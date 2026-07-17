@@ -393,6 +393,300 @@ function renderPerfSummary(warmanData, containerId) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   CUSTOM CURVES MODULE
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const CUSTOM_COLORS = [
+  '#58a6ff', // blue
+  '#3fb950', // green
+  '#f0c040', // yellow
+  '#f85149', // red
+  '#bc8cff', // purple
+  '#39d3c0', // teal
+  '#ff9900', // orange
+  '#e879f9', // pink
+];
+
+let customCurves = [];   // [{id, label, color, q, h, eta, fitted}]
+let _curveIdCounter = 0;
+
+/* ── Parse user-entered data text ────────────────────────────────────────── */
+function parseDataText(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  const q_h = [], q_eta = [];
+  for (const line of lines) {
+    const parts = line.split(/[\s,;]+/).map(Number);
+    if (parts.length >= 2 && !parts.some(isNaN)) {
+      q_h.push([parts[0], parts[1]]);
+      if (parts.length >= 3 && !isNaN(parts[2])) {
+        q_eta.push([parts[0], parts[2]]);
+      }
+    }
+  }
+  return { q_h, q_eta };
+}
+
+/* ── Update the curve-count badge ─────────────────────────────────────────── */
+function updateCurveCountBadge() {
+  const badge = document.getElementById('customCurveCount');
+  const n = customCurves.filter(c => c.fitted).length;
+  badge.textContent = n;
+  badge.style.display = n > 0 ? '' : 'none';
+  document.getElementById('customCurvesEmpty').style.display =
+    customCurves.length === 0 ? '' : 'none';
+}
+
+/* ── Build Plotly traces for a fitted custom curve ───────────────────────── */
+function buildCustomTraces(curve) {
+  if (!curve.fitted) return [];
+  const { label, color, q, h, eta } = curve;
+  const traces = [];
+
+  // H-Q line
+  traces.push({
+    type: 'scatter', mode: 'lines',
+    name: label || 'Custom',
+    x: q, y: h,
+    line: { color, width: 2, dash: 'dashdot' },
+    legendgroup: `custom_${curve.id}`,
+    hovertemplate: `${label || 'Custom'}<br>Q=%{x:.1f}<br>H=%{y:.2f} m<extra></extra>`,
+  });
+
+  // η line (if available)
+  if (eta && eta.length) {
+    traces.push({
+      type: 'scatter', mode: 'lines',
+      name: `${label || 'Custom'} η`,
+      x: q, y: eta,
+      line: { color, width: 1.5, dash: 'dot' },
+      legendgroup: `custom_${curve.id}`,
+      hovertemplate: `${label || 'Custom'}<br>η=%{y:.1f}%<extra></extra>`,
+      showlegend: false,
+    });
+  }
+
+  return traces;
+}
+
+/* ── Get all custom traces (optionally filtered for a yaxis) ─────────────── */
+function getCustomTracesHQ() {
+  return customCurves.flatMap(c => buildCustomTraces(c).filter(t => !t.yaxis || t.yaxis === 'y'));
+}
+
+function getCustomTracesEta() {
+  return customCurves.flatMap(c => {
+    if (!c.fitted || !c.eta || !c.eta.length) return [];
+    return [{
+      type: 'scatter', mode: 'lines',
+      name: `${c.label || 'Custom'} η`,
+      x: c.q, y: c.eta,
+      line: { color: c.color, width: 1.8, dash: 'dashdot' },
+      legendgroup: `custom_${c.id}`,
+      hovertemplate: `${c.label || 'Custom'}<br>η=%{y:.1f}%<extra></extra>`,
+    }];
+  });
+}
+
+function getCustomTracesPower() {
+  return customCurves.flatMap(c => {
+    if (!c.fitted || !c.power || !c.power.length) return [];
+    return [{
+      type: 'scatter', mode: 'lines',
+      name: `${c.label || 'Custom'} P`,
+      x: c.q, y: c.power,
+      line: { color: c.color, width: 1.8, dash: 'dashdot' },
+      legendgroup: `custom_${c.id}`,
+      hovertemplate: `${c.label || 'Custom'}<br>P=%{y:.2f} kW<extra></extra>`,
+    }];
+  });
+}
+
+/* ── Fit a custom curve via the existing API endpoint ────────────────────── */
+async function fitCustomCurve(curveId) {
+  const curve = customCurves.find(c => c.id === curveId);
+  if (!curve) return;
+
+  const entry = document.getElementById(`curve-entry-${curveId}`);
+  const statusEl = entry.querySelector('.curve-status');
+  const plotBtn  = entry.querySelector('.btn-plot-curve');
+  const textarea = entry.querySelector('.curve-data-input');
+
+  const { q_h, q_eta } = parseDataText(textarea.value);
+
+  if (q_h.length < 3) {
+    statusEl.className = 'curve-status error';
+    statusEl.textContent = '✗ Need at least 3 Q,H data points';
+    return;
+  }
+
+  statusEl.className = 'curve-status busy';
+  statusEl.textContent = '⟳ Fitting curve…';
+  plotBtn.disabled = true;
+
+  const payload = { q_h };
+  if (q_eta.length >= 3) payload.q_eta = q_eta;
+  else {
+    // Synthesise flat η so the API doesn't reject
+    payload.q_eta = q_h.map(([q]) => [q, 70]);
+  }
+
+  try {
+    const res = await fetch('/papi/fit-curves', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const d = await res.json();
+
+    if (!d.ok) {
+      statusEl.className = 'curve-status error';
+      statusEl.textContent = `✗ ${d.error || 'Fit failed'}`;
+      return;
+    }
+
+    // Evaluate smooth curve from coefficients
+    const qMax = d.q_max;
+    const qArr = Array.from({ length: 80 }, (_, i) => (i / 79) * qMax);
+    const evalP = (coeffs, q) => coeffs.reduce((s, c, i) => s + c * Math.pow(q, i), 0);
+    const a  = [d.hq_a0, d.hq_a1, d.hq_a2, d.hq_a3];
+    const b  = [d.eff_b0, d.eff_b1, d.eff_b2, d.eff_b3];
+    const pp = [d.pow_p0, d.pow_p1, d.pow_p2];
+
+    curve.q     = qArr.map(q => Math.round(q * 100) / 100);
+    curve.h     = qArr.map(q => Math.max(0, evalP(a, q)));
+    curve.eta   = q_eta.length >= 3 ? qArr.map(q => Math.max(0, Math.min(100, evalP(b, q)))) : null;
+    curve.power = qArr.map(q => Math.max(0, evalP(pp, q)));
+    curve.fitted = true;
+
+    // Also store raw points for scatter markers
+    curve.raw_q_h  = q_h;
+    curve.raw_q_eta = q_eta.length >= 3 ? q_eta : null;
+
+    statusEl.className = 'curve-status ok';
+    statusEl.textContent = `✓ Fitted — Q_max=${d.q_max.toFixed(1)}, η_BEP=${d.eta_bep}%, R²(H)=${d.r2_hq}`;
+
+    updateCurveCountBadge();
+    renderAll();   // re-render all charts with the new curve
+
+  } catch(e) {
+    statusEl.className = 'curve-status error';
+    statusEl.textContent = `✗ Network error: ${e.message}`;
+  } finally {
+    plotBtn.disabled = false;
+  }
+}
+
+/* ── Add a new curve UI row ──────────────────────────────────────────────── */
+function addCustomCurveRow() {
+  const id    = ++_curveIdCounter;
+  const color = CUSTOM_COLORS[(id - 1) % CUSTOM_COLORS.length];
+
+  customCurves.push({ id, label: `Curve ${id}`, color, fitted: false });
+
+  const list = document.getElementById('customCurvesList');
+  const div  = document.createElement('div');
+  div.className = 'custom-curve-entry';
+  div.id = `curve-entry-${id}`;
+
+  const colorSwatches = CUSTOM_COLORS.map((c, ci) =>
+    `<span class="curve-color-swatch ${c === color ? 'active' : ''}"
+          style="background:${c}"
+          data-color="${c}"
+          data-curve-id="${id}"
+          title="${c}"></span>`
+  ).join('');
+
+  div.innerHTML = `
+    <div class="d-flex align-items-start gap-3">
+      <div class="flex-grow-1">
+        <!-- Header row -->
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="curve-color-dot"
+                style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${color};flex-shrink:0"></span>
+          <input type="text" class="form-control form-control-sm form-control-dark curve-label-input"
+                 value="Curve ${id}" placeholder="Label"
+                 style="max-width:160px;font-weight:600"
+                 data-curve-id="${id}">
+          <span class="text-muted small ms-1">Color:</span>
+          <div class="d-flex gap-1 align-items-center flex-wrap" id="swatches-${id}">
+            ${colorSwatches}
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 ms-auto btn-remove-curve"
+                  data-curve-id="${id}" title="Remove curve">×</button>
+        </div>
+        <!-- Data entry -->
+        <div class="row g-2">
+          <div class="col-12">
+            <label class="form-label form-label-sm text-muted mb-1">
+              Q, H data pairs <span class="text-muted fw-normal">(one per line: <code style="color:#8b949e">100, 45.2</code> — optionally add η: <code style="color:#8b949e">100, 45.2, 78</code>)</span>
+            </label>
+            <textarea class="form-control curve-data-input w-100" rows="5"
+                      placeholder="0, 55&#10;50, 52&#10;100, 45&#10;150, 34&#10;200, 18&#10;220, 0"
+                      id="curve-data-${id}"></textarea>
+          </div>
+        </div>
+        <!-- Status + action -->
+        <div class="d-flex align-items-center gap-2 mt-2">
+          <button type="button" class="btn btn-sm btn-primary btn-plot-curve" data-curve-id="${id}">
+            <i class="bi bi-graph-up me-1"></i>Plot
+          </button>
+          <span class="curve-status" id="curve-status-${id}"></span>
+        </div>
+      </div>
+    </div>`;
+
+  list.appendChild(div);
+
+  // Bind color swatch clicks
+  div.querySelectorAll('.curve-color-swatch').forEach(swatch => {
+    swatch.addEventListener('click', () => {
+      const cid = parseInt(swatch.dataset.curveId);
+      const newColor = swatch.dataset.color;
+      const curve = customCurves.find(c => c.id === cid);
+      if (!curve) return;
+      curve.color = newColor;
+      div.querySelectorAll('.curve-color-swatch').forEach(s => s.classList.remove('active'));
+      swatch.classList.add('active');
+      div.querySelector('.curve-color-dot').style.background = newColor;
+      if (curve.fitted) renderAll();
+    });
+  });
+
+  // Bind label input
+  div.querySelector('.curve-label-input').addEventListener('input', (e) => {
+    const cid  = parseInt(e.target.dataset.curveId);
+    const curve = customCurves.find(c => c.id === cid);
+    if (curve) {
+      curve.label = e.target.value || `Curve ${cid}`;
+      if (curve.fitted) renderAll();
+    }
+  });
+
+  // Bind Plot button
+  div.querySelector('.btn-plot-curve').addEventListener('click', (e) => {
+    fitCustomCurve(parseInt(e.currentTarget.dataset.curveId));
+  });
+
+  // Bind Remove button
+  div.querySelector('.btn-remove-curve').addEventListener('click', (e) => {
+    const cid = parseInt(e.currentTarget.dataset.curveId);
+    customCurves = customCurves.filter(c => c.id !== cid);
+    document.getElementById(`curve-entry-${cid}`)?.remove();
+    updateCurveCountBadge();
+    renderAll();
+  });
+
+  updateCurveCountBadge();
+
+  // Auto-open the collapse if not already open
+  const body = document.getElementById('customCurvesBody');
+  if (!body.classList.contains('show')) {
+    new bootstrap.Collapse(body, { toggle: true });
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
    PUMP CURVE PAGE CONTROLLER
    ══════════════════════════════════════════════════════════════════════════ */
 
@@ -436,16 +730,18 @@ if (typeof PUMP_ID !== 'undefined') {
     });
   }
 
-  /* ── Render all charts for current view mode ──── */
+  /* ── Render all charts for current view mode (+ custom curves) ──── */
   function renderAll() {
     const duty = getDuty();
+    const customHQ  = getCustomTracesHQ();
+    const customEta = getCustomTracesEta();
+    const customPow = getCustomTracesPower();
 
     if (viewMode === 'warman') {
       if (!currentData) return;
       const showIso  = document.getElementById('chkIsolines').checked;
       const showPwrI = document.getElementById('chkPowerIso').checked;
       const showNpshF= document.getElementById('chkNpshFamily').checked;
-
       const showSpdL  = document.getElementById('chkSpeedLines').checked;
 
       const wc = buildWarmanChart(currentData, {
@@ -453,7 +749,8 @@ if (typeof PUMP_ID !== 'undefined') {
         showSpeedLines: showSpdL,
         dutyQ: duty.q, dutyH: duty.h
       });
-      Plotly.react('chartWarman', wc.traces, wc.layout, PLOTLY_CONFIG);
+      // Inject custom HQ curves into Warman map
+      Plotly.react('chartWarman', [...wc.traces, ...customHQ], wc.layout, PLOTLY_CONFIG);
 
       // NPSH family
       document.getElementById('npshFamilyPanel').style.display = showNpshF ? '' : 'none';
@@ -466,10 +763,11 @@ if (typeof PUMP_ID !== 'undefined') {
       document.getElementById('powerFamilyPanel').style.display = showPwrI ? '' : 'none';
       if (showPwrI) {
         const pc = buildPowerFamilyChart(currentData.family);
-        Plotly.react('chartPowerFamily', pc.traces, pc.layout, PLOTLY_CONFIG);
+        Plotly.react('chartPowerFamily', [...pc.traces, ...customPow], pc.layout, PLOTLY_CONFIG);
       }
 
       renderPerfSummary(currentData, 'perfSummary');
+      renderCustomSummary();
 
     } else if (viewMode === 'standalone') {
       if (!singleData) return;
@@ -484,10 +782,11 @@ if (typeof PUMP_ID !== 'undefined') {
       const power = buildPowerChart(singleData, showClean);
       const npsh  = buildNpshChart(singleData);
 
-      Plotly.react('chartHQ',    hq.traces,    hq.layout,    PLOTLY_CONFIG);
-      Plotly.react('chartEff',   eff.traces,   eff.layout,   PLOTLY_CONFIG);
-      Plotly.react('chartPower', power.traces, power.layout, PLOTLY_CONFIG);
-      Plotly.react('chartNpsh',  npsh.traces,  npsh.layout,  PLOTLY_CONFIG);
+      // Inject custom traces into each standalone chart
+      Plotly.react('chartHQ',    [...hq.traces,    ...customHQ],  hq.layout,    PLOTLY_CONFIG);
+      Plotly.react('chartEff',   [...eff.traces,   ...customEta], eff.layout,   PLOTLY_CONFIG);
+      Plotly.react('chartPower', [...power.traces, ...customPow], power.layout, PLOTLY_CONFIG);
+      Plotly.react('chartNpsh',  npsh.traces,                     npsh.layout,  PLOTLY_CONFIG);
 
       document.getElementById('panelEff').style.display   = showEff   ? '' : 'none';
       document.getElementById('panelPower').style.display = showPow   ? '' : 'none';
@@ -499,8 +798,64 @@ if (typeof PUMP_ID !== 'undefined') {
       const showPow  = document.getElementById('chkPower').checked;
       const showNpsh = document.getElementById('chkNpsh').checked;
       const ov = buildOverlayChart(singleData, showEff, showPow, showNpsh);
-      Plotly.react('chartOverlay', ov.traces, ov.layout, PLOTLY_CONFIG);
+      // Custom HQ curves on overlay
+      Plotly.react('chartOverlay', [...ov.traces, ...customHQ], ov.layout, PLOTLY_CONFIG);
     }
+  }
+
+  /* ── Custom curve summary table below the standard perfSummary ──────────── */
+  function renderCustomSummary() {
+    const fitted = customCurves.filter(c => c.fitted);
+    let el = document.getElementById('customPerfSummary');
+    if (!fitted.length) {
+      if (el) el.style.display = 'none';
+      return;
+    }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'customPerfSummary';
+      el.className = 'card card-dark mt-3';
+      el.innerHTML = `
+        <div class="card-header card-header-dark">
+          <i class="bi bi-pencil-square text-accent me-2"></i>Custom Curves Summary
+        </div>
+        <div class="card-body" id="customPerfSummaryBody"></div>`;
+      const perfCard = document.getElementById('perfSummary')?.closest('.card');
+      if (perfCard) perfCard.after(el);
+    }
+    el.style.display = '';
+    const rows = fitted.map(c => {
+      let bepQ = '—', bepH = '—', bepEta = '—', bepP = '—';
+      if (c.eta && c.eta.length) {
+        const maxEta = Math.max(...c.eta);
+        const idx = c.eta.indexOf(maxEta);
+        bepQ   = c.q[idx]?.toFixed(1)     ?? '—';
+        bepH   = c.h[idx]?.toFixed(2)     ?? '—';
+        bepEta = c.eta[idx]?.toFixed(1)   ?? '—';
+        bepP   = c.power?.[idx]?.toFixed(2) ?? '—';
+      }
+      return `<tr>
+        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c.color};margin-right:6px"></span>
+          <strong>${c.label}</strong></td>
+        <td class="text-center fw-semibold">${bepQ}</td>
+        <td class="text-center">${bepH}</td>
+        <td class="text-center text-warning fw-semibold">${bepEta}%</td>
+        <td class="text-center">${bepP}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('customPerfSummaryBody').innerHTML = `
+      <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0" style="font-size:0.88rem">
+          <thead><tr>
+            <th>Curve</th>
+            <th class="text-center">Q<sub>BEP</sub> (m³/h)</th>
+            <th class="text-center">H<sub>BEP</sub> (m)</th>
+            <th class="text-center">η<sub>BEP</sub></th>
+            <th class="text-center">P<sub>BEP</sub> (kW)</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
   }
 
   /* ── Fetch both endpoints in parallel ──── */
@@ -550,6 +905,16 @@ if (typeof PUMP_ID !== 'undefined') {
   ['chkIsolines','chkPowerIso','chkSpeedLines','chkNpshFamily','chkEff','chkPower','chkNpsh'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', renderAll);
+  });
+
+  // Custom curves: Add Curve button + chevron toggle
+  document.getElementById('btnAddCurve').addEventListener('click', addCustomCurveRow);
+
+  document.getElementById('customCurvesBody').addEventListener('show.bs.collapse', () => {
+    document.getElementById('customCurvesChevron').className = 'bi bi-chevron-up';
+  });
+  document.getElementById('customCurvesBody').addEventListener('hide.bs.collapse', () => {
+    document.getElementById('customCurvesChevron').className = 'bi bi-chevron-down';
   });
 
   // Initial setup

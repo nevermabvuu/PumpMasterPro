@@ -84,9 +84,10 @@ def _pump_from_form(f, pump=None):
     pump.hr     = _get_float(f, 'hr', pump.hr if pump.hr is not None else 1.0)
     pump.qr     = _get_float(f, 'qr', pump.qr if pump.qr is not None else 1.0)
     pump.er     = _get_float(f, 'er', pump.er if pump.er is not None else 1.0)
-    pump.pump_type   = f.get('pump_type', pump.pump_type or 'centrifugal')
-    pump.application = f.get('application', pump.application or '')
-    pump.notes       = f.get('notes', pump.notes or '')
+    pump.pump_type        = f.get('pump_type', pump.pump_type or 'centrifugal')
+    pump.application      = f.get('application', pump.application or '')
+    pump.notes            = f.get('notes', pump.notes or '')
+    pump.extra_curves_json = f.get('extra_curves_json', pump.extra_curves_json or '')
     return pump
 
 

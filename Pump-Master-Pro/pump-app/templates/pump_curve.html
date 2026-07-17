@@ -276,4 +276,37 @@
 
 <script>const PUMP_ID = {{ pump.id }};</script>
 <script src="{{ url_for('static', filename='js/pump_curves.js') }}"></script>
+<script>
+// Pre-load any saved extra curves from the pump data into the custom curves overlay
+(function () {
+  const savedExtras = {{ pump.get_extra_curves() | tojson }};
+  if (!Array.isArray(savedExtras) || savedExtras.length === 0) return;
+
+  const evalP = (coeffs, q) => coeffs.reduce((s, c, i) => s + c * Math.pow(q, i), 0);
+
+  savedExtras.forEach(ec => {
+    const id    = ++_curveIdCounter;
+    const color = ec.color || CUSTOM_COLORS[(id - 1) % CUSTOM_COLORS.length];
+    const qMax  = ec.q_max || 200;
+    const qArr  = Array.from({ length: 80 }, (_, i) => (i / 79) * qMax);
+    const a  = [ec.hq_a0, ec.hq_a1, ec.hq_a2, ec.hq_a3];
+    const b  = [ec.eff_b0, ec.eff_b1, ec.eff_b2, ec.eff_b3];
+    const pp = [ec.pow_p0, ec.pow_p1, ec.pow_p2];
+    const hasEta = ec.eff_b1 || ec.eff_b2 || ec.eff_b3;
+
+    customCurves.push({
+      id,
+      label: ec.label || `Curve ${id}`,
+      color,
+      fitted: true,
+      q:     qArr.map(q => Math.round(q * 100) / 100),
+      h:     qArr.map(q => Math.max(0, evalP(a, q))),
+      eta:   hasEta ? qArr.map(q => Math.max(0, Math.min(100, evalP(b, q)))) : null,
+      power: qArr.map(q => Math.max(0, evalP(pp, q))),
+    });
+  });
+
+  updateCurveCountBadge();
+})();
+</script>
 {% endblock %}

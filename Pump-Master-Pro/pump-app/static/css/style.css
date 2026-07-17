@@ -491,6 +491,12 @@ select.form-select.form-control-dark option {
 .custom-curve-entry .curve-status.error { color: var(--accent-red);   }
 .custom-curve-entry .curve-status.busy  { color: var(--text-muted);   }
 
+/* Alias used by pump_form.js extra curves */
+.extra-curve-status         { font-size: 0.75rem; min-height: 1.2em; }
+.extra-curve-status.ok      { color: var(--accent-green); }
+.extra-curve-status.error   { color: var(--accent-red);   }
+.extra-curve-status.busy    { color: var(--text-muted);   }
+
 /* Legend pill shown in chart header for custom curves */
 .custom-legend-pill {
   display: inline-flex;

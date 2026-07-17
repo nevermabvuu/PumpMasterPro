@@ -505,3 +505,331 @@ function initBlankTable() {
     tbody.appendChild(row);
   });
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   EXTRA CURVES MODULE
+   Each additional curve is a self-contained mini performance table with
+   its own Fit & Preview, label, color, and power auto-calc.
+   All fitted curves are serialised to JSON in a hidden form field on submit.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const EXTRA_CURVE_COLORS = [
+  '#58a6ff','#3fb950','#f0c040','#f85149','#bc8cff','#39d3c0','#ff9900','#e879f9'
+];
+
+let _extraCurveIdCounter = 0;
+let extraCurves = [];   // [{id, label, color, fitted, coeffs}]
+
+/* ── Serialise all extra curves to the hidden form field ─────────────────── */
+function serializeExtraCurves() {
+  const payload = extraCurves
+    .filter(c => c.fitted && c.coeffs)
+    .map(c => ({ label: c.label, color: c.color, ...c.coeffs }));
+  const field = document.getElementById('extra_curves_json_field');
+  if (field) field.value = JSON.stringify(payload);
+}
+
+/* ── Update badge count ──────────────────────────────────────────────────── */
+function updateExtraBadge() {
+  const badge = document.getElementById('extraCurveBadge');
+  if (!badge) return;
+  const n = extraCurves.length;
+  badge.textContent = n;
+  badge.style.display = n > 0 ? '' : 'none';
+}
+
+/* ── Extract data from an extra curve table ──────────────────────────────── */
+function getExtraTableData(tableId) {
+  const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+  const q_h = [], q_eta = [], q_p = [];
+  rows.forEach(row => {
+    const q   = parseFloat(row.querySelector('.col-q')?.value);
+    const h   = parseFloat(row.querySelector('.col-h')?.value);
+    const eta = parseFloat(row.querySelector('.col-eta')?.value);
+    const pow = parseFloat(row.querySelector('.col-pow')?.value);
+    if (!isNaN(q) && !isNaN(h)) q_h.push([q, h]);
+    if (!isNaN(q) && !isNaN(eta)) q_eta.push([q, eta]);
+    if (!isNaN(q) && !isNaN(pow)) q_p.push([q, pow]);
+  });
+  return {
+    q_h,
+    q_eta: q_eta.length >= 3 ? q_eta : null,
+    q_p:   q_p.length  >= 3 ? q_p   : null,
+  };
+}
+
+/* ── Build an HTML table row for an extra curve table ────────────────────── */
+function _extraRow() {
+  return `<tr>
+    <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" placeholder="Q"></td>
+    <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" placeholder="H"></td>
+    <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" placeholder="η %"></td>
+    <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" placeholder="NPSHr"></td>
+    <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" placeholder="kW (opt)"></td>
+    <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">×</button></td>
+  </tr>`;
+}
+
+/* ── Wire power auto-calc on a single row ────────────────────────────────── */
+function _wireExtraRow(row) {
+  ['col-q','col-h','col-eta'].forEach(cls => {
+    const inp = row.querySelector(`.${cls}`);
+    if (inp) inp.addEventListener('input', () => autoUpdatePowerInRow(row));
+  });
+}
+
+/* ── Fit an extra curve via /papi/fit-curves ─────────────────────────────── */
+async function fitExtraCurve(curveId) {
+  const curve  = extraCurves.find(c => c.id === curveId);
+  if (!curve) return;
+  const entry    = document.getElementById(`extra-entry-${curveId}`);
+  const statusEl = entry.querySelector('.extra-curve-status');
+  const fitBtn   = entry.querySelector('.btn-extra-fit');
+  const { q_h, q_eta, q_p } = getExtraTableData(`extraTable-${curveId}`);
+
+  if (q_h.length < 3) {
+    statusEl.className = 'extra-curve-status error';
+    statusEl.textContent = '\u2717 Need at least 3 Q, H points';
+    return;
+  }
+
+  statusEl.className = 'extra-curve-status busy';
+  statusEl.textContent = '\u27f3 Fitting\u2026';
+  fitBtn.disabled = true;
+
+  const payload = {
+    q_h,
+    q_eta: q_eta || q_h.map(([q]) => [q, 70]),
+    q_npsh: null,
+    q_p: q_p || null,
+  };
+
+  try {
+    const res = await fetch('/papi/fit-curves', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const d = await res.json();
+    if (!d.ok) {
+      statusEl.className = 'extra-curve-status error';
+      statusEl.textContent = `\u2717 ${d.error || 'Fit failed'}`;
+      return;
+    }
+
+    curve.fitted = true;
+    curve.coeffs = {
+      hq_a0: d.hq_a0, hq_a1: d.hq_a1, hq_a2: d.hq_a2, hq_a3: d.hq_a3,
+      eff_b0: d.eff_b0, eff_b1: d.eff_b1, eff_b2: d.eff_b2, eff_b3: d.eff_b3,
+      npsh_c0: d.npsh_c0, npsh_c1: d.npsh_c1, npsh_c2: d.npsh_c2,
+      pow_p0: d.pow_p0, pow_p1: d.pow_p1, pow_p2: d.pow_p2,
+      q_max: d.q_max, q_bep: d.q_bep,
+    };
+
+    statusEl.className = 'extra-curve-status ok';
+    statusEl.textContent =
+      `\u2713 Fitted \u2014 H\u2080=${d.hq_a0.toFixed(1)} m, Q_max=${d.q_max.toFixed(1)}, \u03b7_BEP=${d.eta_bep}%, R\u00b2=${d.r2_hq}`;
+
+    _drawExtraPreview(curveId, d, curve.color);
+    serializeExtraCurves();
+
+  } catch(e) {
+    statusEl.className = 'extra-curve-status error';
+    statusEl.textContent = `\u2717 Network error: ${e.message}`;
+  } finally {
+    fitBtn.disabled = false;
+  }
+}
+
+/* ── Draw compact Plotly preview inside an extra curve card ──────────────── */
+function _drawExtraPreview(curveId, d, color) {
+  const previewEl = document.getElementById(`extra-preview-${curveId}`);
+  if (!previewEl) return;
+  previewEl.style.display = '';
+
+  const qMax = d.q_max;
+  const qArr = Array.from({ length: 60 }, (_, i) => (i / 59) * qMax);
+  const evalP = (coeffs, q) => coeffs.reduce((s, c, i) => s + c * Math.pow(q, i), 0);
+  const a = [d.hq_a0, d.hq_a1, d.hq_a2, d.hq_a3];
+  const b = [d.eff_b0, d.eff_b1, d.eff_b2, d.eff_b3];
+  const H   = qArr.map(q => Math.max(0, evalP(a, q)));
+  const eta = qArr.map(q => Math.max(0, Math.min(100, evalP(b, q))));
+
+  const base = {
+    paper_bgcolor: '#1a1d23', plot_bgcolor: '#1a1d23',
+    font: { color: '#c9d1d9', size: 10 },
+    margin: { l: 40, r: 8, t: 22, b: 32 },
+    xaxis: { gridcolor: '#30363d', zerolinecolor: '#30363d', title: 'Q (m\u00b3/h)' },
+    yaxis: { gridcolor: '#30363d', zerolinecolor: '#30363d' },
+    showlegend: false,
+  };
+
+  Plotly.react(`extra-previewHQ-${curveId}`, [
+    { x: qArr, y: H, mode: 'lines', line: { color, width: 2 } },
+  ], { ...base, title: { text: 'H-Q', font: { size: 11 } },
+       yaxis: { ...base.yaxis, title: 'H (m)' } }, { responsive: true });
+
+  Plotly.react(`extra-previewEta-${curveId}`, [
+    { x: qArr, y: eta, mode: 'lines', line: { color: '#f0c040', width: 2 } },
+  ], { ...base, title: { text: '\u03b7', font: { size: 11 } },
+       yaxis: { ...base.yaxis, title: '\u03b7 (%)', range: [0, 100] } }, { responsive: true });
+}
+
+/* ── Add a new extra curve card (optionally pre-filled with existingData) ── */
+function addExtraCurveCard(existingData) {
+  const id    = ++_extraCurveIdCounter;
+  const color = existingData?.color || EXTRA_CURVE_COLORS[(id - 1) % EXTRA_CURVE_COLORS.length];
+  const label = existingData?.label || `Curve ${id}`;
+
+  extraCurves.push({ id, label, color, fitted: !!existingData, coeffs: existingData || null });
+
+  const list = document.getElementById('extraCurvesList');
+  const div  = document.createElement('div');
+  div.className = 'custom-curve-entry mb-3';
+  div.id = `extra-entry-${id}`;
+
+  const swatches = EXTRA_CURVE_COLORS.map(c =>
+    `<span class="curve-color-swatch ${c === color ? 'active' : ''}"
+          style="background:${c}" data-color="${c}" data-eid="${id}"></span>`
+  ).join('');
+
+  const blankRows = Array.from({ length: 6 }, _extraRow).join('');
+
+  div.innerHTML = `
+    <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+      <span class="curve-color-dot"
+            style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${color}"></span>
+      <input type="text" class="form-control form-control-sm form-control-dark extra-label-input"
+             value="${label}" placeholder="Curve label"
+             style="max-width:180px;font-weight:600" data-eid="${id}">
+      <span class="text-muted small">Color:</span>
+      <div class="d-flex gap-1 flex-wrap">${swatches}</div>
+      <button type="button" class="btn btn-sm btn-outline-danger ms-auto py-0 px-2 btn-extra-remove"
+              data-eid="${id}">&#x2715; Remove</button>
+    </div>
+
+    <div class="table-responsive mb-2">
+      <table class="table table-sm table-dark mb-0 align-middle" id="extraTable-${id}" style="font-size:0.83rem">
+        <thead>
+          <tr style="background:#21262d">
+            <th style="width:110px">Flow Q<br><span class="fw-normal text-muted small">(m\u00b3/h)</span></th>
+            <th style="width:95px">Head H<br><span class="fw-normal text-muted small">(m)</span></th>
+            <th style="width:80px">Effic. \u03b7<br><span class="fw-normal text-muted small">(%)</span></th>
+            <th style="width:100px">NPSHr<br><span class="fw-normal text-muted small">(m, opt.)</span></th>
+            <th style="width:105px">Power<br><span class="fw-normal text-muted small">(kW, opt.)</span></th>
+            <th style="width:30px"></th>
+          </tr>
+        </thead>
+        <tbody>${blankRows}</tbody>
+      </table>
+    </div>
+
+    <div class="d-flex gap-2 align-items-center mb-2">
+      <button type="button" class="btn btn-sm btn-outline-secondary btn-extra-add-row" data-eid="${id}">
+        <i class="bi bi-plus-lg me-1"></i>Add Row
+      </button>
+      <button type="button" class="btn btn-sm btn-primary ms-auto btn-extra-fit" data-eid="${id}">
+        <i class="bi bi-calculator me-1"></i>Fit &amp; Preview
+      </button>
+    </div>
+
+    <div class="extra-curve-status mb-2" id="extra-status-${id}"></div>
+
+    <div id="extra-preview-${id}" style="display:none">
+      <div class="row g-2">
+        <div class="col-6"><div id="extra-previewHQ-${id}" style="height:160px"></div></div>
+        <div class="col-6"><div id="extra-previewEta-${id}" style="height:160px"></div></div>
+      </div>
+    </div>`;
+
+  list.appendChild(div);
+
+  // If pre-loading saved data, show status + preview
+  if (existingData) {
+    const statusEl = div.querySelector('.extra-curve-status');
+    statusEl.className = 'extra-curve-status ok';
+    statusEl.textContent = `\u2713 Saved \u2014 Q_max=${existingData.q_max?.toFixed(1) ?? '?'}`;
+    _drawExtraPreview(id, {
+      hq_a0: existingData.hq_a0, hq_a1: existingData.hq_a1,
+      hq_a2: existingData.hq_a2, hq_a3: existingData.hq_a3,
+      eff_b0: existingData.eff_b0, eff_b1: existingData.eff_b1,
+      eff_b2: existingData.eff_b2, eff_b3: existingData.eff_b3,
+      q_max: existingData.q_max, eta_bep: 0, r2_hq: 0,
+    }, color);
+  }
+
+  // Events: color swatches
+  div.querySelectorAll('.curve-color-swatch').forEach(swatch => {
+    swatch.addEventListener('click', () => {
+      const eid = parseInt(swatch.dataset.eid);
+      const newColor = swatch.dataset.color;
+      const curve = extraCurves.find(c => c.id === eid);
+      if (!curve) return;
+      curve.color = newColor;
+      div.querySelectorAll('.curve-color-swatch').forEach(s => s.classList.remove('active'));
+      swatch.classList.add('active');
+      div.querySelector('.curve-color-dot').style.background = newColor;
+      serializeExtraCurves();
+    });
+  });
+
+  // Events: label
+  div.querySelector('.extra-label-input').addEventListener('input', e => {
+    const curve = extraCurves.find(c => c.id === parseInt(e.target.dataset.eid));
+    if (curve) { curve.label = e.target.value || `Curve ${curve.id}`; serializeExtraCurves(); }
+  });
+
+  // Events: add row
+  div.querySelector('.btn-extra-add-row').addEventListener('click', e => {
+    const eid = parseInt(e.currentTarget.dataset.eid);
+    const tbody = document.querySelector(`#extraTable-${eid} tbody`);
+    const row = document.createElement('tr');
+    row.innerHTML = _extraRow();
+    tbody.appendChild(row);
+    _wireExtraRow(row);
+  });
+
+  // Events: fit
+  div.querySelector('.btn-extra-fit').addEventListener('click', e => {
+    fitExtraCurve(parseInt(e.currentTarget.dataset.eid));
+  });
+
+  // Events: remove
+  div.querySelector('.btn-extra-remove').addEventListener('click', e => {
+    const eid = parseInt(e.currentTarget.dataset.eid);
+    extraCurves = extraCurves.filter(c => c.id !== eid);
+    document.getElementById(`extra-entry-${eid}`)?.remove();
+    updateExtraBadge();
+    serializeExtraCurves();
+  });
+
+  // Power auto-calc for all initial rows
+  div.querySelectorAll(`#extraTable-${id} tbody tr`).forEach(_wireExtraRow);
+
+  updateExtraBadge();
+
+  // Auto-open the collapse panel
+  const body = document.getElementById('extraCurvesBody');
+  if (body && !body.classList.contains('show')) {
+    new bootstrap.Collapse(body, { toggle: true });
+  }
+}
+
+/* ── Entry point: initialise extra curves (called from inline script) ─────── */
+function initExtraCurves(curvesArray) {
+  extraCurves = [];
+  _extraCurveIdCounter = 0;
+
+  // Wire the Add Curve Table button
+  const addBtn = document.getElementById('btnAddExtraCurve');
+  if (addBtn) addBtn.addEventListener('click', () => addExtraCurveCard());
+
+  // Wire form submit to serialise before POST
+  const form = document.getElementById('pumpForm');
+  if (form) form.addEventListener('submit', serializeExtraCurves);
+
+  // Load existing saved curves (edit mode)
+  const data = Array.isArray(curvesArray) ? curvesArray :
+               (typeof curvesArray === 'string' ? JSON.parse(curvesArray || '[]') : []);
+  data.forEach(c => addExtraCurveCard(c));
+}

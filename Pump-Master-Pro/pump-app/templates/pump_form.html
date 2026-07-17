@@ -300,6 +300,37 @@
       </div>
     </div>
 
+
+    <!-- ── Additional Curves ─────────────────────────────────────────────── -->
+    <div class="card card-dark mt-3" id="extraCurvesCard">
+      <div class="card-header card-header-dark d-flex align-items-center justify-content-between"
+           style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#extraCurvesBody">
+        <span>
+          <i class="bi bi-layers-half text-accent me-2"></i>
+          <strong>Additional Curves</strong>
+          <span class="text-muted small ms-2">— Extra impeller trims or speed variants</span>
+        </span>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-accent" id="extraCurveBadge" style="display:none">0</span>
+          <i class="bi bi-chevron-down" id="extraCurvesChevron"></i>
+        </div>
+      </div>
+      <div class="collapse" id="extraCurvesBody">
+        <div class="card-body">
+          <p class="small text-muted mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Add data tables for additional curves (e.g. trimmed impellers, different speeds).
+            Each curve is fitted independently and stored with the pump.
+            They will appear as overlaid curves on the curve viewer.
+          </p>
+          <div id="extraCurvesList"></div>
+          <button type="button" class="btn btn-sm btn-outline-accent mt-2" id="btnAddExtraCurve">
+            <i class="bi bi-plus-lg me-1"></i>Add Curve Table
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /col-lg-7 -->
 
 </div><!-- /row -->
@@ -317,6 +348,10 @@
   </a>
   {% endif %}
 </div>
+
+<!-- Hidden field carries the serialised extra curves JSON on submit -->
+<input type="hidden" name="extra_curves_json" id="extra_curves_json_field" value="{{ pump.extra_curves_json if pump else '' }}">
+
 </form>
 {% endblock %}
 
@@ -329,9 +364,11 @@
   {% if pump %}
   // Edit mode: populate table from existing polynomial coefficients
   initTableFromCurves({{ pump.to_dict() | tojson }});
+  initExtraCurves({{ pump.extra_curves_json if pump.extra_curves_json else '[]' }});
   {% else %}
   // New pump: blank suggestion rows
   initBlankTable();
+  initExtraCurves([]);
   {% endif %}
 
   // Chevron toggle for coeff panel
@@ -340,6 +377,14 @@
   });
   document.getElementById('coeffPanel').addEventListener('hide.bs.collapse', () => {
     document.getElementById('coeffChevron').className = 'bi bi-chevron-down me-1';
+  });
+
+  // Chevron toggle for extra curves panel
+  document.getElementById('extraCurvesBody').addEventListener('show.bs.collapse', () => {
+    document.getElementById('extraCurvesChevron').className = 'bi bi-chevron-up';
+  });
+  document.getElementById('extraCurvesBody').addEventListener('hide.bs.collapse', () => {
+    document.getElementById('extraCurvesChevron').className = 'bi bi-chevron-down';
   });
 })();
 </script>

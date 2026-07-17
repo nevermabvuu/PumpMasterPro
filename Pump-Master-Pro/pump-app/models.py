@@ -62,6 +62,11 @@ class Pump(db.Model):
     application = db.Column(db.String(100), default='')
     notes = db.Column(db.Text, default='')
 
+    # JSON array of extra manually-defined curves:
+    # [{"label": str, "color": str, "hq_a0..3": float, "eff_b0..3": float,
+    #   "pow_p0..2": float, "npsh_c0..2": float, "q_max": float}]
+    extra_curves_json = db.Column(db.Text, default='')
+
     created_at = db.Column(db.DateTime, default=_utcnow)
     updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow)
 
@@ -78,6 +83,16 @@ class Pump(db.Model):
             return sorted([float(d) for d in diameters], reverse=True)
         except Exception:
             return [self.impeller_dia_mm]
+
+    def get_extra_curves(self):
+        """Return the list of extra manually-defined curves, or []."""
+        raw = (self.extra_curves_json or '').strip()
+        if not raw:
+            return []
+        try:
+            return json.loads(raw)
+        except Exception:
+            return []
 
     def has_power_poly(self):
         """True when a stored power polynomial is available."""
@@ -105,4 +120,5 @@ class Pump(db.Model):
             'application': self.application,
             'notes': self.notes,
             'diameters': self.get_diameters(),
+            'extra_curves': self.get_extra_curves(),
         }

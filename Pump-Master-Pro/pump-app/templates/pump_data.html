@@ -95,3 +95,62 @@
 </div>
 {% endif %}
 {% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const pumps = {{ pump_dicts|tojson }};
+    pumps.forEach(pump => {
+      drawSparkline(`spark-${pump.id}`, pump);
+    });
+  });
+
+  function drawSparkline(containerId, pump) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const width = 120;
+    const height = 80;
+    const steps = 30;
+    
+    // Evaluate H-Q points from Q=0 to Q=q_max
+    const points = [];
+    let maxH = 0;
+    
+    for (let i = 0; i <= steps; i++) {
+      const q = (pump.q_max / steps) * i;
+      const h = pump.hq_a0 + pump.hq_a1 * q + pump.hq_a2 * Math.pow(q, 2) + pump.hq_a3 * Math.pow(q, 3);
+      const validH = Math.max(0, h);
+      points.push({ q, h: validH });
+      if (validH > maxH) maxH = validH;
+    }
+    
+    const yMax = maxH * 1.1 || 10;
+    const yMin = 0;
+    
+    const svgPoints = points.map(p => {
+      const x = (p.q / pump.q_max) * width;
+      const y = height - ((p.h - yMin) / (yMax - yMin)) * height;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    
+    const linePath = `M ${svgPoints.join(' L ')}`;
+    const areaPath = `${linePath} L ${width},${height} L 0,${height} Z`;
+    
+    const svgHtml = `
+      <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="display: block;">
+        <defs>
+          <linearGradient id="grad-${pump.id}" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="var(--accent, #58a6ff)" stop-opacity="0.35" />
+            <stop offset="100%" stop-color="var(--accent, #58a6ff)" stop-opacity="0.0" />
+          </linearGradient>
+        </defs>
+        <path d="${areaPath}" fill="url(#grad-${pump.id})" />
+        <path d="${linePath}" fill="none" stroke="var(--accent, #58a6ff)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    `;
+    container.innerHTML = svgHtml;
+  }
+</script>
+{% endblock %}
+

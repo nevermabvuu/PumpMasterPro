@@ -33,6 +33,11 @@ body {
 
 main { flex: 1; }
 
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+
 /* ── Navbar ──────────────────────────────────────────────────────── */
 .bg-primary-dark {
   background: #0d1117 !important;

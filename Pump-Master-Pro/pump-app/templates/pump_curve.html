@@ -130,6 +130,43 @@
   </div>
 </div>
 
+<!-- ── CUSTOM CURVES PANEL ───────────────────────────────────────────────────── -->
+<div class="card card-dark mb-3" id="customCurvesCard">
+  <div class="card-header card-header-dark d-flex align-items-center justify-content-between"
+       style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#customCurvesBody">
+    <span>
+      <i class="bi bi-pencil-square text-accent me-2"></i>
+      <strong>Custom Curves</strong>
+      <span class="text-muted small ms-2">— Manually add curves (test data, alternative trims, etc.)</span>
+    </span>
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge bg-accent" id="customCurveCount" style="display:none">0</span>
+      <i class="bi bi-chevron-down" id="customCurvesChevron"></i>
+    </div>
+  </div>
+  <div class="collapse" id="customCurvesBody">
+    <div class="card-body">
+      <p class="small text-muted mb-3">
+        <i class="bi bi-info-circle me-1"></i>
+        Enter Q,H data pairs for each curve — one pair per line as <code>Q, H</code> (e.g. <code>100, 45.2</code>).
+        Optionally add efficiency as <code>Q, H, η%</code>. At least 3 points required. Click
+        <strong>Plot</strong> to fit and display the curve on all charts.
+      </p>
+
+      <div id="customCurvesList">
+        <!-- Rows injected by JS -->
+        <div class="text-center text-muted py-2 small" id="customCurvesEmpty">
+          <i class="bi bi-plus-circle me-1"></i>No custom curves yet — click "Add Curve" below.
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-sm btn-outline-accent mt-3" id="btnAddCurve">
+        <i class="bi bi-plus-lg me-1"></i>Add Curve
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ── WARMAN PERFORMANCE MAP ───────────────────────────────────────────────── -->
 <div id="warmanPanel">
   <div class="row g-4">

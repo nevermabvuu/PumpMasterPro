@@ -428,3 +428,78 @@ select.form-select.form-control-dark option {
   animation: calcFlash 0.6s ease-out forwards;
 }
 
+/* ── Custom Curves Panel ─────────────────────────────────────────── */
+.btn-outline-accent {
+  color: var(--accent);
+  border-color: rgba(88,166,255,0.45);
+  background: transparent;
+  transition: all 0.2s;
+}
+.btn-outline-accent:hover, .btn-outline-accent:focus {
+  background: rgba(88,166,255,0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 8px rgba(88,166,255,0.3);
+}
+
+.custom-curve-entry {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  transition: border-color 0.2s;
+}
+.custom-curve-entry:hover {
+  border-color: rgba(88,166,255,0.35);
+}
+.custom-curve-entry .curve-color-swatch {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s, transform 0.15s;
+  flex-shrink: 0;
+}
+.custom-curve-entry .curve-color-swatch.active {
+  border-color: #fff;
+  transform: scale(1.2);
+}
+.custom-curve-entry textarea.curve-data-input {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  border-radius: 6px;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.78rem;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.2s;
+}
+.custom-curve-entry textarea.curve-data-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 6px rgba(88,166,255,0.25);
+}
+.custom-curve-entry .curve-status {
+  font-size: 0.75rem;
+  min-height: 1.2em;
+}
+.custom-curve-entry .curve-status.ok    { color: var(--accent-green); }
+.custom-curve-entry .curve-status.error { color: var(--accent-red);   }
+.custom-curve-entry .curve-status.busy  { color: var(--text-muted);   }
+
+/* Legend pill shown in chart header for custom curves */
+.custom-legend-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  color: #c9d1d9;
+}
+

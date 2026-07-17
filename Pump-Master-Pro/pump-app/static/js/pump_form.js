@@ -80,6 +80,109 @@ function updatePlaceholders(type, unit) {
   });
 }
 
+/* ── Auto-calculate Power from Q, H, η ──────────────────────────────────────
+ * Formula (SI): P [kW] = ρ·g·Q·H / (η/100 × 3 600 000)
+ *   where Q [m³/h], H [m], ρ = 1000 kg/m³, g = 9.81 m/s²
+ * Simplified: P_kW = (Q/3600 × H × 9810) / (η/100) / 1000
+ *           = Q × H × 9810 / (η × 3600000) × 100
+ *           = Q × H × 2.725 / η   (kW)
+ */
+const WATER_FACTOR = 9810 / 3600000; // ρg / (3600 × 1000)  [kW per (m³/h·m·1)]
+
+function calcPowerKW(q_m3h, h_m, eta_pct) {
+  if (isNaN(q_m3h) || isNaN(h_m) || isNaN(eta_pct) || eta_pct <= 0) return null;
+  return (q_m3h * h_m * WATER_FACTOR) / (eta_pct / 100);
+}
+
+function autoUpdatePowerInRow(row) {
+  const unitQ   = document.getElementById('unit-q')?.value   || 'm3h';
+  const unitH   = document.getElementById('unit-h')?.value   || 'm';
+  const unitPow = document.getElementById('unit-pow')?.value || 'kw';
+
+  const qDisp   = parseFloat(row.querySelector('.col-q')?.value);
+  const hDisp   = parseFloat(row.querySelector('.col-h')?.value);
+  const etaDisp = parseFloat(row.querySelector('.col-eta')?.value);
+  const powInput = row.querySelector('.col-pow');
+  if (!powInput) return;
+
+  // Convert display values back to SI
+  const q_SI = isNaN(qDisp)   ? NaN : qDisp   / CONVERSIONS.q[unitQ];
+  const h_SI = isNaN(hDisp)   ? NaN : hDisp   / CONVERSIONS.h[unitH];
+
+  const p_kw = calcPowerKW(q_SI, h_SI, etaDisp);
+  if (p_kw !== null) {
+    // Convert kW → display unit
+    const p_display = p_kw * CONVERSIONS.pow[unitPow];
+    powInput.value = p_display.toFixed(2);
+    powInput.classList.add('auto-calc-flash');
+    setTimeout(() => powInput.classList.remove('auto-calc-flash'), 600);
+  }
+}
+
+function initPowerAutoCalc() {
+  // Listen on table body using event delegation
+  const tbody = document.querySelector('#perfTable tbody');
+  if (!tbody) return;
+  tbody.addEventListener('input', (e) => {
+    const target = e.target;
+    if (target.classList.contains('col-eta') ||
+        target.classList.contains('col-q')   ||
+        target.classList.contains('col-h')) {
+      const row = target.closest('tr');
+      if (row) autoUpdatePowerInRow(row);
+    }
+  });
+  // Also trigger when unit changes cause value rewrite (via MutationObserver on value isn't needed;
+  // the unit-select change handler will call recalcAllPowerRows)
+}
+
+function recalcAllPowerRows() {
+  document.querySelectorAll('#perfTable tbody tr').forEach(row => autoUpdatePowerInRow(row));
+}
+
+/* ── Operating Region unit selector ─────────────────────────────────────── */
+function initOpRegionUnits() {
+  const sel = document.getElementById('unit-op-q');
+  if (!sel) return;
+  sel.setAttribute('data-prev', sel.value);
+
+  // Label config: el = input element, lbl = <label> element
+  const LABELS = [
+    { el: document.querySelector('[name="q_min"]'), lbl: document.getElementById('lbl-q-min'), name: 'Q<sub>min</sub>' },
+    { el: document.querySelector('[name="q_max"]'), lbl: document.getElementById('lbl-q-max'), name: 'Q<sub>max</sub>', required: true },
+    { el: document.querySelector('[name="q_bep"]'), lbl: document.getElementById('lbl-q-bep'), name: 'Q<sub>bep</sub>' },
+  ];
+
+  function updateOpLabels(unitVal) {
+    const unitStr = getUnitLabel('q', unitVal);
+    LABELS.forEach(item => {
+      if (item.lbl) {
+        item.lbl.innerHTML = `${item.name} (${unitStr})${item.required ? ' <span class="text-danger">*</span>' : ''}`;
+      }
+    });
+  }
+
+  sel.addEventListener('change', (e) => {
+    const fromUnit = e.target.getAttribute('data-prev');
+    const toUnit   = e.target.value;
+    if (fromUnit === toUnit) return;
+
+    LABELS.forEach(item => {
+      if (!item.el) return;
+      const val = parseFloat(item.el.value);
+      if (!isNaN(val)) {
+        item.el.value = convertValue(val, fromUnit, toUnit, 'q');
+      }
+    });
+
+    updateOpLabels(toUnit);
+    e.target.setAttribute('data-prev', toUnit);
+  });
+
+  // Set initial labels
+  updateOpLabels(sel.value);
+}
+
 function initUnitSelectors() {
   document.querySelectorAll('.unit-select').forEach(select => {
     select.setAttribute('data-prev', select.value);
@@ -99,6 +202,11 @@ function initUnitSelectors() {
       
       updatePlaceholders(type, toUnit);
       e.target.setAttribute('data-prev', toUnit);
+
+      // After unit change, recalculate power with new units
+      if (type === 'q' || type === 'h' || type === 'pow') {
+        recalcAllPowerRows();
+      }
       
       const previewEl = document.getElementById('curvePreview');
       if (previewEl && previewEl.style.display !== 'none' && lastFitResults) {
@@ -107,6 +215,9 @@ function initUnitSelectors() {
       }
     });
   });
+
+  initOpRegionUnits();
+  initPowerAutoCalc();
 }
 
 /* ── Plotly minimal dark theme ─────────────────────────────────────────────── */

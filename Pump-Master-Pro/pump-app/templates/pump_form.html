@@ -68,21 +68,29 @@
     </div>
 
     <div class="card card-dark mb-3">
-      <div class="card-header card-header-dark"><i class="bi bi-sliders me-2"></i>Operating Range</div>
+      <div class="card-header card-header-dark d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-sliders me-2"></i>Operating Range</span>
+        <select class="header-unit-select" id="unit-op-q" style="margin-top:0">
+          <option value="m3h" selected>m³/h</option>
+          <option value="ls">L/s</option>
+          <option value="gpm">gpm</option>
+          <option value="lmin">L/min</option>
+        </select>
+      </div>
       <div class="card-body">
         <div class="row g-3">
           <div class="col-4">
-            <label class="form-label">Q<sub>min</sub> (m³/h)</label>
+            <label class="form-label" id="lbl-q-min">Q<sub>min</sub> (m³/h)</label>
             <input type="number" name="q_min" class="form-control form-control-dark"
                    value="{{ pump.q_min if pump else 0 }}" step="0.1">
           </div>
           <div class="col-4">
-            <label class="form-label">Q<sub>max</sub> (m³/h) *</label>
+            <label class="form-label" id="lbl-q-max">Q<sub>max</sub> (m³/h) <span class="text-danger">*</span></label>
             <input type="number" name="q_max" class="form-control form-control-dark"
                    value="{{ pump.q_max if pump else '' }}" step="0.1" required id="inp_q_max">
           </div>
           <div class="col-4">
-            <label class="form-label">Q<sub>BEP</sub> (m³/h)</label>
+            <label class="form-label" id="lbl-q-bep">Q<sub>bep</sub> (m³/h)</label>
             <input type="number" name="q_bep" class="form-control form-control-dark"
                    value="{{ pump.q_bep if pump else 0 }}" step="0.1" id="inp_q_bep">
           </div>
@@ -148,7 +156,7 @@
               <tr style="background:#21262d">
                 <th style="width:120px">
                   Flow Q<br>
-                  <select class="form-select form-control-dark py-0 px-1 border-0 bg-transparent text-muted small fw-normal unit-select" id="unit-q" style="box-shadow: none; font-size: 0.75rem;">
+                  <select class="header-unit-select unit-select" id="unit-q">
                     <option value="m3h" selected>m³/h</option>
                     <option value="ls">L/s</option>
                     <option value="gpm">gpm</option>
@@ -157,7 +165,7 @@
                 </th>
                 <th style="width:100px">
                   Head H<br>
-                  <select class="form-select form-control-dark py-0 px-1 border-0 bg-transparent text-muted small fw-normal unit-select" id="unit-h" style="box-shadow: none; font-size: 0.75rem;">
+                  <select class="header-unit-select unit-select" id="unit-h">
                     <option value="m" selected>m</option>
                     <option value="ft">ft</option>
                   </select>
@@ -165,14 +173,14 @@
                 <th style="width:85px">Effic. η<br><span class="fw-normal text-muted">(%)</span></th>
                 <th style="width:115px">
                   NPSHr<br>
-                  <select class="form-select form-control-dark py-0 px-1 border-0 bg-transparent text-muted small fw-normal unit-select" id="unit-npsh" style="box-shadow: none; font-size: 0.75rem;">
+                  <select class="header-unit-select unit-select" id="unit-npsh">
                     <option value="m" selected>m (opt.)</option>
                     <option value="ft">ft (opt.)</option>
                   </select>
                 </th>
                 <th style="width:120px">
                   Power<br>
-                  <select class="form-select form-control-dark py-0 px-1 border-0 bg-transparent text-muted small fw-normal unit-select" id="unit-pow" style="box-shadow: none; font-size: 0.75rem;">
+                  <select class="header-unit-select unit-select" id="unit-pow">
                     <option value="kw" selected>kW (opt.)</option>
                     <option value="hp">hp (opt.)</option>
                   </select>

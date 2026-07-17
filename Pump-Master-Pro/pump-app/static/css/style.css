@@ -366,3 +366,65 @@ select.form-select.form-control-dark option {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-base); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── Custom Header Unit Selectors ────────────────────────────────── */
+.header-unit-select {
+  background:
+    linear-gradient(135deg, rgba(88,166,255,0.06) 0%, rgba(0,0,0,0) 100%),
+    var(--bg-card-2)
+    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2358a6ff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e")
+    no-repeat right 0.4rem center;
+  background-size: auto, auto, 8px 10px;
+  border: 1px solid rgba(88,166,255,0.25);
+  border-radius: 20px;           /* pill shape */
+  color: #58a6ff;
+  font-size: 0.70rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 3px 18px 3px 8px;
+  margin-top: 2px;
+  width: auto;
+  display: inline-block;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, box-shadow 0.2s, background 0.2s;
+  box-shadow: 0 0 0 0 rgba(88,166,255,0);
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.header-unit-select:hover {
+  border-color: #58a6ff;
+  color: #c9d1d9;
+  box-shadow: 0 0 6px rgba(88,166,255,0.30);
+}
+
+.header-unit-select:focus {
+  outline: none;
+  border-color: #58a6ff;
+  color: #c9d1d9;
+  box-shadow: 0 0 8px rgba(88,166,255,0.40);
+}
+
+.header-unit-select option {
+  background-color: #161b22 !important;
+  color: #c9d1d9;
+}
+
+/* Operating-region card header variant – slightly larger & bolder */
+.card-header .header-unit-select {
+  font-size: 0.72rem;
+  padding: 4px 20px 4px 10px;
+  border-color: rgba(88,166,255,0.35);
+}
+
+/* ── Auto-calculated power field flash ──────────────────────────── */
+@keyframes calcFlash {
+  0%   { background-color: rgba(88,166,255,0.25); box-shadow: 0 0 8px rgba(88,166,255,0.5); }
+  100% { background-color: transparent; box-shadow: none; }
+}
+
+.auto-calc-flash {
+  animation: calcFlash 0.6s ease-out forwards;
+}
+

@@ -1,0 +1,8 @@
+{
+  "python.analysis.extraPaths": [
+    "./Pump-Master-Pro/pump-app"
+  ],
+  "python.autoComplete.extraPaths": [
+    "./Pump-Master-Pro/pump-app"
+  ]
+}

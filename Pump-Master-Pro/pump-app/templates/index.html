@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — PumpSelect Pro{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+  <h1 class="page-title"><i class="bi bi-droplet-fill text-accent me-2"></i>PumpSelect Pro</h1>
+  <p class="page-subtitle">Interactive pump selection and Warman-style curve visualisation</p>
+</div>
+
+<!-- Stats row -->
+<div class="row g-4 mb-5">
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-blue"><i class="bi bi-database-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ pump_count }}</div>
+        <div class="stat-label">Pumps in Catalogue</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-green"><i class="bi bi-graph-up"></i></div>
+      <div>
+        <div class="stat-value">4</div>
+        <div class="stat-label">Curve Types</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-orange"><i class="bi bi-layers-fill"></i></div>
+      <div>
+        <div class="stat-value">3</div>
+        <div class="stat-label">Liquid Modes</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon bg-purple"><i class="bi bi-speedometer2"></i></div>
+      <div>
+        <div class="stat-value">BEP</div>
+        <div class="stat-label">Best Efficiency Analysis</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Feature cards -->
+<div class="row g-4 mb-5">
+  <div class="col-md-6 col-xl-3">
+    <div class="feature-card">
+      <div class="feature-icon"><i class="bi bi-database-add"></i></div>
+      <h5 class="feature-title">Pump Catalogue</h5>
+      <p class="feature-desc">Enter real Q / H / η data points from a datasheet — curves are fitted automatically. Mini H-Q sparklines visible on every catalogue card.</p>
+      <a href="{{ url_for('pump_data') }}" class="btn btn-outline-primary btn-sm mt-auto">
+        <i class="bi bi-arrow-right me-1"></i>Open Catalogue
+      </a>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-xl-3">
+    <div class="feature-card">
+      <div class="feature-icon"><i class="bi bi-activity"></i></div>
+      <h5 class="feature-title">Warman Performance Map</h5>
+      <p class="feature-desc">Full impeller-diameter family curves + closed efficiency isolines + RPM speed lines. Toggle Power Lines and System Curve overlay.</p>
+      <a href="{{ url_for('pump_data') }}" class="btn btn-outline-primary btn-sm mt-auto">
+        <i class="bi bi-arrow-right me-1"></i>View Curves
+      </a>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-xl-3">
+    <div class="feature-card">
+      <div class="feature-icon"><i class="bi bi-bullseye"></i></div>
+      <h5 class="feature-title">Pump Selection</h5>
+      <p class="feature-desc">Enter duty point (flow, head, NPSH), choose liquid type — water, slurry or viscous fluid — and get ranked results.</p>
+      <a href="{{ url_for('pump_selection') }}" class="btn btn-outline-primary btn-sm mt-auto">
+        <i class="bi bi-arrow-right me-1"></i>Select a Pump
+      </a>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-xl-3">
+    <div class="feature-card">
+      <div class="feature-icon"><i class="bi bi-bar-chart-steps"></i></div>
+      <h5 class="feature-title">Pump Comparison</h5>
+      <p class="feature-desc">Side-by-side curve comparison for up to 4 pumps. Overlay H-Q, efficiency and power on shared axes.</p>
+      <a href="{{ url_for('pump_comparison') }}" class="btn btn-outline-primary btn-sm mt-auto">
+        <i class="bi bi-arrow-right me-1"></i>Compare Pumps
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Liquid modes info -->
+<div class="row g-4">
+  <div class="col-12">
+    <div class="info-panel">
+      <h5 class="info-panel-title"><i class="bi bi-info-circle me-2"></i>Liquid Derating Methods</h5>
+      <div class="row g-3 mt-1">
+        <div class="col-md-4">
+          <div class="liquid-card water">
+            <div class="liquid-icon"><i class="bi bi-droplet"></i></div>
+            <div>
+              <strong>Clean Water</strong>
+              <p class="mb-0 small text-muted">Standard pump curves, no correction applied. Basis for all derating.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="liquid-card slurry">
+            <div class="liquid-icon"><i class="bi bi-layers"></i></div>
+            <div>
+              <strong>Slurry (Warman Method)</strong>
+              <p class="mb-0 small text-muted">HR, QR, ER derating factors. Input volumetric concentration C<sub>v</sub> and particle size d<sub>50</sub>.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="liquid-card viscous">
+            <div class="liquid-icon"><i class="bi bi-droplet-half"></i></div>
+            <div>
+              <strong>Viscous Fluid (HI Method)</strong>
+              <p class="mb-0 small text-muted">Hydraulic Institute correction curves. Input viscosity in cSt. CH, CQ, CE factors applied.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

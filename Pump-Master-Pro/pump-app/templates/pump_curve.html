@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}{{ pump.name }} — Curves{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+  <div class="page-header mb-0">
+    <h1 class="page-title"><i class="bi bi-activity text-accent me-2"></i>{{ pump.name }}</h1>
+    <p class="page-subtitle">
+      {{ pump.manufacturer }} &bull; {{ pump.size }} &bull; {{ pump.speed_rpm|int }} rpm
+      &bull; Ø{{ pump.impeller_dia_mm|int }} mm max impeller
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('pump_edit', pump_id=pump.id) }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Edit
+    </a>
+    <a href="{{ url_for('pump_comparison') }}?ids={{ pump.id }}" class="btn btn-outline-info btn-sm">
+      <i class="bi bi-bar-chart-line me-1"></i>Compare
+    </a>
+    <a href="{{ url_for('pump_data') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Catalogue
+    </a>
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="card card-dark mb-3">
+  <div class="card-body py-3">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label form-label-sm">Liquid Type</label>
+        <select id="liquidSelect" class="form-select form-control-dark">
+          <option value="water">Clean Water</option>
+          <option value="viscous">Viscous Fluid</option>
+          <option value="slurry">Slurry (Warman)</option>
+        </select>
+      </div>
+      <div class="col-md-2 liquid-param viscous" style="display:none">
+        <label class="form-label form-label-sm">Viscosity (cSt)</label>
+        <input type="number" id="viscosity" class="form-control form-control-dark" value="50" min="1" step="1">
+      </div>
+      <div class="col-md-2 liquid-param slurry" style="display:none">
+        <label class="form-label form-label-sm">C<sub>v</sub></label>
+        <input type="number" id="slurryCv" class="form-control form-control-dark" value="0.20" min="0" max="0.6" step="0.01">
+      </div>
+      <div class="col-md-2 liquid-param slurry" style="display:none">
+        <label class="form-label form-label-sm">d<sub>50</sub> (mm)</label>
+        <input type="number" id="slurryD50" class="form-control form-control-dark" value="0.3" step="0.05">
+      </div>
+      <div class="col-md-2 liquid-param slurry" style="display:none">
+        <label class="form-label form-label-sm">ρ<sub>solid</sub> (kg/m³)</label>
+        <input type="number" id="rhoSolid" class="form-control form-control-dark" value="2650" step="10">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label form-label-sm">H<sub>static</sub> (m)</label>
+        <input type="number" id="staticHead" class="form-control form-control-dark" value="0" step="0.5">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label form-label-sm">Pipe K</label>
+        <input type="number" id="pipeK" class="form-control form-control-dark" value="0" step="0.0001">
+        <div class="form-text">H<sub>sys</sub> = H<sub>s</sub> + K·Q²</div>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label form-label-sm">Duty Q (m³/h)</label>
+        <input type="number" id="dutyQ" class="form-control form-control-dark" value="" step="0.1" placeholder="optional">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label form-label-sm">Duty H (m)</label>
+        <input type="number" id="dutyH" class="form-control form-control-dark" value="" step="0.1" placeholder="optional">
+      </div>
+      <div class="col-auto">
+        <button id="btnUpdate" class="btn btn-primary">
+          <i class="bi bi-arrow-clockwise me-1"></i>Update
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View mode selector -->
+<div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
+  <span class="text-muted fw-semibold small">VIEW:</span>
+  <div class="btn-group" role="group" id="viewModeGroup">
+    <input type="radio" class="btn-check" name="viewMode" id="modeWarman" value="warman" checked>
+    <label class="btn btn-outline-secondary btn-sm" for="modeWarman">
+      <i class="bi bi-layers me-1"></i>Warman Map
+    </label>
+    <input type="radio" class="btn-check" name="viewMode" id="modeStandalone" value="standalone">
+    <label class="btn btn-outline-secondary btn-sm" for="modeStandalone">
+      <i class="bi bi-grid-3x2-gap me-1"></i>Standalone Curves
+    </label>
+    <input type="radio" class="btn-check" name="viewMode" id="modeOverlay" value="overlay">
+    <label class="btn btn-outline-secondary btn-sm" for="modeOverlay">
+      <i class="bi bi-diagram-3 me-1"></i>Isolines on H-Q
+    </label>
+  </div>
+
+  <div class="ms-3 d-flex gap-3 align-items-center" id="warmanToggles">
+    <div class="form-check form-check-inline mb-0">
+      <input class="form-check-input" type="checkbox" id="chkIsolines" checked>
+      <label class="form-check-label small text-warning" for="chkIsolines">η Isolines</label>
+    </div>
+    <div class="form-check form-check-inline mb-0">
+      <input class="form-check-input" type="checkbox" id="chkPowerIso">
+      <label class="form-check-label small text-danger" for="chkPowerIso">Power Lines</label>
+    </div>
+    <div class="form-check form-check-inline mb-0">
+      <input class="form-check-input" type="checkbox" id="chkSpeedLines">
+      <label class="form-check-label small" for="chkSpeedLines" style="color:#ff9900">Speed Lines</label>
+    </div>
+    <div class="form-check form-check-inline mb-0">
+      <input class="form-check-input" type="checkbox" id="chkNpshFamily">
+      <label class="form-check-label small text-info" for="chkNpshFamily">NPSH / Diameter</label>
+    </div>
+  </div>
+
+  <div class="ms-3 d-flex gap-3 align-items-center" id="standaloneToggles" style="display:none!important">
+    <div class="form-check form-check-inline mb-0">
+      <input class="form-check-input" type="checkbox" id="chkEff" checked>
+      <label class="form-check-label small text-warning" for="chkEff">Efficiency</label>
+    </div>
+    <div class="form-check form-check-inline mb-0">
+      <input class="form-check-input" type="checkbox" id="chkPower" checked>
+      <label class="form-check-label small text-danger" for="chkPower">Power</label>
+    </div>
+    <div class="form-check form-check-inline mb-0">
+      <input class="form-check-input" type="checkbox" id="chkNpsh" checked>
+      <label class="form-check-label small text-info" for="chkNpsh">NPSHr</label>
+    </div>
+  </div>
+</div>
+
+<!-- ── WARMAN PERFORMANCE MAP ───────────────────────────────────────────────── -->
+<div id="warmanPanel">
+  <div class="row g-4">
+    <div class="col-12">
+      <div class="card card-dark">
+        <div class="card-header card-header-dark d-flex justify-content-between align-items-center">
+          <span>
+            <i class="bi bi-layers text-accent me-2"></i>
+            <strong>Warman Performance Map</strong>
+            <span class="text-muted small ms-2">— H-Q family with efficiency isolines</span>
+          </span>
+          <div id="warmanLegendDias" class="d-flex gap-2 flex-wrap"></div>
+        </div>
+        <div class="card-body p-0">
+          <div id="chartWarman" class="chart-container-tall"></div>
+        </div>
+      </div>
+    </div>
+    <!-- NPSH family panel -->
+    <div class="col-lg-6" id="npshFamilyPanel" style="display:none">
+      <div class="card card-dark">
+        <div class="card-header card-header-dark">
+          <span class="curve-label npsh"><i class="bi bi-arrow-up-right me-2"></i>NPSHr — Flow (per diameter)</span>
+        </div>
+        <div class="card-body p-0">
+          <div id="chartNpshFamily" class="chart-container"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Power family panel -->
+    <div class="col-lg-6" id="powerFamilyPanel" style="display:none">
+      <div class="card card-dark">
+        <div class="card-header card-header-dark">
+          <span class="curve-label power"><i class="bi bi-lightning-fill me-2"></i>Power — Flow (per diameter)</span>
+        </div>
+        <div class="card-body p-0">
+          <div id="chartPowerFamily" class="chart-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── STANDALONE CURVES ────────────────────────────────────────────────────── -->
+<div id="standalonePanels" style="display:none">
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card card-dark">
+        <div class="card-header card-header-dark">
+          <span class="curve-label hq"><i class="bi bi-graph-down-arrow me-2"></i>Head — Flow (H-Q)</span>
+        </div>
+        <div class="card-body p-0"><div id="chartHQ" class="chart-container"></div></div>
+      </div>
+    </div>
+    <div class="col-lg-6" id="panelEff">
+      <div class="card card-dark">
+        <div class="card-header card-header-dark">
+          <span class="curve-label eff"><i class="bi bi-speedometer2 me-2"></i>Efficiency — Flow</span>
+        </div>
+        <div class="card-body p-0"><div id="chartEff" class="chart-container"></div></div>
+      </div>
+    </div>
+    <div class="col-lg-6" id="panelPower">
+      <div class="card card-dark">
+        <div class="card-header card-header-dark">
+          <span class="curve-label power"><i class="bi bi-lightning-fill me-2"></i>Power — Flow</span>
+        </div>
+        <div class="card-body p-0"><div id="chartPower" class="chart-container"></div></div>
+      </div>
+    </div>
+    <div class="col-lg-6" id="panelNpsh">
+      <div class="card card-dark">
+        <div class="card-header card-header-dark">
+          <span class="curve-label npsh"><i class="bi bi-arrow-up-right me-2"></i>NPSHr — Flow</span>
+        </div>
+        <div class="card-body p-0"><div id="chartNpsh" class="chart-container"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── OVERLAY / ISOLINE VIEW ───────────────────────────────────────────────── -->
+<div id="overlayPanel" style="display:none">
+  <div class="card card-dark">
+    <div class="card-header card-header-dark">
+      <i class="bi bi-diagram-3 me-2 text-accent"></i>H-Q Curve with Efficiency / Power / NPSH Isolines
+    </div>
+    <div class="card-body p-0">
+      <div id="chartOverlay" class="chart-container-tall"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BEP Summary -->
+<div class="row g-4 mt-2">
+  <div class="col-12">
+    <div class="card card-dark">
+      <div class="card-header card-header-dark">
+        <i class="bi bi-table me-2"></i>Performance Summary — Impeller Family
+      </div>
+      <div class="card-body" id="perfSummary">
+        <div class="text-center text-muted py-3"><i class="bi bi-hourglass-split me-2"></i>Loading…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>const PUMP_ID = {{ pump.id }};</script>
+<script src="{{ url_for('static', filename='js/pump_curves.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% block title %}Pump Selection — PumpSelect Pro{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+  <h1 class="page-title"><i class="bi bi-bullseye text-accent me-2"></i>Pump Selection</h1>
+  <p class="page-subtitle">Enter your duty point to find matching pumps from the catalogue</p>
+</div>
+
+<div class="row g-4">
+  <!-- Selection form -->
+  <div class="col-xl-4 col-lg-5">
+    <form method="post" id="selectionForm">
+      <!-- Duty point -->
+      <div class="card card-dark mb-3">
+        <div class="card-header card-header-dark">
+          <i class="bi bi-crosshair me-2"></i>Duty Point
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label">Flow Q (m³/h) *</label>
+              <input type="number" name="q_duty" class="form-control form-control-dark"
+                     value="{{ form_data.q_duty or '' }}" step="0.1" required
+                     placeholder="e.g. 150">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Head H (m) *</label>
+              <input type="number" name="h_duty" class="form-control form-control-dark"
+                     value="{{ form_data.h_duty or '' }}" step="0.1" required
+                     placeholder="e.g. 35">
+            </div>
+            <div class="col-6">
+              <label class="form-label">NPSHa (m)</label>
+              <input type="number" name="npsh_avail" class="form-control form-control-dark"
+                     value="{{ form_data.npsh_avail or '' }}" step="0.1"
+                     placeholder="Optional">
+              <div class="form-text">Available NPSH at pump inlet</div>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Static Head H<sub>s</sub> (m)</label>
+              <input type="number" name="static_head" class="form-control form-control-dark"
+                     value="{{ form_data.static_head or '' }}" step="0.1"
+                     placeholder="0">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Liquid options -->
+      <div class="card card-dark mb-3">
+        <div class="card-header card-header-dark">
+          <i class="bi bi-droplet me-2"></i>Liquid Options
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Liquid Type</label>
+            <select name="liquid" id="liquidSel" class="form-select form-control-dark">
+              <option value="water" {{ 'selected' if form_data.get('liquid','water') == 'water' }}>Clean Water</option>
+              <option value="viscous" {{ 'selected' if form_data.get('liquid') == 'viscous' }}>Viscous Fluid</option>
+              <option value="slurry" {{ 'selected' if form_data.get('liquid') == 'slurry' }}>Slurry</option>
+            </select>
+          </div>
+
+          <!-- Water params -->
+          <div id="waterParams">
+            <div class="row g-2">
+              <div class="col-12">
+                <label class="form-label">Liquid Density ρ (kg/m³)</label>
+                <input type="number" name="rho" class="form-control form-control-dark"
+                       value="{{ form_data.rho or 1000 }}" step="1">
+              </div>
+            </div>
+          </div>
+
+          <!-- Viscous params -->
+          <div id="viscousParams" style="display:none">
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label">Density ρ (kg/m³)</label>
+                <input type="number" name="rho" class="form-control form-control-dark"
+                       value="{{ form_data.rho or 900 }}" step="1">
+              </div>
+              <div class="col-6">
+                <label class="form-label">Viscosity (cSt)</label>
+                <input type="number" name="viscosity_cSt" class="form-control form-control-dark"
+                       value="{{ form_data.viscosity_cSt or 50 }}" step="1" min="1">
+              </div>
+            </div>
+            <div class="alert alert-info-dark small mt-2 p-2">
+              HI correction factors (CH, CQ, CE) will be applied automatically.
+            </div>
+          </div>
+
+          <!-- Slurry params -->
+          <div id="slurryParams" style="display:none">
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label">C<sub>v</sub> (vol. fraction)</label>
+                <input type="number" name="slurry_cv" class="form-control form-control-dark"
+                       value="{{ form_data.slurry_cv or 0.20 }}" step="0.01" min="0" max="0.6">
+              </div>
+              <div class="col-6">
+                <label class="form-label">d<sub>50</sub> (mm)</label>
+                <input type="number" name="slurry_d50" class="form-control form-control-dark"
+                       value="{{ form_data.slurry_d50 or 0.3 }}" step="0.05">
+              </div>
+              <div class="col-6">
+                <label class="form-label">ρ<sub>solid</sub> (kg/m³)</label>
+                <input type="number" name="rho_solid" class="form-control form-control-dark"
+                       value="{{ form_data.rho_solid or 2650 }}" step="10">
+              </div>
+              <div class="col-6">
+                <label class="form-label">ρ<sub>slurry</sub> (kg/m³)</label>
+                <input type="number" id="rhoSlurryCalc" class="form-control form-control-dark"
+                       value="1330" readonly>
+              </div>
+            </div>
+            <div class="alert alert-info-dark small mt-2 p-2">
+              Warman HR, QR, ER derating factors applied per pump. Slurry density calculated automatically.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100">
+        <i class="bi bi-search me-2"></i>Find Matching Pumps
+      </button>
+    </form>
+  </div>
+
+  <!-- Results -->
+  <div class="col-xl-8 col-lg-7">
+    {% if results is not none %}
+      {% if results %}
+        <div class="d-flex align-items-center mb-3 gap-3">
+          <h5 class="mb-0">
+            <i class="bi bi-check-circle text-success me-2"></i>
+            {{ results|length }} pump{{ 's' if results|length != 1 else '' }} found
+          </h5>
+          <span class="text-muted small">
+            Duty: Q = {{ form_data.q_duty }} m³/h &bull; H = {{ form_data.h_duty }} m
+            {% if form_data.liquid != 'water' %}
+            &bull; {{ form_data.liquid|capitalize }}
+            {% endif %}
+          </span>
+        </div>
+
+        <!-- Comparison checkbox header -->
+        <div class="d-flex gap-2 mb-3 align-items-center" id="compareBar" style="display:none!important">
+          <span class="text-muted small">Select pumps to compare:</span>
+          <a id="compareBtn" href="#" class="btn btn-outline-info btn-sm disabled">
+            <i class="bi bi-bar-chart-line me-1"></i>Compare Selected
+          </a>
+        </div>
+
+        {% for r in results %}
+        <div class="result-card mb-3 {{ 'result-excellent' if r.rating >= 80 else ('result-good' if r.rating >= 65 else ('result-acceptable' if r.rating >= 50 else 'result-marginal')) }}">
+          <div class="result-header">
+            <div class="d-flex align-items-start gap-3">
+              <input type="checkbox" class="form-check-input pump-compare-cb mt-1"
+                     value="{{ r.pump_id }}" title="Add to comparison">
+              <div class="flex-grow-1">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                  <div>
+                    <h5 class="result-title mb-0">{{ r.pump_name }}</h5>
+                    <div class="text-muted small mt-1">
+                      {{ r.manufacturer }} &bull; {{ r.size }} &bull; {{ r.speed_rpm|int }} rpm
+                    </div>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="rating-badge {{ 'excellent' if r.rating >= 80 else ('good' if r.rating >= 65 else ('acceptable' if r.rating >= 50 else 'marginal')) }}">
+                      {{ r.rating_label }}
+                    </div>
+                    <div class="rating-score">{{ r.rating }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="result-body">
+            <!-- Performance at duty -->
+            <div class="row g-3 mb-3">
+              <div class="col-6 col-md-3">
+                <div class="perf-metric">
+                  <div class="perf-label">Head at Duty</div>
+                  <div class="perf-value">{{ r.op_h }} <span class="perf-unit">m</span></div>
+                  <div class="text-{{ 'warning' if r.head_surplus_pct > 15 else 'muted' }} small">
+                    +{{ r.head_surplus_pct }}% surplus
+                  </div>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="perf-metric">
+                  <div class="perf-label">Efficiency</div>
+                  <div class="perf-value {{ 'text-success' if r.op_eta >= 70 else ('text-warning' if r.op_eta >= 55 else 'text-danger') }}">
+                    {{ r.op_eta }} <span class="perf-unit">%</span>
+                  </div>
+                  <div class="text-muted small">BEP: {{ r.bep_eta }}%</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="perf-metric">
+                  <div class="perf-label">Power</div>
+                  <div class="perf-value">{{ r.op_power }} <span class="perf-unit">kW</span></div>
+                  <div class="text-muted small">BEP: {{ r.bep_power }} kW</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="perf-metric">
+                  <div class="perf-label">NPSHr</div>
+                  <div class="perf-value {{ 'text-danger' if not r.npsh_ok else '' }}">
+                    {{ r.op_npsh }} <span class="perf-unit">m</span>
+                  </div>
+                  {% if r.npsh_margin is not none %}
+                    <div class="small {{ 'text-success' if r.npsh_margin > 0 else 'text-danger' }}">
+                      Margin: {{ r.npsh_margin }} m
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- BEP proximity -->
+            <div class="mb-3">
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Operating range (% of BEP flow: {{ r.bep_q }} m³/h)</span>
+                <span class="{{ 'text-success' if r.in_preferred_range else ('text-warning' if r.in_acceptable_range else 'text-danger') }}">
+                  {{ (r.q_ratio * 100)|round|int }}% of BEP
+                </span>
+              </div>
+              <div class="bep-bar">
+                <div class="bep-zones">
+                  <div class="bep-zone marginal-lo" title="Below acceptable range (< 65% BEP)"></div>
+                  <div class="bep-zone acceptable-lo" title="Acceptable range (65–80% BEP)"></div>
+                  <div class="bep-zone preferred" title="Preferred range (80–120% BEP)"></div>
+                  <div class="bep-zone acceptable-hi" title="Acceptable range (120–135% BEP)"></div>
+                  <div class="bep-zone marginal-hi" title="Above acceptable range (> 135% BEP)"></div>
+                </div>
+                <div class="bep-marker" style="left: {{ [0, [100, (r.q_ratio * 100 / 2)|int]|min]|max }}%"></div>
+              </div>
+              <div class="d-flex justify-content-between" style="font-size:0.65rem; color:#666; margin-top:2px;">
+                <span>0%</span><span>65%</span><span>80%</span><span style="font-weight:700">100% BEP</span><span>120%</span><span>135%</span><span>200%</span>
+              </div>
+            </div>
+
+            {% if not r.npsh_ok %}
+            <div class="alert alert-danger py-2 small">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>
+              NPSH margin insufficient (NPSHa must be &ge; 1.1 × NPSHr = {{ (r.op_npsh * 1.1)|round(1) }} m)
+            </div>
+            {% endif %}
+
+            <!-- Action buttons -->
+            <div class="d-flex gap-2 flex-wrap">
+              <a href="{{ url_for('pump_curve', pump_id=r.pump_id) }}?liquid={{ form_data.get('liquid','water') }}"
+                 class="btn btn-outline-success btn-sm">
+                <i class="bi bi-activity me-1"></i>View Curves
+              </a>
+              <a href="{{ url_for('pump_edit', pump_id=r.pump_id) }}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-info-circle me-1"></i>Details
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+
+        <!-- Compare selected button -->
+        <div class="d-flex gap-3 mt-3">
+          <a id="compareLink" href="{{ url_for('pump_comparison') }}" class="btn btn-info btn-sm disabled">
+            <i class="bi bi-bar-chart-line me-1"></i>Compare Selected (<span id="compareCount">0</span>)
+          </a>
+        </div>
+
+      {% else %}
+        <div class="empty-state">
+          <i class="bi bi-search"></i>
+          <h4>No matching pumps found</h4>
+          <p>
+            No pumps in the catalogue can satisfy Q = {{ form_data.q_duty }} m³/h at H = {{ form_data.h_duty }} m.<br>
+            Try reducing the duty requirements or add more pumps to the catalogue.
+          </p>
+          <a href="{{ url_for('pump_new') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Add Pump
+          </a>
+        </div>
+      {% endif %}
+
+    {% else %}
+      <div class="empty-state">
+        <i class="bi bi-bullseye"></i>
+        <h4>Enter duty point</h4>
+        <p>Fill in the form on the left and click <strong>Find Matching Pumps</strong>.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/pump_selection.js') }}"></script>
+{% endblock %}

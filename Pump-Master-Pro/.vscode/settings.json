@@ -1,0 +1,8 @@
+{
+  "python.analysis.extraPaths": [
+    "./pump-app"
+  ],
+  "python.autoComplete.extraPaths": [
+    "./pump-app"
+  ]
+}

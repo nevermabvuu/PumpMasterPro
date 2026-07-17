@@ -1,0 +1,25 @@
+# Ignore local backup folders
+.git_backup/
+Pump-Master-Pro/.git_backup/
+
+# Ignore large zip file
+Pump-Master-Pro.zip
+
+# Ignore local env and cache
+.env
+.cache/
+.local/
+node_modules/
+dist/
+tmp/
+
+# Python compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+

@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Pump Comparison — PumpSelect Pro{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+  <h1 class="page-title"><i class="bi bi-bar-chart-line text-accent me-2"></i>Pump Comparison</h1>
+  <p class="page-subtitle">Compare up to 4 pumps side-by-side on shared axes</p>
+</div>
+
+<!-- Pump selector + controls -->
+<div class="card card-dark mb-4">
+  <div class="card-header card-header-dark">
+    <i class="bi bi-sliders me-2"></i>Comparison Settings
+  </div>
+  <div class="card-body">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label">Select Pumps (up to 4)</label>
+        <select id="pumpSelector" class="form-select form-control-dark" multiple size="5">
+          {% for p in all_pumps %}
+          <option value="{{ p.id }}" {{ 'selected' if p.id in pump_ids }}>
+            {{ p.name }} — {{ p.size }}
+          </option>
+          {% endfor %}
+        </select>
+        <div class="form-text">Hold Ctrl/Cmd to select multiple</div>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">Liquid Type</label>
+        <select id="compLiquid" class="form-select form-control-dark">
+          <option value="water" {{ 'selected' if liquid == 'water' }}>Water</option>
+          <option value="viscous" {{ 'selected' if liquid == 'viscous' }}>Viscous</option>
+          <option value="slurry" {{ 'selected' if liquid == 'slurry' }}>Slurry</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">Duty Q (m³/h)</label>
+        <input type="number" id="compQDuty" class="form-control form-control-dark"
+               value="{{ q_duty or '' }}" placeholder="Optional">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Duty H (m)</label>
+        <input type="number" id="compHDuty" class="form-control form-control-dark"
+               value="{{ h_duty or '' }}" placeholder="Optional">
+      </div>
+
+      <div class="col-md-1">
+        <button id="btnCompare" class="btn btn-primary w-100">
+          <i class="bi bi-arrow-clockwise"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart view toggles -->
+<div class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+  <span class="text-muted small me-1">SHOW:</span>
+  <div class="btn-group btn-group-sm">
+    <button class="btn btn-primary active comp-chart-btn" data-chart="hq">H-Q Curve</button>
+    <button class="btn btn-outline-secondary comp-chart-btn" data-chart="eff">Efficiency</button>
+    <button class="btn btn-outline-secondary comp-chart-btn" data-chart="power">Power</button>
+    <button class="btn btn-outline-secondary comp-chart-btn" data-chart="npsh">NPSHr</button>
+    <button class="btn btn-outline-secondary comp-chart-btn" data-chart="all">All (4-panel)</button>
+  </div>
+</div>
+
+<!-- Charts -->
+<div id="compLoading" class="text-center py-5 text-muted" style="display:none">
+  <div class="spinner-border text-primary" role="status"></div>
+  <p class="mt-2">Loading comparison data…</p>
+</div>
+
+<div id="compCharts">
+  <!-- Single chart view -->
+  <div id="singleChartPanel">
+    <div class="card card-dark">
+      <div class="card-body p-0">
+        <div id="chartComp" class="chart-container-tall"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- All 4 panel view -->
+  <div id="allChartPanel" style="display:none">
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="card card-dark">
+          <div class="card-header card-header-dark">
+            <span class="curve-label hq"><i class="bi bi-graph-down-arrow me-2"></i>Head — Flow</span>
+          </div>
+          <div class="card-body p-0">
+            <div id="chartAll_hq" class="chart-container"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card card-dark">
+          <div class="card-header card-header-dark">
+            <span class="curve-label eff"><i class="bi bi-speedometer2 me-2"></i>Efficiency — Flow</span>
+          </div>
+          <div class="card-body p-0">
+            <div id="chartAll_eff" class="chart-container"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card card-dark">
+          <div class="card-header card-header-dark">
+            <span class="curve-label power"><i class="bi bi-lightning-fill me-2"></i>Power — Flow</span>
+          </div>
+          <div class="card-body p-0">
+            <div id="chartAll_power" class="chart-container"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card card-dark">
+          <div class="card-header card-header-dark">
+            <span class="curve-label npsh"><i class="bi bi-arrow-up-right me-2"></i>NPSHr — Flow</span>
+          </div>
+          <div class="card-body p-0">
+            <div id="chartAll_npsh" class="chart-container"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Comparison table -->
+<div id="compTable" class="mt-4" style="display:none">
+  <div class="card card-dark">
+    <div class="card-header card-header-dark">
+      <i class="bi bi-table me-2"></i>BEP Comparison Table
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0" id="bepTable">
+          <thead>
+            <tr>
+              <th>Pump</th>
+              <th class="text-center">Speed (rpm)</th>
+              <th class="text-center">Imp. Dia (mm)</th>
+              <th class="text-center">Q<sub>BEP</sub> (m³/h)</th>
+              <th class="text-center">H<sub>BEP</sub> (m)</th>
+              <th class="text-center">η<sub>BEP</sub> (%)</th>
+              <th class="text-center">P<sub>BEP</sub> (kW)</th>
+            </tr>
+          </thead>
+          <tbody id="bepTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const INITIAL_IDS = {{ pump_ids | tojson }};
+  const INITIAL_Q_DUTY = {{ q_duty or 'null' }};
+  const INITIAL_H_DUTY = {{ h_duty or 'null' }};
+</script>
+<script src="{{ url_for('static', filename='js/pump_curves.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pump_comparison.js') }}"></script>
+{% endblock %}

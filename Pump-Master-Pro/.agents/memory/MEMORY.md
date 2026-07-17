@@ -1,0 +1,2 @@
+- [Flask route prefix conflict](flask-route-prefix.md) — Flask /api/* routes conflict with Node.js proxy; use /papi/ prefix for Flask internal endpoints.
+- [Efficiency isoline quadratic](efficiency-isoline-coefficients.md) — Bell-curve efficiency polynomials require Q_bep > Q_max/2; use closed-form quadratic with η(0)<0, η(Q_bep)=peak, η(Q_max)=0.

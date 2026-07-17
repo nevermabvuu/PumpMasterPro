@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if action == 'edit' else 'Add' }} Pump — PumpSelect Pro{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+  <h1 class="page-title">
+    <i class="bi bi-{{ 'pencil-square' if action == 'edit' else 'plus-circle' }} text-accent me-2"></i>
+    {{ 'Edit Pump' if action == 'edit' else 'Add New Pump' }}
+  </h1>
+  <p class="page-subtitle">{{ pump.name if pump else 'Enter pump details and performance data to generate curves automatically' }}</p>
+</div>
+
+<form method="post" id="pumpForm">
+<div class="row g-4">
+
+  <!-- ── Column 1: Pump Details + Operating Range + Impeller Family ── -->
+  <div class="col-lg-5">
+
+    <div class="card card-dark mb-3">
+      <div class="card-header card-header-dark"><i class="bi bi-info-circle me-2"></i>Pump Details</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Pump Name *</label>
+            <input type="text" name="name" class="form-control form-control-dark"
+                   value="{{ pump.name if pump else '' }}" required placeholder="e.g. Warman 6/4 D-AH">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Manufacturer</label>
+            <input type="text" name="manufacturer" class="form-control form-control-dark"
+                   value="{{ pump.manufacturer if pump else '' }}" placeholder="e.g. Weir Minerals">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Model Number</label>
+            <input type="text" name="model_number" class="form-control form-control-dark"
+                   value="{{ pump.model_number if pump else '' }}" placeholder="e.g. 6/4 D-AH">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Speed (rpm)</label>
+            <input type="number" name="speed_rpm" class="form-control form-control-dark"
+                   value="{{ pump.speed_rpm if pump else 1450 }}" step="1" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Max Impeller (mm)</label>
+            <input type="number" name="impeller_dia_mm" class="form-control form-control-dark"
+                   value="{{ pump.impeller_dia_mm if pump else 300 }}" step="1">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Pump Type</label>
+            <select name="pump_type" class="form-select form-control-dark">
+              {% for t in ['centrifugal', 'centrifugal slurry', 'axial flow', 'mixed flow', 'submersible'] %}
+              <option value="{{ t }}" {{ 'selected' if pump and pump.pump_type == t }}>{{ t|capitalize }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Application</label>
+            <input type="text" name="application" class="form-control form-control-dark"
+                   value="{{ pump.application if pump else '' }}" placeholder="e.g. Slurry / mineral processing">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Notes</label>
+            <textarea name="notes" class="form-control form-control-dark" rows="2"
+                      placeholder="Any additional notes...">{{ pump.notes if pump else '' }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card card-dark mb-3">
+      <div class="card-header card-header-dark"><i class="bi bi-sliders me-2"></i>Operating Range</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-4">
+            <label class="form-label">Q<sub>min</sub> (m³/h)</label>
+            <input type="number" name="q_min" class="form-control form-control-dark"
+                   value="{{ pump.q_min if pump else 0 }}" step="0.1">
+          </div>
+          <div class="col-4">
+            <label class="form-label">Q<sub>max</sub> (m³/h) *</label>
+            <input type="number" name="q_max" class="form-control form-control-dark"
+                   value="{{ pump.q_max if pump else '' }}" step="0.1" required id="inp_q_max">
+          </div>
+          <div class="col-4">
+            <label class="form-label">Q<sub>BEP</sub> (m³/h)</label>
+            <input type="number" name="q_bep" class="form-control form-control-dark"
+                   value="{{ pump.q_bep if pump else 0 }}" step="0.1" id="inp_q_bep">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card card-dark mb-3">
+      <div class="card-header card-header-dark"><i class="bi bi-record-circle me-2 text-accent"></i>Impeller Diameter Family</div>
+      <div class="card-body">
+        <p class="small text-muted mb-2">Comma-separated diameters (mm), largest first. Smaller diameters generated via affinity laws.</p>
+        <input type="text" name="impeller_diameters" class="form-control form-control-dark"
+               value="{{ pump.impeller_diameters if pump else '' }}"
+               placeholder="e.g. 480, 450, 420, 390, 360">
+      </div>
+    </div>
+
+    <div class="card card-dark">
+      <div class="card-header card-header-dark"><i class="bi bi-layers me-2"></i>Slurry Derating (Warman)</div>
+      <div class="card-body">
+        <p class="small text-muted mb-2">HR = Head Ratio, QR = Flow Ratio, ER = Efficiency Ratio for slurry duty.</p>
+        <div class="row g-3">
+          <div class="col-4">
+            <label class="form-label">HR</label>
+            <input type="number" name="hr" class="form-control form-control-dark"
+                   value="{{ pump.hr if pump else 1.0 }}" step="0.01" min="0" max="1">
+          </div>
+          <div class="col-4">
+            <label class="form-label">QR</label>
+            <input type="number" name="qr" class="form-control form-control-dark"
+                   value="{{ pump.qr if pump else 1.0 }}" step="0.01" min="0" max="1">
+          </div>
+          <div class="col-4">
+            <label class="form-label">ER</label>
+            <input type="number" name="er" class="form-control form-control-dark"
+                   value="{{ pump.er if pump else 1.0 }}" step="0.01" min="0" max="1">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Column 2: Performance Data Entry ── -->
+  <div class="col-lg-7">
+    <div class="card card-dark mb-3">
+      <div class="card-header card-header-dark d-flex align-items-center gap-2">
+        <i class="bi bi-table me-1"></i>Performance Data
+        <span class="badge bg-accent ms-1">Enter real data points</span>
+        <span class="ms-auto small text-muted">All values at maximum impeller diameter</span>
+      </div>
+      <div class="card-body">
+
+        <div class="alert alert-info-dark small p-2 mb-3">
+          <i class="bi bi-lightbulb me-1"></i>
+          Enter Q, H, and η (%) values from the pump datasheet or test report. At least
+          <strong>3 points each for H and η</strong> are required. Include the shutoff head (Q=0),
+          BEP, and runout point for best accuracy. Then click <strong>Fit &amp; Preview</strong>.
+        </div>
+
+        <div class="table-responsive mb-2">
+          <table class="table table-sm table-dark mb-0 align-middle" id="perfTable" style="font-size:0.85rem">
+            <thead>
+              <tr style="background:#21262d">
+                <th style="width:90px">Flow Q<br><span class="fw-normal text-muted">(m³/h)</span></th>
+                <th style="width:80px">Head H<br><span class="fw-normal text-muted">(m)</span></th>
+                <th style="width:80px">Effic. η<br><span class="fw-normal text-muted">(%)</span></th>
+                <th style="width:80px">NPSHr<br><span class="fw-normal text-muted">(m) opt.</span></th>
+                <th style="width:80px">Power<br><span class="fw-normal text-muted">(kW) opt.</span></th>
+                <th style="width:30px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Rows injected by pump_form.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex gap-2 mb-3">
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addRow('perfTable')">
+            <i class="bi bi-plus-lg me-1"></i>Add Row
+          </button>
+          <button type="button" class="btn btn-sm btn-primary ms-auto" id="fitBtn" onclick="fitAndPreview()">
+            <i class="bi bi-calculator me-1"></i>Fit &amp; Preview
+          </button>
+        </div>
+
+        <div id="fitStatus" class="mt-1 small"></div>
+
+        <!-- Preview charts (hidden until fit) -->
+        <div id="curvePreview" style="display:none">
+          <div class="row g-2 mt-1">
+            <div class="col-md-6">
+              <div id="previewHQ" style="height:200px"></div>
+            </div>
+            <div class="col-md-6">
+              <div id="previewEta" style="height:200px"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Generated Coefficients (collapsible) -->
+    <div class="card card-dark">
+      <div class="card-header card-header-dark" style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#coeffPanel">
+        <i class="bi bi-chevron-down me-1" id="coeffChevron"></i>
+        Generated Polynomial Coefficients
+        <span class="small text-muted ms-2">(auto-filled by Fit, or enter manually)</span>
+      </div>
+      <div class="collapse" id="coeffPanel">
+        <div class="card-body">
+          <div class="row g-3">
+
+            <!-- H-Q -->
+            <div class="col-lg-6">
+              <div class="p-2 rounded" style="background:#161b22;border:1px solid #30363d">
+                <div class="small text-accent mb-2 fw-semibold"><i class="bi bi-graph-down-arrow me-1"></i>H-Q  H = a₀ + a₁Q + a₂Q² + a₃Q³</div>
+                <div class="row g-2">
+                  <div class="col-6"><label class="form-label form-label-sm">a₀ (shutoff) *</label>
+                    <input type="number" name="hq_a0" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a0 if pump else 0 }}" step="any" required></div>
+                  <div class="col-6"><label class="form-label form-label-sm">a₁</label>
+                    <input type="number" name="hq_a1" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a1 if pump else 0 }}" step="any"></div>
+                  <div class="col-6"><label class="form-label form-label-sm">a₂</label>
+                    <input type="number" name="hq_a2" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a2 if pump else 0 }}" step="any"></div>
+                  <div class="col-6"><label class="form-label form-label-sm">a₃</label>
+                    <input type="number" name="hq_a3" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a3 if pump else 0 }}" step="any"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Efficiency -->
+            <div class="col-lg-6">
+              <div class="p-2 rounded" style="background:#161b22;border:1px solid #30363d">
+                <div class="small text-success mb-2 fw-semibold"><i class="bi bi-speedometer2 me-1"></i>Efficiency  η = b₀ + b₁Q + b₂Q² + b₃Q³</div>
+                <div class="row g-2">
+                  <div class="col-6"><label class="form-label form-label-sm">b₀</label>
+                    <input type="number" name="eff_b0" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b0 if pump else 0 }}" step="any"></div>
+                  <div class="col-6"><label class="form-label form-label-sm">b₁</label>
+                    <input type="number" name="eff_b1" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b1 if pump else 0 }}" step="any"></div>
+                  <div class="col-6"><label class="form-label form-label-sm">b₂</label>
+                    <input type="number" name="eff_b2" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b2 if pump else 0 }}" step="any"></div>
+                  <div class="col-6"><label class="form-label form-label-sm">b₃</label>
+                    <input type="number" name="eff_b3" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b3 if pump else 0 }}" step="any"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- NPSH -->
+            <div class="col-lg-6">
+              <div class="p-2 rounded" style="background:#161b22;border:1px solid #30363d">
+                <div class="small text-warning mb-2 fw-semibold"><i class="bi bi-arrow-up-right me-1"></i>NPSHr  = c₀ + c₁Q + c₂Q²</div>
+                <div class="row g-2">
+                  <div class="col-4"><label class="form-label form-label-sm">c₀</label>
+                    <input type="number" name="npsh_c0" class="form-control form-control-sm form-control-dark" value="{{ pump.npsh_c0 if pump else 1 }}" step="any"></div>
+                  <div class="col-4"><label class="form-label form-label-sm">c₁</label>
+                    <input type="number" name="npsh_c1" class="form-control form-control-sm form-control-dark" value="{{ pump.npsh_c1 if pump else 0 }}" step="any"></div>
+                  <div class="col-4"><label class="form-label form-label-sm">c₂</label>
+                    <input type="number" name="npsh_c2" class="form-control form-control-sm form-control-dark" value="{{ pump.npsh_c2 if pump else 0 }}" step="any"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Power -->
+            <div class="col-lg-6">
+              <div class="p-2 rounded" style="background:#161b22;border:1px solid #30363d">
+                <div class="small text-info mb-2 fw-semibold"><i class="bi bi-lightning-charge me-1"></i>Shaft Power  P = p₀ + p₁Q + p₂Q²  (kW)</div>
+                <div class="row g-2">
+                  <div class="col-4"><label class="form-label form-label-sm">p₀ (shutoff kW)</label>
+                    <input type="number" name="pow_p0" class="form-control form-control-sm form-control-dark" value="{{ pump.pow_p0 if pump else 0 }}" step="any"></div>
+                  <div class="col-4"><label class="form-label form-label-sm">p₁</label>
+                    <input type="number" name="pow_p1" class="form-control form-control-sm form-control-dark" value="{{ pump.pow_p1 if pump else 0 }}" step="any"></div>
+                  <div class="col-4"><label class="form-label form-label-sm">p₂</label>
+                    <input type="number" name="pow_p2" class="form-control form-control-sm form-control-dark" value="{{ pump.pow_p2 if pump else 0 }}" step="any"></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /col-lg-7 -->
+
+</div><!-- /row -->
+
+<div class="d-flex gap-3 mt-4">
+  <button type="submit" class="btn btn-primary px-4">
+    <i class="bi bi-check-lg me-1"></i>{{ 'Save Changes' if action == 'edit' else 'Add Pump' }}
+  </button>
+  <a href="{{ url_for('pump_data') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-x-lg me-1"></i>Cancel
+  </a>
+  {% if action == 'edit' and pump %}
+  <a href="{{ url_for('pump_curve', pump_id=pump.id) }}" class="btn btn-outline-success ms-auto">
+    <i class="bi bi-activity me-1"></i>View Curves
+  </a>
+  {% endif %}
+</div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pump_form.js') }}"></script>
+<script>
+(function () {
+  {% if pump %}
+  // Edit mode: populate table from existing polynomial coefficients
+  initTableFromCurves({{ pump.to_dict() | tojson }});
+  {% else %}
+  // New pump: blank suggestion rows
+  initBlankTable();
+  {% endif %}
+
+  // Chevron toggle for coeff panel
+  document.getElementById('coeffPanel').addEventListener('show.bs.collapse', () => {
+    document.getElementById('coeffChevron').className = 'bi bi-chevron-up me-1';
+  });
+  document.getElementById('coeffPanel').addEventListener('hide.bs.collapse', () => {
+    document.getElementById('coeffChevron').className = 'bi bi-chevron-down me-1';
+  });
+})();
+</script>
+{% endblock %}

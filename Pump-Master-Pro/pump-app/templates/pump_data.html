@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Pump Catalogue — PumpSelect Pro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div class="page-header mb-0">
+    <h1 class="page-title"><i class="bi bi-database me-2 text-accent"></i>Pump Catalogue</h1>
+    <p class="page-subtitle">{{ pumps|length }} pump{{ 's' if pumps|length != 1 else '' }} — click <i class="bi bi-activity"></i> on any card to open the full Warman performance map</p>
+  </div>
+  <a href="{{ url_for('pump_new') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Add Pump
+  </a>
+</div>
+
+{% if pumps %}
+<div class="row g-4" id="catalogueGrid">
+  {% for pump in pumps %}
+  <div class="col-sm-6 col-xl-4">
+    <div class="card card-dark h-100 pump-card" id="card-{{ pump.id }}">
+      <div class="card-body p-3">
+
+        <!-- Header row -->
+        <div class="d-flex align-items-start gap-2 mb-2">
+          <div class="flex-grow-1 min-w-0">
+            <div class="fw-semibold text-truncate" style="font-size:1rem">{{ pump.name }}</div>
+            <div class="text-muted small">{{ pump.manufacturer or '' }}{% if pump.model_number %} · {{ pump.model_number }}{% endif %}</div>
+          </div>
+          <span class="badge flex-shrink-0 {{ 'bg-warning text-dark' if 'slurry' in pump.pump_type else 'bg-info text-dark' }}">
+            {{ pump.pump_type }}
+          </span>
+        </div>
+
+        <!-- Mini H-Q sparkline -->
+        <div class="sparkline-area mb-2" style="height:100px;border-radius:6px;overflow:hidden;background:#0d1117">
+          <div id="spark-{{ pump.id }}" style="width:100%;height:100%"></div>
+        </div>
+
+        <!-- Key specs row -->
+        <div class="row g-2 text-center mb-3" style="font-size:0.78rem">
+          <div class="col-3">
+            <div class="text-muted">Q<sub>max</sub></div>
+            <div class="fw-semibold">{{ pump.q_max|round(0)|int }}</div>
+            <div class="text-muted" style="font-size:0.7rem">m³/h</div>
+          </div>
+          <div class="col-3">
+            <div class="text-muted">H<sub>shut</sub></div>
+            <div class="fw-semibold">{{ pump.hq_a0|round(0)|int }}</div>
+            <div class="text-muted" style="font-size:0.7rem">m</div>
+          </div>
+          <div class="col-3">
+            <div class="text-muted">Speed</div>
+            <div class="fw-semibold">{{ pump.speed_rpm|int }}</div>
+            <div class="text-muted" style="font-size:0.7rem">rpm</div>
+          </div>
+          <div class="col-3">
+            <div class="text-muted">Imp.</div>
+            <div class="fw-semibold">{{ pump.impeller_dia_mm|int }}</div>
+            <div class="text-muted" style="font-size:0.7rem">mm</div>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="d-flex gap-1">
+          <a href="{{ url_for('pump_curve', pump_id=pump.id) }}" class="btn btn-sm btn-success flex-grow-1" title="Warman performance map">
+            <i class="bi bi-activity me-1"></i>Curves
+          </a>
+          <a href="{{ url_for('pump_edit', pump_id=pump.id) }}" class="btn btn-sm btn-outline-primary" title="Edit pump data">
+            <i class="bi bi-pencil"></i>
+          </a>
+          <a href="{{ url_for('pump_comparison') }}?ids={{ pump.id }}" class="btn btn-sm btn-outline-info" title="Compare">
+            <i class="bi bi-bar-chart-line"></i>
+          </a>
+          <form method="post" action="{{ url_for('pump_delete', pump_id=pump.id) }}"
+                onsubmit="return confirm('Delete {{ pump.name }}?')" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+  <i class="bi bi-database-slash"></i>
+  <h4>No pumps in catalogue</h4>
+  <p>Add your first pump to get started.</p>
+  <a href="{{ url_for('pump_new') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Add Pump
+  </a>
+</div>
+{% endif %}
+{% endblock %}

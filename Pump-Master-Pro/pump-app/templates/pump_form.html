@@ -146,11 +146,37 @@
           <table class="table table-sm table-dark mb-0 align-middle" id="perfTable" style="font-size:0.85rem">
             <thead>
               <tr style="background:#21262d">
-                <th style="width:90px">Flow Q<br><span class="fw-normal text-muted">(m³/h)</span></th>
-                <th style="width:80px">Head H<br><span class="fw-normal text-muted">(m)</span></th>
-                <th style="width:80px">Effic. η<br><span class="fw-normal text-muted">(%)</span></th>
-                <th style="width:80px">NPSHr<br><span class="fw-normal text-muted">(m) opt.</span></th>
-                <th style="width:80px">Power<br><span class="fw-normal text-muted">(kW) opt.</span></th>
+                <th style="width:120px">
+                  Flow Q<br>
+                  <select class="form-select form-control-dark py-0 px-1 border-0 bg-transparent text-muted small fw-normal unit-select" id="unit-q" style="box-shadow: none; font-size: 0.75rem;">
+                    <option value="m3h" selected>m³/h</option>
+                    <option value="ls">L/s</option>
+                    <option value="gpm">gpm</option>
+                    <option value="lmin">L/min</option>
+                  </select>
+                </th>
+                <th style="width:100px">
+                  Head H<br>
+                  <select class="form-select form-control-dark py-0 px-1 border-0 bg-transparent text-muted small fw-normal unit-select" id="unit-h" style="box-shadow: none; font-size: 0.75rem;">
+                    <option value="m" selected>m</option>
+                    <option value="ft">ft</option>
+                  </select>
+                </th>
+                <th style="width:85px">Effic. η<br><span class="fw-normal text-muted">(%)</span></th>
+                <th style="width:115px">
+                  NPSHr<br>
+                  <select class="form-select form-control-dark py-0 px-1 border-0 bg-transparent text-muted small fw-normal unit-select" id="unit-npsh" style="box-shadow: none; font-size: 0.75rem;">
+                    <option value="m" selected>m (opt.)</option>
+                    <option value="ft">ft (opt.)</option>
+                  </select>
+                </th>
+                <th style="width:120px">
+                  Power<br>
+                  <select class="form-select form-control-dark py-0 px-1 border-0 bg-transparent text-muted small fw-normal unit-select" id="unit-pow" style="box-shadow: none; font-size: 0.75rem;">
+                    <option value="kw" selected>kW (opt.)</option>
+                    <option value="hp">hp (opt.)</option>
+                  </select>
+                </th>
                 <th style="width:30px"></th>
               </tr>
             </thead>
@@ -290,6 +316,8 @@
 <script src="{{ url_for('static', filename='js/pump_form.js') }}"></script>
 <script>
 (function () {
+  initUnitSelectors();
+
   {% if pump %}
   // Edit mode: populate table from existing polynomial coefficients
   initTableFromCurves({{ pump.to_dict() | tojson }});

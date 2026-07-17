@@ -97,9 +97,12 @@
 {% endblock %}
 
 {% block scripts %}
+<script id="pumps-data" type="application/json">
+  {{ pump_dicts|tojson }}
+</script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    const pumps = {{ pump_dicts|tojson }};
+    const pumps = JSON.parse(document.getElementById('pumps-data').textContent);
     pumps.forEach(pump => {
       drawSparkline(`spark-${pump.id}`, pump);
     });

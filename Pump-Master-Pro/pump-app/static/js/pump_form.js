@@ -9,6 +9,106 @@
  *   5. Standard form submit stores everything.
  */
 
+let lastFitResults = null;
+
+const CONVERSIONS = {
+  q: {
+    m3h: 1.0,
+    ls: 0.2777777777777778,   // 1 m3h = 1/3.6 L/s
+    gpm: 4.402917396,         // 1 m3h = 4.402917 gpm
+    lmin: 16.6666666667       // 1 m3h = 16.66667 L/min
+  },
+  h: {
+    m: 1.0,
+    ft: 3.280839895
+  },
+  npsh: {
+    m: 1.0,
+    ft: 3.280839895
+  },
+  pow: {
+    kw: 1.0,
+    hp: 1.34102209
+  }
+};
+
+function convertValue(val, fromUnit, toUnit, type) {
+  if (isNaN(val)) return '';
+  const factorA = CONVERSIONS[type][fromUnit];
+  const factorB = CONVERSIONS[type][toUnit];
+  const baseVal = val / factorA;
+  const newVal = baseVal * factorB;
+  return Number(newVal.toFixed(2));
+}
+
+function getUnitLabel(type, unitValue) {
+  if (type === 'q') {
+    if (unitValue === 'm3h') return 'm³/h';
+    if (unitValue === 'ls') return 'L/s';
+    if (unitValue === 'gpm') return 'gpm';
+    if (unitValue === 'lmin') return 'L/min';
+  }
+  if (type === 'h' || type === 'npsh') {
+    if (unitValue === 'm') return 'm';
+    if (unitValue === 'ft') return 'ft';
+  }
+  if (type === 'pow') {
+    if (unitValue === 'kw') return 'kW';
+    if (unitValue === 'hp') return 'hp';
+  }
+  return unitValue;
+}
+
+function updatePlaceholders(type, unit) {
+  const inputs = document.querySelectorAll(`#perfTable tbody tr .col-${type}`);
+  const label = getUnitLabel(type, unit);
+  inputs.forEach(input => {
+    if (type === 'q') {
+      input.placeholder = `Q (${label})`;
+    } else if (type === 'h') {
+      const td = input.parentElement;
+      const index = Array.from(td.parentElement.parentElement.children).indexOf(td.parentElement);
+      if (index === 0) input.placeholder = `Shutoff (${label})`;
+      else if (index === 2) input.placeholder = `BEP (${label})`;
+      else if (index === 5) input.placeholder = `Runout (${label})`;
+      else input.placeholder = `H (${label})`;
+    } else if (type === 'npsh') {
+      input.placeholder = `NPSHr (${label})`;
+    } else if (type === 'pow') {
+      input.placeholder = `${label} (opt)`;
+    }
+  });
+}
+
+function initUnitSelectors() {
+  document.querySelectorAll('.unit-select').forEach(select => {
+    select.setAttribute('data-prev', select.value);
+    select.addEventListener('change', (e) => {
+      const type = e.target.id.replace('unit-', '');
+      const fromUnit = e.target.getAttribute('data-prev');
+      const toUnit = e.target.value;
+      if (fromUnit === toUnit) return;
+      
+      const inputs = document.querySelectorAll(`#perfTable tbody tr .col-${type}`);
+      inputs.forEach(input => {
+        const val = parseFloat(input.value);
+        if (!isNaN(val)) {
+          input.value = convertValue(val, fromUnit, toUnit, type);
+        }
+      });
+      
+      updatePlaceholders(type, toUnit);
+      e.target.setAttribute('data-prev', toUnit);
+      
+      const previewEl = document.getElementById('curvePreview');
+      if (previewEl && previewEl.style.display !== 'none' && lastFitResults) {
+        const { q_h: q_h_raw, q_eta: q_eta_raw } = getTableData('perfTable', false);
+        buildPreviewCharts(lastFitResults, q_h_raw, q_eta_raw);
+      }
+    });
+  });
+}
+
 /* ── Plotly minimal dark theme ─────────────────────────────────────────────── */
 const FORM_LAYOUT = {
   paper_bgcolor: '#1a1d23',
@@ -23,12 +123,16 @@ const FORM_LAYOUT = {
 function addRow(tableId) {
   const tbody = document.querySelector(`#${tableId} tbody`);
   const row = document.createElement('tr');
+  const unitQ = document.getElementById('unit-q')?.value || 'm3h';
+  const unitH = document.getElementById('unit-h')?.value || 'm';
+  const unitNpsh = document.getElementById('unit-npsh')?.value || 'm';
+  const unitPow = document.getElementById('unit-pow')?.value || 'kw';
   row.innerHTML = `
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" placeholder="0"></td>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" placeholder=""></td>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" placeholder=""></td>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" placeholder=""></td>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" placeholder=""></td>
+    <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" placeholder="Q (${getUnitLabel('q', unitQ)})"></td>
+    <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" placeholder="H (${getUnitLabel('h', unitH)})"></td>
+    <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" placeholder="η %"></td>
+    <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" placeholder="NPSHr (${getUnitLabel('npsh', unitNpsh)})"></td>
+    <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" placeholder="${getUnitLabel('pow', unitPow)} (opt)"></td>
     <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">×</button></td>`;
   tbody.appendChild(row);
 }
@@ -40,15 +144,28 @@ function removeRow(btn) {
 }
 
 /* ── Extract table data ─────────────────────────────────────────────────────── */
-function getTableData(tableId) {
+function getTableData(tableId, toSIUnits = false) {
   const rows = document.querySelectorAll(`#${tableId} tbody tr`);
   const q_h = [], q_eta = [], q_npsh = [], q_p = [];
+  const unitQ = document.getElementById('unit-q')?.value || 'm3h';
+  const unitH = document.getElementById('unit-h')?.value || 'm';
+  const unitNpsh = document.getElementById('unit-npsh')?.value || 'm';
+  const unitPow = document.getElementById('unit-pow')?.value || 'kw';
+
   rows.forEach(row => {
-    const q    = parseFloat(row.querySelector('.col-q')?.value);
-    const h    = parseFloat(row.querySelector('.col-h')?.value);
-    const eta  = parseFloat(row.querySelector('.col-eta')?.value);
-    const npsh = parseFloat(row.querySelector('.col-npsh')?.value);
-    const pow  = parseFloat(row.querySelector('.col-pow')?.value);
+    let q    = parseFloat(row.querySelector('.col-q')?.value);
+    let h    = parseFloat(row.querySelector('.col-h')?.value);
+    let eta  = parseFloat(row.querySelector('.col-eta')?.value);
+    let npsh = parseFloat(row.querySelector('.col-npsh')?.value);
+    let pow  = parseFloat(row.querySelector('.col-pow')?.value);
+
+    if (toSIUnits) {
+      if (!isNaN(q)) q = q / CONVERSIONS.q[unitQ];
+      if (!isNaN(h)) h = h / CONVERSIONS.h[unitH];
+      if (!isNaN(npsh)) npsh = npsh / CONVERSIONS.npsh[unitNpsh];
+      if (!isNaN(pow)) pow = pow / CONVERSIONS.pow[unitPow];
+    }
+
     if (!isNaN(q) && !isNaN(h))   q_h.push([q, h]);
     if (!isNaN(q) && !isNaN(eta)) q_eta.push([q, eta]);
     if (!isNaN(q) && !isNaN(npsh)) q_npsh.push([q, npsh]);
@@ -69,7 +186,7 @@ async function fitAndPreview() {
   const statusEl = document.getElementById('fitStatus');
   const previewEl = document.getElementById('curvePreview');
 
-  const { q_h, q_eta, q_npsh, q_p } = getTableData('perfTable');
+  const { q_h, q_eta, q_npsh, q_p } = getTableData('perfTable', true);
 
   if (q_h.length < 3) {
     showStatus('error', 'Need at least 3 flow-head (Q, H) data points.');
@@ -97,6 +214,8 @@ async function fitAndPreview() {
       return;
     }
 
+    lastFitResults = d;
+
     // Populate hidden coefficient fields
     ['hq_a0','hq_a1','hq_a2','hq_a3',
      'eff_b0','eff_b1','eff_b2','eff_b3',
@@ -107,13 +226,22 @@ async function fitAndPreview() {
     if (d.q_max) setField('q_max', d.q_max);
     if (d.q_bep) setField('q_bep', d.q_bep);
 
+    const unitQ = document.getElementById('unit-q')?.value || 'm3h';
+    const unitH = document.getElementById('unit-h')?.value || 'm';
+
+    const displayHShutoff = (d.h_shutoff * CONVERSIONS.h[unitH]).toFixed(1);
+    const displayQMax = (d.q_max * CONVERSIONS.q[unitQ]).toFixed(1);
+    const displayQBep = (d.q_bep * CONVERSIONS.q[unitQ]).toFixed(1);
+
     showStatus('ok',
-      `Fitted: H₀=${d.h_shutoff} m  Q_max=${d.q_max} m³/h  Q_BEP=${d.q_bep} m³/h  η_BEP=${d.eta_bep}% ` +
+      `Fitted: H₀=${displayHShutoff} ${getUnitLabel('h', unitH)}  Q_max=${displayQMax} ${getUnitLabel('q', unitQ)}  Q_BEP=${displayQBep} ${getUnitLabel('q', unitQ)}  η_BEP=${d.eta_bep}% ` +
       ` | R² H-Q=${d.r2_hq}  R² η=${d.r2_eta}`);
 
     // Build preview charts
     previewEl.style.display = 'block';
-    buildPreviewCharts(d, q_h, q_eta);
+
+    const { q_h: q_h_raw, q_eta: q_eta_raw } = getTableData('perfTable', false);
+    buildPreviewCharts(d, q_h_raw, q_eta_raw);
 
     // Refresh coefficient display
     refreshCoeffDisplay(d);
@@ -147,23 +275,40 @@ function buildPreviewCharts(d, q_h_raw, q_eta_raw) {
   const eta = q_arr.map(q => clamp(evalP(b, q), 0, 100));
   const pow = q_arr.map(q => clamp(evalP(pp, q), 0, Infinity));
 
+  const unitQ = document.getElementById('unit-q')?.value || 'm3h';
+  const unitH = document.getElementById('unit-h')?.value || 'm';
+  const unitPow = document.getElementById('unit-pow')?.value || 'kw';
+
+  const labelQ = getUnitLabel('q', unitQ);
+  const labelH = getUnitLabel('h', unitH);
+  const labelPow = getUnitLabel('pow', unitPow);
+
+  const q_arr_selected = q_arr.map(q => q * CONVERSIONS.q[unitQ]);
+  const H_selected     = H.map(h => h * CONVERSIONS.h[unitH]);
+  const pow_selected   = pow.map(p => p * CONVERSIONS.pow[unitPow]);
+
   // H-Q chart
   Plotly.react('previewHQ', [
     { x: q_h_raw.map(r=>r[0]), y: q_h_raw.map(r=>r[1]), mode:'markers', name:'Data', marker:{color:'#f0883e',size:7} },
-    { x: q_arr, y: H, mode:'lines', name:'Fitted', line:{color:'#58a6ff',width:2} },
-  ], { ...FORM_LAYOUT, title:{text:'H-Q',font:{size:12}}, xaxis:{...FORM_LAYOUT.xaxis,title:'Q (m³/h)'}, yaxis:{...FORM_LAYOUT.yaxis,title:'Head (m)'} }, { responsive: true });
+    { x: q_arr_selected, y: H_selected, mode:'lines', name:'Fitted', line:{color:'#58a6ff',width:2} },
+  ], { 
+    ...FORM_LAYOUT, 
+    title:{text:'H-Q',font:{size:12}}, 
+    xaxis:{...FORM_LAYOUT.xaxis,title:`Q (${labelQ})`}, 
+    yaxis:{...FORM_LAYOUT.yaxis,title:`Head (${labelH})`} 
+  }, { responsive: true });
 
   // Efficiency + Power chart
   Plotly.react('previewEta', [
     { x: q_eta_raw.map(r=>r[0]), y: q_eta_raw.map(r=>r[1]), mode:'markers', name:'η Data', marker:{color:'#f0883e',size:7}, yaxis:'y' },
-    { x: q_arr, y: eta, mode:'lines', name:'η Fitted (%)', line:{color:'#3fb950',width:2}, yaxis:'y' },
-    { x: q_arr, y: pow, mode:'lines', name:'Power (kW)', line:{color:'#d29922',width:2,dash:'dot'}, yaxis:'y2' },
+    { x: q_arr_selected, y: eta, mode:'lines', name:'η Fitted (%)', line:{color:'#3fb950',width:2}, yaxis:'y' },
+    { x: q_arr_selected, y: pow_selected, mode:'lines', name:`Power (${labelPow})`, line:{color:'#d29922',width:2,dash:'dot'}, yaxis:'y2' },
   ], {
     ...FORM_LAYOUT,
     title:{text:'Efficiency & Power',font:{size:12}},
-    xaxis:{...FORM_LAYOUT.xaxis,title:'Q (m³/h)'},
+    xaxis:{...FORM_LAYOUT.xaxis,title:`Q (${labelQ})`},
     yaxis:{...FORM_LAYOUT.yaxis,title:'Efficiency (%)'},
-    yaxis2:{...FORM_LAYOUT.yaxis,title:'Power (kW)',overlaying:'y',side:'right',showgrid:false},
+    yaxis2:{...FORM_LAYOUT.yaxis,title:`Power (${labelPow})`,overlaying:'y',side:'right',showgrid:false},
     legend:{x:0.02,y:0.98,bgcolor:'rgba(0,0,0,0)'},
   }, { responsive: true });
 }
@@ -219,22 +364,32 @@ function initTableFromCurves(pumpData) {
 function initBlankTable() {
   const tbody = document.querySelector('#perfTable tbody');
   tbody.innerHTML = '';
+  const unitQ = document.getElementById('unit-q')?.value || 'm3h';
+  const unitH = document.getElementById('unit-h')?.value || 'm';
+  const unitNpsh = document.getElementById('unit-npsh')?.value || 'm';
+  const unitPow = document.getElementById('unit-pow')?.value || 'kw';
+
+  const labelQ = getUnitLabel('q', unitQ);
+  const labelH = getUnitLabel('h', unitH);
+  const labelNpsh = getUnitLabel('npsh', unitNpsh);
+  const labelPow = getUnitLabel('pow', unitPow);
+
   const suggestions = [
-    { q: 0,    hNote: 'Shutoff head', etaNote: '' },
-    { q: '',   hNote: '', etaNote: '25% load' },
-    { q: '',   hNote: 'BEP', etaNote: 'BEP (peak η)' },
-    { q: '',   hNote: '', etaNote: '' },
-    { q: '',   hNote: '', etaNote: '' },
-    { q: '',   hNote: 'Runout (H≈0)', etaNote: '' },
+    { q: 0,    hNote: `Shutoff (${labelH})`, etaNote: '' },
+    { q: '',   hNote: `H (${labelH})`, etaNote: '25% load' },
+    { q: '',   hNote: `BEP (${labelH})`, etaNote: 'BEP (peak η)' },
+    { q: '',   hNote: `H (${labelH})`, etaNote: '' },
+    { q: '',   hNote: `H (${labelH})`, etaNote: '' },
+    { q: '',   hNote: `Runout (${labelH})`, etaNote: '' },
   ];
   suggestions.forEach(s => {
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" value="${s.q}" placeholder="Q"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" placeholder="${s.hNote || 'H (m)'}"></td>
+      <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" value="${s.q}" placeholder="Q (${labelQ})"></td>
+      <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" placeholder="${s.hNote}"></td>
       <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" placeholder="${s.etaNote || 'η %'}"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" placeholder="NPSHr (m)"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" placeholder="kW (opt)"></td>
+      <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" placeholder="NPSHr (${labelNpsh})"></td>
+      <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" placeholder="${labelPow} (opt)"></td>
       <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">×</button></td>`;
     tbody.appendChild(row);
   });

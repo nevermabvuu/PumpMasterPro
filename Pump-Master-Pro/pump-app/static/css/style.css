@@ -371,19 +371,19 @@ select.form-select.form-control-dark option {
 .header-unit-select {
   background:
     linear-gradient(135deg, rgba(88,166,255,0.06) 0%, rgba(0,0,0,0) 100%),
-    var(--bg-card-2)
     url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2358a6ff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e")
-    no-repeat right 0.4rem center;
-  background-size: auto, auto, 8px 10px;
+    no-repeat right 0.35rem center var(--bg-card-2);
+  background-size: auto, 8px 5px;
   border: 1px solid rgba(88,166,255,0.25);
   border-radius: 20px;           /* pill shape */
   color: #58a6ff;
   font-size: 0.70rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  padding: 3px 18px 3px 8px;
+  padding: 2px 14px 2px 6px;
   margin-top: 2px;
   width: auto;
+  min-width: 60px;
   display: inline-block;
   cursor: pointer;
   transition: border-color 0.2s, color 0.2s, box-shadow 0.2s, background 0.2s;

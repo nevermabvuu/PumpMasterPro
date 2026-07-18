@@ -67,6 +67,19 @@ class Pump(db.Model):
     #   "pow_p0..2": float, "npsh_c0..2": float, "q_max": float}]
     extra_curves_json = db.Column(db.Text, default='')
 
+    # Original raw data points entered by the user for the main curve
+    # JSON: [[q_display, h_display, eta, npsh_display, pow_display], ...]
+    # Values stored in the display unit at the time of saving.
+    raw_table_json = db.Column(db.Text, default='')
+
+    # Input-unit preferences for the main performance-data table
+    # JSON: {"q": "ls", "h": "m", "npsh": "m", "pow": "kw", "op_q": "ls"}
+    data_units = db.Column(db.Text, default='')
+
+    # Optional label and measured diameter for the main (first) curve
+    main_curve_label  = db.Column(db.String(100), default='')
+    main_curve_dia_mm = db.Column(db.Float, nullable=True)
+
     created_at = db.Column(db.DateTime, default=_utcnow)
     updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow)
 
@@ -93,6 +106,23 @@ class Pump(db.Model):
             return json.loads(raw)
         except Exception:
             return []
+
+    def _get_data_units(self):
+        """Return the saved input-unit preferences dict, or defaults."""
+        raw = (self.data_units or '').strip()
+        defaults = {'q': 'm3h', 'h': 'm', 'npsh': 'm', 'pow': 'kw', 'op_q': 'm3h'}
+        if not raw:
+            return defaults
+        try:
+            saved = json.loads(raw)
+            return {**defaults, **saved}
+        except Exception:
+            return defaults
+
+    @property
+    def data_units_dict(self):
+        """Template-friendly alias for _get_data_units()."""
+        return self._get_data_units()
 
     def has_power_poly(self):
         """True when a stored power polynomial is available."""
@@ -121,4 +151,7 @@ class Pump(db.Model):
             'notes': self.notes,
             'diameters': self.get_diameters(),
             'extra_curves': self.get_extra_curves(),
+            'data_units': self._get_data_units(),
+            'main_curve_label': self.main_curve_label or '',
+            'main_curve_dia_mm': self.main_curve_dia_mm,
         }

@@ -67,14 +67,33 @@
       </div>
     </div>
 
+    <!-- Preview charts inside LHS Column 1 -->
+    <div id="curvePreview" style="display:none" class="mb-3">
+      <div class="card card-dark">
+        <div class="card-header card-header-dark">
+          <i class="bi bi-graph-up me-2 text-accent"></i>Curve Preview
+        </div>
+        <div class="card-body">
+          <div class="row g-2">
+            <div class="col-12">
+              <div id="previewHQ" style="height:260px"></div>
+            </div>
+            <div class="col-12">
+              <div id="previewEta" style="height:260px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="card card-dark mb-3">
       <div class="card-header card-header-dark d-flex align-items-center justify-content-between">
         <span><i class="bi bi-sliders me-2"></i>Operating Range</span>
         <select class="header-unit-select" id="unit-op-q" style="margin-top:0">
-          <option value="m3h" selected>m³/h</option>
-          <option value="ls">L/s</option>
-          <option value="gpm">gpm</option>
-          <option value="lmin">L/min</option>
+          <option value="m3h" {% if pump and pump.data_units_dict and pump.data_units_dict.op_q == 'm3h' %}selected{% elif not pump %}selected{% endif %}>m³/h</option>
+          <option value="ls" {% if pump and pump.data_units_dict and pump.data_units_dict.op_q == 'ls' %}selected{% endif %}>L/s</option>
+          <option value="gpm" {% if pump and pump.data_units_dict and pump.data_units_dict.op_q == 'gpm' %}selected{% endif %}>gpm</option>
+          <option value="lmin" {% if pump and pump.data_units_dict and pump.data_units_dict.op_q == 'lmin' %}selected{% endif %}>L/min</option>
         </select>
       </div>
       <div class="card-body">
@@ -82,17 +101,17 @@
           <div class="col-4">
             <label class="form-label" id="lbl-q-min">Q<sub>min</sub> (m³/h)</label>
             <input type="number" name="q_min" class="form-control form-control-dark"
-                   value="{{ pump.q_min if pump else 0 }}" step="0.1">
+                   value="{{ pump.q_min if pump else 0 }}" step="any">
           </div>
           <div class="col-4">
             <label class="form-label" id="lbl-q-max">Q<sub>max</sub> (m³/h) <span class="text-danger">*</span></label>
             <input type="number" name="q_max" class="form-control form-control-dark"
-                   value="{{ pump.q_max if pump else '' }}" step="0.1" required id="inp_q_max">
+                   value="{{ pump.q_max if pump else '' }}" step="any" required id="inp_q_max">
           </div>
           <div class="col-4">
             <label class="form-label" id="lbl-q-bep">Q<sub>bep</sub> (m³/h)</label>
             <input type="number" name="q_bep" class="form-control form-control-dark"
-                   value="{{ pump.q_bep if pump else 0 }}" step="0.1" id="inp_q_bep">
+                   value="{{ pump.q_bep if pump else 0 }}" step="any" id="inp_q_bep">
           </div>
         </div>
       </div>
@@ -116,17 +135,17 @@
           <div class="col-4">
             <label class="form-label">HR</label>
             <input type="number" name="hr" class="form-control form-control-dark"
-                   value="{{ pump.hr if pump else 1.0 }}" step="0.01" min="0" max="1">
+                   value="{{ pump.hr if pump else 1.0 }}" step="any" min="0" max="1">
           </div>
           <div class="col-4">
             <label class="form-label">QR</label>
             <input type="number" name="qr" class="form-control form-control-dark"
-                   value="{{ pump.qr if pump else 1.0 }}" step="0.01" min="0" max="1">
+                   value="{{ pump.qr if pump else 1.0 }}" step="any" min="0" max="1">
           </div>
           <div class="col-4">
             <label class="form-label">ER</label>
             <input type="number" name="er" class="form-control form-control-dark"
-                   value="{{ pump.er if pump else 1.0 }}" step="0.01" min="0" max="1">
+                   value="{{ pump.er if pump else 1.0 }}" step="any" min="0" max="1">
           </div>
         </div>
       </div>
@@ -136,10 +155,21 @@
   <!-- ── Column 2: Performance Data Entry ── -->
   <div class="col-lg-7">
     <div class="card card-dark mb-3">
-      <div class="card-header card-header-dark d-flex align-items-center gap-2">
+      <div class="card-header card-header-dark d-flex align-items-center gap-2 flex-wrap">
         <i class="bi bi-table me-1"></i>Performance Data
         <span class="badge bg-accent ms-1">Enter real data points</span>
-        <span class="ms-auto small text-muted">All values at maximum impeller diameter</span>
+        <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
+          <span class="text-muted small">Curve Label:</span>
+          <input type="text" name="main_curve_label" id="main_curve_label"
+                 class="form-control form-control-sm form-control-dark"
+                 value="{{ pump.main_curve_label if pump else '' }}"
+                 placeholder="e.g. Full Trim" style="max-width:130px">
+          <span class="text-muted small">Diameter (mm):</span>
+          <input type="number" name="main_curve_dia_mm" id="main_curve_dia_mm"
+                 class="form-control form-control-sm form-control-dark"
+                 value="{{ pump.main_curve_dia_mm if pump and pump.main_curve_dia_mm else '' }}"
+                 placeholder="{{ pump.impeller_dia_mm if pump else '' }}" style="max-width:90px">
+        </div>
       </div>
       <div class="card-body">
 
@@ -157,32 +187,32 @@
                 <th style="width:120px">
                   Flow Q<br>
                   <select class="header-unit-select unit-select" id="unit-q">
-                    <option value="m3h" selected>m³/h</option>
-                    <option value="ls">L/s</option>
-                    <option value="gpm">gpm</option>
-                    <option value="lmin">L/min</option>
+                    <option value="m3h" {% if pump and pump.data_units_dict and pump.data_units_dict.q == 'm3h' %}selected{% elif not pump %}selected{% endif %}>m³/h</option>
+                    <option value="ls" {% if pump and pump.data_units_dict and pump.data_units_dict.q == 'ls' %}selected{% endif %}>L/s</option>
+                    <option value="gpm" {% if pump and pump.data_units_dict and pump.data_units_dict.q == 'gpm' %}selected{% endif %}>gpm</option>
+                    <option value="lmin" {% if pump and pump.data_units_dict and pump.data_units_dict.q == 'lmin' %}selected{% endif %}>L/min</option>
                   </select>
                 </th>
                 <th style="width:100px">
                   Head H<br>
                   <select class="header-unit-select unit-select" id="unit-h">
-                    <option value="m" selected>m</option>
-                    <option value="ft">ft</option>
+                    <option value="m" {% if pump and pump.data_units_dict and pump.data_units_dict.h == 'm' %}selected{% elif not pump %}selected{% endif %}>m</option>
+                    <option value="ft" {% if pump and pump.data_units_dict and pump.data_units_dict.h == 'ft' %}selected{% endif %}>ft</option>
                   </select>
                 </th>
                 <th style="width:85px">Effic. η<br><span class="fw-normal text-muted">(%)</span></th>
                 <th style="width:115px">
                   NPSHr<br>
                   <select class="header-unit-select unit-select" id="unit-npsh">
-                    <option value="m" selected>m (opt.)</option>
-                    <option value="ft">ft (opt.)</option>
+                    <option value="m" {% if pump and pump.data_units_dict and pump.data_units_dict.npsh == 'm' %}selected{% elif not pump %}selected{% endif %}>m (opt.)</option>
+                    <option value="ft" {% if pump and pump.data_units_dict and pump.data_units_dict.npsh == 'ft' %}selected{% endif %}>ft (opt.)</option>
                   </select>
                 </th>
                 <th style="width:120px">
                   Power<br>
                   <select class="header-unit-select unit-select" id="unit-pow">
-                    <option value="kw" selected>kW (opt.)</option>
-                    <option value="hp">hp (opt.)</option>
+                    <option value="kw" {% if pump and pump.data_units_dict and pump.data_units_dict.pow == 'kw' %}selected{% elif not pump %}selected{% endif %}>kW (opt.)</option>
+                    <option value="hp" {% if pump and pump.data_units_dict and pump.data_units_dict.pow == 'hp' %}selected{% endif %}>hp (opt.)</option>
                   </select>
                 </th>
                 <th style="width:30px"></th>
@@ -204,18 +234,6 @@
         </div>
 
         <div id="fitStatus" class="mt-1 small"></div>
-
-        <!-- Preview charts (hidden until fit) -->
-        <div id="curvePreview" style="display:none">
-          <div class="row g-2 mt-1">
-            <div class="col-md-6">
-              <div id="previewHQ" style="height:200px"></div>
-            </div>
-            <div class="col-md-6">
-              <div id="previewEta" style="height:200px"></div>
-            </div>
-          </div>
-        </div>
 
       </div>
     </div>
@@ -335,8 +353,11 @@
 
 </div><!-- /row -->
 
+<!-- Preview charts moved to LHS Column 1 -->
+
+
 <div class="d-flex gap-3 mt-4">
-  <button type="submit" class="btn btn-primary px-4">
+  <button type="submit" class="btn btn-primary px-4" id="saveBtn">
     <i class="bi bi-check-lg me-1"></i>{{ 'Save Changes' if action == 'edit' else 'Add Pump' }}
   </button>
   <a href="{{ url_for('pump_data') }}" class="btn btn-outline-secondary">
@@ -349,27 +370,59 @@
   {% endif %}
 </div>
 
-<!-- Hidden field carries the serialised extra curves JSON on submit -->
+<!-- Hidden fields carry serialised extra curves JSON, raw table data, and current unit prefs on submit -->
 <input type="hidden" name="extra_curves_json" id="extra_curves_json_field" value="{{ pump.extra_curves_json if pump else '' }}">
+<input type="hidden" name="data_units" id="data_units_field" value="{{ pump.data_units if pump else '' }}">
+<input type="hidden" name="raw_table_json" id="raw_table_json_field" value="{{ pump.raw_table_json if pump else '' }}">
 
 </form>
 {% endblock %}
 
 {% block scripts %}
+<div id="pump-init-data"
+     data-is-edit="{{ 'true' if pump else 'false' }}"
+     {% if pump %}
+     data-raw-json='{{ (pump.raw_table_json if pump.raw_table_json else "[]") | safe }}'
+     data-to-json='{{ pump.to_dict() | tojson }}'
+     data-extra-curves='{{ (pump.extra_curves_json if pump.extra_curves_json else "[]") | safe }}'
+     {% endif %}>
+</div>
 <script src="{{ url_for('static', filename='js/pump_form.js') }}"></script>
 <script>
 (function () {
   initUnitSelectors();
 
-  {% if pump %}
-  // Edit mode: populate table from existing polynomial coefficients
-  initTableFromCurves({{ pump.to_dict() | tojson }});
-  initExtraCurves({{ pump.extra_curves_json if pump.extra_curves_json else '[]' }});
-  {% else %}
-  // New pump: blank suggestion rows
-  initBlankTable();
-  initExtraCurves([]);
-  {% endif %}
+  // Wire form submit to serialise raw table + units before POST
+  document.getElementById('pumpForm').addEventListener('submit', function() {
+    serializeRawTable();
+    serializeDataUnits();
+  });
+
+  const initEl = document.getElementById('pump-init-data');
+  const isEdit = initEl.dataset.isEdit === 'true';
+
+  if (isEdit) {
+    // Edit mode: restore table from raw saved data (prevents polynomial drift)
+    // Fall back to polynomial reconstruction only if no raw data saved yet
+    const rawJson = initEl.dataset.rawJson;
+    const restoredFromRaw = rawJson && rawJson !== '[]' && rawJson !== '""' ? restoreRawTable(rawJson) : false;
+    if (!restoredFromRaw) {
+      initTableFromCurves(JSON.parse(initEl.dataset.toJson));
+    }
+    initExtraCurves(JSON.parse(initEl.dataset.extraCurves));
+    // Show preview with existing fit on load
+    (function() {
+      const pumpData = JSON.parse(initEl.dataset.toJson);
+      lastFitResults = pumpData;
+      document.getElementById('curvePreview').style.display = 'block';
+      const { q_h, q_eta } = getTableData('perfTable', false);
+      buildPreviewCharts(pumpData, q_h, q_eta);
+    })();
+  } else {
+    // New pump: blank suggestion rows
+    initBlankTable();
+    initExtraCurves([]);
+  }
 
   // Chevron toggle for coeff panel
   document.getElementById('coeffPanel').addEventListener('show.bs.collapse', () => {

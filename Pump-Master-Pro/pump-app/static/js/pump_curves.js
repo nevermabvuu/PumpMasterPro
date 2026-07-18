@@ -360,21 +360,74 @@ function buildOverlayChart(data, showEff, showPower, showNpsh) {
 /* ── Performance summary table ───────────────────────────────────────────── */
 function renderPerfSummary(warmanData, containerId) {
   const family = warmanData.family || [];
-  if (!family.length) { document.getElementById(containerId).innerHTML = '<p class="text-muted">No data.</p>'; return; }
+  const baseDia = warmanData.pump?.impeller_dia_mm || 1.0;
+  
+  let htmlRows = '';
 
-  const rows = family.map((d, i) => {
+  // 1. Auto-generated family curves
+  family.forEach((d, i) => {
     const b = d.bep || {};
     const col = DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)];
-    return `<tr>
+    let rowLabel;
+    if (d.is_max) {
+      // Use the user-specified main curve label/diameter if available
+      const mainLabel = (typeof PUMP_MAIN_LABEL !== 'undefined' && PUMP_MAIN_LABEL)
+        ? PUMP_MAIN_LABEL
+        : '';
+      const mainDia   = (typeof PUMP_MAIN_DIA !== 'undefined' && PUMP_MAIN_DIA)
+        ? PUMP_MAIN_DIA
+        : d.dia;
+      const diaStr = `Ø${mainDia} mm`;
+      rowLabel = mainLabel
+        ? `<strong>${diaStr}</strong> <span class="text-muted small">(${mainLabel})</span>`
+        : `<strong>${diaStr}</strong>`;
+    } else {
+      rowLabel = `<strong>Ø${d.dia} mm</strong>`;
+    }
+
+    htmlRows += `<tr>
       <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${col};margin-right:6px;"></span>
-        <strong>Ø${d.dia} mm</strong>${d.is_max ? ' <span class="badge bg-secondary ms-1" style="font-size:0.65rem">BASE</span>' : ''}</td>
+        ${rowLabel}${d.is_max ? ' <span class="badge bg-secondary ms-1" style="font-size:0.65rem">BASE</span>' : ''}</td>
       <td class="text-center">${(d.ratio * 100).toFixed(1)}%</td>
       <td class="text-center fw-semibold">${b.q ?? '—'}</td>
       <td class="text-center">${b.h ?? '—'}</td>
       <td class="text-center text-warning fw-semibold">${b.eta ?? '—'}%</td>
       <td class="text-center">${b.power ?? '—'}</td>
     </tr>`;
-  }).join('');
+  });
+
+  // 2. Manually entered custom / additional curves
+  const fittedCustom = customCurves.filter(c => c.fitted);
+  fittedCustom.forEach(c => {
+    let bepQ = '—', bepH = '—', bepEta = '—', bepP = '—';
+    if (c.eta && c.eta.length) {
+      const maxEta = Math.max(...c.eta);
+      const idx = c.eta.indexOf(maxEta);
+      bepQ   = c.q[idx]?.toFixed(1)     ?? '—';
+      bepH   = c.h[idx]?.toFixed(2)     ?? '—';
+      bepEta = c.eta[idx]?.toFixed(1)   ?? '—';
+      bepP   = c.power?.[idx]?.toFixed(2) ?? '—';
+    }
+
+    const dia = c.diameter || null;
+    const ratioStr = dia ? `${((dia / baseDia) * 100).toFixed(1)}%` : '—';
+    const labelStr = dia ? `<strong>Ø${dia} mm</strong> (Manual)` : `<strong>${c.label}</strong>`;
+
+    htmlRows += `<tr>
+      <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c.color};margin-right:6px;"></span>
+        ${labelStr}</td>
+      <td class="text-center">${ratioStr}</td>
+      <td class="text-center fw-semibold">${bepQ}</td>
+      <td class="text-center">${bepH}</td>
+      <td class="text-center text-warning fw-semibold">${bepEta}%</td>
+      <td class="text-center">${bepP}</td>
+    </tr>`;
+  });
+
+  if (!family.length && !fittedCustom.length) {
+    document.getElementById(containerId).innerHTML = '<p class="text-muted">No data.</p>';
+    return;
+  }
 
   document.getElementById(containerId).innerHTML = `
     <div class="table-responsive">
@@ -387,7 +440,7 @@ function renderPerfSummary(warmanData, containerId) {
           <th class="text-center">η<sub>BEP</sub></th>
           <th class="text-center">P<sub>BEP</sub> (kW)</th>
         </tr></thead>
-        <tbody>${rows}</tbody>
+        <tbody>${htmlRows}</tbody>
       </table>
     </div>`;
 }
@@ -442,12 +495,12 @@ function buildCustomTraces(curve) {
   const { label, color, q, h, eta } = curve;
   const traces = [];
 
-  // H-Q line
+  // H-Q line (drawn solid to match the impeller family)
   traces.push({
     type: 'scatter', mode: 'lines',
     name: label || 'Custom',
     x: q, y: h,
-    line: { color, width: 2, dash: 'dashdot' },
+    line: { color, width: 2.2 },
     legendgroup: `custom_${curve.id}`,
     hovertemplate: `${label || 'Custom'}<br>Q=%{x:.1f}<br>H=%{y:.2f} m<extra></extra>`,
   });
@@ -805,57 +858,7 @@ if (typeof PUMP_ID !== 'undefined') {
 
   /* ── Custom curve summary table below the standard perfSummary ──────────── */
   function renderCustomSummary() {
-    const fitted = customCurves.filter(c => c.fitted);
-    let el = document.getElementById('customPerfSummary');
-    if (!fitted.length) {
-      if (el) el.style.display = 'none';
-      return;
-    }
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'customPerfSummary';
-      el.className = 'card card-dark mt-3';
-      el.innerHTML = `
-        <div class="card-header card-header-dark">
-          <i class="bi bi-pencil-square text-accent me-2"></i>Custom Curves Summary
-        </div>
-        <div class="card-body" id="customPerfSummaryBody"></div>`;
-      const perfCard = document.getElementById('perfSummary')?.closest('.card');
-      if (perfCard) perfCard.after(el);
-    }
-    el.style.display = '';
-    const rows = fitted.map(c => {
-      let bepQ = '—', bepH = '—', bepEta = '—', bepP = '—';
-      if (c.eta && c.eta.length) {
-        const maxEta = Math.max(...c.eta);
-        const idx = c.eta.indexOf(maxEta);
-        bepQ   = c.q[idx]?.toFixed(1)     ?? '—';
-        bepH   = c.h[idx]?.toFixed(2)     ?? '—';
-        bepEta = c.eta[idx]?.toFixed(1)   ?? '—';
-        bepP   = c.power?.[idx]?.toFixed(2) ?? '—';
-      }
-      return `<tr>
-        <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c.color};margin-right:6px"></span>
-          <strong>${c.label}</strong></td>
-        <td class="text-center fw-semibold">${bepQ}</td>
-        <td class="text-center">${bepH}</td>
-        <td class="text-center text-warning fw-semibold">${bepEta}%</td>
-        <td class="text-center">${bepP}</td>
-      </tr>`;
-    }).join('');
-    document.getElementById('customPerfSummaryBody').innerHTML = `
-      <div class="table-responsive">
-        <table class="table table-dark table-hover align-middle mb-0" style="font-size:0.88rem">
-          <thead><tr>
-            <th>Curve</th>
-            <th class="text-center">Q<sub>BEP</sub> (m³/h)</th>
-            <th class="text-center">H<sub>BEP</sub> (m)</th>
-            <th class="text-center">η<sub>BEP</sub></th>
-            <th class="text-center">P<sub>BEP</sub> (kW)</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
+    // Disabled - custom/additional curves are now grouped in the main perfSummary table
   }
 
   /* ── Fetch both endpoints in parallel ──── */

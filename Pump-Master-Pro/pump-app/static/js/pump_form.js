@@ -177,6 +177,7 @@ function initOpRegionUnits() {
 
     updateOpLabels(toUnit);
     e.target.setAttribute('data-prev', toUnit);
+    serializeDataUnits();
   });
 
   // Set initial labels
@@ -213,11 +214,27 @@ function initUnitSelectors() {
         const { q_h: q_h_raw, q_eta: q_eta_raw } = getTableData('perfTable', false);
         buildPreviewCharts(lastFitResults, q_h_raw, q_eta_raw);
       }
+
+      // Persist unit change immediately
+      serializeDataUnits();
     });
   });
 
   initOpRegionUnits();
   initPowerAutoCalc();
+}
+
+/* ── Serialize current unit preferences to the hidden form field ────────── */
+function serializeDataUnits() {
+  const units = {
+    q:    document.getElementById('unit-q')?.value    || 'm3h',
+    h:    document.getElementById('unit-h')?.value    || 'm',
+    npsh: document.getElementById('unit-npsh')?.value || 'm',
+    pow:  document.getElementById('unit-pow')?.value  || 'kw',
+    op_q: document.getElementById('unit-op-q')?.value || 'm3h',
+  };
+  const field = document.getElementById('data_units_field');
+  if (field) field.value = JSON.stringify(units);
 }
 
 /* ── Plotly minimal dark theme ─────────────────────────────────────────────── */
@@ -229,6 +246,51 @@ const FORM_LAYOUT = {
   xaxis: { gridcolor: '#30363d', zerolinecolor: '#30363d', title: { font: { size: 11 } } },
   yaxis: { gridcolor: '#30363d', zerolinecolor: '#30363d', title: { font: { size: 11 } } },
 };
+
+/* ── Raw table helpers ─────────────────────────────────────────────────────── */
+
+function serializeRawTable() {
+  const rows = document.querySelectorAll('#perfTable tbody tr');
+  const data = [];
+  rows.forEach(row => {
+    const q    = row.querySelector('.col-q')?.value    ?? '';
+    const h    = row.querySelector('.col-h')?.value    ?? '';
+    const eta  = row.querySelector('.col-eta')?.value  ?? '';
+    const npsh = row.querySelector('.col-npsh')?.value ?? '';
+    const pow  = row.querySelector('.col-pow')?.value  ?? '';
+    data.push([q, h, eta, npsh, pow]);
+  });
+  const field = document.getElementById('raw_table_json_field');
+  if (field) field.value = JSON.stringify(data);
+}
+
+function restoreRawTable(rawJson) {
+  let data;
+  if (Array.isArray(rawJson)) {
+    data = rawJson;
+  } else if (typeof rawJson === 'object' && rawJson !== null) {
+    data = rawJson;
+  } else {
+    try { data = JSON.parse(rawJson); } catch(e) { return false; }
+  }
+  if (!Array.isArray(data) || !data.length) return false;
+
+  const tbody = document.querySelector('#perfTable tbody');
+  tbody.innerHTML = '';
+  data.forEach(row => {
+    const [q, h, eta, npsh, pow] = row;
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" value="' + q + '"></td>' +
+      '<td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" value="' + h + '"></td>' +
+      '<td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" value="' + eta + '"></td>' +
+      '<td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" value="' + npsh + '"></td>' +
+      '<td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" value="' + pow + '"></td>' +
+      '<td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">&times;</button></td>';
+    tbody.appendChild(tr);
+  });
+  return true;
+}
 
 /* ── Row management ─────────────────────────────────────────────────────────── */
 function addRow(tableId) {
@@ -333,9 +395,11 @@ async function fitAndPreview() {
      'npsh_c0','npsh_c1','npsh_c2',
      'pow_p0','pow_p1','pow_p2'].forEach(k => setField(k, d[k] ?? 0));
 
-    // Populate derived operating range
-    if (d.q_max) setField('q_max', d.q_max);
-    if (d.q_bep) setField('q_bep', d.q_bep);
+    // Populate derived operating range — convert SI to the op-range display unit
+    const opUnit = document.getElementById('unit-op-q')?.value || 'm3h';
+    const opFactor = CONVERSIONS.q[opUnit];
+    if (d.q_max != null) setField('q_max', (d.q_max * opFactor).toFixed(2));
+    if (d.q_bep != null) setField('q_bep', (d.q_bep * opFactor).toFixed(2));
 
     const unitQ = document.getElementById('unit-q')?.value || 'm3h';
     const unitH = document.getElementById('unit-h')?.value || 'm';
@@ -357,6 +421,9 @@ async function fitAndPreview() {
     // Refresh coefficient display
     refreshCoeffDisplay(d);
 
+    // Snapshot the raw table values so they survive a page reload in edit mode
+    serializeRawTable();
+
   } catch (e) {
     showStatus('error', 'Network error: ' + e.message);
   } finally {
@@ -372,20 +439,6 @@ function showStatus(type, msg) {
 }
 
 function buildPreviewCharts(d, q_h_raw, q_eta_raw) {
-  const q_max = d.q_max;
-  const q_arr = Array.from({ length: 80 }, (_, i) => (i / 79) * q_max);
-
-  const a = [d.hq_a0, d.hq_a1, d.hq_a2, d.hq_a3];
-  const b = [d.eff_b0, d.eff_b1, d.eff_b2, d.eff_b3];
-  const pp = [d.pow_p0, d.pow_p1, d.pow_p2];
-
-  const evalP = (coeffs, q) => coeffs.reduce((s, c, i) => s + c * Math.pow(q, i), 0);
-  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-
-  const H   = q_arr.map(q => clamp(evalP(a, q), 0, Infinity));
-  const eta = q_arr.map(q => clamp(evalP(b, q), 0, 100));
-  const pow = q_arr.map(q => clamp(evalP(pp, q), 0, Infinity));
-
   const unitQ = document.getElementById('unit-q')?.value || 'm3h';
   const unitH = document.getElementById('unit-h')?.value || 'm';
   const unitPow = document.getElementById('unit-pow')?.value || 'kw';
@@ -394,15 +447,91 @@ function buildPreviewCharts(d, q_h_raw, q_eta_raw) {
   const labelH = getUnitLabel('h', unitH);
   const labelPow = getUnitLabel('pow', unitPow);
 
-  const q_arr_selected = q_arr.map(q => q * CONVERSIONS.q[unitQ]);
-  const H_selected     = H.map(h => h * CONVERSIONS.h[unitH]);
-  const pow_selected   = pow.map(p => p * CONVERSIONS.pow[unitPow]);
+  const hqTraces = [];
+  const etaTraces = [];
+
+  const evalP = (coeffs, q) => coeffs.reduce((s, c, i) => s + c * Math.pow(q, i), 0);
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  // 1. Add main curve traces if main curve fit 'd' exists
+  if (d) {
+    const q_max = d.q_max || 100;
+    const q_arr = Array.from({ length: 80 }, (_, i) => (i / 79) * q_max);
+
+    const a = [d.hq_a0, d.hq_a1, d.hq_a2, d.hq_a3];
+    const b = [d.eff_b0, d.eff_b1, d.eff_b2, d.eff_b3];
+    const pp = [d.pow_p0, d.pow_p1, d.pow_p2];
+
+    const H   = q_arr.map(q => clamp(evalP(a, q), 0, Infinity));
+    const eta = q_arr.map(q => clamp(evalP(b, q), 0, 100));
+    const pow = q_arr.map(q => clamp(evalP(pp, q), 0, Infinity));
+
+    const q_arr_selected = q_arr.map(q => q * CONVERSIONS.q[unitQ]);
+    const H_selected     = H.map(h => h * CONVERSIONS.h[unitH]);
+    const pow_selected   = pow.map(p => p * CONVERSIONS.pow[unitPow]);
+
+    if (q_h_raw && q_h_raw.length) {
+      hqTraces.push({ x: q_h_raw.map(r=>r[0]), y: q_h_raw.map(r=>r[1]), mode:'markers', name:'Main Data', marker:{color:'#f0883e',size:7} });
+    }
+    hqTraces.push({ x: q_arr_selected, y: H_selected, mode:'lines', name:'Main Fitted', line:{color:'#58a6ff',width:2.2} });
+
+    if (q_eta_raw && q_eta_raw.length) {
+      etaTraces.push({ x: q_eta_raw.map(r=>r[0]), y: q_eta_raw.map(r=>r[1]), mode:'markers', name:'Main η Data', marker:{color:'#f0883e',size:7}, yaxis:'y' });
+    }
+    etaTraces.push({ x: q_arr_selected, y: eta, mode:'lines', name:'Main η Fitted (%)', line:{color:'#3fb950',width:2.2}, yaxis:'y' });
+    etaTraces.push({ x: q_arr_selected, y: pow_selected, mode:'lines', name:`Main Power (${labelPow})`, line:{color:'#d29922',width:2,dash:'dot'}, yaxis:'y2' });
+  }
+
+  // 2. Add extra curves traces if fitted
+  extraCurves.forEach(ec => {
+    if (!ec.fitted || !ec.coeffs) return;
+    const e_d = ec.coeffs;
+    const e_q_max = e_d.q_max || 100;
+    const e_q_arr = Array.from({ length: 60 }, (_, i) => (i / 59) * e_q_max);
+    
+    const e_a = [e_d.hq_a0, e_d.hq_a1, e_d.hq_a2, e_d.hq_a3];
+    const e_b = [e_d.eff_b0, e_d.eff_b1, e_d.eff_b2, e_d.eff_b3];
+    const e_pp = [e_d.pow_p0, e_d.pow_p1, e_d.pow_p2];
+
+    const e_H = e_q_arr.map(q => clamp(evalP(e_a, q), 0, Infinity));
+    const e_eta = e_q_arr.map(q => clamp(evalP(e_b, q), 0, 100));
+    const e_pow = e_q_arr.map(q => clamp(evalP(e_pp, q), 0, Infinity));
+
+    const e_q_selected = e_q_arr.map(q => q * CONVERSIONS.q[unitQ]);
+    const e_H_selected = e_H.map(h => h * CONVERSIONS.h[unitH]);
+    const e_pow_selected = e_pow.map(p => p * CONVERSIONS.pow[unitPow]);
+
+    const labelStr = ec.diameter ? `${ec.label} (Ø${ec.diameter} mm)` : ec.label;
+
+    hqTraces.push({
+      x: e_q_selected,
+      y: e_H_selected,
+      mode: 'lines',
+      name: `${labelStr} Fitted`,
+      line: { color: ec.color, width: 2 }
+    });
+
+    etaTraces.push({
+      x: e_q_selected,
+      y: e_eta,
+      mode: 'lines',
+      name: `${labelStr} η Fitted (%)`,
+      line: { color: ec.color, width: 2 },
+      yaxis: 'y'
+    });
+
+    etaTraces.push({
+      x: e_q_selected,
+      y: e_pow_selected,
+      mode: 'lines',
+      name: `${labelStr} Power (${labelPow})`,
+      line: { color: ec.color, width: 1.5, dash: 'dot' },
+      yaxis: 'y2'
+    });
+  });
 
   // H-Q chart
-  Plotly.react('previewHQ', [
-    { x: q_h_raw.map(r=>r[0]), y: q_h_raw.map(r=>r[1]), mode:'markers', name:'Data', marker:{color:'#f0883e',size:7} },
-    { x: q_arr_selected, y: H_selected, mode:'lines', name:'Fitted', line:{color:'#58a6ff',width:2} },
-  ], { 
+  Plotly.react('previewHQ', hqTraces, { 
     ...FORM_LAYOUT, 
     title:{text:'H-Q',font:{size:12}}, 
     xaxis:{...FORM_LAYOUT.xaxis,title:`Q (${labelQ})`}, 
@@ -410,11 +539,7 @@ function buildPreviewCharts(d, q_h_raw, q_eta_raw) {
   }, { responsive: true });
 
   // Efficiency + Power chart
-  Plotly.react('previewEta', [
-    { x: q_eta_raw.map(r=>r[0]), y: q_eta_raw.map(r=>r[1]), mode:'markers', name:'η Data', marker:{color:'#f0883e',size:7}, yaxis:'y' },
-    { x: q_arr_selected, y: eta, mode:'lines', name:'η Fitted (%)', line:{color:'#3fb950',width:2}, yaxis:'y' },
-    { x: q_arr_selected, y: pow_selected, mode:'lines', name:`Power (${labelPow})`, line:{color:'#d29922',width:2,dash:'dot'}, yaxis:'y2' },
-  ], {
+  Plotly.react('previewEta', etaTraces, {
     ...FORM_LAYOUT,
     title:{text:'Efficiency & Power',font:{size:12}},
     xaxis:{...FORM_LAYOUT.xaxis,title:`Q (${labelQ})`},
@@ -441,7 +566,7 @@ function initTableFromCurves(pumpData) {
   const qMax = pumpData.q_max || 100;
   const qBep = pumpData.q_bep || qMax * 0.55;
 
-  // Evaluate polynomials at 6 representative flow points
+  // Evaluate polynomials at 6 representative flow points (SI units)
   const a  = [pumpData.hq_a0, pumpData.hq_a1, pumpData.hq_a2, pumpData.hq_a3];
   const b  = [pumpData.eff_b0, pumpData.eff_b1, pumpData.eff_b2, pumpData.eff_b3];
   const c  = [pumpData.npsh_c0, pumpData.npsh_c1, pumpData.npsh_c2];
@@ -454,21 +579,43 @@ function initTableFromCurves(pumpData) {
   const tbody = document.querySelector('#perfTable tbody');
   tbody.innerHTML = '';
 
+  // Read current display units (already pre-selected by server-side template)
+  const unitQ    = document.getElementById('unit-q')?.value    || 'm3h';
+  const unitH    = document.getElementById('unit-h')?.value    || 'm';
+  const unitNpsh = document.getElementById('unit-npsh')?.value || 'm';
+  const unitPow  = document.getElementById('unit-pow')?.value  || 'kw';
+
+  const fQ    = CONVERSIONS.q[unitQ];
+  const fH    = CONVERSIONS.h[unitH];
+  const fNpsh = CONVERSIONS.npsh[unitNpsh];
+  const fPow  = CONVERSIONS.pow[unitPow];
+
   flowPts.forEach(q => {
     const H    = Math.max(0, evalP(a, q));
     const eta  = clamp(evalP(b, q), 0, 100);
     const npsh = Math.max(0, evalP(c, q));
     const pow  = Math.max(0, evalP(pp, q));
     const row  = document.createElement('tr');
+    // Display values are converted from SI to the selected unit
     row.innerHTML = `
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" value="${q}"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" value="${H > 0 ? H.toFixed(2) : ''}"></td>
+      <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" value="${(q * fQ).toFixed(3)}"></td>
+      <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" value="${H > 0 ? (H * fH).toFixed(3) : ''}"></td>
       <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" value="${eta > 0 ? eta.toFixed(1) : ''}"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" value="${npsh > 0 ? npsh.toFixed(2) : ''}"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" value="${pow > 0 ? pow.toFixed(2) : ''}"></td>
+      <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" value="${npsh > 0 ? (npsh * fNpsh).toFixed(3) : ''}"></td>
+      <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" value="${pow > 0 ? (pow * fPow).toFixed(3) : ''}"></td>
       <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">×</button></td>`;
     tbody.appendChild(row);
   });
+
+  // Populate op-range inputs with values already stored in selected op-range unit
+  const unitOpQ = document.getElementById('unit-op-q')?.value || 'm3h';
+  const fOpQ = CONVERSIONS.q[unitOpQ];
+  const opQMinEl = document.querySelector('[name="q_min"]');
+  const opQMaxEl = document.querySelector('[name="q_max"]');
+  const opQBepEl = document.querySelector('[name="q_bep"]');
+  if (opQMinEl && pumpData.q_min != null) opQMinEl.value = (pumpData.q_min * fOpQ).toFixed(2);
+  if (opQMaxEl && pumpData.q_max != null) opQMaxEl.value = (pumpData.q_max * fOpQ).toFixed(2);
+  if (opQBepEl && pumpData.q_bep != null) opQBepEl.value = (pumpData.q_bep * fOpQ).toFixed(2);
 }
 
 /* ── Init blank table for new pump ─────────────────────────────────────────── */
@@ -524,7 +671,41 @@ let extraCurves = [];   // [{id, label, color, fitted, coeffs}]
 function serializeExtraCurves() {
   const payload = extraCurves
     .filter(c => c.fitted && c.coeffs)
-    .map(c => ({ label: c.label, color: c.color, ...c.coeffs }));
+    .map(c => {
+      const entry = document.getElementById(`extra-entry-${c.id}`);
+      
+      const diaInput = entry?.querySelector('.extra-dia-input');
+      const diameter = diaInput && diaInput.value.trim() !== '' ? parseFloat(diaInput.value) : '';
+
+      const unitQ = entry?.querySelector(`.unit-select-q`)?.value || 'm3h';
+      const unitH = entry?.querySelector(`.unit-select-h`)?.value || 'm';
+      const unitNpsh = entry?.querySelector(`.unit-select-npsh`)?.value || 'm';
+      const unitPow = entry?.querySelector(`.unit-select-pow`)?.value || 'kw';
+
+      // Gather current raw table values
+      const tableRows = document.querySelectorAll(`#extraTable-${c.id} tbody tr`);
+      const raw_table = [];
+      tableRows.forEach(tr => {
+        const q    = tr.querySelector('.col-q')?.value    ?? '';
+        const h    = tr.querySelector('.col-h')?.value    ?? '';
+        const eta  = tr.querySelector('.col-eta')?.value  ?? '';
+        const npsh = tr.querySelector('.col-npsh')?.value ?? '';
+        const pow  = tr.querySelector('.col-pow')?.value  ?? '';
+        raw_table.push([q, h, eta, npsh, pow]);
+      });
+
+      return {
+        label: c.label,
+        color: c.color,
+        diameter: diameter,
+        unit_q: unitQ,
+        unit_h: unitH,
+        unit_npsh: unitNpsh,
+        unit_pow: unitPow,
+        ...c.coeffs,
+        raw_table: raw_table
+      };
+    });
   const field = document.getElementById('extra_curves_json_field');
   if (field) field.value = JSON.stringify(payload);
 }
@@ -539,14 +720,25 @@ function updateExtraBadge() {
 }
 
 /* ── Extract data from an extra curve table ──────────────────────────────── */
-function getExtraTableData(tableId) {
+function getExtraTableData(tableId, curveId) {
   const rows = document.querySelectorAll(`#${tableId} tbody tr`);
   const q_h = [], q_eta = [], q_p = [];
+  const entry = document.getElementById(`extra-entry-${curveId}`);
+  const unitQ   = entry?.querySelector(`.unit-select-q`)?.value   || 'm3h';
+  const unitH   = entry?.querySelector(`.unit-select-h`)?.value   || 'm';
+  const unitPow = entry?.querySelector(`.unit-select-pow`)?.value || 'kw';
+
   rows.forEach(row => {
-    const q   = parseFloat(row.querySelector('.col-q')?.value);
-    const h   = parseFloat(row.querySelector('.col-h')?.value);
-    const eta = parseFloat(row.querySelector('.col-eta')?.value);
-    const pow = parseFloat(row.querySelector('.col-pow')?.value);
+    let q    = parseFloat(row.querySelector('.col-q')?.value);
+    let h    = parseFloat(row.querySelector('.col-h')?.value);
+    let eta  = parseFloat(row.querySelector('.col-eta')?.value);
+    let pow  = parseFloat(row.querySelector('.col-pow')?.value);
+
+    // Convert display values back to SI (m3h, m, kW)
+    if (!isNaN(q)) q = q / CONVERSIONS.q[unitQ];
+    if (!isNaN(h)) h = h / CONVERSIONS.h[unitH];
+    if (!isNaN(pow)) pow = pow / CONVERSIONS.pow[unitPow];
+
     if (!isNaN(q) && !isNaN(h)) q_h.push([q, h]);
     if (!isNaN(q) && !isNaN(eta)) q_eta.push([q, eta]);
     if (!isNaN(q) && !isNaN(pow)) q_p.push([q, pow]);
@@ -559,22 +751,54 @@ function getExtraTableData(tableId) {
 }
 
 /* ── Build an HTML table row for an extra curve table ────────────────────── */
-function _extraRow() {
+function _extraRow(qUnit, hUnit, npshUnit, powUnit) {
+  const lblQ = getUnitLabel('q', qUnit);
+  const lblH = getUnitLabel('h', hUnit);
+  const lblNpsh = getUnitLabel('npsh', npshUnit);
+  const lblPow = getUnitLabel('pow', powUnit);
+
   return `<tr>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" placeholder="Q"></td>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" placeholder="H"></td>
+    <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" placeholder="Q (${lblQ})"></td>
+    <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" placeholder="H (${lblH})"></td>
     <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" placeholder="η %"></td>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" placeholder="NPSHr"></td>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" placeholder="kW (opt)"></td>
+    <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" placeholder="NPSHr (${lblNpsh})"></td>
+    <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" placeholder="${lblPow} (opt)"></td>
     <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">×</button></td>
   </tr>`;
 }
 
+function _autoUpdateExtraPowerInRow(row, curveId) {
+  const entry   = document.getElementById(`extra-entry-${curveId}`);
+  if (!entry) return;
+  const unitQ   = entry.querySelector(`.unit-select-q`)?.value   || 'm3h';
+  const unitH   = entry.querySelector(`.unit-select-h`)?.value   || 'm';
+  const unitPow = entry.querySelector(`.unit-select-pow`)?.value || 'kw';
+
+  const qDisp   = parseFloat(row.querySelector('.col-q')?.value);
+  const hDisp   = parseFloat(row.querySelector('.col-h')?.value);
+  const etaDisp = parseFloat(row.querySelector('.col-eta')?.value);
+  const powInput = row.querySelector('.col-pow');
+  if (!powInput) return;
+
+  // Convert display values back to SI
+  const q_SI = isNaN(qDisp)   ? NaN : qDisp   / CONVERSIONS.q[unitQ];
+  const h_SI = isNaN(hDisp)   ? NaN : hDisp   / CONVERSIONS.h[unitH];
+
+  const p_kw = calcPowerKW(q_SI, h_SI, etaDisp);
+  if (p_kw !== null) {
+    // Convert kW → display unit
+    const p_display = p_kw * CONVERSIONS.pow[unitPow];
+    powInput.value = p_display.toFixed(2);
+    powInput.classList.add('auto-calc-flash');
+    setTimeout(() => powInput.classList.remove('auto-calc-flash'), 600);
+  }
+}
+
 /* ── Wire power auto-calc on a single row ────────────────────────────────── */
-function _wireExtraRow(row) {
+function _wireExtraRow(row, curveId) {
   ['col-q','col-h','col-eta'].forEach(cls => {
     const inp = row.querySelector(`.${cls}`);
-    if (inp) inp.addEventListener('input', () => autoUpdatePowerInRow(row));
+    if (inp) inp.addEventListener('input', () => _autoUpdateExtraPowerInRow(row, curveId));
   });
 }
 
@@ -585,7 +809,7 @@ async function fitExtraCurve(curveId) {
   const entry    = document.getElementById(`extra-entry-${curveId}`);
   const statusEl = entry.querySelector('.extra-curve-status');
   const fitBtn   = entry.querySelector('.btn-extra-fit');
-  const { q_h, q_eta, q_p } = getExtraTableData(`extraTable-${curveId}`);
+  const { q_h, q_eta, q_p } = getExtraTableData(`extraTable-${curveId}`, curveId);
 
   if (q_h.length < 3) {
     statusEl.className = 'extra-curve-status error';
@@ -628,9 +852,24 @@ async function fitExtraCurve(curveId) {
 
     statusEl.className = 'extra-curve-status ok';
     statusEl.textContent =
-      `\u2713 Fitted \u2014 H\u2080=${d.hq_a0.toFixed(1)} m, Q_max=${d.q_max.toFixed(1)}, \u03b7_BEP=${d.eta_bep}%, R\u00b2=${d.r2_hq}`;
+      `\u2713 Fitted \u2014 H\u2080=${d.hq_a0.toFixed(1)} m, Q_max=${d.q_max.toFixed(1)}, \u03b7_BEP=${d.eta_bep}%`;
 
-    _drawExtraPreview(curveId, d, curve.color);
+    // Make main preview visible and refresh it
+    document.getElementById('curvePreview').style.display = 'block';
+    refreshMainPreview();
+
+    // Widen operating range if this curve's q_max exceeds current op q_max
+    const opUnit = document.getElementById('unit-op-q')?.value || 'm3h';
+    const opFactor = CONVERSIONS.q[opUnit];
+    const opQMaxEl = document.querySelector('[name="q_max"]');
+    if (opQMaxEl) {
+      const currentQMax = parseFloat(opQMaxEl.value) || 0;
+      const newQMaxDisplay = d.q_max * opFactor;
+      if (newQMaxDisplay > currentQMax) {
+        opQMaxEl.value = newQMaxDisplay.toFixed(2);
+      }
+    }
+
     serializeExtraCurves();
 
   } catch(e) {
@@ -641,38 +880,28 @@ async function fitExtraCurve(curveId) {
   }
 }
 
-/* ── Draw compact Plotly preview inside an extra curve card ──────────────── */
-function _drawExtraPreview(curveId, d, color) {
-  const previewEl = document.getElementById(`extra-preview-${curveId}`);
-  if (!previewEl) return;
-  previewEl.style.display = '';
+function refreshMainPreview() {
+  const previewEl = document.getElementById('curvePreview');
+  if (previewEl && previewEl.style.display !== 'none') {
+    const { q_h: q_h_raw, q_eta: q_eta_raw } = getTableData('perfTable', false);
+    buildPreviewCharts(lastFitResults, q_h_raw, q_eta_raw);
+  }
+}
 
-  const qMax = d.q_max;
-  const qArr = Array.from({ length: 60 }, (_, i) => (i / 59) * qMax);
-  const evalP = (coeffs, q) => coeffs.reduce((s, c, i) => s + c * Math.pow(q, i), 0);
-  const a = [d.hq_a0, d.hq_a1, d.hq_a2, d.hq_a3];
-  const b = [d.eff_b0, d.eff_b1, d.eff_b2, d.eff_b3];
-  const H   = qArr.map(q => Math.max(0, evalP(a, q)));
-  const eta = qArr.map(q => Math.max(0, Math.min(100, evalP(b, q))));
-
-  const base = {
-    paper_bgcolor: '#1a1d23', plot_bgcolor: '#1a1d23',
-    font: { color: '#c9d1d9', size: 10 },
-    margin: { l: 40, r: 8, t: 22, b: 32 },
-    xaxis: { gridcolor: '#30363d', zerolinecolor: '#30363d', title: 'Q (m\u00b3/h)' },
-    yaxis: { gridcolor: '#30363d', zerolinecolor: '#30363d' },
-    showlegend: false,
-  };
-
-  Plotly.react(`extra-previewHQ-${curveId}`, [
-    { x: qArr, y: H, mode: 'lines', line: { color, width: 2 } },
-  ], { ...base, title: { text: 'H-Q', font: { size: 11 } },
-       yaxis: { ...base.yaxis, title: 'H (m)' } }, { responsive: true });
-
-  Plotly.react(`extra-previewEta-${curveId}`, [
-    { x: qArr, y: eta, mode: 'lines', line: { color: '#f0c040', width: 2 } },
-  ], { ...base, title: { text: '\u03b7', font: { size: 11 } },
-       yaxis: { ...base.yaxis, title: '\u03b7 (%)', range: [0, 100] } }, { responsive: true });
+function _updateExtraPlaceholders(div, type, unit) {
+  const inputs = div.querySelectorAll(`.col-${type}`);
+  const label = getUnitLabel(type, unit);
+  inputs.forEach(input => {
+    if (type === 'q') {
+      input.placeholder = `Q (${label})`;
+    } else if (type === 'h') {
+      input.placeholder = `H (${label})`;
+    } else if (type === 'npsh') {
+      input.placeholder = `NPSHr (${label})`;
+    } else if (type === 'pow') {
+      input.placeholder = `${label} (opt)`;
+    }
+  });
 }
 
 /* ── Add a new extra curve card (optionally pre-filled with existingData) ── */
@@ -680,8 +909,24 @@ function addExtraCurveCard(existingData) {
   const id    = ++_extraCurveIdCounter;
   const color = existingData?.color || EXTRA_CURVE_COLORS[(id - 1) % EXTRA_CURVE_COLORS.length];
   const label = existingData?.label || `Curve ${id}`;
+  const diameter = existingData?.diameter || '';
+  const qUnit = existingData?.unit_q || document.getElementById('unit-q')?.value || 'm3h';
+  const hUnit = existingData?.unit_h || document.getElementById('unit-h')?.value || 'm';
+  const npshUnit = existingData?.unit_npsh || document.getElementById('unit-npsh')?.value || 'm';
+  const powUnit = existingData?.unit_pow || document.getElementById('unit-pow')?.value || 'kw';
 
-  extraCurves.push({ id, label, color, fitted: !!existingData, coeffs: existingData || null });
+  extraCurves.push({
+    id,
+    label,
+    color,
+    diameter,
+    unit_q: qUnit,
+    unit_h: hUnit,
+    unit_npsh: npshUnit,
+    unit_pow: powUnit,
+    fitted: !!existingData,
+    coeffs: existingData || null
+  });
 
   const list = document.getElementById('extraCurvesList');
   const div  = document.createElement('div');
@@ -693,7 +938,22 @@ function addExtraCurveCard(existingData) {
           style="background:${c}" data-color="${c}" data-eid="${id}"></span>`
   ).join('');
 
-  const blankRows = Array.from({ length: 6 }, _extraRow).join('');
+  let tableRowsHtml = '';
+  if (existingData && Array.isArray(existingData.raw_table) && existingData.raw_table.length > 0) {
+    tableRowsHtml = existingData.raw_table.map(row => {
+      const [q, h, eta, npsh, pow] = row;
+      return `<tr>
+        <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" placeholder="Q (${getUnitLabel('q', qUnit)})" value="${q}"></td>
+        <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" placeholder="H (${getUnitLabel('h', hUnit)})" value="${h}"></td>
+        <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" placeholder="η %" value="${eta}"></td>
+        <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" placeholder="NPSHr (${getUnitLabel('npsh', npshUnit)})" value="${npsh}"></td>
+        <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" placeholder="${getUnitLabel('pow', powUnit)} (opt)" value="${pow}"></td>
+        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">×</button></td>
+      </tr>`;
+    }).join('');
+  } else {
+    tableRowsHtml = Array.from({ length: 6 }, () => _extraRow(qUnit, hUnit, npshUnit, powUnit)).join('');
+  }
 
   div.innerHTML = `
     <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
@@ -702,7 +962,11 @@ function addExtraCurveCard(existingData) {
       <input type="text" class="form-control form-control-sm form-control-dark extra-label-input"
              value="${label}" placeholder="Curve label"
              style="max-width:180px;font-weight:600" data-eid="${id}">
-      <span class="text-muted small">Color:</span>
+      <span class="text-muted small ms-2">Diameter (mm):</span>
+      <input type="number" class="form-control form-control-sm form-control-dark extra-dia-input"
+             value="${diameter}" placeholder="e.g. 280"
+             style="max-width:90px" data-eid="${id}">
+      <span class="text-muted small ms-2">Color:</span>
       <div class="d-flex gap-1 flex-wrap">${swatches}</div>
       <button type="button" class="btn btn-sm btn-outline-danger ms-auto py-0 px-2 btn-extra-remove"
               data-eid="${id}">&#x2715; Remove</button>
@@ -712,15 +976,41 @@ function addExtraCurveCard(existingData) {
       <table class="table table-sm table-dark mb-0 align-middle" id="extraTable-${id}" style="font-size:0.83rem">
         <thead>
           <tr style="background:#21262d">
-            <th style="width:110px">Flow Q<br><span class="fw-normal text-muted small">(m\u00b3/h)</span></th>
-            <th style="width:95px">Head H<br><span class="fw-normal text-muted small">(m)</span></th>
-            <th style="width:80px">Effic. \u03b7<br><span class="fw-normal text-muted small">(%)</span></th>
-            <th style="width:100px">NPSHr<br><span class="fw-normal text-muted small">(m, opt.)</span></th>
-            <th style="width:105px">Power<br><span class="fw-normal text-muted small">(kW, opt.)</span></th>
+            <th style="width:115px">
+              Flow Q<br>
+              <select class="header-unit-select unit-select-q" data-eid="${id}">
+                <option value="m3h" ${qUnit === 'm3h' ? 'selected' : ''}>m³/h</option>
+                <option value="ls" ${qUnit === 'ls' ? 'selected' : ''}>L/s</option>
+                <option value="gpm" ${qUnit === 'gpm' ? 'selected' : ''}>gpm</option>
+                <option value="lmin" ${qUnit === 'lmin' ? 'selected' : ''}>L/min</option>
+              </select>
+            </th>
+            <th style="width:100px">
+              Head H<br>
+              <select class="header-unit-select unit-select-h" data-eid="${id}">
+                <option value="m" ${hUnit === 'm' ? 'selected' : ''}>m</option>
+                <option value="ft" ${hUnit === 'ft' ? 'selected' : ''}>ft</option>
+              </select>
+            </th>
+            <th style="width:85px">Effic. η<br><span class="fw-normal text-muted" style="font-size:0.7rem">(%)</span></th>
+            <th style="width:115px">
+              NPSHr<br>
+              <select class="header-unit-select unit-select-npsh" data-eid="${id}">
+                <option value="m" ${npshUnit === 'm' ? 'selected' : ''}>m (opt.)</option>
+                <option value="ft" ${npshUnit === 'ft' ? 'selected' : ''}>ft (opt.)</option>
+              </select>
+            </th>
+            <th style="width:120px">
+              Power<br>
+              <select class="header-unit-select unit-select-pow" data-eid="${id}">
+                <option value="kw" ${powUnit === 'kw' ? 'selected' : ''}>kW (opt.)</option>
+                <option value="hp" ${powUnit === 'hp' ? 'selected' : ''}>hp (opt.)</option>
+              </select>
+            </th>
             <th style="width:30px"></th>
           </tr>
         </thead>
-        <tbody>${blankRows}</tbody>
+        <tbody>${tableRowsHtml}</tbody>
       </table>
     </div>
 
@@ -733,30 +1023,56 @@ function addExtraCurveCard(existingData) {
       </button>
     </div>
 
-    <div class="extra-curve-status mb-2" id="extra-status-${id}"></div>
-
-    <div id="extra-preview-${id}" style="display:none">
-      <div class="row g-2">
-        <div class="col-6"><div id="extra-previewHQ-${id}" style="height:160px"></div></div>
-        <div class="col-6"><div id="extra-previewEta-${id}" style="height:160px"></div></div>
-      </div>
-    </div>`;
+    <div class="extra-curve-status mb-2" id="extra-status-${id}"></div>`;
 
   list.appendChild(div);
 
-  // If pre-loading saved data, show status + preview
+  // If pre-loading saved data, show status
   if (existingData) {
     const statusEl = div.querySelector('.extra-curve-status');
     statusEl.className = 'extra-curve-status ok';
     statusEl.textContent = `\u2713 Saved \u2014 Q_max=${existingData.q_max?.toFixed(1) ?? '?'}`;
-    _drawExtraPreview(id, {
-      hq_a0: existingData.hq_a0, hq_a1: existingData.hq_a1,
-      hq_a2: existingData.hq_a2, hq_a3: existingData.hq_a3,
-      eff_b0: existingData.eff_b0, eff_b1: existingData.eff_b1,
-      eff_b2: existingData.eff_b2, eff_b3: existingData.eff_b3,
-      q_max: existingData.q_max, eta_bep: 0, r2_hq: 0,
-    }, color);
   }
+
+  // Helper to convert inputs on unit change
+  const initExtraUnitSelectors = () => {
+    ['q', 'h', 'npsh', 'pow'].forEach(type => {
+      const select = div.querySelector(`.unit-select-${type}`);
+      if (!select) return;
+      select.setAttribute('data-prev', select.value);
+      select.addEventListener('change', (e) => {
+        const fromUnit = e.target.getAttribute('data-prev');
+        const toUnit = e.target.value;
+        if (fromUnit === toUnit) return;
+
+        const inputs = div.querySelectorAll(`.col-${type}`);
+        inputs.forEach(input => {
+          const val = parseFloat(input.value);
+          if (!isNaN(val)) {
+            input.value = convertValue(val, fromUnit, toUnit, type);
+          }
+        });
+
+        // Update placeholders
+        _updateExtraPlaceholders(div, type, toUnit);
+        e.target.setAttribute('data-prev', toUnit);
+
+        // Recalculate power in the table rows if needed
+        if (type === 'q' || type === 'h' || type === 'pow') {
+          div.querySelectorAll(`tbody tr`).forEach(row => _autoUpdateExtraPowerInRow(row, id));
+        }
+
+        // Re-draw preview if fitted
+        const curve = extraCurves.find(c => c.id === id);
+        if (curve && curve.fitted && curve.coeffs) {
+          refreshMainPreview();
+        }
+
+        serializeExtraCurves();
+      });
+    });
+  };
+  initExtraUnitSelectors();
 
   // Events: color swatches
   div.querySelectorAll('.curve-color-swatch').forEach(swatch => {
@@ -769,6 +1085,7 @@ function addExtraCurveCard(existingData) {
       div.querySelectorAll('.curve-color-swatch').forEach(s => s.classList.remove('active'));
       swatch.classList.add('active');
       div.querySelector('.curve-color-dot').style.background = newColor;
+      refreshMainPreview();
       serializeExtraCurves();
     });
   });
@@ -776,7 +1093,20 @@ function addExtraCurveCard(existingData) {
   // Events: label
   div.querySelector('.extra-label-input').addEventListener('input', e => {
     const curve = extraCurves.find(c => c.id === parseInt(e.target.dataset.eid));
-    if (curve) { curve.label = e.target.value || `Curve ${curve.id}`; serializeExtraCurves(); }
+    if (curve) { 
+      curve.label = e.target.value || `Curve ${curve.id}`; 
+      refreshMainPreview();
+      serializeExtraCurves(); 
+    }
+  });
+
+  // Events: diameter
+  div.querySelector('.extra-dia-input').addEventListener('input', e => {
+    const curve = extraCurves.find(c => c.id === id);
+    if (curve) {
+      curve.diameter = e.target.value.trim() !== '' ? parseFloat(e.target.value) : '';
+      serializeExtraCurves();
+    }
   });
 
   // Events: add row
@@ -784,14 +1114,21 @@ function addExtraCurveCard(existingData) {
     const eid = parseInt(e.currentTarget.dataset.eid);
     const tbody = document.querySelector(`#extraTable-${eid} tbody`);
     const row = document.createElement('tr');
-    row.innerHTML = _extraRow();
+    
+    const currentQUnit = div.querySelector('.unit-select-q')?.value || 'm3h';
+    const currentHUnit = div.querySelector('.unit-select-h')?.value || 'm';
+    const currentNpshUnit = div.querySelector('.unit-select-npsh')?.value || 'm';
+    const currentPowUnit = div.querySelector('.unit-select-pow')?.value || 'kw';
+
+    row.innerHTML = _extraRow(currentQUnit, currentHUnit, currentNpshUnit, currentPowUnit);
     tbody.appendChild(row);
-    _wireExtraRow(row);
+    _wireExtraRow(row, eid);
   });
 
   // Events: fit
   div.querySelector('.btn-extra-fit').addEventListener('click', e => {
     fitExtraCurve(parseInt(e.currentTarget.dataset.eid));
+    serializeDataUnits();
   });
 
   // Events: remove
@@ -800,11 +1137,12 @@ function addExtraCurveCard(existingData) {
     extraCurves = extraCurves.filter(c => c.id !== eid);
     document.getElementById(`extra-entry-${eid}`)?.remove();
     updateExtraBadge();
+    refreshMainPreview();
     serializeExtraCurves();
   });
 
   // Power auto-calc for all initial rows
-  div.querySelectorAll(`#extraTable-${id} tbody tr`).forEach(_wireExtraRow);
+  div.querySelectorAll(`#extraTable-${id} tbody tr`).forEach(row => _wireExtraRow(row, id));
 
   updateExtraBadge();
 
@@ -824,9 +1162,14 @@ function initExtraCurves(curvesArray) {
   const addBtn = document.getElementById('btnAddExtraCurve');
   if (addBtn) addBtn.addEventListener('click', () => addExtraCurveCard());
 
-  // Wire form submit to serialise before POST
+  // Wire form submit to serialise extra curves before POST
+  // (raw table + data units are serialized by the inline init script)
   const form = document.getElementById('pumpForm');
-  if (form) form.addEventListener('submit', serializeExtraCurves);
+  if (form) {
+    form.addEventListener('submit', () => {
+      serializeExtraCurves();
+    });
+  }
 
   // Load existing saved curves (edit mode)
   const data = Array.isArray(curvesArray) ? curvesArray :

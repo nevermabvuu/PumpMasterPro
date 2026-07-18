@@ -10,6 +10,14 @@ from pump_curves import (
 from pump_selection import select_pumps
 from seed_data import seed_pumps
 
+# Conversion factors: 1 unit -> m3/h
+Q_TO_M3H = {
+    'm3h':  1.0,
+    'ls':   3.6,        # 1 L/s  = 3.6 m³/h
+    'gpm':  0.22712,    # 1 gpm  = 0.22712 m³/h
+    'lmin': 0.06,       # 1 L/min = 0.06 m³/h
+}
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH  = os.path.join(BASE_DIR, 'pumps.db')
 
@@ -88,6 +96,33 @@ def _pump_from_form(f, pump=None):
     pump.application      = f.get('application', pump.application or '')
     pump.notes            = f.get('notes', pump.notes or '')
     pump.extra_curves_json = f.get('extra_curves_json', pump.extra_curves_json or '')
+    pump.data_units        = f.get('data_units', pump.data_units or '')
+    pump.main_curve_label  = f.get('main_curve_label', pump.main_curve_label or '')
+    raw_dia = f.get('main_curve_dia_mm', '')
+    if str(raw_dia).strip():
+        try:
+            pump.main_curve_dia_mm = float(raw_dia)
+        except ValueError:
+            pass
+    pump.raw_table_json = f.get('raw_table_json', pump.raw_table_json or '')
+
+    # Convert op-range values from display unit to SI (m³/h) before persisting
+    try:
+        units_dict = json.loads(pump.data_units) if pump.data_units else {}
+    except (ValueError, TypeError):
+        units_dict = {}
+    op_q_unit = units_dict.get('op_q', 'm3h')
+    factor = Q_TO_M3H.get(op_q_unit, 1.0)
+    q_min_raw = _get_float(f, 'q_min', None)
+    q_max_raw = _get_float(f, 'q_max', None)
+    q_bep_raw = _get_float(f, 'q_bep', None)
+    if q_min_raw is not None:
+        pump.q_min = q_min_raw * factor
+    if q_max_raw is not None:
+        pump.q_max = q_max_raw * factor
+    if q_bep_raw is not None:
+        pump.q_bep = q_bep_raw * factor
+
     return pump
 
 

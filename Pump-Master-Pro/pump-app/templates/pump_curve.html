@@ -274,12 +274,24 @@
   </div>
 </div>
 
-<script>const PUMP_ID = {{ pump.id }};</script>
+<div id="pump-meta"
+     data-id="{{ pump.id }}"
+     data-main-label="{{ pump.main_curve_label or '' }}"
+     data-main-dia="{{ pump.main_curve_dia_mm if pump.main_curve_dia_mm else pump.impeller_dia_mm }}"
+     data-extra-curves='{{ pump.get_extra_curves() | tojson }}'>
+</div>
+
+<script>
+  const metaEl = document.getElementById('pump-meta');
+  const PUMP_ID = parseInt(metaEl.dataset.id);
+  const PUMP_MAIN_LABEL = metaEl.dataset.mainLabel;
+  const PUMP_MAIN_DIA   = parseFloat(metaEl.dataset.mainDia);
+</script>
 <script src="{{ url_for('static', filename='js/pump_curves.js') }}"></script>
 <script>
 // Pre-load any saved extra curves from the pump data into the custom curves overlay
 (function () {
-  const savedExtras = {{ pump.get_extra_curves() | tojson }};
+  const savedExtras = JSON.parse(document.getElementById('pump-meta').dataset.extraCurves || '[]');
   if (!Array.isArray(savedExtras) || savedExtras.length === 0) return;
 
   const evalP = (coeffs, q) => coeffs.reduce((s, c, i) => s + c * Math.pow(q, i), 0);
@@ -294,10 +306,16 @@
     const pp = [ec.pow_p0, ec.pow_p1, ec.pow_p2];
     const hasEta = ec.eff_b1 || ec.eff_b2 || ec.eff_b3;
 
+    let label = ec.label || `Curve ${id}`;
+    if (ec.diameter) {
+      label += ` (${ec.diameter} mm)`;
+    }
+
     customCurves.push({
       id,
-      label: ec.label || `Curve ${id}`,
+      label: label,
       color,
+      diameter: ec.diameter,
       fitted: true,
       q:     qArr.map(q => Math.round(q * 100) / 100),
       h:     qArr.map(q => Math.max(0, evalP(a, q))),

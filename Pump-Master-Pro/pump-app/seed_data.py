@@ -111,7 +111,7 @@ def seed_pumps(app):
         e = _eff(80.0, 880.0, 1600.0)
         p = _pow(h, e, 880.0, 1600.0)
         pumps.append(Pump(
-            name='Warman 10/8 F-M', manufacturer='Weir Minerals',
+            name='Warman 10/8 F-MTest', manufacturer='Weir Minerals',
             model_number='10/8 F-M', size='10/8 F-M',
             speed_rpm=600, impeller_dia_mm=760,
             impeller_diameters=json.dumps([760, 710, 660, 610, 560]),

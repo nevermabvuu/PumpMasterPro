@@ -209,9 +209,21 @@ function initUnitSelectors() {
         recalcAllPowerRows();
       }
       
+      // After unit change, sync the preview dropdowns to match the new units
+      if (type === 'q') {
+        const previewSelect = document.getElementById('preview-unit-q');
+        if (previewSelect) previewSelect.value = toUnit;
+      } else if (type === 'h') {
+        const previewSelect = document.getElementById('preview-unit-h');
+        if (previewSelect) previewSelect.value = toUnit;
+      } else if (type === 'pow') {
+        const previewSelect = document.getElementById('preview-unit-pow');
+        if (previewSelect) previewSelect.value = toUnit;
+      }
+
       const previewEl = document.getElementById('curvePreview');
       if (previewEl && previewEl.style.display !== 'none' && lastFitResults) {
-        const { q_h: q_h_raw, q_eta: q_eta_raw } = getTableData('perfTable', false);
+        const { q_h: q_h_raw, q_eta: q_eta_raw } = getTableData('perfTable', true);
         buildPreviewCharts(lastFitResults, q_h_raw, q_eta_raw);
       }
 
@@ -222,6 +234,18 @@ function initUnitSelectors() {
 
   initOpRegionUnits();
   initPowerAutoCalc();
+  initPreviewUnitSelectors();
+}
+
+function initPreviewUnitSelectors() {
+  ['q', 'h', 'pow'].forEach(type => {
+    const el = document.getElementById(`preview-unit-${type}`);
+    if (el) {
+      el.addEventListener('change', () => {
+        refreshMainPreview();
+      });
+    }
+  });
 }
 
 /* ── Serialize current unit preferences to the hidden form field ────────── */
@@ -415,7 +439,7 @@ async function fitAndPreview() {
     // Build preview charts
     previewEl.style.display = 'block';
 
-    const { q_h: q_h_raw, q_eta: q_eta_raw } = getTableData('perfTable', false);
+    const { q_h: q_h_raw, q_eta: q_eta_raw } = getTableData('perfTable', true);
     buildPreviewCharts(d, q_h_raw, q_eta_raw);
 
     // Refresh coefficient display
@@ -438,10 +462,10 @@ function showStatus(type, msg) {
   el.textContent = msg;
 }
 
-function buildPreviewCharts(d, q_h_raw, q_eta_raw) {
-  const unitQ = document.getElementById('unit-q')?.value || 'm3h';
-  const unitH = document.getElementById('unit-h')?.value || 'm';
-  const unitPow = document.getElementById('unit-pow')?.value || 'kw';
+function buildPreviewCharts(d, q_h_si, q_eta_si) {
+  const unitQ = document.getElementById('preview-unit-q')?.value || document.getElementById('unit-q')?.value || 'm3h';
+  const unitH = document.getElementById('preview-unit-h')?.value || document.getElementById('unit-h')?.value || 'm';
+  const unitPow = document.getElementById('preview-unit-pow')?.value || document.getElementById('unit-pow')?.value || 'kw';
 
   const labelQ = getUnitLabel('q', unitQ);
   const labelH = getUnitLabel('h', unitH);
@@ -452,6 +476,21 @@ function buildPreviewCharts(d, q_h_raw, q_eta_raw) {
 
   const evalP = (coeffs, q) => coeffs.reduce((s, c, i) => s + c * Math.pow(q, i), 0);
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  // Determine overall maximum Q in SI units to align X-axes of both graphs
+  let maxQ_SI = 100;
+  if (d && d.q_max) {
+    maxQ_SI = d.q_max;
+  }
+  extraCurves.forEach(ec => {
+    if (ec.fitted && ec.coeffs && ec.coeffs.q_max) {
+      if (ec.coeffs.q_max > maxQ_SI) {
+        maxQ_SI = ec.coeffs.q_max;
+      }
+    }
+  });
+
+  const maxQ_display = maxQ_SI * CONVERSIONS.q[unitQ];
 
   // 1. Add main curve traces if main curve fit 'd' exists
   if (d) {
@@ -470,16 +509,29 @@ function buildPreviewCharts(d, q_h_raw, q_eta_raw) {
     const H_selected     = H.map(h => h * CONVERSIONS.h[unitH]);
     const pow_selected   = pow.map(p => p * CONVERSIONS.pow[unitPow]);
 
-    if (q_h_raw && q_h_raw.length) {
-      hqTraces.push({ x: q_h_raw.map(r=>r[0]), y: q_h_raw.map(r=>r[1]), mode:'markers', name:'Main Data', marker:{color:'#f0883e',size:7} });
+    if (q_h_si && q_h_si.length) {
+      hqTraces.push({
+        x: q_h_si.map(r => r[0] * CONVERSIONS.q[unitQ]),
+        y: q_h_si.map(r => r[1] * CONVERSIONS.h[unitH]),
+        mode: 'markers',
+        name: 'Main Data',
+        marker: { color: '#f0883e', size: 7 }
+      });
     }
-    hqTraces.push({ x: q_arr_selected, y: H_selected, mode:'lines', name:'Main Fitted', line:{color:'#58a6ff',width:2.2} });
+    hqTraces.push({ x: q_arr_selected, y: H_selected, mode: 'lines', name: 'Main Fitted', line: { color: '#58a6ff', width: 2.2 } });
 
-    if (q_eta_raw && q_eta_raw.length) {
-      etaTraces.push({ x: q_eta_raw.map(r=>r[0]), y: q_eta_raw.map(r=>r[1]), mode:'markers', name:'Main η Data', marker:{color:'#f0883e',size:7}, yaxis:'y' });
+    if (q_eta_si && q_eta_si.length) {
+      etaTraces.push({
+        x: q_eta_si.map(r => r[0] * CONVERSIONS.q[unitQ]),
+        y: q_eta_si.map(r => r[1]), // eta is %
+        mode: 'markers',
+        name: 'Main η Data',
+        marker: { color: '#f0883e', size: 7 },
+        yaxis: 'y'
+      });
     }
-    etaTraces.push({ x: q_arr_selected, y: eta, mode:'lines', name:'Main η Fitted (%)', line:{color:'#3fb950',width:2.2}, yaxis:'y' });
-    etaTraces.push({ x: q_arr_selected, y: pow_selected, mode:'lines', name:`Main Power (${labelPow})`, line:{color:'#d29922',width:2,dash:'dot'}, yaxis:'y2' });
+    etaTraces.push({ x: q_arr_selected, y: eta, mode: 'lines', name: 'Main η Fitted (%)', line: { color: '#3fb950', width: 2.2 }, yaxis: 'y' });
+    etaTraces.push({ x: q_arr_selected, y: pow_selected, mode: 'lines', name: `Main Power (${labelPow})`, line: { color: '#d29922', width: 2, dash: 'dot' }, yaxis: 'y2' });
   }
 
   // 2. Add extra curves traces if fitted
@@ -530,22 +582,28 @@ function buildPreviewCharts(d, q_h_raw, q_eta_raw) {
     });
   });
 
+  // Shared margins to guarantee exact alignment of Plotly plotting areas
+  const SHARED_MARGINS = { l: 50, r: 60, t: 30, b: 40 };
+
   // H-Q chart
   Plotly.react('previewHQ', hqTraces, { 
     ...FORM_LAYOUT, 
     title:{text:'H-Q',font:{size:12}}, 
-    xaxis:{...FORM_LAYOUT.xaxis,title:`Q (${labelQ})`}, 
-    yaxis:{...FORM_LAYOUT.yaxis,title:`Head (${labelH})`} 
+    xaxis:{...FORM_LAYOUT.xaxis,title:`Q (${labelQ})`,range:[0, maxQ_display]}, 
+    yaxis:{...FORM_LAYOUT.yaxis,title:`Head (${labelH})`},
+    legend:{x:0.02,y:0.98,bgcolor:'rgba(0,0,0,0)'},
+    margin: SHARED_MARGINS
   }, { responsive: true });
 
   // Efficiency + Power chart
   Plotly.react('previewEta', etaTraces, {
     ...FORM_LAYOUT,
     title:{text:'Efficiency & Power',font:{size:12}},
-    xaxis:{...FORM_LAYOUT.xaxis,title:`Q (${labelQ})`},
+    xaxis:{...FORM_LAYOUT.xaxis,title:`Q (${labelQ})`,range:[0, maxQ_display]},
     yaxis:{...FORM_LAYOUT.yaxis,title:'Efficiency (%)'},
     yaxis2:{...FORM_LAYOUT.yaxis,title:`Power (${labelPow})`,overlaying:'y',side:'right',showgrid:false},
     legend:{x:0.02,y:0.98,bgcolor:'rgba(0,0,0,0)'},
+    margin: SHARED_MARGINS
   }, { responsive: true });
 }
 
@@ -883,7 +941,7 @@ async function fitExtraCurve(curveId) {
 function refreshMainPreview() {
   const previewEl = document.getElementById('curvePreview');
   if (previewEl && previewEl.style.display !== 'none') {
-    const { q_h: q_h_raw, q_eta: q_eta_raw } = getTableData('perfTable', false);
+    const { q_h: q_h_raw, q_eta: q_eta_raw } = getTableData('perfTable', true);
     buildPreviewCharts(lastFitResults, q_h_raw, q_eta_raw);
   }
 }

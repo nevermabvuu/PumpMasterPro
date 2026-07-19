@@ -70,8 +70,24 @@
     <!-- Preview charts inside LHS Column 1 -->
     <div id="curvePreview" style="display:none" class="mb-3">
       <div class="card card-dark">
-        <div class="card-header card-header-dark">
-          <i class="bi bi-graph-up me-2 text-accent"></i>Curve Preview
+        <div class="card-header card-header-dark d-flex align-items-center gap-2 flex-wrap">
+          <span><i class="bi bi-graph-up me-2 text-accent"></i>Curve Preview</span>
+          <div class="ms-auto d-flex align-items-center gap-1">
+            <select class="header-unit-select" id="preview-unit-q" style="margin-top:0; font-size: 0.75rem; padding: 2px 4px;">
+              <option value="m3h">m³/h</option>
+              <option value="ls">L/s</option>
+              <option value="gpm">gpm</option>
+              <option value="lmin">L/min</option>
+            </select>
+            <select class="header-unit-select" id="preview-unit-h" style="margin-top:0; font-size: 0.75rem; padding: 2px 4px;">
+              <option value="m">m</option>
+              <option value="ft">ft</option>
+            </select>
+            <select class="header-unit-select" id="preview-unit-pow" style="margin-top:0; font-size: 0.75rem; padding: 2px 4px;">
+              <option value="kw">kW</option>
+              <option value="hp">hp</option>
+            </select>
+          </div>
         </div>
         <div class="card-body">
           <div class="row g-2">
@@ -414,8 +430,17 @@
     (function() {
       const pumpData = JSON.parse(initEl.dataset.toJson);
       lastFitResults = pumpData;
+
+      // Sync preview unit selectors to match table units on load
+      const previewQ = document.getElementById('preview-unit-q');
+      const previewH = document.getElementById('preview-unit-h');
+      const previewPow = document.getElementById('preview-unit-pow');
+      if (previewQ) previewQ.value = document.getElementById('unit-q')?.value || 'm3h';
+      if (previewH) previewH.value = document.getElementById('unit-h')?.value || 'm';
+      if (previewPow) previewPow.value = document.getElementById('unit-pow')?.value || 'kw';
+
       document.getElementById('curvePreview').style.display = 'block';
-      const { q_h, q_eta } = getTableData('perfTable', false);
+      const { q_h, q_eta } = getTableData('perfTable', true);
       buildPreviewCharts(pumpData, q_h, q_eta);
     })();
   } else {

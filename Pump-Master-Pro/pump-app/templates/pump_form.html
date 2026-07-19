@@ -67,12 +67,15 @@
       </div>
     </div>
 
-    <!-- Preview charts inside LHS Column 1 -->
+    <!-- Curve Preview Section -->
     <div id="curvePreview" style="display:none" class="mb-3">
-      <div class="card card-dark">
-        <div class="card-header card-header-dark d-flex align-items-center gap-2 flex-wrap">
-          <span><i class="bi bi-graph-up me-2 text-accent"></i>Curve Preview</span>
-          <div class="ms-auto d-flex align-items-center gap-1">
+      
+      <!-- Display Options Panel -->
+      <div class="card card-dark mb-3">
+        <div class="card-header card-header-dark d-flex align-items-center justify-content-between flex-wrap">
+          <span><i class="bi bi-display me-2 text-accent"></i><strong>Display Options</strong></span>
+          <!-- Unit Selectors -->
+          <div class="d-flex align-items-center gap-1">
             <select class="header-unit-select" id="preview-unit-q" style="margin-top:0; font-size: 0.75rem; padding: 2px 4px;">
               <option value="m3h">m³/h</option>
               <option value="ls">L/s</option>
@@ -83,26 +86,163 @@
               <option value="m">m</option>
               <option value="ft">ft</option>
             </select>
+            <select class="header-unit-select" id="preview-unit-npsh" style="margin-top:0; font-size: 0.75rem; padding: 2px 4px;">
+              <option value="m">m (NPSH)</option>
+              <option value="ft">ft (NPSH)</option>
+            </select>
             <select class="header-unit-select" id="preview-unit-pow" style="margin-top:0; font-size: 0.75rem; padding: 2px 4px;">
               <option value="kw">kW</option>
               <option value="hp">hp</option>
             </select>
           </div>
         </div>
-        <div class="card-body">
-          <div class="row g-2">
-            <div class="col-12">
-              <div id="previewHQ" style="height:260px"></div>
+        <div class="card-body py-2">
+          <label class="form-label form-label-sm fw-semibold mb-2 text-accent">H-Q Graph Overlays</label>
+          
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="chkShowEffIso" checked>
+            <label class="form-check-label small text-warning" for="chkShowEffIso">
+              Show Efficiency Isolines (Warman style)
+            </label>
+            <div class="ms-4 mt-1" id="groupEffLevels">
+              <input type="text" id="txtEffLevels" class="form-control form-control-sm form-control-dark" 
+                     value="20;30;45;80" placeholder="e.g. 20;30;45;80 (empty for auto)">
+              <div class="form-text small text-muted" style="font-size:0.75rem">Semicolon or comma-separated levels.</div>
             </div>
-            <div class="col-12">
-              <div id="previewEta" style="height:260px"></div>
+          </div>
+          
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="chkShowPowerIso">
+            <label class="form-check-label small text-danger" for="chkShowPowerIso">
+              Show Power Isolines
+            </label>
+            <div class="ms-4 mt-1" id="groupPowerLevels" style="display:none">
+              <input type="text" id="txtPowerLevels" class="form-control form-control-sm form-control-dark" 
+                     value="" placeholder="e.g. 5;10;20;50 (empty for auto)">
+              <div class="form-text small text-muted" style="font-size:0.75rem">Semicolon or comma-separated levels.</div>
+            </div>
+          </div>
+          
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="chkShowNpshIso">
+            <label class="form-check-label small text-teal" style="color: #39d3c0" for="chkShowNpshIso">
+              Show NPSH Isolines
+            </label>
+            <div class="ms-4 mt-1" id="groupNpshLevels" style="display:none">
+              <input type="text" id="txtNpshLevels" class="form-control form-control-sm form-control-dark" 
+                     value="" placeholder="e.g. 2;4;6 (empty for auto)">
+              <div class="form-text small text-muted" style="font-size:0.75rem">Semicolon or comma-separated levels.</div>
+            </div>
+          </div>
+
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="chkShowNpshCurve">
+            <label class="form-check-label small text-info" for="chkShowNpshCurve">
+              Show NPSH standard curves
+            </label>
+            <div class="ms-4 mb-2" id="groupNpshYAxis" style="display:none">
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="npshYAxisChoice" id="radNpshY2" value="y2" checked>
+                <label class="form-check-label small text-muted" style="font-size:0.75rem" for="radNpshY2">Secondary Y-axis (right)</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="npshYAxisChoice" id="radNpshY1" value="y1">
+                <label class="form-check-label small text-muted" style="font-size:0.75rem" for="radNpshY1">Same Y-axis as Head (left)</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="chkSpeedLines">
+            <label class="form-check-label small" for="chkSpeedLines" style="color:#ff9900">Show Speed Lines (70% - 100%)</label>
+          </div>
+
+          <hr class="border-secondary my-2">
+
+          <label class="form-label form-label-sm fw-semibold mb-2 text-accent">Other Performance Graphs</label>
+          
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="chkShowOther" checked>
+            <label class="form-check-label small fw-semibold" for="chkShowOther">
+              Show additional performance graphs below
+            </label>
+          </div>
+          
+          <div class="ms-4" id="otherGraphsOptions">
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="radio" name="otherGraphsLayout" id="radCombined" value="combined" checked>
+              <label class="form-check-label small" for="radCombined">
+                Display efficiency and power on the same graph (NPSH separate)
+              </label>
+            </div>
+            
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="radio" name="otherGraphsLayout" id="radSeparate" value="separate">
+              <label class="form-check-label small" for="radSeparate">
+                Show each curve as a separate graph (H-Q, Efficiency, Power, NPSH)
+              </label>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="card card-dark mb-3">
+      <!-- Performance Map Preview Card -->
+      <div class="card card-dark mb-3">
+        <div class="card-header card-header-dark">
+          <i class="bi bi-layers text-accent me-2"></i><strong>Performance Map Preview</strong>
+        </div>
+        <div class="card-body p-0">
+          <div id="chartWarman" class="chart-container" style="height:380px"></div>
+        </div>
+      </div>
+
+      <!-- Standalone panels container -->
+      <div id="standalonePanels" style="display:none">
+        <div class="row g-3">
+          <div class="col-12" id="panelHQ" style="display:none">
+            <div class="card card-dark">
+              <div class="card-header card-header-dark">
+                <span class="curve-label hq"><i class="bi bi-graph-down-arrow me-2"></i>Head — Flow (H-Q)</span>
+              </div>
+              <div class="card-body p-0"><div id="chartHQ" class="chart-container" style="height:260px"></div></div>
+            </div>
+          </div>
+          <div class="col-12" id="panelEffPower" style="display:none">
+            <div class="card card-dark">
+              <div class="card-header card-header-dark">
+                <span class="curve-label eff"><i class="bi bi-speedometer2 me-2"></i>Efficiency &amp; Power</span>
+              </div>
+              <div class="card-body p-0"><div id="chartEffPower" class="chart-container" style="height:260px"></div></div>
+            </div>
+          </div>
+          <div class="col-12" id="panelEff" style="display:none">
+            <div class="card card-dark">
+              <div class="card-header card-header-dark">
+                <span class="curve-label eff"><i class="bi bi-speedometer2 me-2"></i>Efficiency — Flow</span>
+              </div>
+              <div class="card-body p-0"><div id="chartEff" class="chart-container" style="height:260px"></div></div>
+            </div>
+          </div>
+          <div class="col-12" id="panelPower" style="display:none">
+            <div class="card card-dark">
+              <div class="card-header card-header-dark">
+                <span class="curve-label power"><i class="bi bi-lightning-fill me-2"></i>Power — Flow</span>
+              </div>
+              <div class="card-body p-0"><div id="chartPower" class="chart-container" style="height:260px"></div></div>
+            </div>
+          </div>
+          <div class="col-12" id="panelNpsh" style="display:none">
+            <div class="card card-dark">
+              <div class="card-header card-header-dark">
+                <span class="curve-label npsh"><i class="bi bi-arrow-up-right me-2"></i>NPSHr — Flow</span>
+              </div>
+              <div class="card-body p-0"><div id="chartNpsh" class="chart-container" style="height:260px"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>    <div class="card card-dark mb-3">
       <div class="card-header card-header-dark d-flex align-items-center justify-content-between">
         <span><i class="bi bi-sliders me-2"></i>Operating Range</span>
         <select class="header-unit-select" id="unit-op-q" style="margin-top:0">
@@ -369,8 +509,6 @@
 
 </div><!-- /row -->
 
-<!-- Preview charts moved to LHS Column 1 -->
-
 
 <div class="d-flex gap-3 mt-4">
   <button type="submit" class="btn btn-primary px-4" id="saveBtn">
@@ -403,6 +541,7 @@
      data-extra-curves='{{ (pump.extra_curves_json if pump.extra_curves_json else "[]") | safe }}'
      {% endif %}>
 </div>
+<script src="{{ url_for('static', filename='js/pump_curves.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pump_form.js') }}"></script>
 <script>
 (function () {
@@ -434,14 +573,16 @@
       // Sync preview unit selectors to match table units on load
       const previewQ = document.getElementById('preview-unit-q');
       const previewH = document.getElementById('preview-unit-h');
+      const previewNpsh = document.getElementById('preview-unit-npsh');
       const previewPow = document.getElementById('preview-unit-pow');
       if (previewQ) previewQ.value = document.getElementById('unit-q')?.value || 'm3h';
       if (previewH) previewH.value = document.getElementById('unit-h')?.value || 'm';
+      if (previewNpsh) previewNpsh.value = document.getElementById('unit-npsh')?.value || 'm';
       if (previewPow) previewPow.value = document.getElementById('unit-pow')?.value || 'kw';
 
       document.getElementById('curvePreview').style.display = 'block';
-      const { q_h, q_eta } = getTableData('perfTable', true);
-      buildPreviewCharts(pumpData, q_h, q_eta);
+      const { q_h, q_eta, q_npsh } = getTableData('perfTable', true);
+      buildPreviewCharts(pumpData, q_h, q_eta, q_npsh);
     })();
   } else {
     // New pump: blank suggestion rows

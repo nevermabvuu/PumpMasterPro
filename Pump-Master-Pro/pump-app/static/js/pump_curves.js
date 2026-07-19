@@ -68,11 +68,12 @@ function dutyTrace(q, h) {
 const SPD_COLORS = ['#664400','#995500','#cc7700','#ff9900'];  // 70%→80%→90%→100%
 
 function buildWarmanChart(data, opts = {}) {
-  const { showIsolines = true, showPowerIso = false, showSpeedLines = false, dutyQ, dutyH } = opts;
+  const { showIsolines = true, showPowerIso = false, showNpshIso = false, showSpeedLines = false, showNpshCurve = false, npshYAxis = 'y2', dutyQ, dutyH } = opts;
   const traces = [];
   const family     = data.family      || [];
   const isolines   = data.isolines    || [];
   const pwr_iso    = data.power_isolines || [];
+  const npsh_iso   = data.npsh_isolines || [];
   const spd_lines  = data.speed_lines || [];
 
   const nDia = family.length;
@@ -156,6 +157,30 @@ function buildWarmanChart(data, opts = {}) {
     });
   }
 
+  /* ── NPSH isolines ──── */
+  if (showNpshIso && npsh_iso.length > 0) {
+    npsh_iso.forEach(nl => {
+      traces.push({
+        type: 'scatter', mode: 'lines',
+        name: `NPSHr = ${nl.npsh} m`,
+        x: nl.q, y: nl.h,
+        line: { color: '#39d3c0', width: 1.2, dash: 'dashdot' },
+        showlegend: false,
+        hovertemplate: `NPSHr = ${nl.npsh} m<br>Q=%{x:.1f}<br>H=%{y:.2f}<extra></extra>`,
+      });
+      if (nl.q.length > 0) {
+        const mi = Math.floor(nl.q.length / 2);
+        traces.push({
+          type: 'scatter', mode: 'text',
+          x: [nl.q[mi]], y: [nl.h[mi]],
+          text: [`${nl.npsh}m`],
+          textfont: { color: '#39d3c0', size: 9 },
+          showlegend: false, hoverinfo: 'skip',
+        });
+      }
+    });
+  }
+
   /* ── Speed lines ──── */
   if (showSpeedLines && spd_lines.length > 0) {
     spd_lines.forEach((sl, i) => {
@@ -183,6 +208,21 @@ function buildWarmanChart(data, opts = {}) {
     });
   }
 
+  /* ── NPSH standard curves (secondary or same axis) ── */
+  if (showNpshCurve) {
+    family.forEach((d, i) => {
+      traces.push({
+        type: 'scatter', mode: 'lines',
+        name: `NPSHr Ø${d.dia} mm`,
+        x: d.q, y: d.npsh,
+        line: { color: DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)], width: 1.5, dash: 'dashdot' },
+        yaxis: npshYAxis,
+        showlegend: false,
+        hovertemplate: `Ø${d.dia} mm NPSHr<br>Q=%{x:.1f} m³/h<br>NPSHr=%{y:.2f} m<extra></extra>`
+      });
+    });
+  }
+
   /* ── System curve ──── */
   if (data.system_q && data.system_h) {
     traces.push({
@@ -199,6 +239,14 @@ function buildWarmanChart(data, opts = {}) {
   const layout = makeLayout('Flow Q (m³/h)', 'Head H (m)', {
     yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { title: 'Head H (m)', rangemode: 'tozero' }),
   });
+
+  if (showNpshCurve && npshYAxis === 'y2') {
+    layout.yaxis2 = {
+      title: 'NPSHr (m)', overlaying: 'y', side: 'right',
+      rangemode: 'tozero', showgrid: false,
+      titlefont: { color: '#39d3c0', size: 12 }, tickfont: { color: '#39d3c0' }
+    };
+  }
 
   return { traces, layout };
 }
@@ -287,6 +335,59 @@ function buildEffChart(data, showClean) {
   return { traces, layout };
 }
 
+function buildEffPowerChart(data, showClean) {
+  const traces = [];
+  
+  // Efficiency on y1 (left side)
+  traces.push({ type: 'scatter', mode: 'lines', name: 'Efficiency',
+    x: data.q, y: data.eta, line: { color: '#f0c040', width: 2.5 },
+    hovertemplate: 'Q=%{x:.1f}<br>η=%{y:.1f}%<extra></extra>',
+    yaxis: 'y1'
+  });
+  if (showClean && data.eta_clean) {
+    traces.push({ type: 'scatter', mode: 'lines', name: 'η (water ref)',
+      x: data.q, y: data.eta_clean,
+      line: { color: '#f0c040', width: 1.5, dash: 'dot' }, opacity: 0.45,
+      hovertemplate: 'Q=%{x:.1f}<br>η(clean)=%{y:.1f}%<extra></extra>',
+      yaxis: 'y1'
+    });
+  }
+  if (data.bep) {
+    traces.push({ type: 'scatter', mode: 'markers', name: 'BEP',
+      x: [data.bep.q], y: [data.bep.eta],
+      marker: { size: 10, color: '#3fb950', symbol: 'star', line: { color: '#fff', width: 1 } },
+      hovertemplate: `BEP η=${data.bep.eta}%<extra></extra>`,
+      yaxis: 'y1'
+    });
+  }
+
+  // Power on y2 (right side)
+  if (data.power) {
+    traces.push({ type: 'scatter', mode: 'lines', name: 'Power',
+      x: data.q, y: data.power, line: { color: '#f85149', width: 2.5 },
+      hovertemplate: 'Q=%{x:.1f}<br>P=%{y:.2f} kW<extra></extra>',
+      yaxis: 'y2'
+    });
+    if (showClean && data.power_clean) {
+      traces.push({ type: 'scatter', mode: 'lines', name: 'Power (water ref)',
+        x: data.q, y: data.power_clean,
+        line: { color: '#f85149', width: 1.5, dash: 'dot' }, opacity: 0.45,
+        hovertemplate: 'Q=%{x:.1f}<br>P(clean)=%{y:.2f} kW<extra></extra>',
+        yaxis: 'y2'
+      });
+    }
+  }
+
+  const layout = Object.assign({}, PLOTLY_LAYOUT_BASE, {
+    xaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.xaxis, { title: 'Flow Q (m³/h)' }),
+    yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { title: 'Efficiency η (%)', range: [0, 105] }),
+    yaxis2: { title: 'Shaft Power P (kW)', overlaying: 'y', side: 'right',
+              rangemode: 'tozero', showgrid: false,
+              titlefont: { color: '#f85149', size: 12 }, tickfont: { color: '#f85149' } }
+  });
+  return { traces, layout };
+}
+
 function buildPowerChart(data, showClean) {
   const traces = [{ type: 'scatter', mode: 'lines', name: 'Power',
     x: data.q, y: data.power, line: { color: '#f85149', width: 2.5 },
@@ -311,7 +412,7 @@ function buildNpshChart(data) {
   return { traces, layout };
 }
 
-function buildOverlayChart(data, showEff, showPower, showNpsh) {
+function buildOverlayChart(data, showEff, showPow, showNpsh) {
   const traces = [];
   traces.push({ type: 'scatter', mode: 'lines', name: 'H-Q',
     x: data.q, y: data.h, line: { color: '#58a6ff', width: 3 },
@@ -326,7 +427,7 @@ function buildOverlayChart(data, showEff, showPower, showNpsh) {
       x: data.q, y: data.eta, line: { color: '#f0c040', width: 2, dash: 'longdash' },
       hovertemplate: 'η=%{y:.1f}%<extra></extra>' });
   }
-  if (showPower && data.power) {
+  if (showPow && data.power) {
     const pMax = Math.max(...data.power), hMax = Math.max(...data.h);
     const sc = pMax > 0 ? hMax / pMax * 0.55 : 1;
     traces.push({ type: 'scatter', mode: 'lines', name: 'Power (scaled)',
@@ -336,7 +437,8 @@ function buildOverlayChart(data, showEff, showPower, showNpsh) {
       hovertemplate: 'P=%{customdata:.2f} kW<extra></extra>' });
   }
   if (showNpsh) {
-    traces.push({ type: 'scatter', mode: 'lines', name: 'NPSHr',
+    const useY2 = !showEff && !showPow;
+    traces.push({ type: 'scatter', mode: 'lines', name: 'NPSHr', yaxis: useY2 ? 'y2' : 'y1',
       x: data.q, y: data.npsh, line: { color: '#39d3c0', width: 2, dash: 'dashdot' },
       hovertemplate: 'NPSHr=%{y:.2f} m<extra></extra>' });
   }
@@ -349,11 +451,17 @@ function buildOverlayChart(data, showEff, showPower, showNpsh) {
   const layout = Object.assign({}, PLOTLY_LAYOUT_BASE, {
     xaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.xaxis, { title: 'Flow Q (m³/h)' }),
     yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { title: 'Head H (m)', rangemode: 'tozero' }),
-    yaxis2: { title: 'Efficiency η (%)', overlaying: 'y', side: 'right',
+  });
+  if (showEff) {
+    layout.yaxis2 = { title: 'Efficiency η (%)', overlaying: 'y', side: 'right',
               range: [0, 105], showgrid: false,
               titlefont: { color: '#f0c040', size: 12 }, tickfont: { color: '#f0c040' },
-              ticksuffix: '%' },
-  });
+              ticksuffix: '%' };
+  } else if (showNpsh) {
+    layout.yaxis2 = { title: 'NPSHr (m)', overlaying: 'y', side: 'right',
+              rangemode: 'tozero', showgrid: false,
+              titlefont: { color: '#39d3c0', size: 12 }, tickfont: { color: '#39d3c0' } };
+  }
   return { traces, layout };
 }
 
@@ -765,6 +873,14 @@ if (typeof PUMP_ID !== 'undefined') {
       p.set('static_head', sh || 0);
       p.set('pipe_k', pk || 0);
     }
+
+    const effL = document.getElementById('txtEffLevels')?.value || '';
+    const powL = document.getElementById('txtPowerLevels')?.value || '';
+    const npshL = document.getElementById('txtNpshLevels')?.value || '';
+    if (effL) p.set('eff_levels', effL);
+    if (powL) p.set('power_levels', powL);
+    if (npshL) p.set('npsh_levels', npshL);
+
     return p;
   }
 
@@ -783,76 +899,79 @@ if (typeof PUMP_ID !== 'undefined') {
     });
   }
 
-  /* ── Render all charts for current view mode (+ custom curves) ──── */
+  /* ── Render all charts for current display option (+ custom curves) ──── */
   function renderAll() {
     const duty = getDuty();
     const customHQ  = getCustomTracesHQ();
     const customEta = getCustomTracesEta();
     const customPow = getCustomTracesPower();
 
-    if (viewMode === 'warman') {
-      if (!currentData) return;
-      const showIso  = document.getElementById('chkIsolines').checked;
-      const showPwrI = document.getElementById('chkPowerIso').checked;
-      const showNpshF= document.getElementById('chkNpshFamily').checked;
-      const showSpdL  = document.getElementById('chkSpeedLines').checked;
+    const showEffIso   = document.getElementById('chkShowEffIso').checked;
+    const showPowerIso = document.getElementById('chkShowPowerIso').checked;
+    const showNpshIso  = document.getElementById('chkShowNpshIso').checked;
+    const showNpshCurve= document.getElementById('chkShowNpshCurve').checked;
+    const showSpeedLines= document.getElementById('chkSpeedLines').checked;
 
+    // Toggle custom inputs visibility based on checkboxes
+    document.getElementById('groupEffLevels').style.display = showEffIso ? '' : 'none';
+    document.getElementById('groupPowerLevels').style.display = showPowerIso ? '' : 'none';
+    document.getElementById('groupNpshLevels').style.display = showNpshIso ? '' : 'none';
+    document.getElementById('groupNpshYAxis').style.display = showNpshCurve ? '' : 'none';
+
+    const npshYAxis = document.querySelector('input[name="npshYAxisChoice"]:checked')?.value || 'y2';
+
+    // Ensure family subpanels are hidden
+    if (document.getElementById('npshFamilyPanel')) document.getElementById('npshFamilyPanel').style.display = 'none';
+    if (document.getElementById('powerFamilyPanel')) document.getElementById('powerFamilyPanel').style.display = 'none';
+
+    // RENDER MAIN Performance Map
+    if (currentData) {
       const wc = buildWarmanChart(currentData, {
-        showIsolines: showIso, showPowerIso: showPwrI,
-        showSpeedLines: showSpdL,
+        showIsolines: showEffIso,
+        showPowerIso: showPowerIso,
+        showNpshIso:  showNpshIso,
+        showSpeedLines: showSpeedLines,
+        showNpshCurve: showNpshCurve,
+        npshYAxis: npshYAxis,
         dutyQ: duty.q, dutyH: duty.h
       });
-      // Inject custom HQ curves into Warman map
       Plotly.react('chartWarman', [...wc.traces, ...customHQ], wc.layout, PLOTLY_CONFIG);
-
-      // NPSH family
-      document.getElementById('npshFamilyPanel').style.display = showNpshF ? '' : 'none';
-      if (showNpshF) {
-        const nc = buildNpshFamilyChart(currentData.family);
-        Plotly.react('chartNpshFamily', nc.traces, nc.layout, PLOTLY_CONFIG);
-      }
-
-      // Power family (show when power iso is on)
-      document.getElementById('powerFamilyPanel').style.display = showPwrI ? '' : 'none';
-      if (showPwrI) {
-        const pc = buildPowerFamilyChart(currentData.family);
-        Plotly.react('chartPowerFamily', [...pc.traces, ...customPow], pc.layout, PLOTLY_CONFIG);
-      }
-
       renderPerfSummary(currentData, 'perfSummary');
-      renderCustomSummary();
+    }
 
-    } else if (viewMode === 'standalone') {
-      if (!singleData) return;
-      const showClean  = singleData.liquid !== 'water';
+    // Toggle additional performance graphs below
+    const showOther = document.getElementById('chkShowOther').checked;
+    document.getElementById('standalonePanels').style.display = showOther ? '' : 'none';
+    document.getElementById('otherGraphsOptions').style.display = showOther ? '' : 'none';
+
+    if (showOther && singleData) {
+      const layoutChoice = document.querySelector('input[name="otherGraphsLayout"]:checked')?.value || 'combined';
+      const showClean = singleData.liquid !== 'water';
       const showSystem = !!singleData.system_h;
-      const showEff    = document.getElementById('chkEff').checked;
-      const showPow    = document.getElementById('chkPower').checked;
-      const showNpsh   = document.getElementById('chkNpsh').checked;
 
-      const hq    = buildHQChart(singleData, showSystem, showClean);
-      const eff   = buildEffChart(singleData, showClean);
-      const power = buildPowerChart(singleData, showClean);
-      const npsh  = buildNpshChart(singleData);
+      // Toggle panel columns
+      document.getElementById('panelHQ').style.display = (layoutChoice === 'separate') ? '' : 'none';
+      document.getElementById('panelEffPower').style.display = (layoutChoice === 'combined') ? '' : 'none';
+      document.getElementById('panelEff').style.display = (layoutChoice === 'separate') ? '' : 'none';
+      document.getElementById('panelPower').style.display = (layoutChoice === 'separate') ? '' : 'none';
+      document.getElementById('panelNpsh').style.display = ''; // NPSHr is shown in both
 
-      // Inject custom traces into each standalone chart
-      Plotly.react('chartHQ',    [...hq.traces,    ...customHQ],  hq.layout,    PLOTLY_CONFIG);
-      Plotly.react('chartEff',   [...eff.traces,   ...customEta], eff.layout,   PLOTLY_CONFIG);
-      Plotly.react('chartPower', [...power.traces, ...customPow], power.layout, PLOTLY_CONFIG);
-      Plotly.react('chartNpsh',  npsh.traces,                     npsh.layout,  PLOTLY_CONFIG);
+      if (layoutChoice === 'combined') {
+        const effPow = buildEffPowerChart(singleData, showClean);
+        const npsh = buildNpshChart(singleData);
+        Plotly.react('chartEffPower', [...effPow.traces, ...customEta, ...customPow], effPow.layout, PLOTLY_CONFIG);
+        Plotly.react('chartNpsh', npsh.traces, npsh.layout, PLOTLY_CONFIG);
+      } else {
+        const hq    = buildHQChart(singleData, showSystem, showClean);
+        const eff   = buildEffChart(singleData, showClean);
+        const power = buildPowerChart(singleData, showClean);
+        const npsh  = buildNpshChart(singleData);
 
-      document.getElementById('panelEff').style.display   = showEff   ? '' : 'none';
-      document.getElementById('panelPower').style.display = showPow   ? '' : 'none';
-      document.getElementById('panelNpsh').style.display  = showNpsh  ? '' : 'none';
-
-    } else if (viewMode === 'overlay') {
-      if (!singleData) return;
-      const showEff  = document.getElementById('chkEff').checked;
-      const showPow  = document.getElementById('chkPower').checked;
-      const showNpsh = document.getElementById('chkNpsh').checked;
-      const ov = buildOverlayChart(singleData, showEff, showPow, showNpsh);
-      // Custom HQ curves on overlay
-      Plotly.react('chartOverlay', [...ov.traces, ...customHQ], ov.layout, PLOTLY_CONFIG);
+        Plotly.react('chartHQ',    [...hq.traces,    ...customHQ],  hq.layout,    PLOTLY_CONFIG);
+        Plotly.react('chartEff',   [...eff.traces,   ...customEta], eff.layout,   PLOTLY_CONFIG);
+        Plotly.react('chartPower', [...power.traces, ...customPow], power.layout, PLOTLY_CONFIG);
+        Plotly.react('chartNpsh',  npsh.traces,                     npsh.layout,  PLOTLY_CONFIG);
+      }
     }
   }
 
@@ -884,44 +1003,48 @@ if (typeof PUMP_ID !== 'undefined') {
     }
   }
 
-  /* ── View mode switching ──── */
-  function switchPanels() {
-    document.getElementById('warmanPanel').style.display    = viewMode === 'warman'     ? '' : 'none';
-    document.getElementById('standalonePanels').style.display = viewMode === 'standalone' ? '' : 'none';
-    document.getElementById('overlayPanel').style.display   = viewMode === 'overlay'    ? '' : 'none';
-
-    document.getElementById('warmanToggles').style.display    = viewMode === 'warman'     ? '' : 'none';
-    document.getElementById('standaloneToggles').style.display = viewMode !== 'warman'    ? '' : 'none';
-  }
-
-  document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      viewMode = radio.value;
-      switchPanels();
-      renderAll();
+  const isCurvesPage = !!document.getElementById('btnUpdate');
+  if (isCurvesPage) {
+    // Bind change event to checkboxes that change overlays
+    ['chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'chkShowOther'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', renderAll);
     });
-  });
 
-  document.getElementById('liquidSelect').addEventListener('change', updateLiquidPanels);
-  document.getElementById('btnUpdate').addEventListener('click', fetchAndRender);
+    // Bind change event to other layout radios
+    document.querySelectorAll('input[name="otherGraphsLayout"], input[name="npshYAxisChoice"]').forEach(radio => {
+      radio.addEventListener('change', renderAll);
+    });
 
-  ['chkIsolines','chkPowerIso','chkSpeedLines','chkNpshFamily','chkEff','chkPower','chkNpsh'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('change', renderAll);
-  });
+    // Bind change/keypress event to custom levels to automatically fetch
+    ['txtEffLevels', 'txtPowerLevels', 'txtNpshLevels'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', fetchAndRender);
+        el.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            fetchAndRender();
+          }
+        });
+      }
+    });
 
-  // Custom curves: Add Curve button + chevron toggle
-  document.getElementById('btnAddCurve').addEventListener('click', addCustomCurveRow);
+    document.getElementById('liquidSelect').addEventListener('change', updateLiquidPanels);
+    document.getElementById('btnUpdate').addEventListener('click', fetchAndRender);
 
-  document.getElementById('customCurvesBody').addEventListener('show.bs.collapse', () => {
-    document.getElementById('customCurvesChevron').className = 'bi bi-chevron-up';
-  });
-  document.getElementById('customCurvesBody').addEventListener('hide.bs.collapse', () => {
-    document.getElementById('customCurvesChevron').className = 'bi bi-chevron-down';
-  });
+    // Custom curves: Add Curve button + chevron toggle
+    document.getElementById('btnAddCurve').addEventListener('click', addCustomCurveRow);
 
-  // Initial setup
-  updateLiquidPanels();
-  switchPanels();
-  fetchAndRender();
+    document.getElementById('customCurvesBody').addEventListener('show.bs.collapse', () => {
+      document.getElementById('customCurvesChevron').className = 'bi bi-chevron-up';
+    });
+    document.getElementById('customCurvesBody').addEventListener('hide.bs.collapse', () => {
+      document.getElementById('customCurvesChevron').className = 'bi bi-chevron-down';
+    });
+
+    // Initial setup
+    updateLiquidPanels();
+    fetchAndRender();
+  }
 }

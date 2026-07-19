@@ -219,12 +219,15 @@ function initUnitSelectors() {
       } else if (type === 'pow') {
         const previewSelect = document.getElementById('preview-unit-pow');
         if (previewSelect) previewSelect.value = toUnit;
+      } else if (type === 'npsh') {
+        const previewSelect = document.getElementById('preview-unit-npsh');
+        if (previewSelect) previewSelect.value = toUnit;
       }
 
       const previewEl = document.getElementById('curvePreview');
       if (previewEl && previewEl.style.display !== 'none' && lastFitResults) {
-        const { q_h: q_h_raw, q_eta: q_eta_raw } = getTableData('perfTable', true);
-        buildPreviewCharts(lastFitResults, q_h_raw, q_eta_raw);
+        const { q_h: q_h_raw, q_eta: q_eta_raw, q_npsh: q_npsh_raw } = getTableData('perfTable', true);
+        buildPreviewCharts(lastFitResults, q_h_raw, q_eta_raw, q_npsh_raw);
       }
 
       // Persist unit change immediately
@@ -238,7 +241,7 @@ function initUnitSelectors() {
 }
 
 function initPreviewUnitSelectors() {
-  ['q', 'h', 'pow'].forEach(type => {
+  ['q', 'h', 'npsh', 'pow'].forEach(type => {
     const el = document.getElementById(`preview-unit-${type}`);
     if (el) {
       el.addEventListener('change', () => {
@@ -428,7 +431,7 @@ async function fitAndPreview() {
     const unitQ = document.getElementById('unit-q')?.value || 'm3h';
     const unitH = document.getElementById('unit-h')?.value || 'm';
 
-    const displayHShutoff = (d.h_shutoff * CONVERSIONS.h[unitH]).toFixed(1);
+const displayHShutoff = (d.h_shutoff * CONVERSIONS.h[unitH]).toFixed(1);
     const displayQMax = (d.q_max * CONVERSIONS.q[unitQ]).toFixed(1);
     const displayQBep = (d.q_bep * CONVERSIONS.q[unitQ]).toFixed(1);
 
@@ -462,149 +465,319 @@ function showStatus(type, msg) {
   el.textContent = msg;
 }
 
-function buildPreviewCharts(d, q_h_si, q_eta_si) {
-  const unitQ = document.getElementById('preview-unit-q')?.value || document.getElementById('unit-q')?.value || 'm3h';
-  const unitH = document.getElementById('preview-unit-h')?.value || document.getElementById('unit-h')?.value || 'm';
-  const unitPow = document.getElementById('preview-unit-pow')?.value || document.getElementById('unit-pow')?.value || 'kw';
+let isPreviewEventsBound = false;
 
-  const labelQ = getUnitLabel('q', unitQ);
-  const labelH = getUnitLabel('h', unitH);
-  const labelPow = getUnitLabel('pow', unitPow);
-
-  const hqTraces = [];
-  const etaTraces = [];
-
-  const evalP = (coeffs, q) => coeffs.reduce((s, c, i) => s + c * Math.pow(q, i), 0);
-  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-
-  // Determine overall maximum Q in SI units to align X-axes of both graphs
-  let maxQ_SI = 100;
-  if (d && d.q_max) {
-    maxQ_SI = d.q_max;
-  }
-  extraCurves.forEach(ec => {
-    if (ec.fitted && ec.coeffs && ec.coeffs.q_max) {
-      if (ec.coeffs.q_max > maxQ_SI) {
-        maxQ_SI = ec.coeffs.q_max;
+function getPumpFormData() {
+  const data = {};
+  const fields = [
+    'speed_rpm', 'impeller_dia_mm', 'q_min', 'q_max', 'q_bep',
+    'hq_a0', 'hq_a1', 'hq_a2', 'hq_a3',
+    'eff_b0', 'eff_b1', 'eff_b2', 'eff_b3',
+    'npsh_c0', 'npsh_c1', 'npsh_c2',
+    'pow_p0', 'pow_p1', 'pow_p2',
+    'hr', 'qr', 'er', 'impeller_diameters'
+  ];
+  
+  fields.forEach(f => {
+    const el = document.querySelector(`[name="${f}"]`);
+    if (el) {
+      if (f === 'impeller_diameters') {
+        const val = el.value.trim();
+        if (val) {
+          data[f] = val.split(/[;,]/).map(x => parseFloat(x.trim())).filter(x => !isNaN(x));
+        } else {
+          data[f] = [];
+        }
+      } else {
+        data[f] = el.value ? parseFloat(el.value) : 0.0;
       }
     }
   });
+  return data;
+}
 
-  const maxQ_display = maxQ_SI * CONVERSIONS.q[unitQ];
+function convertUnitCurveData(data, qUnit, hUnit, npshUnit, powUnit) {
+  const converted = JSON.parse(JSON.stringify(data));
+  const qFactor = CONVERSIONS.q[qUnit] || 1.0;
+  const hFactor = CONVERSIONS.h[hUnit] || 1.0;
+  const npshFactor = CONVERSIONS.npsh[npshUnit] || 1.0;
+  const powFactor = CONVERSIONS.pow[powUnit] || 1.0;
 
-  // 1. Add main curve traces if main curve fit 'd' exists
-  if (d) {
-    const q_max = d.q_max || 100;
-    const q_arr = Array.from({ length: 80 }, (_, i) => (i / 79) * q_max);
+  if (converted.q) converted.q = converted.q.map(v => v * qFactor);
+  if (converted.h) converted.h = converted.h.map(v => v * hFactor);
+  if (converted.eta) converted.eta = converted.eta.map(v => v);
+  if (converted.power) converted.power = converted.power.map(v => v * powFactor);
+  if (converted.npsh) converted.npsh = converted.npsh.map(v => v * npshFactor);
 
-    const a = [d.hq_a0, d.hq_a1, d.hq_a2, d.hq_a3];
-    const b = [d.eff_b0, d.eff_b1, d.eff_b2, d.eff_b3];
-    const pp = [d.pow_p0, d.pow_p1, d.pow_p2];
+  if (converted.h_clean) converted.h_clean = converted.h_clean.map(v => v * hFactor);
+  if (converted.eta_clean) converted.eta_clean = converted.eta_clean.map(v => v);
+  if (converted.power_clean) converted.power_clean = converted.power_clean.map(v => v * powFactor);
 
-    const H   = q_arr.map(q => clamp(evalP(a, q), 0, Infinity));
-    const eta = q_arr.map(q => clamp(evalP(b, q), 0, 100));
-    const pow = q_arr.map(q => clamp(evalP(pp, q), 0, Infinity));
+  if (converted.bep) {
+    converted.bep.q = converted.bep.q * qFactor;
+    converted.bep.h = converted.bep.h * hFactor;
+    converted.bep.power = converted.bep.power * powFactor;
+  }
+  if (converted.system_h) converted.system_h = converted.system_h.map(v => v * hFactor);
 
-    const q_arr_selected = q_arr.map(q => q * CONVERSIONS.q[unitQ]);
-    const H_selected     = H.map(h => h * CONVERSIONS.h[unitH]);
-    const pow_selected   = pow.map(p => p * CONVERSIONS.pow[unitPow]);
+  return converted;
+}
 
-    if (q_h_si && q_h_si.length) {
-      hqTraces.push({
-        x: q_h_si.map(r => r[0] * CONVERSIONS.q[unitQ]),
-        y: q_h_si.map(r => r[1] * CONVERSIONS.h[unitH]),
-        mode: 'markers',
-        name: 'Main Data',
-        marker: { color: '#f0883e', size: 7 }
-      });
-    }
-    hqTraces.push({ x: q_arr_selected, y: H_selected, mode: 'lines', name: 'Main Fitted', line: { color: '#58a6ff', width: 2.2 } });
+function convertUnitWarmanData(data, qUnit, hUnit, npshUnit, powUnit) {
+  const converted = JSON.parse(JSON.stringify(data));
+  const qFactor = CONVERSIONS.q[qUnit] || 1.0;
+  const hFactor = CONVERSIONS.h[hUnit] || 1.0;
+  const npshFactor = CONVERSIONS.npsh[npshUnit] || 1.0;
+  const powFactor = CONVERSIONS.pow[powUnit] || 1.0;
 
-    if (q_eta_si && q_eta_si.length) {
-      etaTraces.push({
-        x: q_eta_si.map(r => r[0] * CONVERSIONS.q[unitQ]),
-        y: q_eta_si.map(r => r[1]), // eta is %
-        mode: 'markers',
-        name: 'Main η Data',
-        marker: { color: '#f0883e', size: 7 },
-        yaxis: 'y'
-      });
-    }
-    etaTraces.push({ x: q_arr_selected, y: eta, mode: 'lines', name: 'Main η Fitted (%)', line: { color: '#3fb950', width: 2.2 }, yaxis: 'y' });
-    etaTraces.push({ x: q_arr_selected, y: pow_selected, mode: 'lines', name: `Main Power (${labelPow})`, line: { color: '#d29922', width: 2, dash: 'dot' }, yaxis: 'y2' });
+  if (converted.family) {
+    converted.family.forEach(d => {
+      d.q = d.q.map(v => v * qFactor);
+      d.h = d.h.map(v => v * hFactor);
+      d.eta = d.eta.map(v => v);
+      d.power = d.power.map(v => v * powFactor);
+      d.npsh = d.npsh.map(v => v * npshFactor);
+      if (d.bep) {
+        d.bep.q = d.bep.q * qFactor;
+        d.bep.h = d.bep.h * hFactor;
+      }
+    });
   }
 
-  // 2. Add extra curves traces if fitted
-  extraCurves.forEach(ec => {
-    if (!ec.fitted || !ec.coeffs) return;
-    const e_d = ec.coeffs;
-    const e_q_max = e_d.q_max || 100;
-    const e_q_arr = Array.from({ length: 60 }, (_, i) => (i / 59) * e_q_max);
-    
-    const e_a = [e_d.hq_a0, e_d.hq_a1, e_d.hq_a2, e_d.hq_a3];
-    const e_b = [e_d.eff_b0, e_d.eff_b1, e_d.eff_b2, e_d.eff_b3];
-    const e_pp = [e_d.pow_p0, e_d.pow_p1, e_d.pow_p2];
-
-    const e_H = e_q_arr.map(q => clamp(evalP(e_a, q), 0, Infinity));
-    const e_eta = e_q_arr.map(q => clamp(evalP(e_b, q), 0, 100));
-    const e_pow = e_q_arr.map(q => clamp(evalP(e_pp, q), 0, Infinity));
-
-    const e_q_selected = e_q_arr.map(q => q * CONVERSIONS.q[unitQ]);
-    const e_H_selected = e_H.map(h => h * CONVERSIONS.h[unitH]);
-    const e_pow_selected = e_pow.map(p => p * CONVERSIONS.pow[unitPow]);
-
-    const labelStr = ec.diameter ? `${ec.label} (Ø${ec.diameter} mm)` : ec.label;
-
-    hqTraces.push({
-      x: e_q_selected,
-      y: e_H_selected,
-      mode: 'lines',
-      name: `${labelStr} Fitted`,
-      line: { color: ec.color, width: 2 }
+  if (converted.isolines) {
+    converted.isolines.forEach(iso => {
+      iso.q = iso.q.map(v => v * qFactor);
+      iso.h = iso.h.map(v => v * hFactor);
+      iso.label_q = iso.label_q * qFactor;
+      iso.label_h = iso.label_h * hFactor;
     });
+  }
 
-    etaTraces.push({
-      x: e_q_selected,
-      y: e_eta,
-      mode: 'lines',
-      name: `${labelStr} η Fitted (%)`,
-      line: { color: ec.color, width: 2 },
-      yaxis: 'y'
+  if (converted.power_isolines) {
+    converted.power_isolines.forEach(iso => {
+      iso.q = iso.q.map(v => v * qFactor);
+      iso.h = iso.h.map(v => v * hFactor);
+      iso.label_q = iso.label_q * qFactor;
+      iso.label_h = iso.label_h * hFactor;
     });
+  }
 
-    etaTraces.push({
-      x: e_q_selected,
-      y: e_pow_selected,
-      mode: 'lines',
-      name: `${labelStr} Power (${labelPow})`,
-      line: { color: ec.color, width: 1.5, dash: 'dot' },
-      yaxis: 'y2'
+  if (converted.npsh_isolines) {
+    converted.npsh_isolines.forEach(iso => {
+      iso.q = iso.q.map(v => v * qFactor);
+      iso.h = iso.h.map(v => v * hFactor);
+      iso.label_q = iso.label_q * qFactor;
+      iso.label_h = iso.label_h * hFactor;
     });
+  }
+
+  if (converted.speed_lines) {
+    converted.speed_lines.forEach(sl => {
+      sl.q = sl.q.map(v => v * qFactor);
+      sl.h = sl.h.map(v => v * hFactor);
+      if (sl.bep) {
+        sl.bep.q = sl.bep.q * qFactor;
+        sl.bep.h = sl.bep.h * hFactor;
+      }
+    });
+  }
+
+  if (converted.bep) {
+    converted.bep.q = converted.bep.q * qFactor;
+    converted.bep.h = converted.bep.h * hFactor;
+  }
+
+  if (converted.system_q) converted.system_q = converted.system_q.map(v => v * qFactor);
+  if (converted.system_h) converted.system_h = converted.system_h.map(v => v * hFactor);
+
+  return converted;
+}
+
+function bindPreviewEvents() {
+  if (isPreviewEventsBound) return;
+  isPreviewEventsBound = true;
+
+  const ids = ['chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'chkShowOther'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => refreshPreviewCharts());
   });
 
-  // Shared margins to guarantee exact alignment of Plotly plotting areas
-  const SHARED_MARGINS = { l: 50, r: 60, t: 30, b: 40 };
+  const txtIds = ['txtEffLevels', 'txtPowerLevels', 'txtNpshLevels'];
+  txtIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('change', () => refreshPreviewCharts());
+      el.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          refreshPreviewCharts();
+        }
+      });
+    }
+  });
 
-  // H-Q chart
-  Plotly.react('previewHQ', hqTraces, { 
-    ...FORM_LAYOUT, 
-    title:{text:'H-Q',font:{size:12}}, 
-    xaxis:{...FORM_LAYOUT.xaxis,title:`Q (${labelQ})`,range:[0, maxQ_display]}, 
-    yaxis:{...FORM_LAYOUT.yaxis,title:`Head (${labelH})`},
-    legend:{x:0.02,y:0.98,bgcolor:'rgba(0,0,0,0)'},
-    margin: SHARED_MARGINS
-  }, { responsive: true });
+  document.querySelectorAll('input[name="otherGraphsLayout"], input[name="npshYAxisChoice"]').forEach(radio => {
+    radio.addEventListener('change', () => refreshPreviewCharts());
+  });
 
-  // Efficiency + Power chart
-  Plotly.react('previewEta', etaTraces, {
-    ...FORM_LAYOUT,
-    title:{text:'Efficiency & Power',font:{size:12}},
-    xaxis:{...FORM_LAYOUT.xaxis,title:`Q (${labelQ})`,range:[0, maxQ_display]},
-    yaxis:{...FORM_LAYOUT.yaxis,title:'Efficiency (%)'},
-    yaxis2:{...FORM_LAYOUT.yaxis,title:`Power (${labelPow})`,overlaying:'y',side:'right',showgrid:false},
-    legend:{x:0.02,y:0.98,bgcolor:'rgba(0,0,0,0)'},
-    margin: SHARED_MARGINS
-  }, { responsive: true });
+  ['preview-unit-q', 'preview-unit-h', 'preview-unit-npsh', 'preview-unit-pow'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => refreshPreviewCharts());
+  });
+}
+
+async function refreshPreviewCharts() {
+  bindPreviewEvents();
+
+  const formData = getPumpFormData();
+  const showEffIso = document.getElementById('chkShowEffIso').checked;
+  const showPowerIso = document.getElementById('chkShowPowerIso').checked;
+  const showNpshIso = document.getElementById('chkShowNpshIso').checked;
+  const showNpshCurve = document.getElementById('chkShowNpshCurve').checked;
+  const showSpeedLines = document.getElementById('chkSpeedLines').checked;
+  const showOther = document.getElementById('chkShowOther').checked;
+  const npshYAxis = document.querySelector('input[name="npshYAxisChoice"]:checked')?.value || 'y2';
+
+  // Toggle inputs visibility
+  document.getElementById('groupEffLevels').style.display = showEffIso ? '' : 'none';
+  document.getElementById('groupPowerLevels').style.display = showPowerIso ? '' : 'none';
+  document.getElementById('groupNpshLevels').style.display = showNpshIso ? '' : 'none';
+  document.getElementById('groupNpshYAxis').style.display = showNpshCurve ? '' : 'none';
+  document.getElementById('standalonePanels').style.display = showOther ? '' : 'none';
+  document.getElementById('otherGraphsOptions').style.display = showOther ? '' : 'none';
+
+  const body = {
+    ...formData,
+    eff_levels: showEffIso ? document.getElementById('txtEffLevels').value : null,
+    power_levels: showPowerIso ? document.getElementById('txtPowerLevels').value : null,
+    npsh_levels: showNpshIso ? document.getElementById('txtNpshLevels').value : null,
+  };
+
+  try {
+    const [warmanRes, curveRes] = await Promise.all([
+      fetch('/papi/preview-warman-chart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).then(r => r.json()),
+      fetch('/papi/preview-curve-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).then(r => r.json())
+    ]);
+
+    const unitQ = document.getElementById('preview-unit-q')?.value || 'm3h';
+    const unitH = document.getElementById('preview-unit-h')?.value || 'm';
+    const unitNpsh = document.getElementById('preview-unit-npsh')?.value || 'm';
+    const unitPow = document.getElementById('preview-unit-pow')?.value || 'kw';
+
+    const convertedWarman = convertUnitWarmanData(warmanRes, unitQ, unitH, unitNpsh, unitPow);
+    const convertedCurves = convertUnitCurveData(curveRes, unitQ, unitH, unitNpsh, unitPow);
+
+    renderPreviewChartsData(convertedWarman, convertedCurves);
+  } catch (err) {
+    console.error("Preview failed:", err);
+  }
+}
+
+function renderPreviewChartsData(warmanData, curveData) {
+  const showEffIso = document.getElementById('chkShowEffIso').checked;
+  const showPowerIso = document.getElementById('chkShowPowerIso').checked;
+  const showNpshIso = document.getElementById('chkShowNpshIso').checked;
+  const showNpshCurve = document.getElementById('chkShowNpshCurve').checked;
+  const showSpeedLines = document.getElementById('chkSpeedLines').checked;
+  const npshYAxis = document.querySelector('input[name="npshYAxisChoice"]:checked')?.value || 'y2';
+
+  const PLOTLY_CONFIG = {
+    responsive: true, displayModeBar: true,
+    modeBarButtonsToRemove: ['select2d', 'lasso2d'],
+    displaylogo: false
+  };
+
+  const wc = buildWarmanChart(warmanData, {
+    showIsolines: showEffIso,
+    showPowerIso: showPowerIso,
+    showNpshIso: showNpshIso,
+    showSpeedLines: showSpeedLines,
+    showNpshCurve: showNpshCurve,
+    npshYAxis: npshYAxis
+  });
+
+  const unitQ = document.getElementById('preview-unit-q')?.value || 'm3h';
+  const unitH = document.getElementById('preview-unit-h')?.value || 'm';
+  const unitNpsh = document.getElementById('preview-unit-npsh')?.value || 'm';
+  const unitPow = document.getElementById('preview-unit-pow')?.value || 'kw';
+
+  const labelQ = getUnitLabel('q', unitQ);
+  const labelH = getUnitLabel('h', unitH);
+  const labelNpsh = getUnitLabel('npsh', unitNpsh);
+  const labelPow = getUnitLabel('pow', unitPow);
+
+  wc.layout.xaxis.title = `Flow Q (${labelQ})`;
+  wc.layout.yaxis.title = `Head H (${labelH})`;
+  if (wc.layout.yaxis2) {
+    wc.layout.yaxis2.title = `NPSHr (${labelNpsh})`;
+  }
+
+  Plotly.react('chartWarman', wc.traces, wc.layout, PLOTLY_CONFIG);
+
+  const showOther = document.getElementById('chkShowOther').checked;
+  document.getElementById('standalonePanels').style.display = showOther ? '' : 'none';
+  document.getElementById('otherGraphsOptions').style.display = showOther ? '' : 'none';
+
+  if (showOther && curveData) {
+    const layoutChoice = document.querySelector('input[name="otherGraphsLayout"]:checked')?.value || 'combined';
+    const showClean = curveData.liquid !== 'water';
+    const showSystem = !!curveData.system_h;
+
+    document.getElementById('panelHQ').style.display = (layoutChoice === 'separate') ? '' : 'none';
+    document.getElementById('panelEffPower').style.display = (layoutChoice === 'combined') ? '' : 'none';
+    document.getElementById('panelEff').style.display = (layoutChoice === 'separate') ? '' : 'none';
+    document.getElementById('panelPower').style.display = (layoutChoice === 'separate') ? '' : 'none';
+    document.getElementById('panelNpsh').style.display = '';
+
+    if (layoutChoice === 'combined') {
+      const effPow = buildEffPowerChart(curveData, showClean);
+      effPow.layout.xaxis.title = `Flow Q (${labelQ})`;
+      effPow.layout.yaxis.title = 'Efficiency (%)';
+      effPow.layout.yaxis2.title = `Shaft Power P (${labelPow})`;
+
+      const npsh = buildNpshChart(curveData);
+      npsh.layout.xaxis.title = `Flow Q (${labelQ})`;
+      npsh.layout.yaxis.title = `NPSHr (${labelNpsh})`;
+
+      Plotly.react('chartEffPower', effPow.traces, effPow.layout, PLOTLY_CONFIG);
+      Plotly.react('chartNpsh', npsh.traces, npsh.layout, PLOTLY_CONFIG);
+    } else {
+      const hq = buildHQChart(curveData, showSystem, showClean);
+      hq.layout.xaxis.title = `Flow Q (${labelQ})`;
+      hq.layout.yaxis.title = `Head H (${labelH})`;
+
+      const eff = buildEffChart(curveData, showClean);
+      eff.layout.xaxis.title = `Flow Q (${labelQ})`;
+      eff.layout.yaxis.title = 'Efficiency (%)';
+
+      const power = buildPowerChart(curveData, showClean);
+      power.layout.xaxis.title = `Flow Q (${labelQ})`;
+      power.layout.yaxis.title = `Shaft Power P (${labelPow})`;
+
+      const npsh = buildNpshChart(curveData);
+      npsh.layout.xaxis.title = `Flow Q (${labelQ})`;
+      npsh.layout.yaxis.title = `NPSHr (${labelNpsh})`;
+
+      Plotly.react('chartHQ', hq.traces, hq.layout, PLOTLY_CONFIG);
+      Plotly.react('chartEff', eff.traces, eff.layout, PLOTLY_CONFIG);
+      Plotly.react('chartPower', power.traces, power.layout, PLOTLY_CONFIG);
+      Plotly.react('chartNpsh', npsh.traces, npsh.layout, PLOTLY_CONFIG);
+    }
+  }
+}
+
+function buildPreviewCharts(d, q_h_si, q_eta_si, q_npsh_si) {
+  if (d) lastFitResults = d;
+  refreshPreviewCharts();
 }
 
 function refreshCoeffDisplay(d) {
@@ -941,8 +1114,8 @@ async function fitExtraCurve(curveId) {
 function refreshMainPreview() {
   const previewEl = document.getElementById('curvePreview');
   if (previewEl && previewEl.style.display !== 'none') {
-    const { q_h: q_h_raw, q_eta: q_eta_raw } = getTableData('perfTable', true);
-    buildPreviewCharts(lastFitResults, q_h_raw, q_eta_raw);
+    const { q_h: q_h_raw, q_eta: q_eta_raw, q_npsh: q_npsh_raw } = getTableData('perfTable', true);
+    buildPreviewCharts(lastFitResults, q_h_raw, q_eta_raw, q_npsh_raw);
   }
 }
 

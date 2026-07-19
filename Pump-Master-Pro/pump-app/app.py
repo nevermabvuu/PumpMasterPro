@@ -230,8 +230,22 @@ def api_warman_chart(pump_id):
     d50    = _get_float(args, 'slurry_d50', 0.3)
     rho_s  = _get_float(args, 'rho_solid', 2650.0)
 
+    def parse_levels(raw_str):
+        if not raw_str or not raw_str.strip():
+            return None
+        try:
+            return [float(x.strip()) for x in raw_str.replace(';', ',').split(',') if x.strip()]
+        except ValueError:
+            return None
+
+    eff_levels   = parse_levels(args.get('eff_levels'))
+    power_levels = parse_levels(args.get('power_levels'))
+    npsh_levels  = parse_levels(args.get('npsh_levels'))
+
     data = warman_chart_data(pump, liquid=liquid, rho=rho, viscosity_cSt=vis,
-                             slurry_cv=cv, slurry_d50=d50, rho_solid=rho_s)
+                             slurry_cv=cv, slurry_d50=d50, rho_solid=rho_s,
+                             eff_levels=eff_levels, power_levels=power_levels,
+                             npsh_levels=npsh_levels)
 
     sh = _get_float(args, 'static_head', 0.0)
     pk = _get_float(args, 'pipe_k', 0.0)
@@ -242,6 +256,101 @@ def api_warman_chart(pump_id):
         data['system_h'] = system_curve_points(sh, pk, q_sys)
 
     return jsonify(data)
+
+
+@app.route('/papi/preview-warman-chart', methods=['POST'])
+def api_preview_warman_chart():
+    """Return full Warman performance map data for unsaved/preview pump data."""
+    data = request.get_json(force=True)
+    pump = Pump()
+    for field in ['hq_a0', 'hq_a1', 'hq_a2', 'hq_a3',
+                  'eff_b0', 'eff_b1', 'eff_b2', 'eff_b3',
+                  'npsh_c0', 'npsh_c1', 'npsh_c2',
+                  'pow_p0', 'pow_p1', 'pow_p2',
+                  'speed_rpm', 'impeller_dia_mm', 'q_min', 'q_max', 'q_bep',
+                  'hr', 'qr', 'er']:
+        val = data.get(field)
+        if val is not None:
+            setattr(pump, field, float(val))
+        else:
+            setattr(pump, field, 0.0)
+
+    imp_dia = data.get('impeller_diameters')
+    if isinstance(imp_dia, list):
+        pump.impeller_diameters = json.dumps(imp_dia)
+    elif isinstance(imp_dia, str):
+        pump.impeller_diameters = imp_dia
+
+    liquid = data.get('liquid', 'water')
+    rho = float(data.get('rho', 1000.0))
+    vis = float(data.get('viscosity_cSt', 1.0))
+    cv = float(data.get('slurry_cv', 0.0))
+    d50 = float(data.get('slurry_d50', 0.3))
+    rho_s = float(data.get('rho_solid', 2650.0))
+
+    def parse_levels(raw_str):
+        if not raw_str or not str(raw_str).strip():
+            return None
+        try:
+            return [float(x.strip()) for x in str(raw_str).replace(';', ',').split(',') if x.strip()]
+        except ValueError:
+            return None
+
+    eff_levels = parse_levels(data.get('eff_levels'))
+    power_levels = parse_levels(data.get('power_levels'))
+    npsh_levels = parse_levels(data.get('npsh_levels'))
+
+    chart_data = warman_chart_data(pump, liquid=liquid, rho=rho, viscosity_cSt=vis,
+                                   slurry_cv=cv, slurry_d50=d50, rho_solid=rho_s,
+                                   eff_levels=eff_levels, power_levels=power_levels,
+                                   npsh_levels=npsh_levels)
+
+    sh = float(data.get('static_head', 0.0))
+    pk = float(data.get('pipe_k', 0.0))
+    if sh or pk:
+        q_sys = np.linspace(0, pump.q_max or 100, 100).tolist()
+        chart_data['system_q'] = q_sys
+        chart_data['system_h'] = system_curve_points(sh, pk, q_sys)
+
+    return jsonify(chart_data)
+
+
+@app.route('/papi/preview-curve-data', methods=['POST'])
+def api_preview_curve_data():
+    """Return single-diameter curve data for unsaved/preview pump data."""
+    data = request.get_json(force=True)
+    pump = Pump()
+    for field in ['hq_a0', 'hq_a1', 'hq_a2', 'hq_a3',
+                  'eff_b0', 'eff_b1', 'eff_b2', 'eff_b3',
+                  'npsh_c0', 'npsh_c1', 'npsh_c2',
+                  'pow_p0', 'pow_p1', 'pow_p2',
+                  'speed_rpm', 'impeller_dia_mm', 'q_min', 'q_max', 'q_bep',
+                  'hr', 'qr', 'er']:
+        val = data.get(field)
+        if val is not None:
+            setattr(pump, field, float(val))
+        else:
+            setattr(pump, field, 0.0)
+
+    liquid = data.get('liquid', 'water')
+    rho = float(data.get('rho', 1000.0))
+    vis = float(data.get('viscosity_cSt', 1.0))
+    cv = float(data.get('slurry_cv', 0.0))
+    d50 = float(data.get('slurry_d50', 0.3))
+    rho_s = float(data.get('rho_solid', 2650.0))
+
+    chart_data = full_curve_data(pump, n_points=100, liquid=liquid, rho=rho,
+                                 viscosity_cSt=vis, slurry_cv=cv,
+                                 slurry_d50=d50, rho_solid=rho_s)
+    bep = bep_point(pump, liquid, rho, vis, cv, d50, rho_s)
+
+    sh = float(data.get('static_head', 0.0))
+    pk = float(data.get('pipe_k', 0.0))
+    chart_data['system_h'] = system_curve_points(sh, pk, chart_data['q']) if (pk or sh) else None
+
+    chart_data['bep'] = bep
+    chart_data['pump'] = pump.to_dict()
+    return jsonify(chart_data)
 
 
 # ── Pump Selection Module ──────────────────────────────────────────────────────

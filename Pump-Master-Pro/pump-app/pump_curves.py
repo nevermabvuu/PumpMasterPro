@@ -196,13 +196,15 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
     family = []
     for d in diameters:
         r = d / d_max
+        penalty = 40.0 * (1.0 - r)
+        eta_trimmed = np.clip(eta_base - penalty, 0, 100)
         family.append({
             'dia': d,
             'is_max': d == d_max,
             'ratio': round(r, 4),
             'q':    (q_base * r).tolist(),
             'h':    (h_base * r ** 2).tolist(),
-            'eta':  eta_base.tolist(),
+            'eta':  eta_trimmed.tolist(),
             'power': (pwr_base * r ** 3).tolist(),
             'npsh': (npsh_base * r ** 2).tolist(),
             'bep': _bep_for_ratio(pump, r, h_base, eta_base, pwr_base, q_base),
@@ -214,10 +216,11 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
 def _bep_for_ratio(pump, ratio, h_base, eta_base, pwr_base, q_base):
     """BEP at a given impeller trim ratio."""
     idx = int(np.argmax(eta_base))
+    penalty = 40.0 * (1.0 - ratio)
     return {
         'q': round(float(q_base[idx]) * ratio, 2),
         'h': round(float(h_base[idx]) * ratio ** 2, 2),
-        'eta': round(float(eta_base[idx]), 2),
+        'eta': round(float(eta_base[idx]) - penalty, 2),
         'power': round(float(pwr_base[idx]) * ratio ** 3, 2),
     }
 
@@ -245,7 +248,7 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
     valid = h_base > 0
     q_v, h_v, eta_v = q_base[valid], h_base[valid], eta_base[valid]
 
-    if iso_levels is None:
+    if not iso_levels:
         eta_max = float(np.max(eta_v))
         lo = max(25, int((eta_max * 0.55) // 5) * 5)
         hi = int((eta_max * 0.97) // 5) * 5
@@ -255,59 +258,101 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
 
     isolines = []
     for eta_t in iso_levels:
-        diff = eta_v - eta_t
-        crossings = []
-        for i in range(len(diff) - 1):
-            if diff[i] * diff[i + 1] <= 0 and not (diff[i] == 0 and diff[i + 1] == 0):
-                t = diff[i] / (diff[i] - diff[i + 1]) if (diff[i] - diff[i + 1]) != 0 else 0
-                q_c = float(q_v[i] + t * (q_v[i + 1] - q_v[i]))
-                h_c = float(h_v[i] + t * (h_v[i + 1] - h_v[i]))
-                crossings.append((q_c, h_c))
+        left_pts = []
+        right_pts = []
 
-        if len(crossings) < 2:
+        # Check at r=1.0 if the runout efficiency is below target eta_t
+        # If runout efficiency is higher than eta_t, then there is no right-side crossing
+        # (efficiency never drops below target in the flow range).
+        diff_1 = eta_v - eta_t
+        has_right_branch = (diff_1[-1] < 0)
+
+        for r in ratios[::-1]:
+            q_r = q_v * r
+            h_r = h_v * r ** 2
+            penalty = 40.0 * (1.0 - r)
+            eta_r = np.clip(eta_v - penalty, 0, 100)
+
+            diff = eta_r - eta_t
+            crossings = []
+            for i in range(len(diff) - 1):
+                if diff[i] * diff[i + 1] <= 0 and not (diff[i] == 0 and diff[i + 1] == 0):
+                    t = diff[i] / (diff[i] - diff[i + 1]) if (diff[i] - diff[i + 1]) != 0 else 0
+                    q_c = float(q_r[i] + t * (q_r[i + 1] - q_r[i]))
+                    h_c = float(h_r[i] + t * (h_r[i + 1] - h_r[i]))
+                    crossings.append((q_c, h_c))
+
+            if has_right_branch:
+                if len(crossings) == 1 and diff[-1] >= 0:
+                    # If right crossing is cut off by flow range, cap at runout point
+                    crossings.append((float(q_r[-1]), float(h_r[-1])))
+
+                if len(crossings) >= 2:
+                    crossings.sort(key=lambda x: x[0])
+                    left_pts.append(crossings[0])
+                    right_pts.append(crossings[-1])
+                else:
+                    break
+            else:
+                if len(crossings) >= 1:
+                    crossings.sort(key=lambda x: x[0])
+                    left_pts.append(crossings[0])
+                else:
+                    break
+
+        if len(left_pts) == 0:
             continue
 
-        crossings.sort(key=lambda x: x[0])
-        q_L, h_L = crossings[0]
-        q_R, h_R = crossings[-1]
+        left_q = [p[0] for p in left_pts]
+        left_h = [p[1] for p in left_pts]
+        right_q = [p[0] for p in right_pts]
+        right_h = [p[1] for p in right_pts]
 
-        r_seq_dn = ratios[::-1]
-        left_q = (q_L * r_seq_dn).tolist()
-        left_h = (h_L * r_seq_dn ** 2).tolist()
+        if not has_right_branch or len(right_q) == 0:
+            # Single-crossing line running all the way down
+            # Extrapolate/generate across all ratios
+            q_c, h_c = left_pts[0]
+            iso_q = (q_c * ratios[::-1]).tolist()
+            iso_h = (h_c * ratios[::-1] ** 2).tolist()
+            isolines.append({
+                'eta': eta_t,
+                'q': iso_q,
+                'h': iso_h,
+                'label_q': round(q_c, 2),
+                'label_h': round(h_c, 2),
+            })
+            continue
 
-        qlo, qhi = q_L * r_min, q_R * r_min
-        mask_bot = (q_v >= qlo - 1e-9) & (q_v <= qhi + 1e-9)
-        arc_q_bot = (q_v[mask_bot] * r_min).tolist()
-        arc_h_bot = (h_v[mask_bot] * r_min ** 2).tolist()
-        if len(arc_q_bot) < 2:
-            arc_q_bot = [qlo, qhi]
-            arc_h_bot = [h_L * r_min ** 2, h_R * r_min ** 2]
+        reached_bottom = (len(left_pts) == len(ratios))
 
-        r_seq_up = ratios
-        right_q = (q_R * r_seq_up).tolist()
-        right_h = (h_R * r_seq_up ** 2).tolist()
-
-        mask_top = (q_v >= q_L - 1e-9) & (q_v <= q_R + 1e-9)
-        arc_q_top = q_v[mask_top][::-1].tolist()
-        arc_h_top = h_v[mask_top][::-1].tolist()
-        if len(arc_q_top) < 2:
-            arc_q_top = [q_R, q_L]
-            arc_h_top = [h_R, h_L]
-
-        iso_q = left_q + arc_q_bot + right_q + arc_q_top + [left_q[0]]
-        iso_h = left_h + arc_h_bot + right_h + arc_h_top + [left_h[0]]
-
-        mid = len(arc_q_top) // 2
-        label_q = arc_q_top[mid] if arc_q_top else (q_L + q_R) / 2
-        label_h = arc_h_top[mid] if arc_h_top else (h_L + h_R) / 2
-
-        isolines.append({
-            'eta': eta_t,
-            'q': iso_q,
-            'h': iso_h,
-            'label_q': round(label_q, 2),
-            'label_h': round(label_h, 2),
-        })
+        if reached_bottom:
+            # Return left branch and right branch as two separate lines (contour style)
+            # which prevents drawing horizontal lines along the boundaries.
+            isolines.append({
+                'eta': eta_t,
+                'q': left_q,
+                'h': left_h,
+                'label_q': round(left_q[0], 2),
+                'label_h': round(left_h[0], 2),
+            })
+            isolines.append({
+                'eta': eta_t,
+                'q': right_q,
+                'h': right_h,
+                'label_q': round(right_q[0], 2),
+                'label_h': round(right_h[0], 2),
+            })
+        else:
+            # Closed U-shaped loop in the middle
+            iso_q = left_q + right_q[::-1]
+            iso_h = left_h + right_h[::-1]
+            isolines.append({
+                'eta': eta_t,
+                'q': iso_q,
+                'h': iso_h,
+                'label_q': round(left_q[0], 2),
+                'label_h': round(left_h[0], 2),
+            })
 
     return isolines
 
@@ -316,7 +361,8 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
 
 def power_isolines(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
                    slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650,
-                   n_power_lines=5, n_ratio_steps=40, n_base=1000):
+                   n_power_lines=5, n_ratio_steps=40, n_base=1000,
+                   power_levels=None):
     """Constant shaft-power lines across the H-Q family."""
     diameters = pump.get_diameters()
     d_max = max(diameters)
@@ -329,7 +375,10 @@ def power_isolines(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
     pwr_max_arr = power_curve(pump, q_base, liquid, rho, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
     p_max_base = float(np.max(pwr_max_arr))
 
-    p_levels = np.linspace(p_max_base * 0.2, p_max_base * 0.95, n_power_lines)
+    if power_levels:
+        p_levels = power_levels
+    else:
+        p_levels = np.linspace(p_max_base * 0.2, p_max_base * 0.95, n_power_lines)
 
     pwr_lines = []
     for p_target in p_levels:
@@ -356,6 +405,54 @@ def power_isolines(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
             })
 
     return pwr_lines
+
+
+# ── NPSH isolines (constant NPSHr lines) ──────────────────────────────────────
+
+def npsh_isolines(pump, liquid='water', viscosity_cSt=1.0,
+                  slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650,
+                  iso_levels=None, n_ratio_steps=40, n_base=1000):
+    """Constant NPSHr lines across the H-Q family."""
+    diameters = pump.get_diameters()
+    d_max = max(diameters)
+    d_min = min(diameters)
+    r_min = d_min / d_max
+
+    ratios = np.linspace(r_min, 1.0, n_ratio_steps)
+
+    q_base = np.linspace(pump.q_min or 0.01, pump.q_max, n_base)
+    npsh_base_arr = npsh_curve(pump, q_base)
+    npsh_max_val = float(np.max(npsh_base_arr))
+
+    if not iso_levels:
+        iso_levels = np.linspace(npsh_max_val * 0.2, npsh_max_val * 0.95, 5).tolist()
+
+    npsh_lines = []
+    for npsh_target in iso_levels:
+        pts_q, pts_h = [], []
+        for r in ratios:
+            if r <= 0:
+                continue
+            npsh_base_target = npsh_target / r ** 2
+            diffs = npsh_base_arr - npsh_base_target
+            for i in range(len(diffs) - 1):
+                if diffs[i] * diffs[i + 1] < 0:
+                    t = diffs[i] / (diffs[i] - diffs[i + 1])
+                    q_b = float(q_base[i] + t * (q_base[i + 1] - q_base[i]))
+                    h_b_arr = hq_curve(pump, np.array([q_b]), liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
+                    h_b = float(h_b_arr[0])
+                    pts_q.append(q_b * r)
+                    pts_h.append(h_b * r ** 2)
+                    break
+
+        if len(pts_q) >= 2:
+            npsh_lines.append({
+                'npsh': round(float(npsh_target), 2),
+                'q': pts_q,
+                'h': pts_h,
+            })
+
+    return npsh_lines
 
 
 # ── Full Warman performance map data ──────────────────────────────────────────
@@ -395,16 +492,21 @@ def speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00), n_points=100,
 
 
 def warman_chart_data(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
-                      slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650):
+                      slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650,
+                      eff_levels=None, power_levels=None, npsh_levels=None):
     """Return everything needed to render a Warman performance map."""
     family   = family_curves_diameter(pump, n_points=100, liquid=liquid, rho=rho,
                                       viscosity_cSt=viscosity_cSt, slurry_cv=slurry_cv,
                                       slurry_d50=slurry_d50, rho_solid=rho_solid)
     isolines = efficiency_isolines(pump, liquid=liquid, viscosity_cSt=viscosity_cSt,
                                    slurry_cv=slurry_cv, slurry_d50=slurry_d50,
-                                   rho_solid=rho_solid)
+                                   rho_solid=rho_solid, iso_levels=eff_levels)
     pwr_iso  = power_isolines(pump, liquid=liquid, rho=rho, viscosity_cSt=viscosity_cSt,
-                              slurry_cv=slurry_cv, slurry_d50=slurry_d50, rho_solid=rho_solid)
+                              slurry_cv=slurry_cv, slurry_d50=slurry_d50, rho_solid=rho_solid,
+                              power_levels=power_levels)
+    npsh_iso = npsh_isolines(pump, liquid=liquid, viscosity_cSt=viscosity_cSt,
+                             slurry_cv=slurry_cv, slurry_d50=slurry_d50,
+                             rho_solid=rho_solid, iso_levels=npsh_levels)
     bep_max  = bep_point(pump, liquid, rho, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
     spd_lines = speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00),
                             liquid=liquid, viscosity_cSt=viscosity_cSt,
@@ -415,6 +517,7 @@ def warman_chart_data(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
         'family': family,
         'isolines': isolines,
         'power_isolines': pwr_iso,
+        'npsh_isolines': npsh_iso,
         'speed_lines': spd_lines,
         'bep': bep_max,
         'liquid': liquid,

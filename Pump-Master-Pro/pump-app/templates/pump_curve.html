@@ -77,55 +77,103 @@
   </div>
 </div>
 
-<!-- View mode selector -->
-<div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
-  <span class="text-muted fw-semibold small">VIEW:</span>
-  <div class="btn-group" role="group" id="viewModeGroup">
-    <input type="radio" class="btn-check" name="viewMode" id="modeWarman" value="warman" checked>
-    <label class="btn btn-outline-secondary btn-sm" for="modeWarman">
-      <i class="bi bi-layers me-1"></i>Warman Map
-    </label>
-    <input type="radio" class="btn-check" name="viewMode" id="modeStandalone" value="standalone">
-    <label class="btn btn-outline-secondary btn-sm" for="modeStandalone">
-      <i class="bi bi-grid-3x2-gap me-1"></i>Standalone Curves
-    </label>
-    <input type="radio" class="btn-check" name="viewMode" id="modeOverlay" value="overlay">
-    <label class="btn btn-outline-secondary btn-sm" for="modeOverlay">
-      <i class="bi bi-diagram-3 me-1"></i>Isolines on H-Q
-    </label>
-  </div>
+<!-- Display Options Panel -->
+<div class="card card-dark mb-4">
+  <div class="card-header card-header-dark d-flex align-items-center"><i class="bi bi-display me-2 text-accent"></i><strong>Display Options</strong></div>
+  <div class="card-body py-3">
+    <div class="row g-3">
+      
+      <!-- H-Q Graph Overlays (Checkboxes) -->
+      <div class="col-md-6 border-end border-secondary pe-md-4">
+        <label class="form-label form-label-sm fw-semibold mb-2 text-accent">H-Q Graph Overlays</label>
+        
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="chkShowEffIso" checked>
+          <label class="form-check-label small text-warning" for="chkShowEffIso">
+            Show Efficiency Isolines (Warman style)
+          </label>
+          <div class="ms-4 mt-1" id="groupEffLevels">
+            <input type="text" id="txtEffLevels" class="form-control form-control-sm form-control-dark" 
+                   value="20;30;45;80" placeholder="e.g. 20;30;45;80 (empty for auto)">
+            <div class="form-text small text-muted" style="font-size:0.75rem">Semicolon or comma-separated levels. Click "Update" to apply.</div>
+          </div>
+        </div>
+        
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="chkShowPowerIso">
+          <label class="form-check-label small text-danger" for="chkShowPowerIso">
+            Show Power Isolines
+          </label>
+          <div class="ms-4 mt-1" id="groupPowerLevels" style="display:none">
+            <input type="text" id="txtPowerLevels" class="form-control form-control-sm form-control-dark" 
+                   value="" placeholder="e.g. 5;10;20;50 (empty for auto)">
+            <div class="form-text small text-muted" style="font-size:0.75rem">Semicolon or comma-separated levels. Click "Update" to apply.</div>
+          </div>
+        </div>
+        
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="chkShowNpshIso">
+          <label class="form-check-label small text-teal" style="color: #39d3c0" for="chkShowNpshIso">
+            Show NPSH Isolines
+          </label>
+          <div class="ms-4 mt-1" id="groupNpshLevels" style="display:none">
+            <input type="text" id="txtNpshLevels" class="form-control form-control-sm form-control-dark" 
+                   value="" placeholder="e.g. 2;4;6 (empty for auto)">
+            <div class="form-text small text-muted" style="font-size:0.75rem">Semicolon or comma-separated levels. Click "Update" to apply.</div>
+          </div>
+        </div>
 
-  <div class="ms-3 d-flex gap-3 align-items-center" id="warmanToggles">
-    <div class="form-check form-check-inline mb-0">
-      <input class="form-check-input" type="checkbox" id="chkIsolines" checked>
-      <label class="form-check-label small text-warning" for="chkIsolines">η Isolines</label>
-    </div>
-    <div class="form-check form-check-inline mb-0">
-      <input class="form-check-input" type="checkbox" id="chkPowerIso">
-      <label class="form-check-label small text-danger" for="chkPowerIso">Power Lines</label>
-    </div>
-    <div class="form-check form-check-inline mb-0">
-      <input class="form-check-input" type="checkbox" id="chkSpeedLines">
-      <label class="form-check-label small" for="chkSpeedLines" style="color:#ff9900">Speed Lines</label>
-    </div>
-    <div class="form-check form-check-inline mb-0">
-      <input class="form-check-input" type="checkbox" id="chkNpshFamily">
-      <label class="form-check-label small text-info" for="chkNpshFamily">NPSH / Diameter</label>
-    </div>
-  </div>
+        <div class="form-check mb-1">
+          <input class="form-check-input" type="checkbox" id="chkShowNpshCurve">
+          <label class="form-check-label small text-info" for="chkShowNpshCurve">
+            Show NPSH standard curves
+          </label>
+          <div class="ms-4 mb-2" id="groupNpshYAxis" style="display:none">
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="npshYAxisChoice" id="radNpshY2" value="y2" checked>
+              <label class="form-check-label small text-muted" style="font-size:0.75rem" for="radNpshY2">Secondary Y-axis (right)</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="npshYAxisChoice" id="radNpshY1" value="y1">
+              <label class="form-check-label small text-muted" style="font-size:0.75rem" for="radNpshY1">Same Y-axis as Head (left)</label>
+            </div>
+          </div>
+        </div>
 
-  <div class="ms-3 d-flex gap-3 align-items-center" id="standaloneToggles" style="display:none!important">
-    <div class="form-check form-check-inline mb-0">
-      <input class="form-check-input" type="checkbox" id="chkEff" checked>
-      <label class="form-check-label small text-warning" for="chkEff">Efficiency</label>
-    </div>
-    <div class="form-check form-check-inline mb-0">
-      <input class="form-check-input" type="checkbox" id="chkPower" checked>
-      <label class="form-check-label small text-danger" for="chkPower">Power</label>
-    </div>
-    <div class="form-check form-check-inline mb-0">
-      <input class="form-check-input" type="checkbox" id="chkNpsh" checked>
-      <label class="form-check-label small text-info" for="chkNpsh">NPSHr</label>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="chkSpeedLines">
+          <label class="form-check-label small" for="chkSpeedLines" style="color:#ff9900">Show Speed Lines (70% - 100%)</label>
+        </div>
+      </div>
+
+      <!-- Other Graphs (Radio Buttons) -->
+      <div class="col-md-6 ps-md-4">
+        <label class="form-label form-label-sm fw-semibold mb-2 text-accent">Other Performance Graphs</label>
+        
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="chkShowOther" checked>
+          <label class="form-check-label small fw-semibold" for="chkShowOther">
+            Show additional performance graphs below
+          </label>
+        </div>
+        
+        <div class="ms-4" id="otherGraphsOptions">
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="radio" name="otherGraphsLayout" id="radCombined" value="combined" checked>
+            <label class="form-check-label small" for="radCombined">
+              Display efficiency and power on the same graph (NPSH separate)
+            </label>
+          </div>
+          
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="radio" name="otherGraphsLayout" id="radSeparate" value="separate">
+            <label class="form-check-label small" for="radSeparate">
+              Show each curve as a separate graph (H-Q, Efficiency, Power, NPSH)
+            </label>
+          </div>
+        </div>
+      </div>
+      
     </div>
   </div>
 </div>
@@ -213,7 +261,7 @@
 <!-- ── STANDALONE CURVES ────────────────────────────────────────────────────── -->
 <div id="standalonePanels" style="display:none">
   <div class="row g-4">
-    <div class="col-lg-6">
+    <div class="col-lg-6" id="panelHQ" style="display:none">
       <div class="card card-dark">
         <div class="card-header card-header-dark">
           <span class="curve-label hq"><i class="bi bi-graph-down-arrow me-2"></i>Head — Flow (H-Q)</span>
@@ -221,7 +269,15 @@
         <div class="card-body p-0"><div id="chartHQ" class="chart-container"></div></div>
       </div>
     </div>
-    <div class="col-lg-6" id="panelEff">
+    <div class="col-lg-6" id="panelEffPower" style="display:none">
+      <div class="card card-dark">
+        <div class="card-header card-header-dark">
+          <span class="curve-label eff"><i class="bi bi-speedometer2 me-2"></i>Efficiency &amp; Power</span>
+        </div>
+        <div class="card-body p-0"><div id="chartEffPower" class="chart-container"></div></div>
+      </div>
+    </div>
+    <div class="col-lg-6" id="panelEff" style="display:none">
       <div class="card card-dark">
         <div class="card-header card-header-dark">
           <span class="curve-label eff"><i class="bi bi-speedometer2 me-2"></i>Efficiency — Flow</span>
@@ -229,7 +285,7 @@
         <div class="card-body p-0"><div id="chartEff" class="chart-container"></div></div>
       </div>
     </div>
-    <div class="col-lg-6" id="panelPower">
+    <div class="col-lg-6" id="panelPower" style="display:none">
       <div class="card card-dark">
         <div class="card-header card-header-dark">
           <span class="curve-label power"><i class="bi bi-lightning-fill me-2"></i>Power — Flow</span>
@@ -237,7 +293,7 @@
         <div class="card-body p-0"><div id="chartPower" class="chart-container"></div></div>
       </div>
     </div>
-    <div class="col-lg-6" id="panelNpsh">
+    <div class="col-lg-6" id="panelNpsh" style="display:none">
       <div class="card card-dark">
         <div class="card-header card-header-dark">
           <span class="curve-label npsh"><i class="bi bi-arrow-up-right me-2"></i>NPSHr — Flow</span>

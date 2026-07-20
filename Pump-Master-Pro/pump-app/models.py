@@ -76,9 +76,25 @@ class Pump(db.Model):
     # JSON: {"q": "ls", "h": "m", "npsh": "m", "pow": "kw", "op_q": "ls"}
     data_units = db.Column(db.Text, default='')
 
-    # Saved graph & display options for the curve viewer
-    # JSON: {"show_eff_iso": bool, "eff_levels": str, "trim_model": str, ...}
-    graph_options_json = db.Column(db.Text, default='')
+    # Saved graph & display options stored as separate database columns
+    graph_show_eff_iso      = db.Column(db.Boolean, default=True)
+    graph_eff_levels        = db.Column(db.String(100), default='')
+    graph_show_power_iso    = db.Column(db.Boolean, default=False)
+    graph_power_levels      = db.Column(db.String(100), default='')
+    graph_show_npsh_iso     = db.Column(db.Boolean, default=False)
+    graph_npsh_levels       = db.Column(db.String(100), default='')
+    graph_show_npsh_curve   = db.Column(db.Boolean, default=False)
+    graph_npsh_yaxis        = db.Column(db.String(20), default='y2')
+    graph_show_speed_lines  = db.Column(db.Boolean, default=False)
+    graph_show_hq           = db.Column(db.Boolean, default=True)
+    graph_show_other        = db.Column(db.Boolean, default=True)
+    graph_show_eff          = db.Column(db.Boolean, default=True)
+    graph_show_power        = db.Column(db.Boolean, default=True)
+    graph_show_npsh         = db.Column(db.Boolean, default=True)
+    graph_combine_eff_power = db.Column(db.Boolean, default=True)
+    graph_trim_model        = db.Column(db.String(20), default='fit')
+
+    graph_options_json      = db.Column(db.Text, default='')
 
     # Optional label and measured diameter for the main (first) curve
     main_curve_label  = db.Column(db.String(100), default='')
@@ -134,14 +150,47 @@ class Pump(db.Model):
             return []
 
     def get_graph_options(self):
-        """Return saved graph display options dict, or defaults."""
-        raw = (self.graph_options_json or '').strip()
-        if not raw:
-            return {}
-        try:
-            return json.loads(raw)
-        except Exception:
-            return {}
+        """Return saved graph display options dictionary from individual database columns."""
+        return {
+            'show_eff_iso': self.graph_show_eff_iso if self.graph_show_eff_iso is not None else True,
+            'eff_levels': self.graph_eff_levels or '',
+            'show_power_iso': bool(self.graph_show_power_iso),
+            'power_levels': self.graph_power_levels or '',
+            'show_npsh_iso': bool(self.graph_show_npsh_iso),
+            'npsh_levels': self.graph_npsh_levels or '',
+            'show_npsh_curve': bool(self.graph_show_npsh_curve),
+            'npsh_yaxis': self.graph_npsh_yaxis or 'y2',
+            'show_speed_lines': bool(self.graph_show_speed_lines),
+            'show_hq': self.graph_show_hq if self.graph_show_hq is not None else True,
+            'show_other': self.graph_show_other if self.graph_show_other is not None else True,
+            'show_eff': self.graph_show_eff if self.graph_show_eff is not None else True,
+            'show_power': self.graph_show_power if self.graph_show_power is not None else True,
+            'show_npsh': self.graph_show_npsh if self.graph_show_npsh is not None else True,
+            'combine_eff_power': self.graph_combine_eff_power if self.graph_combine_eff_power is not None else True,
+            'trim_model': self.graph_trim_model or 'fit',
+        }
+
+    def set_graph_options(self, opts):
+        """Set individual database columns from an options dictionary."""
+        if not isinstance(opts, dict):
+            return
+        if 'show_eff_iso' in opts: self.graph_show_eff_iso = bool(opts['show_eff_iso'])
+        if 'eff_levels' in opts: self.graph_eff_levels = str(opts['eff_levels'])
+        if 'show_power_iso' in opts: self.graph_show_power_iso = bool(opts['show_power_iso'])
+        if 'power_levels' in opts: self.graph_power_levels = str(opts['power_levels'])
+        if 'show_npsh_iso' in opts: self.graph_show_npsh_iso = bool(opts['show_npsh_iso'])
+        if 'npsh_levels' in opts: self.graph_npsh_levels = str(opts['npsh_levels'])
+        if 'show_npsh_curve' in opts: self.graph_show_npsh_curve = bool(opts['show_npsh_curve'])
+        if 'npsh_yaxis' in opts: self.graph_npsh_yaxis = str(opts['npsh_yaxis'])
+        if 'show_speed_lines' in opts: self.graph_show_speed_lines = bool(opts['show_speed_lines'])
+        if 'show_hq' in opts: self.graph_show_hq = bool(opts['show_hq'])
+        if 'show_other' in opts: self.graph_show_other = bool(opts['show_other'])
+        if 'show_eff' in opts: self.graph_show_eff = bool(opts['show_eff'])
+        if 'show_power' in opts: self.graph_show_power = bool(opts['show_power'])
+        if 'show_npsh' in opts: self.graph_show_npsh = bool(opts['show_npsh'])
+        if 'combine_eff_power' in opts: self.graph_combine_eff_power = bool(opts['combine_eff_power'])
+        if 'trim_model' in opts: self.graph_trim_model = str(opts['trim_model'])
+        self.graph_options_json = json.dumps(self.get_graph_options())
 
     def _get_data_units(self):
         """Return the saved input-unit preferences dict, or defaults."""

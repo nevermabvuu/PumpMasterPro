@@ -98,7 +98,12 @@ def _pump_from_form(f, pump=None):
     pump.extra_curves_json = f.get('extra_curves_json', pump.extra_curves_json or '')
     pump.data_units        = f.get('data_units', pump.data_units or '')
     if 'graph_options_json' in f and f.get('graph_options_json'):
-        pump.graph_options_json = f.get('graph_options_json')
+        try:
+            g_opts = json.loads(f.get('graph_options_json'))
+            if isinstance(g_opts, dict):
+                pump.set_graph_options(g_opts)
+        except Exception:
+            pass
     pump.main_curve_label  = f.get('main_curve_label', pump.main_curve_label or '')
     raw_dia = f.get('main_curve_dia_mm', '')
     if str(raw_dia).strip():
@@ -503,7 +508,7 @@ def api_compare_pumps():
 def api_save_graph_options(pump_id):
     pump = Pump.query.get_or_404(pump_id)
     data = request.get_json(force=True, silent=True) or {}
-    pump.graph_options_json = json.dumps(data)
+    pump.set_graph_options(data)
     db.session.commit()
     return jsonify({'status': 'ok', 'graph_options': pump.get_graph_options()})
 

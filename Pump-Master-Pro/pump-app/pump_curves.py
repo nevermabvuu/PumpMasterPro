@@ -179,12 +179,16 @@ def full_curve_data(pump, n_points=80, liquid='water', rho=1000.0, viscosity_cSt
 # ── Affinity-law family of curves (multiple impeller diameters) ────────────────
 
 def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
-                           viscosity_cSt=1.0, slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650):
+                           viscosity_cSt=1.0, slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650,
+                           force_affinity=False):
     """
     Return a list of curve dicts — one per impeller diameter.
-    Smaller diameters are scaled from the max-dia base curve by affinity laws.
+    Evaluates fitted polynomial curves for extra curves when mode is 'fit' (unless force_affinity is True),
+    otherwise scales from max-dia base curve by affinity laws.
     """
     diameters = pump.get_diameters()
+    if not diameters:
+        diameters = [pump.impeller_dia_mm or 300.0]
     d_max = max(diameters)
 
     q_base = np.linspace(pump.q_min or 0, pump.q_max, n_points)
@@ -193,22 +197,121 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
     pwr_base = power_curve(pump, q_base, liquid, rho, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
     npsh_base = npsh_curve(pump, q_base)
 
+    extra_curves = pump.get_extra_curves()
+    extra_map = {}
+    for c in extra_curves:
+        d_val = c.get('diameter')
+        if d_val is not None and str(d_val).strip() != '':
+            try:
+                u = c.get('unit_dia', 'mm')
+                if u == 'in':
+                    d_mm = float(d_val) * 25.4
+                elif u == 'm':
+                    d_mm = float(d_val) * 1000.0
+                else:
+                    d_mm = float(d_val)
+                extra_map[round(d_mm, 2)] = c
+            except (ValueError, TypeError):
+                pass
+
     family = []
     for d in diameters:
+        d_round = round(d, 2)
         r = d / d_max
-        penalty = 40.0 * (1.0 - r)
-        eta_trimmed = np.clip(eta_base - penalty, 0, 100)
-        family.append({
-            'dia': d,
-            'is_max': d == d_max,
-            'ratio': round(r, 4),
-            'q':    (q_base * r).tolist(),
-            'h':    (h_base * r ** 2).tolist(),
-            'eta':  eta_trimmed.tolist(),
-            'power': (pwr_base * r ** 3).tolist(),
-            'npsh': (npsh_base * r ** 2).tolist(),
-            'bep': _bep_for_ratio(pump, r, h_base, eta_base, pwr_base, q_base),
-        })
+        matched_extra = extra_map.get(d_round)
+
+        # Determine effective mode
+        if force_affinity == 'affinity' or force_affinity is True:
+            eff_mode = 'affinity'
+        elif force_affinity == 'both':
+            eff_mode = 'both'
+        elif force_affinity == 'fit':
+            eff_mode = 'fit'
+        elif matched_extra:
+            eff_mode = matched_extra.get('curve_mode', 'fit')
+        else:
+            eff_mode = 'affinity'
+
+        has_poly = (matched_extra is not None and matched_extra.get('hq_a0') is not None)
+        can_fit  = has_poly and d != d_max
+
+        def _make_fitted():
+            c = matched_extra
+            q_m = float(c.get('q_max') or (pump.q_max * r))
+            q_arr = np.linspace(0, q_m, n_points)
+
+            hq_coeffs = [c.get('hq_a0', 0), c.get('hq_a1', 0), c.get('hq_a2', 0), c.get('hq_a3', 0)]
+            eff_coeffs = [c.get('eff_b0', 0), c.get('eff_b1', 0), c.get('eff_b2', 0), c.get('eff_b3', 0)]
+            pwr_coeffs = [c.get('pow_p0', 0), c.get('pow_p1', 0), c.get('pow_p2', 0)]
+            npsh_coeffs = [c.get('npsh_c0', 0), c.get('npsh_c1', 0), c.get('npsh_c2', 0)]
+
+            h_arr = np.clip(_poly_array(hq_coeffs, q_arr), 0, None)
+            eta_arr = np.clip(_poly_array(eff_coeffs, q_arr), 0, 100)
+            pwr_arr = np.clip(_poly_array(pwr_coeffs, q_arr), 0, None)
+            if npsh_coeffs[1] != 0 or npsh_coeffs[2] != 0:
+                npsh_arr = np.clip(_poly_array(npsh_coeffs, q_arr), 0, None)
+            else:
+                npsh_arr = np.clip(npsh_curve(pump, q_arr) * r**2, 0, None)
+
+            if liquid == 'slurry':
+                hr, _, er = _slurry_factors(pump, slurry_cv, slurry_d50, rho_solid)
+                h_arr = h_arr * hr
+                eta_arr = np.clip(eta_arr * er, 0, 100)
+                pwr_arr = pwr_arr * er
+            elif liquid == 'viscous' and viscosity_cSt > 1.0:
+                ch, _, ce = _viscosity_correction(viscosity_cSt)
+                h_arr = h_arr * ch
+                eta_arr = np.clip(eta_arr * ce, 0, 100)
+                pwr_arr = pwr_arr * ce
+
+            idx_bep = int(np.argmax(eta_arr))
+            bep_dict = {
+                'q': round(float(q_arr[idx_bep]), 2),
+                'h': round(float(h_arr[idx_bep]), 2),
+                'eta': round(float(eta_arr[idx_bep]), 2),
+                'power': round(float(pwr_arr[idx_bep]), 2)
+            }
+
+            return {
+                'dia': d,
+                'is_max': False,
+                'ratio': round(r, 4),
+                'curve_mode': 'fit',
+                'q': q_arr.tolist(),
+                'h': h_arr.tolist(),
+                'eta': eta_arr.tolist(),
+                'power': pwr_arr.tolist(),
+                'npsh': npsh_arr.tolist(),
+                'bep': bep_dict,
+                'color': c.get('color')
+            }
+
+        def _make_affinity():
+            penalty = 40.0 * (1.0 - r)
+            eta_trimmed = np.clip(eta_base - penalty, 0, 100)
+            return {
+                'dia': d,
+                'is_max': d == d_max,
+                'ratio': round(r, 4),
+                'curve_mode': 'affinity',
+                'q': (q_base * r).tolist(),
+                'h': (h_base * r ** 2).tolist(),
+                'eta': eta_trimmed.tolist(),
+                'power': (pwr_base * r ** 3).tolist(),
+                'npsh': (npsh_base * r ** 2).tolist(),
+                'bep': _bep_for_ratio(pump, r, h_base, eta_base, pwr_base, q_base),
+                'color': matched_extra.get('color') if matched_extra else None
+            }
+
+        if eff_mode == 'both' and can_fit:
+            family.append(_make_fitted())
+            aff_item = _make_affinity()
+            aff_item['label_tag'] = ' (Affinity)'
+            family.append(aff_item)
+        elif eff_mode == 'fit' and can_fit:
+            family.append(_make_fitted())
+        else:
+            family.append(_make_affinity())
 
     return family
 
@@ -482,11 +585,13 @@ def speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00), n_points=100,
 
 def warman_chart_data(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
                       slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650,
-                      eff_levels=None, power_levels=None, npsh_levels=None):
+                      eff_levels=None, power_levels=None, npsh_levels=None,
+                      force_affinity=False):
     """Return everything needed to render a Warman performance map."""
     family   = family_curves_diameter(pump, n_points=100, liquid=liquid, rho=rho,
                                       viscosity_cSt=viscosity_cSt, slurry_cv=slurry_cv,
-                                      slurry_d50=slurry_d50, rho_solid=rho_solid)
+                                      slurry_d50=slurry_d50, rho_solid=rho_solid,
+                                      force_affinity=force_affinity)
     isolines = efficiency_isolines(pump, liquid=liquid, viscosity_cSt=viscosity_cSt,
                                    slurry_cv=slurry_cv, slurry_d50=slurry_d50,
                                    rho_solid=rho_solid, iso_levels=eff_levels)

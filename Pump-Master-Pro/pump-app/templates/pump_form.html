@@ -11,6 +11,7 @@
 </div>
 
 <form method="post" id="pumpForm">
+<input type="hidden" name="graph_options_json" value="{{ pump.graph_options_json if pump else '' }}">
 <div class="row g-4">
 
   <!-- ── Column 1: Pump Details + Operating Range + Impeller Family ── -->
@@ -280,7 +281,7 @@
     <div class="card card-dark mb-3">
       <div class="card-header card-header-dark"><i class="bi bi-record-circle me-2 text-accent"></i>Impeller Diameter Family</div>
       <div class="card-body">
-        <p class="small text-muted mb-2">Comma-separated diameters (mm), largest first. Smaller diameters generated via affinity laws.</p>
+        <p class="small text-muted mb-2">Comma-separated diameters (mm), largest first. Diameters with data tables in <strong>Additional Curves</strong> plot from fitted loaded data; remaining diameters are generated via affinity laws.</p>
         <input type="text" name="impeller_diameters" class="form-control form-control-dark"
                value="{{ pump.impeller_diameters if pump else '' }}"
                placeholder="e.g. 480, 450, 420, 390, 360">

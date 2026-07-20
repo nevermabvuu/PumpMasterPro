@@ -80,26 +80,28 @@ function buildWarmanChart(data, opts = {}) {
 
   /* ── H-Q curves (one per diameter) ──── */
   family.forEach((d, i) => {
-    const col = DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)];
+    const col = d.color || DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)];
     const lw  = d.is_max ? 2.5 : 1.8;
+    const tag = d.label_tag || (d.curve_mode === 'fit' ? ' (Fitted)' : '');
+    const dash = d.label_tag ? 'dash' : 'solid';
     traces.push({
       type: 'scatter', mode: 'lines',
-      name: `Ø${d.dia} mm`,
+      name: `Ø${d.dia} mm${tag}`,
       x: d.q, y: d.h,
-      line: { color: col, width: lw },
-      hovertemplate: `Ø${d.dia} mm<br>Q=%{x:.1f} m³/h<br>H=%{y:.2f} m<extra></extra>`,
+      line: { color: col, width: lw, dash: dash },
+      hovertemplate: `Ø${d.dia} mm${tag}<br>Q=%{x:.1f} m³/h<br>H=%{y:.2f} m<extra></extra>`,
     });
 
     /* BEP star on each curve */
     if (d.bep) {
       traces.push({
         type: 'scatter', mode: 'markers',
-        name: `BEP Ø${d.dia}`,
+        name: `BEP Ø${d.dia}${tag}`,
         x: [d.bep.q], y: [d.bep.h],
         marker: { size: d.is_max ? 10 : 7, color: col, symbol: 'star',
                   line: { color: '#fff', width: 1 } },
         showlegend: false,
-        hovertemplate: `BEP Ø${d.dia}<br>Q=${d.bep.q}<br>H=${d.bep.h}<br>η=${d.bep.eta}%<extra></extra>`,
+        hovertemplate: `BEP Ø${d.dia}${tag}<br>Q=${d.bep.q}<br>H=${d.bep.h}<br>η=${d.bep.eta}%<extra></extra>`,
       });
     }
   });
@@ -253,26 +255,34 @@ function buildWarmanChart(data, opts = {}) {
 
 /* ── NPSH family chart ───────────────────────────────────────────────────── */
 function buildNpshFamilyChart(family) {
-  const traces = family.map((d, i) => ({
-    type: 'scatter', mode: 'lines',
-    name: `Ø${d.dia} mm`,
-    x: d.q, y: d.npsh,
-    line: { color: DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)], width: 1.8 },
-    hovertemplate: `Ø${d.dia}<br>Q=%{x:.1f}<br>NPSHr=%{y:.2f} m<extra></extra>`,
-  }));
+  const traces = family.map((d, i) => {
+    const col = d.color || DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)];
+    const tag = d.curve_mode === 'fit' ? ' (Fitted)' : '';
+    return {
+      type: 'scatter', mode: 'lines',
+      name: `Ø${d.dia} mm${tag}`,
+      x: d.q, y: d.npsh,
+      line: { color: col, width: 1.8 },
+      hovertemplate: `Ø${d.dia}${tag}<br>Q=%{x:.1f}<br>NPSHr=%{y:.2f} m<extra></extra>`,
+    };
+  });
   return { traces, layout: makeLayout('Flow Q (m³/h)', 'NPSHr (m)',
     { yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { rangemode: 'tozero' }) }) };
 }
 
 /* ── Power family chart ──────────────────────────────────────────────────── */
 function buildPowerFamilyChart(family) {
-  const traces = family.map((d, i) => ({
-    type: 'scatter', mode: 'lines',
-    name: `Ø${d.dia} mm`,
-    x: d.q, y: d.power,
-    line: { color: DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)], width: 1.8 },
-    hovertemplate: `Ø${d.dia}<br>Q=%{x:.1f}<br>P=%{y:.2f} kW<extra></extra>`,
-  }));
+  const traces = family.map((d, i) => {
+    const col = d.color || DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)];
+    const tag = d.curve_mode === 'fit' ? ' (Fitted)' : '';
+    return {
+      type: 'scatter', mode: 'lines',
+      name: `Ø${d.dia} mm${tag}`,
+      x: d.q, y: d.power,
+      line: { color: col, width: 1.8 },
+      hovertemplate: `Ø${d.dia}${tag}<br>Q=%{x:.1f}<br>P=%{y:.2f} kW<extra></extra>`,
+    };
+  });
   return { traces, layout: makeLayout('Flow Q (m³/h)', 'Shaft Power P (kW)',
     { yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { rangemode: 'tozero' }) }) };
 }
@@ -1013,7 +1023,99 @@ if (typeof PUMP_ID !== 'undefined') {
     if (powL) p.set('power_levels', powL);
     if (npshL) p.set('npsh_levels', npshL);
 
+    const trimModel = document.querySelector('input[name="trimModelChoice"]:checked')?.value || 'fit';
+    p.set('force_affinity', trimModel);
+
     return p;
+  }
+
+  function collectGraphOptions() {
+    return {
+      show_eff_iso: document.getElementById('chkShowEffIso')?.checked !== false,
+      eff_levels: document.getElementById('txtEffLevels')?.value || '',
+      show_power_iso: document.getElementById('chkShowPowerIso')?.checked || false,
+      power_levels: document.getElementById('txtPowerLevels')?.value || '',
+      show_npsh_iso: document.getElementById('chkShowNpshIso')?.checked || false,
+      npsh_levels: document.getElementById('txtNpshLevels')?.value || '',
+      show_npsh_curve: document.getElementById('chkShowNpshCurve')?.checked || false,
+      npsh_yaxis: document.querySelector('input[name="npshYAxisChoice"]:checked')?.value || 'y2',
+      show_speed_lines: document.getElementById('chkSpeedLines')?.checked || false,
+      show_hq: document.getElementById('chkShowHQ')?.checked !== false,
+      show_other: document.getElementById('chkShowOther')?.checked !== false,
+      show_eff: document.getElementById('chkShowEff')?.checked !== false,
+      show_power: document.getElementById('chkShowPower')?.checked !== false,
+      show_npsh: document.getElementById('chkShowNpsh')?.checked !== false,
+      combine_eff_power: document.getElementById('chkCombineEffPower')?.checked !== false,
+      trim_model: document.querySelector('input[name="trimModelChoice"]:checked')?.value || 'fit',
+    };
+  }
+
+  function applyGraphOptions(opts) {
+    if (!opts || typeof opts !== 'object') return;
+    if (opts.show_eff_iso !== undefined && document.getElementById('chkShowEffIso')) document.getElementById('chkShowEffIso').checked = opts.show_eff_iso;
+    if (opts.eff_levels !== undefined && document.getElementById('txtEffLevels')) document.getElementById('txtEffLevels').value = opts.eff_levels;
+    
+    if (opts.show_power_iso !== undefined && document.getElementById('chkShowPowerIso')) {
+      document.getElementById('chkShowPowerIso').checked = opts.show_power_iso;
+      const g = document.getElementById('groupPowerLevels');
+      if (g) g.style.display = opts.show_power_iso ? '' : 'none';
+    }
+    if (opts.power_levels !== undefined && document.getElementById('txtPowerLevels')) document.getElementById('txtPowerLevels').value = opts.power_levels;
+    
+    if (opts.show_npsh_iso !== undefined && document.getElementById('chkShowNpshIso')) {
+      document.getElementById('chkShowNpshIso').checked = opts.show_npsh_iso;
+      const g = document.getElementById('groupNpshLevels');
+      if (g) g.style.display = opts.show_npsh_iso ? '' : 'none';
+    }
+    if (opts.npsh_levels !== undefined && document.getElementById('txtNpshLevels')) document.getElementById('txtNpshLevels').value = opts.npsh_levels;
+    
+    if (opts.show_npsh_curve !== undefined && document.getElementById('chkShowNpshCurve')) {
+      document.getElementById('chkShowNpshCurve').checked = opts.show_npsh_curve;
+      const g = document.getElementById('groupNpshYAxis');
+      if (g) g.style.display = opts.show_npsh_curve ? '' : 'none';
+    }
+    if (opts.npsh_yaxis && document.querySelector(`input[name="npshYAxisChoice"][value="${opts.npsh_yaxis}"]`)) {
+      document.querySelector(`input[name="npshYAxisChoice"][value="${opts.npsh_yaxis}"]`).checked = true;
+    }
+    if (opts.show_speed_lines !== undefined && document.getElementById('chkSpeedLines')) document.getElementById('chkSpeedLines').checked = opts.show_speed_lines;
+    if (opts.show_hq !== undefined && document.getElementById('chkShowHQ')) document.getElementById('chkShowHQ').checked = opts.show_hq;
+    if (opts.show_other !== undefined && document.getElementById('chkShowOther')) document.getElementById('chkShowOther').checked = opts.show_other;
+    if (opts.show_eff !== undefined && document.getElementById('chkShowEff')) document.getElementById('chkShowEff').checked = opts.show_eff;
+    if (opts.show_power !== undefined && document.getElementById('chkShowPower')) document.getElementById('chkShowPower').checked = opts.show_power;
+    if (opts.show_npsh !== undefined && document.getElementById('chkShowNpsh')) document.getElementById('chkShowNpsh').checked = opts.show_npsh;
+    if (opts.combine_eff_power !== undefined && document.getElementById('chkCombineEffPower')) document.getElementById('chkCombineEffPower').checked = opts.combine_eff_power;
+    if (opts.trim_model && document.querySelector(`input[name="trimModelChoice"][value="${opts.trim_model}"]`)) {
+      document.querySelector(`input[name="trimModelChoice"][value="${opts.trim_model}"]`).checked = true;
+    }
+  }
+
+  async function saveGraphOptions() {
+    const btn = document.getElementById('btnSaveGraphOptions');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+    }
+    const opts = collectGraphOptions();
+    try {
+      const res = await fetch(`/papi/pump/${PUMP_ID}/graph-options`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(opts)
+      });
+      const json = await res.json();
+      if (json.status === 'ok' && btn) {
+        btn.className = 'btn btn-sm btn-success py-0 px-2';
+        btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Saved!';
+        setTimeout(() => {
+          btn.className = 'btn btn-sm btn-outline-accent py-0 px-2';
+          btn.innerHTML = '<i class="bi bi-floppy me-1"></i>Save Options';
+        }, 1500);
+      }
+    } catch (e) {
+      console.error('Failed to save graph options:', e);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   }
 
   function getDuty() {
@@ -1148,26 +1250,39 @@ if (typeof PUMP_ID !== 'undefined') {
 
   const isCurvesPage = !!document.getElementById('btnUpdate');
   if (isCurvesPage) {
+    const onOptionChange = () => {
+      renderAll();
+      saveGraphOptions();
+    };
+    const onOptionFetchChange = () => {
+      fetchAndRender();
+      saveGraphOptions();
+    };
+
     // Bind change event to checkboxes that change overlays
     ['chkShowHQ', 'chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'chkShowOther'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.addEventListener('change', renderAll);
+      if (el) el.addEventListener('change', onOptionChange);
     });
 
-    // Bind change event to other layout checkboxes
+    // Bind change event to other layout checkboxes & radios
     document.querySelectorAll('#otherGraphsOptions input[type="checkbox"], input[name="npshYAxisChoice"]').forEach(input => {
-      input.addEventListener('change', renderAll);
+      input.addEventListener('change', onOptionChange);
+    });
+
+    document.querySelectorAll('input[name="trimModelChoice"]').forEach(input => {
+      input.addEventListener('change', onOptionFetchChange);
     });
 
     // Bind change/keypress event to custom levels to automatically fetch
     ['txtEffLevels', 'txtPowerLevels', 'txtNpshLevels'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
-        el.addEventListener('change', fetchAndRender);
+        el.addEventListener('change', onOptionFetchChange);
         el.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
-            fetchAndRender();
+            onOptionFetchChange();
           }
         });
       }
@@ -1175,6 +1290,10 @@ if (typeof PUMP_ID !== 'undefined') {
 
     document.getElementById('liquidSelect').addEventListener('change', updateLiquidPanels);
     document.getElementById('btnUpdate').addEventListener('click', fetchAndRender);
+    const saveOptBtn = document.getElementById('btnSaveGraphOptions');
+    if (saveOptBtn) {
+      saveOptBtn.addEventListener('click', saveGraphOptions);
+    }
 
     // Custom curves: Add Curve button + chevron toggle
     document.getElementById('btnAddCurve').addEventListener('click', addCustomCurveRow);
@@ -1186,7 +1305,13 @@ if (typeof PUMP_ID !== 'undefined') {
       document.getElementById('customCurvesChevron').className = 'bi bi-chevron-down';
     });
 
-    // Initial setup
+    // Initial setup: apply saved options from dataset if available
+    const savedGraphOpts = document.getElementById('pump-meta')?.dataset.graphOptions;
+    if (savedGraphOpts) {
+      try {
+        applyGraphOptions(JSON.parse(savedGraphOpts));
+      } catch (e) {}
+    }
     updateLiquidPanels();
     fetchAndRender();
   }

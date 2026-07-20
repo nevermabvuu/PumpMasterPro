@@ -28,6 +28,11 @@ var CONVERSIONS = {
   pow: {
     kw: 1.0,
     hp: 1.34102209
+  },
+  dia: {
+    mm: 1.0,
+    in: 0.03937007874015748,   // 1 mm = 1/25.4 in
+    m: 0.001                  // 1 mm = 0.001 m
   }
 };
 
@@ -54,6 +59,11 @@ function getUnitLabel(type, unitValue) {
   if (type === 'pow') {
     if (unitValue === 'kw') return 'kW';
     if (unitValue === 'hp') return 'hp';
+  }
+  if (type === 'dia') {
+    if (unitValue === 'mm') return 'mm';
+    if (unitValue === 'in') return 'in';
+    if (unitValue === 'm') return 'm';
   }
   return unitValue;
 }
@@ -465,6 +475,73 @@ function showStatus(type, msg) {
 
 var isPreviewEventsBound = false;
 
+function collectGraphOptions() {
+  return {
+    show_eff_iso: document.getElementById('chkShowEffIso')?.checked !== false,
+    eff_levels: document.getElementById('txtEffLevels')?.value || '',
+    show_power_iso: document.getElementById('chkShowPowerIso')?.checked || false,
+    power_levels: document.getElementById('txtPowerLevels')?.value || '',
+    show_npsh_iso: document.getElementById('chkShowNpshIso')?.checked || false,
+    npsh_levels: document.getElementById('txtNpshLevels')?.value || '',
+    show_npsh_curve: document.getElementById('chkShowNpshCurve')?.checked || false,
+    npsh_yaxis: document.querySelector('input[name="npshYAxisChoice"]:checked')?.value || 'y2',
+    show_speed_lines: document.getElementById('chkSpeedLines')?.checked || false,
+    show_hq: document.getElementById('chkShowHQ')?.checked !== false,
+    show_other: document.getElementById('chkShowOther')?.checked !== false,
+    show_eff: document.getElementById('chkShowEff')?.checked !== false,
+    show_power: document.getElementById('chkShowPower')?.checked !== false,
+    show_npsh: document.getElementById('chkShowNpsh')?.checked !== false,
+    combine_eff_power: document.getElementById('chkCombineEffPower')?.checked !== false,
+    trim_model: document.querySelector('input[name="trimModelChoice"]:checked')?.value || 'fit',
+  };
+}
+
+function applyGraphOptions(opts) {
+  if (!opts || typeof opts !== 'object') return;
+  if (opts.show_eff_iso !== undefined && document.getElementById('chkShowEffIso')) document.getElementById('chkShowEffIso').checked = opts.show_eff_iso;
+  if (opts.eff_levels !== undefined && document.getElementById('txtEffLevels')) document.getElementById('txtEffLevels').value = opts.eff_levels;
+  
+  if (opts.show_power_iso !== undefined && document.getElementById('chkShowPowerIso')) {
+    document.getElementById('chkShowPowerIso').checked = opts.show_power_iso;
+    const g = document.getElementById('groupPowerLevels');
+    if (g) g.style.display = opts.show_power_iso ? '' : 'none';
+  }
+  if (opts.power_levels !== undefined && document.getElementById('txtPowerLevels')) document.getElementById('txtPowerLevels').value = opts.power_levels;
+  
+  if (opts.show_npsh_iso !== undefined && document.getElementById('chkShowNpshIso')) {
+    document.getElementById('chkShowNpshIso').checked = opts.show_npsh_iso;
+    const g = document.getElementById('groupNpshLevels');
+    if (g) g.style.display = opts.show_npsh_iso ? '' : 'none';
+  }
+  if (opts.npsh_levels !== undefined && document.getElementById('txtNpshLevels')) document.getElementById('txtNpshLevels').value = opts.npsh_levels;
+  
+  if (opts.show_npsh_curve !== undefined && document.getElementById('chkShowNpshCurve')) {
+    document.getElementById('chkShowNpshCurve').checked = opts.show_npsh_curve;
+    const g = document.getElementById('groupNpshYAxis');
+    if (g) g.style.display = opts.show_npsh_curve ? '' : 'none';
+  }
+  if (opts.npsh_yaxis && document.querySelector(`input[name="npshYAxisChoice"][value="${opts.npsh_yaxis}"]`)) {
+    document.querySelector(`input[name="npshYAxisChoice"][value="${opts.npsh_yaxis}"]`).checked = true;
+  }
+  if (opts.show_speed_lines !== undefined && document.getElementById('chkSpeedLines')) document.getElementById('chkSpeedLines').checked = opts.show_speed_lines;
+  if (opts.show_hq !== undefined && document.getElementById('chkShowHQ')) document.getElementById('chkShowHQ').checked = opts.show_hq;
+  if (opts.show_other !== undefined && document.getElementById('chkShowOther')) document.getElementById('chkShowOther').checked = opts.show_other;
+  if (opts.show_eff !== undefined && document.getElementById('chkShowEff')) document.getElementById('chkShowEff').checked = opts.show_eff;
+  if (opts.show_power !== undefined && document.getElementById('chkShowPower')) document.getElementById('chkShowPower').checked = opts.show_power;
+  if (opts.show_npsh !== undefined && document.getElementById('chkShowNpsh')) document.getElementById('chkShowNpsh').checked = opts.show_npsh;
+  if (opts.combine_eff_power !== undefined && document.getElementById('chkCombineEffPower')) document.getElementById('chkCombineEffPower').checked = opts.combine_eff_power;
+  if (opts.trim_model && document.querySelector(`input[name="trimModelChoice"][value="${opts.trim_model}"]`)) {
+    document.querySelector(`input[name="trimModelChoice"][value="${opts.trim_model}"]`).checked = true;
+  }
+}
+
+function serializeGraphOptions() {
+  const field = document.querySelector('input[name="graph_options_json"]');
+  if (field) {
+    field.value = JSON.stringify(collectGraphOptions());
+  }
+}
+
 function getPumpFormData() {
   const data = {};
   const fields = [
@@ -491,6 +568,20 @@ function getPumpFormData() {
       }
     }
   });
+
+  const gOpts = collectGraphOptions();
+  data['eff_levels'] = gOpts.eff_levels;
+  data['power_levels'] = gOpts.power_levels;
+  data['npsh_levels'] = gOpts.npsh_levels;
+  data['force_affinity'] = gOpts.trim_model;
+
+  serializeExtraCurves();
+  serializeGraphOptions();
+  const extraField = document.getElementById('extra_curves_json_field');
+  if (extraField && extraField.value) {
+    data['extra_curves_json'] = extraField.value;
+  }
+
   return data;
 }
 
@@ -615,7 +706,7 @@ function bindPreviewEvents() {
     }
   });
 
-  document.querySelectorAll('input[name="otherGraphsLayout"], input[name="npshYAxisChoice"]').forEach(radio => {
+  document.querySelectorAll('input[name="otherGraphsLayout"], input[name="npshYAxisChoice"], input[name="trimModelChoice"]').forEach(radio => {
     radio.addEventListener('change', () => refreshPreviewCharts());
   });
 
@@ -912,6 +1003,8 @@ function serializeExtraCurves() {
       const unitH = entry?.querySelector(`.unit-select-h`)?.value || 'm';
       const unitNpsh = entry?.querySelector(`.unit-select-npsh`)?.value || 'm';
       const unitPow = entry?.querySelector(`.unit-select-pow`)?.value || 'kw';
+      const unitDia = entry?.querySelector(`.unit-select-dia`)?.value || 'mm';
+      const curveMode = entry?.querySelector(`.unit-select-mode`)?.value || 'fit';
 
       // Gather current raw table values
       const tableRows = document.querySelectorAll(`#extraTable-${c.id} tbody tr`);
@@ -929,6 +1022,8 @@ function serializeExtraCurves() {
         label: c.label,
         color: c.color,
         diameter: diameter,
+        unit_dia: unitDia,
+        curve_mode: curveMode,
         unit_q: unitQ,
         unit_h: unitH,
         unit_npsh: unitNpsh,
@@ -1141,6 +1236,8 @@ function addExtraCurveCard(existingData) {
   const color = existingData?.color || EXTRA_CURVE_COLORS[(id - 1) % EXTRA_CURVE_COLORS.length];
   const label = existingData?.label || `Curve ${id}`;
   const diameter = existingData?.diameter || '';
+  const diaUnit = existingData?.unit_dia || 'mm';
+  const curveMode = existingData?.curve_mode || 'fit';
   const qUnit = existingData?.unit_q || document.getElementById('unit-q')?.value || 'm3h';
   const hUnit = existingData?.unit_h || document.getElementById('unit-h')?.value || 'm';
   const npshUnit = existingData?.unit_npsh || document.getElementById('unit-npsh')?.value || 'm';
@@ -1151,6 +1248,8 @@ function addExtraCurveCard(existingData) {
     label,
     color,
     diameter,
+    unit_dia: diaUnit,
+    curve_mode: curveMode,
     unit_q: qUnit,
     unit_h: hUnit,
     unit_npsh: npshUnit,
@@ -1193,15 +1292,26 @@ function addExtraCurveCard(existingData) {
       <input type="text" class="form-control form-control-sm form-control-dark extra-label-input"
              value="${label}" placeholder="Curve label"
              style="max-width:180px;font-weight:600" data-eid="${id}">
-      <span class="text-muted small ms-2">Diameter (mm):</span>
+      <span class="text-muted small ms-2">Diameter:</span>
       <input type="number" class="form-control form-control-sm form-control-dark extra-dia-input"
              value="${diameter}" placeholder="e.g. 280"
              style="max-width:90px" data-eid="${id}">
+      <select class="header-unit-select unit-select-dia" data-eid="${id}" style="margin-top:0">
+        <option value="mm" ${diaUnit === 'mm' ? 'selected' : ''}>mm</option>
+        <option value="in" ${diaUnit === 'in' ? 'selected' : ''}>in</option>
+        <option value="m" ${diaUnit === 'm' ? 'selected' : ''}>m</option>
+      </select>
       <span class="text-muted small ms-2">Color:</span>
-      <div class="d-flex gap-1 flex-wrap">${swatches}</div>
+      <div class="d-flex gap-1 flex-wrap me-2">${swatches}</div>
       <button type="button" class="btn btn-sm btn-outline-danger ms-auto py-0 px-2 btn-extra-remove"
               data-eid="${id}">&#x2715; Remove</button>
     </div>
+
+    <select class="unit-select-mode" data-eid="${id}" style="display:none">
+      <option value="fit" ${curveMode === 'fit' ? 'selected' : ''}>Fitted</option>
+      <option value="affinity" ${curveMode === 'affinity' ? 'selected' : ''}>Affinity</option>
+      <option value="both" ${curveMode === 'both' ? 'selected' : ''}>Both</option>
+    </select>
 
     <div class="table-responsive mb-2">
       <table class="table table-sm table-dark mb-0 align-middle" id="extraTable-${id}" style="font-size:0.83rem">
@@ -1245,7 +1355,7 @@ function addExtraCurveCard(existingData) {
       </table>
     </div>
 
-    <div class="d-flex gap-2 align-items-center mb-2">
+    <div class="d-flex gap-2 align-items-center mb-2 flex-wrap">
       <button type="button" class="btn btn-sm btn-outline-secondary btn-extra-add-row" data-eid="${id}">
         <i class="bi bi-plus-lg me-1"></i>Add Row
       </button>
@@ -1253,7 +1363,25 @@ function addExtraCurveCard(existingData) {
         <i class="bi bi-file-earmark-arrow-up me-1"></i>Import File
       </button>
       <input type="file" class="extra-file-input-${id}" style="display:none" accept=".csv,.txt,.dat">
-      <button type="button" class="btn btn-sm btn-primary ms-auto btn-extra-fit" data-eid="${id}">
+      
+      <!-- Inline Calculation Mode Radio Group -->
+      <div class="d-inline-flex align-items-center gap-2 ms-auto bg-dark p-1 px-2 rounded border border-secondary border-opacity-50" style="font-size:0.78rem">
+        <span class="text-accent fw-semibold">Method:</span>
+        <div class="form-check form-check-inline mb-0 me-1">
+          <input class="form-check-input extra-mode-radio" type="radio" name="extra_mode_${id}" id="extra_mode_fit_${id}" value="fit" ${curveMode === 'fit' ? 'checked' : ''} data-eid="${id}">
+          <label class="form-check-label text-light" style="cursor:pointer" for="extra_mode_fit_${id}">Fitted</label>
+        </div>
+        <div class="form-check form-check-inline mb-0 me-1">
+          <input class="form-check-input extra-mode-radio" type="radio" name="extra_mode_${id}" id="extra_mode_affinity_${id}" value="affinity" ${curveMode === 'affinity' ? 'checked' : ''} data-eid="${id}">
+          <label class="form-check-label text-light" style="cursor:pointer" for="extra_mode_affinity_${id}">Affinity</label>
+        </div>
+        <div class="form-check form-check-inline mb-0">
+          <input class="form-check-input extra-mode-radio" type="radio" name="extra_mode_${id}" id="extra_mode_both_${id}" value="both" ${curveMode === 'both' ? 'checked' : ''} data-eid="${id}">
+          <label class="form-check-label text-light" style="cursor:pointer" for="extra_mode_both_${id}">Both</label>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-sm btn-primary btn-extra-fit" data-eid="${id}">
         <i class="bi bi-calculator me-1"></i>Fit &amp; Preview
       </button>
     </div>
@@ -1261,6 +1389,38 @@ function addExtraCurveCard(existingData) {
     <div class="extra-curve-status mb-2" id="extra-status-${id}"></div>`;
 
   list.appendChild(div);
+
+  // Wire radio buttons for curve mode
+  div.querySelectorAll(`.extra-mode-radio`).forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      const modeVal = e.target.value;
+      const selectEl = div.querySelector(`.unit-select-mode`);
+      if (selectEl) selectEl.value = modeVal;
+      const curve = extraCurves.find(c => c.id === id);
+      if (curve) {
+        curve.curve_mode = modeVal;
+        if (curve.coeffs) {
+          curve.coeffs.curve_mode = modeVal;
+        }
+      }
+
+      // Check if table has 3+ data points entered
+      const rows = div.querySelectorAll(`#extraTable-${id} tbody tr`);
+      let validPts = 0;
+      rows.forEach(r => {
+        const q = parseFloat(r.querySelector('.col-q')?.value);
+        const h = parseFloat(r.querySelector('.col-h')?.value);
+        if (!isNaN(q) && !isNaN(h)) validPts++;
+      });
+
+      if (validPts >= 3) {
+        fitExtraCurve(id);
+      } else {
+        serializeExtraCurves();
+        refreshMainPreview();
+      }
+    });
+  });
 
   // If pre-loading saved data, show status
   if (existingData) {
@@ -1271,7 +1431,7 @@ function addExtraCurveCard(existingData) {
 
   // Helper to convert inputs on unit change
   const initExtraUnitSelectors = () => {
-    ['q', 'h', 'npsh', 'pow'].forEach(type => {
+    ['q', 'h', 'npsh', 'pow', 'dia', 'mode'].forEach(type => {
       const select = div.querySelector(`.unit-select-${type}`);
       if (!select) return;
       select.setAttribute('data-prev', select.value);
@@ -1280,29 +1440,46 @@ function addExtraCurveCard(existingData) {
         const toUnit = e.target.value;
         if (fromUnit === toUnit) return;
 
-        const inputs = div.querySelectorAll(`.col-${type}`);
-        inputs.forEach(input => {
-          const val = parseFloat(input.value);
-          if (!isNaN(val)) {
-            input.value = convertValue(val, fromUnit, toUnit, type);
-          }
-        });
-
-        // Update placeholders
-        _updateExtraPlaceholders(div, type, toUnit);
-        e.target.setAttribute('data-prev', toUnit);
-
-        // Recalculate power in the table rows if needed
-        if (type === 'q' || type === 'h' || type === 'pow') {
-          div.querySelectorAll(`tbody tr`).forEach(row => _autoUpdateExtraPowerInRow(row, id));
-        }
-
-        // Re-draw preview if fitted
-        const curve = extraCurves.find(c => c.id === id);
-        if (curve && curve.fitted && curve.coeffs) {
+        if (type === 'mode') {
+          const curve = extraCurves.find(c => c.id === id);
+          if (curve) curve.curve_mode = toUnit;
           refreshMainPreview();
+        } else if (type === 'dia') {
+          const diaInp = div.querySelector('.extra-dia-input');
+          if (diaInp) {
+            const val = parseFloat(diaInp.value);
+            if (!isNaN(val)) {
+              diaInp.value = convertValue(val, fromUnit, toUnit, 'dia');
+            }
+          }
+          const curve = extraCurves.find(c => c.id === id);
+          if (curve) curve.unit_dia = toUnit;
+          refreshMainPreview();
+        } else {
+          const inputs = div.querySelectorAll(`.col-${type}`);
+          inputs.forEach(input => {
+            const val = parseFloat(input.value);
+            if (!isNaN(val)) {
+              input.value = convertValue(val, fromUnit, toUnit, type);
+            }
+          });
+
+          // Update placeholders
+          _updateExtraPlaceholders(div, type, toUnit);
+
+          // Recalculate power in the table rows if needed
+          if (type === 'q' || type === 'h' || type === 'pow') {
+            div.querySelectorAll(`tbody tr`).forEach(row => _autoUpdateExtraPowerInRow(row, id));
+          }
+
+          // Re-draw preview if fitted
+          const curve = extraCurves.find(c => c.id === id);
+          if (curve && curve.fitted && curve.coeffs) {
+            refreshMainPreview();
+          }
         }
 
+        e.target.setAttribute('data-prev', toUnit);
         serializeExtraCurves();
       });
     });
@@ -1437,16 +1614,24 @@ function initExtraCurves(curvesArray) {
   extraCurves = [];
   _extraCurveIdCounter = 0;
 
+  // Restore saved graph options if present
+  const savedOptsField = document.querySelector('input[name="graph_options_json"]');
+  if (savedOptsField && savedOptsField.value) {
+    try {
+      applyGraphOptions(JSON.parse(savedOptsField.value));
+    } catch (e) {}
+  }
+
   // Wire the Add Curve Table button
   const addBtn = document.getElementById('btnAddExtraCurve');
   if (addBtn) addBtn.addEventListener('click', () => addExtraCurveCard());
 
-  // Wire form submit to serialise extra curves before POST
-  // (raw table + data units are serialized by the inline init script)
+  // Wire form submit to serialise extra curves and graph options before POST
   const form = document.getElementById('pumpForm');
   if (form) {
     form.addEventListener('submit', () => {
       serializeExtraCurves();
+      serializeGraphOptions();
     });
   }
 
@@ -1553,6 +1738,7 @@ function generateAffinityCurve() {
   const curveObj = {
     label: `Affinity ${labelSuffix}`,
     diameter: dia_mm || '',
+    curve_mode: 'affinity',
     raw_table: newCurveData
   };
   

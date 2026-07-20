@@ -79,7 +79,12 @@
 
 <!-- Display Options Panel -->
 <div class="card card-dark mb-4">
-  <div class="card-header card-header-dark d-flex align-items-center"><i class="bi bi-display me-2 text-accent"></i><strong>Display Options</strong></div>
+  <div class="card-header card-header-dark d-flex align-items-center justify-content-between">
+    <span><i class="bi bi-display me-2 text-accent"></i><strong>Display Options</strong></span>
+    <button type="button" class="btn btn-sm btn-outline-accent py-0 px-2" id="btnSaveGraphOptions">
+      <i class="bi bi-floppy me-1"></i>Save Options
+    </button>
+  </div>
   <div class="card-body py-3">
     <div class="row g-3">
       
@@ -87,6 +92,24 @@
       <div class="col-md-6 border-end border-secondary pe-md-4">
         <label class="form-label form-label-sm fw-semibold mb-2 text-accent">H-Q Graph Overlays</label>
         
+        <div class="p-2 mb-3 bg-dark-subtle border border-secondary border-opacity-25 rounded">
+          <label class="form-label form-label-sm fw-semibold text-accent mb-1"><i class="bi bi-gear-wide-connected me-1"></i>Trimmed Curves Model</label>
+          <div class="d-flex gap-3 flex-wrap">
+            <div class="form-check mb-0">
+              <input class="form-check-input" type="radio" name="trimModelChoice" id="radTrimFitted" value="fit" checked>
+              <label class="form-check-label small text-light fw-semibold" for="radTrimFitted">Fitted Data</label>
+            </div>
+            <div class="form-check mb-0">
+              <input class="form-check-input" type="radio" name="trimModelChoice" id="radTrimAffinity" value="affinity">
+              <label class="form-check-label small text-light fw-semibold" for="radTrimAffinity">Affinity Laws</label>
+            </div>
+            <div class="form-check mb-0">
+              <input class="form-check-input" type="radio" name="trimModelChoice" id="radTrimBoth" value="both">
+              <label class="form-check-label small text-light fw-semibold" for="radTrimBoth">Both (Overlay)</label>
+            </div>
+          </div>
+        </div>
+
         <div class="form-check mb-2">
           <input class="form-check-input" type="checkbox" id="chkShowEffIso" checked>
           <label class="form-check-label small text-warning" for="chkShowEffIso">
@@ -339,7 +362,8 @@
      data-id="{{ pump.id }}"
      data-main-label="{{ pump.main_curve_label or '' }}"
      data-main-dia="{{ pump.main_curve_dia_mm if pump.main_curve_dia_mm else pump.impeller_dia_mm }}"
-     data-extra-curves='{{ pump.get_extra_curves() | tojson }}'>
+     data-extra-curves='{{ pump.get_extra_curves() | tojson }}'
+     data-graph-options='{{ pump.get_graph_options() | tojson }}'>
 </div>
 
 <script>

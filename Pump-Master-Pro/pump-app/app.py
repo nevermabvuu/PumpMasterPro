@@ -97,6 +97,8 @@ def _pump_from_form(f, pump=None):
     pump.notes            = f.get('notes', pump.notes or '')
     pump.extra_curves_json = f.get('extra_curves_json', pump.extra_curves_json or '')
     pump.data_units        = f.get('data_units', pump.data_units or '')
+    if 'graph_options_json' in f and f.get('graph_options_json'):
+        pump.graph_options_json = f.get('graph_options_json')
     pump.main_curve_label  = f.get('main_curve_label', pump.main_curve_label or '')
     raw_dia = f.get('main_curve_dia_mm', '')
     if str(raw_dia).strip():
@@ -243,11 +245,20 @@ def api_warman_chart(pump_id):
     eff_levels   = parse_levels(args.get('eff_levels'))
     power_levels = parse_levels(args.get('power_levels'))
     npsh_levels  = parse_levels(args.get('npsh_levels'))
+    raw_fa       = args.get('force_affinity', '')
+    if raw_fa in ['true', '1', 'affinity']:
+        force_affinity = 'affinity'
+    elif raw_fa == 'both':
+        force_affinity = 'both'
+    elif raw_fa == 'fit':
+        force_affinity = 'fit'
+    else:
+        force_affinity = False
 
     data = warman_chart_data(pump, liquid=liquid, rho=rho, viscosity_cSt=vis,
                              slurry_cv=cv, slurry_d50=d50, rho_solid=rho_s,
                              eff_levels=eff_levels, power_levels=power_levels,
-                             npsh_levels=npsh_levels)
+                             npsh_levels=npsh_levels, force_affinity=force_affinity)
 
     sh = _get_float(args, 'static_head', 0.0)
     pk = _get_float(args, 'pipe_k', 0.0)
@@ -285,6 +296,12 @@ def api_preview_warman_chart():
     elif isinstance(imp_dia, str):
         pump.impeller_diameters = imp_dia
 
+    extra_curves = data.get('extra_curves_json')
+    if isinstance(extra_curves, list) or isinstance(extra_curves, dict):
+        pump.extra_curves_json = json.dumps(extra_curves)
+    elif isinstance(extra_curves, str):
+        pump.extra_curves_json = extra_curves
+
     liquid = data.get('liquid', 'water')
     rho = float(data.get('rho', 1000.0))
     vis = float(data.get('viscosity_cSt', 1.0))
@@ -303,11 +320,20 @@ def api_preview_warman_chart():
     eff_levels = parse_levels(data.get('eff_levels'))
     power_levels = parse_levels(data.get('power_levels'))
     npsh_levels = parse_levels(data.get('npsh_levels'))
+    raw_fa = data.get('force_affinity', False)
+    if str(raw_fa) in ['true', '1', 'affinity']:
+        force_affinity = 'affinity'
+    elif str(raw_fa) == 'both':
+        force_affinity = 'both'
+    elif str(raw_fa) == 'fit':
+        force_affinity = 'fit'
+    else:
+        force_affinity = False
 
     chart_data = warman_chart_data(pump, liquid=liquid, rho=rho, viscosity_cSt=vis,
                                    slurry_cv=cv, slurry_d50=d50, rho_solid=rho_s,
                                    eff_levels=eff_levels, power_levels=power_levels,
-                                   npsh_levels=npsh_levels)
+                                   npsh_levels=npsh_levels, force_affinity=force_affinity)
 
     sh = float(data.get('static_head', 0.0))
     pk = float(data.get('pipe_k', 0.0))
@@ -471,6 +497,15 @@ def api_compare_pumps():
         bep  = bep_point(pump, liquid, rho, vis, cv, d50, rho_s)
         comparison.append({'pump': pump.to_dict(), 'curves': data, 'bep': bep})
     return jsonify(comparison)
+
+
+@app.route('/papi/pump/<int:pump_id>/graph-options', methods=['POST'])
+def api_save_graph_options(pump_id):
+    pump = Pump.query.get_or_404(pump_id)
+    data = request.get_json(force=True, silent=True) or {}
+    pump.graph_options_json = json.dumps(data)
+    db.session.commit()
+    return jsonify({'status': 'ok', 'graph_options': pump.get_graph_options()})
 
 
 if __name__ == '__main__':

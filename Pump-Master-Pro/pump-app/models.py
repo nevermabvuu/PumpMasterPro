@@ -76,6 +76,10 @@ class Pump(db.Model):
     # JSON: {"q": "ls", "h": "m", "npsh": "m", "pow": "kw", "op_q": "ls"}
     data_units = db.Column(db.Text, default='')
 
+    # Saved graph & display options for the curve viewer
+    # JSON: {"show_eff_iso": bool, "eff_levels": str, "trim_model": str, ...}
+    graph_options_json = db.Column(db.Text, default='')
+
     # Optional label and measured diameter for the main (first) curve
     main_curve_label  = db.Column(db.String(100), default='')
     main_curve_dia_mm = db.Column(db.Float, nullable=True)
@@ -90,12 +94,34 @@ class Pump(db.Model):
         """Return sorted list of impeller diameters (descending)."""
         raw = (self.impeller_diameters or '').strip()
         if not raw:
-            return [self.impeller_dia_mm]
-        try:
-            diameters = json.loads(raw) if raw.startswith('[') else [float(x) for x in raw.split(',')]
-            return sorted([float(d) for d in diameters], reverse=True)
-        except Exception:
-            return [self.impeller_dia_mm]
+            dias = [self.impeller_dia_mm] if self.impeller_dia_mm else []
+        else:
+            try:
+                diameters = json.loads(raw) if raw.startswith('[') else [float(x) for x in raw.split(',')]
+                dias = [float(d) for d in diameters]
+            except Exception:
+                dias = [self.impeller_dia_mm] if self.impeller_dia_mm else []
+
+        extra = self.get_extra_curves()
+        for c in extra:
+            d_val = c.get('diameter')
+            if d_val is not None and str(d_val).strip() != '':
+                try:
+                    u = c.get('unit_dia', 'mm')
+                    if u == 'in':
+                        d_mm = float(d_val) * 25.4
+                    elif u == 'm':
+                        d_mm = float(d_val) * 1000.0
+                    else:
+                        d_mm = float(d_val)
+                    if round(d_mm, 2) not in [round(x, 2) for x in dias]:
+                        dias.append(round(d_mm, 2))
+                except (ValueError, TypeError):
+                    pass
+
+        if not dias:
+            dias = [300.0]
+        return sorted(dias, reverse=True)
 
     def get_extra_curves(self):
         """Return the list of extra manually-defined curves, or []."""
@@ -106,6 +132,16 @@ class Pump(db.Model):
             return json.loads(raw)
         except Exception:
             return []
+
+    def get_graph_options(self):
+        """Return saved graph display options dict, or defaults."""
+        raw = (self.graph_options_json or '').strip()
+        if not raw:
+            return {}
+        try:
+            return json.loads(raw)
+        except Exception:
+            return {}
 
     def _get_data_units(self):
         """Return the saved input-unit preferences dict, or defaults."""
@@ -151,6 +187,7 @@ class Pump(db.Model):
             'notes': self.notes,
             'diameters': self.get_diameters(),
             'extra_curves': self.get_extra_curves(),
+            'graph_options': self.get_graph_options(),
             'data_units': self._get_data_units(),
             'main_curve_label': self.main_curve_label or '',
             'main_curve_dia_mm': self.main_curve_dia_mm,

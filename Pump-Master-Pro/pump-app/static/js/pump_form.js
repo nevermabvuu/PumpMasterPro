@@ -9,9 +9,8 @@
  *   5. Standard form submit stores everything.
  */
 
-let lastFitResults = null;
-
-const CONVERSIONS = {
+var lastFitResults = null;
+var CONVERSIONS = {
   q: {
     m3h: 1.0,
     ls: 0.2777777777777778,   // 1 m3h = 1/3.6 L/s
@@ -87,8 +86,7 @@ function updatePlaceholders(type, unit) {
  *           = Q × H × 9810 / (η × 3600000) × 100
  *           = Q × H × 2.725 / η   (kW)
  */
-const WATER_FACTOR = 9810 / 3600000; // ρg / (3600 × 1000)  [kW per (m³/h·m·1)]
-
+var WATER_FACTOR = 9810 / 3600000; // ρg / (3600 × 1000)  [kW per (m³/h·m·1)]
 function calcPowerKW(q_m3h, h_m, eta_pct) {
   if (isNaN(q_m3h) || isNaN(h_m) || isNaN(eta_pct) || eta_pct <= 0) return null;
   return (q_m3h * h_m * WATER_FACTOR) / (eta_pct / 100);
@@ -265,7 +263,7 @@ function serializeDataUnits() {
 }
 
 /* ── Plotly minimal dark theme ─────────────────────────────────────────────── */
-const FORM_LAYOUT = {
+var FORM_LAYOUT = {
   paper_bgcolor: '#1a1d23',
   plot_bgcolor:  '#1a1d23',
   font: { color: '#c9d1d9', size: 11 },
@@ -465,7 +463,7 @@ function showStatus(type, msg) {
   el.textContent = msg;
 }
 
-let isPreviewEventsBound = false;
+var isPreviewEventsBound = false;
 
 function getPumpFormData() {
   const data = {};
@@ -683,6 +681,7 @@ async function refreshPreviewCharts() {
 }
 
 function renderPreviewChartsData(warmanData, curveData) {
+  const showHQ       = document.getElementById('chkShowHQ')?.checked !== false;
   const showEffIso = document.getElementById('chkShowEffIso').checked;
   const showPowerIso = document.getElementById('chkShowPowerIso').checked;
   const showNpshIso = document.getElementById('chkShowNpshIso').checked;
@@ -721,6 +720,11 @@ function renderPreviewChartsData(warmanData, curveData) {
     wc.layout.yaxis2.title = `NPSHr (${labelNpsh})`;
   }
 
+  // Toggle main Performance Map Preview card display
+  const panelWarmanPreview = document.getElementById('panelWarmanPreview');
+  if (panelWarmanPreview) {
+    panelWarmanPreview.style.display = showHQ ? '' : 'none';
+  }
   Plotly.react('chartWarman', wc.traces, wc.layout, PLOTLY_CONFIG);
 
   const showOther = document.getElementById('chkShowOther').checked;
@@ -728,48 +732,44 @@ function renderPreviewChartsData(warmanData, curveData) {
   document.getElementById('otherGraphsOptions').style.display = showOther ? '' : 'none';
 
   if (showOther && curveData) {
-    const layoutChoice = document.querySelector('input[name="otherGraphsLayout"]:checked')?.value || 'combined';
+    const showEff = document.getElementById('chkShowEff')?.checked;
+    const showPower = document.getElementById('chkShowPower')?.checked;
+    const showNpsh = document.getElementById('chkShowNpsh')?.checked;
+    const combineEffPower = document.getElementById('chkCombineEffPower')?.checked;
+
     const showClean = curveData.liquid !== 'water';
-    const showSystem = !!curveData.system_h;
 
-    document.getElementById('panelHQ').style.display = (layoutChoice === 'separate') ? '' : 'none';
-    document.getElementById('panelEffPower').style.display = (layoutChoice === 'combined') ? '' : 'none';
-    document.getElementById('panelEff').style.display = (layoutChoice === 'separate') ? '' : 'none';
-    document.getElementById('panelPower').style.display = (layoutChoice === 'separate') ? '' : 'none';
-    document.getElementById('panelNpsh').style.display = '';
+    // Toggle panels
+    document.getElementById('panelEffPower').style.display = (showEff && showPower && combineEffPower) ? '' : 'none';
+    document.getElementById('panelEff').style.display = (showEff && (!showPower || !combineEffPower)) ? '' : 'none';
+    document.getElementById('panelPower').style.display = (showPower && (!showEff || !combineEffPower)) ? '' : 'none';
+    document.getElementById('panelNpsh').style.display = showNpsh ? '' : 'none';
 
-    if (layoutChoice === 'combined') {
-      const effPow = buildEffPowerChart(curveData, showClean);
+    if (showEff && showPower && combineEffPower) {
+      const effPow = buildEffPowerChart(warmanData, curveData, showClean);
       effPow.layout.xaxis.title = `Flow Q (${labelQ})`;
       effPow.layout.yaxis.title = 'Efficiency (%)';
       effPow.layout.yaxis2.title = `Shaft Power P (${labelPow})`;
-
-      const npsh = buildNpshChart(curveData);
-      npsh.layout.xaxis.title = `Flow Q (${labelQ})`;
-      npsh.layout.yaxis.title = `NPSHr (${labelNpsh})`;
-
       Plotly.react('chartEffPower', effPow.traces, effPow.layout, PLOTLY_CONFIG);
-      Plotly.react('chartNpsh', npsh.traces, npsh.layout, PLOTLY_CONFIG);
     } else {
-      const hq = buildHQChart(curveData, showSystem, showClean);
-      hq.layout.xaxis.title = `Flow Q (${labelQ})`;
-      hq.layout.yaxis.title = `Head H (${labelH})`;
+      if (showEff) {
+        const eff = buildEffChart(warmanData, curveData, showClean);
+        eff.layout.xaxis.title = `Flow Q (${labelQ})`;
+        eff.layout.yaxis.title = 'Efficiency (%)';
+        Plotly.react('chartEff', eff.traces, eff.layout, PLOTLY_CONFIG);
+      }
+      if (showPower) {
+        const power = buildPowerChart(warmanData, curveData, showClean);
+        power.layout.xaxis.title = `Flow Q (${labelQ})`;
+        power.layout.yaxis.title = `Shaft Power P (${labelPow})`;
+        Plotly.react('chartPower', power.traces, power.layout, PLOTLY_CONFIG);
+      }
+    }
 
-      const eff = buildEffChart(curveData, showClean);
-      eff.layout.xaxis.title = `Flow Q (${labelQ})`;
-      eff.layout.yaxis.title = 'Efficiency (%)';
-
-      const power = buildPowerChart(curveData, showClean);
-      power.layout.xaxis.title = `Flow Q (${labelQ})`;
-      power.layout.yaxis.title = `Shaft Power P (${labelPow})`;
-
-      const npsh = buildNpshChart(curveData);
+    if (showNpsh) {
+      const npsh = buildNpshChart(warmanData, curveData);
       npsh.layout.xaxis.title = `Flow Q (${labelQ})`;
       npsh.layout.yaxis.title = `NPSHr (${labelNpsh})`;
-
-      Plotly.react('chartHQ', hq.traces, hq.layout, PLOTLY_CONFIG);
-      Plotly.react('chartEff', eff.traces, eff.layout, PLOTLY_CONFIG);
-      Plotly.react('chartPower', power.traces, power.layout, PLOTLY_CONFIG);
       Plotly.react('chartNpsh', npsh.traces, npsh.layout, PLOTLY_CONFIG);
     }
   }
@@ -891,12 +891,12 @@ function initBlankTable() {
    All fitted curves are serialised to JSON in a hidden form field on submit.
    ══════════════════════════════════════════════════════════════════════════ */
 
-const EXTRA_CURVE_COLORS = [
+var EXTRA_CURVE_COLORS = [
   '#58a6ff','#3fb950','#f0c040','#f85149','#bc8cff','#39d3c0','#ff9900','#e879f9'
 ];
 
-let _extraCurveIdCounter = 0;
-let extraCurves = [];   // [{id, label, color, fitted, coeffs}]
+var _extraCurveIdCounter = 0;
+var extraCurves = [];   // [{id, label, color, fitted, coeffs}]
 
 /* ── Serialise all extra curves to the hidden form field ─────────────────── */
 function serializeExtraCurves() {
@@ -1249,6 +1249,10 @@ function addExtraCurveCard(existingData) {
       <button type="button" class="btn btn-sm btn-outline-secondary btn-extra-add-row" data-eid="${id}">
         <i class="bi bi-plus-lg me-1"></i>Add Row
       </button>
+      <button type="button" class="btn btn-sm btn-outline-info btn-extra-import-file" data-eid="${id}">
+        <i class="bi bi-file-earmark-arrow-up me-1"></i>Import File
+      </button>
+      <input type="file" class="extra-file-input-${id}" style="display:none" accept=".csv,.txt,.dat">
       <button type="button" class="btn btn-sm btn-primary ms-auto btn-extra-fit" data-eid="${id}">
         <i class="bi bi-calculator me-1"></i>Fit &amp; Preview
       </button>
@@ -1375,6 +1379,50 @@ function addExtraCurveCard(existingData) {
   // Power auto-calc for all initial rows
   div.querySelectorAll(`#extraTable-${id} tbody tr`).forEach(row => _wireExtraRow(row, id));
 
+  // Events: import file
+  const cardFileInp = div.querySelector(`.extra-file-input-${id}`);
+  div.querySelector('.btn-extra-import-file').addEventListener('click', () => {
+    cardFileInp.click();
+  });
+  cardFileInp.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const text = evt.target.result;
+      const parsedRows = parseCSVOrTXT(text);
+      if (parsedRows.length < 3) {
+        alert("Invalid file: found fewer than 3 valid data points (each point must have at least Q and H separated by comma, space, tab or semicolon).");
+        return;
+      }
+      
+      const tbody = div.querySelector(`#extraTable-${id} tbody`);
+      tbody.innerHTML = '';
+      const qUnit = div.querySelector('.unit-select-q')?.value || 'm3h';
+      const hUnit = div.querySelector('.unit-select-h')?.value || 'm';
+      const npshUnit = div.querySelector('.unit-select-npsh')?.value || 'm';
+      const powUnit = div.querySelector('.unit-select-pow')?.value || 'kw';
+      
+      parsedRows.forEach(row => {
+        const [q, h, eta, npsh, pow] = row;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" placeholder="Q (${getUnitLabel('q', qUnit)})" value="${q}"></td>
+          <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" placeholder="H (${getUnitLabel('h', hUnit)})" value="${h}"></td>
+          <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" placeholder="η %" value="${eta}"></td>
+          <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" placeholder="NPSHr (${getUnitLabel('npsh', npshUnit)})" value="${npsh}"></td>
+          <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" placeholder="${getUnitLabel('pow', powUnit)} (opt)" value="${pow}"></td>
+          <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">×</button></td>`;
+        tbody.appendChild(tr);
+        _wireExtraRow(tr, id);
+      });
+      
+      fitExtraCurve(id);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
   updateExtraBadge();
 
   // Auto-open the collapse panel
@@ -1406,4 +1454,188 @@ function initExtraCurves(curvesArray) {
   const data = Array.isArray(curvesArray) ? curvesArray :
                (typeof curvesArray === 'string' ? JSON.parse(curvesArray || '[]') : []);
   data.forEach(c => addExtraCurveCard(c));
+}
+
+// Add listener to the Generate button in the Affinity Laws Modal
+document.addEventListener('DOMContentLoaded', () => {
+  const btnGenerateAffinity = document.getElementById('btnGenerateAffinity');
+  if (btnGenerateAffinity) {
+    btnGenerateAffinity.addEventListener('click', generateAffinityCurve);
+  }
+  
+  const affTypeRadios = document.querySelectorAll('input[name="affinityType"]');
+  affTypeRadios.forEach(r => r.addEventListener('change', (e) => {
+    const label = document.getElementById('affinityValueLabel');
+    if (e.target.value === 'diameter') {
+      label.textContent = 'Target Diameter (mm)';
+    } else {
+      label.textContent = 'Target Rotational Speed (RPM)';
+    }
+  }));
+
+  // Bind uploader + preview options
+  initExtraCurveFileLoader();
+  bindPreviewOptions();
+});
+
+function generateAffinityCurve() {
+  const affinityType = document.querySelector('input[name="affinityType"]:checked').value;
+  const targetValue = parseFloat(document.getElementById('affinityValue').value);
+  if (isNaN(targetValue) || targetValue <= 0) {
+    alert("Please enter a valid target value.");
+    return;
+  }
+  
+  const baseTableData = getTableData('perfTable', false);
+  const q_h = baseTableData.q_h, q_eta = baseTableData.q_eta, q_npsh = baseTableData.q_npsh, q_p = baseTableData.q_p;
+  
+  if (q_h.length === 0) {
+    alert("Please enter base curve data first.");
+    return;
+  }
+
+  let ratio = 1.0;
+  let labelSuffix = '';
+  let dia_mm = null;
+  let speed = null;
+  
+  if (affinityType === 'diameter') {
+    const mainCurveDiaEl = document.getElementById('main_curve_dia_mm');
+    const impellerDiaEl = document.querySelector('[name="impeller_dia_mm"]');
+    const baseDia = parseFloat(mainCurveDiaEl?.value) || parseFloat(impellerDiaEl?.value) || parseFloat(mainCurveDiaEl?.placeholder) || 300.0;
+    if (isNaN(baseDia)) {
+      alert("Please specify the base diameter in the pump details first.");
+      return;
+    }
+    ratio = targetValue / baseDia;
+    labelSuffix = `Dia: ${targetValue}mm`;
+    dia_mm = targetValue;
+  } else {
+    const baseSpeed = parseFloat(document.querySelector('[name="speed_rpm"]')?.value);
+    if (isNaN(baseSpeed)) {
+      alert("Please specify the base speed in the pump details first.");
+      return;
+    }
+    ratio = targetValue / baseSpeed;
+    labelSuffix = `Speed: ${targetValue} RPM`;
+    speed = targetValue;
+  }
+  
+  const etaMap = new Map(); q_eta.forEach(p => etaMap.set(p[0], p[1]));
+  const npshMap = new Map(); q_npsh.forEach(p => npshMap.set(p[0], p[1]));
+  const powMap = new Map(); q_p.forEach(p => powMap.set(p[0], p[1]));
+  
+  const newCurveData = [];
+  q_h.forEach(p => {
+    const q1 = p[0];
+    const h1 = p[1];
+    
+    const q2 = q1 * ratio;
+    const h2 = h1 * Math.pow(ratio, 2);
+    
+    let eta2 = etaMap.has(q1) ? etaMap.get(q1) : '';
+    if (eta2 !== '' && affinityType === 'diameter') {
+      const penalty = 40.0 * (1.0 - ratio);
+      eta2 = Math.max(0, Math.min(100, eta2 - penalty)).toFixed(1);
+    } else if (eta2 !== '') {
+      eta2 = parseFloat(eta2).toFixed(1);
+    }
+    
+    let npsh2 = npshMap.has(q1) ? npshMap.get(q1) * Math.pow(ratio, 2) : '';
+    if (npsh2 !== '') npsh2 = parseFloat(npsh2).toFixed(2);
+    
+    let p2 = powMap.has(q1) ? powMap.get(q1) * Math.pow(ratio, 3) : '';
+    if (p2 !== '') p2 = parseFloat(p2).toFixed(2);
+    
+    newCurveData.push([q2.toFixed(1), h2.toFixed(2), eta2, npsh2, p2]);
+  });
+  
+  const curveObj = {
+    label: `Affinity ${labelSuffix}`,
+    diameter: dia_mm || '',
+    raw_table: newCurveData
+  };
+  
+  addExtraCurveCard(curveObj);
+  
+  const newId = _extraCurveIdCounter;
+  fitExtraCurve(newId);
+  
+  const modalEl = document.getElementById('affinityModal');
+  const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+  modal.hide();
+}
+
+function initExtraCurveFileLoader() {
+  const btnLoad = document.getElementById('btnLoadExtraCurve');
+  const fileInp = document.getElementById('extraCurveFileInp');
+  if (!btnLoad || !fileInp) return;
+
+  btnLoad.addEventListener('click', (e) => {
+    e.preventDefault();
+    fileInp.click();
+  });
+
+  fileInp.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const text = evt.target.result;
+      const parsedRows = parseCSVOrTXT(text);
+      if (parsedRows.length < 3) {
+        alert("Invalid file: found fewer than 3 valid data points (each point must have at least Q and H separated by comma, space, tab or semicolon).");
+        return;
+      }
+
+      const defaultLabel = file.name.replace(/\.[^/.]+$/, "");
+      const label = prompt("Enter a label for this loaded curve:", defaultLabel) || defaultLabel;
+      const diameterStr = prompt("Enter the impeller diameter (mm) for this curve (optional):", "");
+      const diameter = parseFloat(diameterStr) || '';
+
+      const curveObj = {
+        label: label,
+        diameter: diameter,
+        raw_table: parsedRows
+      };
+
+      addExtraCurveCard(curveObj);
+      const newId = _extraCurveIdCounter;
+      fitExtraCurve(newId);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+}
+
+function parseCSVOrTXT(text) {
+  const lines = text.split('\n');
+  const parsedRows = [];
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) return;
+    const parts = trimmed.split(/[\s,;]+/).map(Number);
+    if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      const q = parts[0];
+      const h = parts[1];
+      const eta = (parts.length >= 3 && !isNaN(parts[2])) ? parts[2] : '';
+      const npsh = (parts.length >= 4 && !isNaN(parts[3])) ? parts[3] : '';
+      const pow = (parts.length >= 5 && !isNaN(parts[4])) ? parts[4] : '';
+      parsedRows.push([q, h, eta, npsh, pow]);
+    }
+  });
+  return parsedRows;
+}
+
+function bindPreviewOptions() {
+  ['chkShowHQ', 'chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'chkShowOther',
+   'chkShowEff', 'chkShowPower', 'chkShowNpsh', 'chkCombineEffPower'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', refreshMainPreview);
+  });
+  
+  document.querySelectorAll('input[name="npshYAxisChoice"]').forEach(input => {
+    input.addEventListener('change', refreshMainPreview);
+  });
 }

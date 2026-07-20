@@ -215,6 +215,8 @@ def api_curve_data(pump_id):
 
     data['bep']  = bep
     data['pump'] = pump.to_dict()
+    data['raw_table_json'] = pump.raw_table_json or ''
+    data['data_units'] = pump._get_data_units()
     return jsonify(data)
 
 
@@ -255,6 +257,8 @@ def api_warman_chart(pump_id):
         data['system_q'] = q_sys
         data['system_h'] = system_curve_points(sh, pk, q_sys)
 
+    data['raw_table_json'] = pump.raw_table_json or ''
+    data['data_units'] = pump._get_data_units()
     return jsonify(data)
 
 
@@ -312,6 +316,18 @@ def api_preview_warman_chart():
         chart_data['system_q'] = q_sys
         chart_data['system_h'] = system_curve_points(sh, pk, q_sys)
 
+    chart_data['raw_table_json'] = data.get('raw_table_json', '[]')
+    data_units = data.get('data_units')
+    if isinstance(data_units, str):
+        try:
+            chart_data['data_units'] = json.loads(data_units)
+        except Exception:
+            chart_data['data_units'] = {'q': 'm3h', 'h': 'm', 'npsh': 'm', 'pow': 'kw'}
+    elif isinstance(data_units, dict):
+        chart_data['data_units'] = data_units
+    else:
+        chart_data['data_units'] = {'q': 'm3h', 'h': 'm', 'npsh': 'm', 'pow': 'kw'}
+
     return jsonify(chart_data)
 
 
@@ -350,6 +366,18 @@ def api_preview_curve_data():
 
     chart_data['bep'] = bep
     chart_data['pump'] = pump.to_dict()
+    chart_data['raw_table_json'] = data.get('raw_table_json', '[]')
+    data_units = data.get('data_units')
+    if isinstance(data_units, str):
+        try:
+            chart_data['data_units'] = json.loads(data_units)
+        except Exception:
+            chart_data['data_units'] = {'q': 'm3h', 'h': 'm', 'npsh': 'm', 'pow': 'kw'}
+    elif isinstance(data_units, dict):
+        chart_data['data_units'] = data_units
+    else:
+        chart_data['data_units'] = {'q': 'm3h', 'h': 'm', 'npsh': 'm', 'pow': 'kw'}
+
     return jsonify(chart_data)
 
 

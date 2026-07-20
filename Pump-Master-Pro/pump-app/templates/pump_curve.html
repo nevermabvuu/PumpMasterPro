@@ -151,6 +151,13 @@
         <label class="form-label form-label-sm fw-semibold mb-2 text-accent">Other Performance Graphs</label>
         
         <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="chkShowHQ" checked>
+          <label class="form-check-label small fw-semibold text-accent" for="chkShowHQ">
+            Show H-Q Performance Map (Main Graph)
+          </label>
+        </div>
+
+        <div class="form-check mb-2">
           <input class="form-check-input" type="checkbox" id="chkShowOther" checked>
           <label class="form-check-label small fw-semibold" for="chkShowOther">
             Show additional performance graphs below
@@ -158,17 +165,22 @@
         </div>
         
         <div class="ms-4" id="otherGraphsOptions">
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="radio" name="otherGraphsLayout" id="radCombined" value="combined" checked>
-            <label class="form-check-label small" for="radCombined">
-              Display efficiency and power on the same graph (NPSH separate)
-            </label>
+          <div class="form-check mb-1">
+            <input class="form-check-input" type="checkbox" id="chkShowEff" checked>
+            <label class="form-check-label small" for="chkShowEff">Show Efficiency Graph</label>
           </div>
-          
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="radio" name="otherGraphsLayout" id="radSeparate" value="separate">
-            <label class="form-check-label small" for="radSeparate">
-              Show each curve as a separate graph (H-Q, Efficiency, Power, NPSH)
+          <div class="form-check mb-1">
+            <input class="form-check-input" type="checkbox" id="chkShowPower" checked>
+            <label class="form-check-label small" for="chkShowPower">Show Power Graph</label>
+          </div>
+          <div class="form-check mb-1">
+            <input class="form-check-input" type="checkbox" id="chkShowNpsh" checked>
+            <label class="form-check-label small" for="chkShowNpsh">Show NPSHr Graph</label>
+          </div>
+          <div class="form-check mb-2 mt-2 border-top pt-2" style="max-width: 280px;">
+            <input class="form-check-input" type="checkbox" id="chkCombineEffPower" checked>
+            <label class="form-check-label small" for="chkCombineEffPower">
+              Combine Efficiency & Power on one graph
             </label>
           </div>
         </div>
@@ -261,14 +273,7 @@
 <!-- ── STANDALONE CURVES ────────────────────────────────────────────────────── -->
 <div id="standalonePanels" style="display:none">
   <div class="row g-4">
-    <div class="col-lg-6" id="panelHQ" style="display:none">
-      <div class="card card-dark">
-        <div class="card-header card-header-dark">
-          <span class="curve-label hq"><i class="bi bi-graph-down-arrow me-2"></i>Head — Flow (H-Q)</span>
-        </div>
-        <div class="card-body p-0"><div id="chartHQ" class="chart-container"></div></div>
-      </div>
-    </div>
+
     <div class="col-lg-6" id="panelEffPower" style="display:none">
       <div class="card card-dark">
         <div class="card-header card-header-dark">

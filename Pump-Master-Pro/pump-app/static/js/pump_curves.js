@@ -312,68 +312,137 @@ function buildHQChart(data, showSystem, showClean) {
   return { traces, layout };
 }
 
-function buildEffChart(data, showClean) {
-  const traces = [{ type: 'scatter', mode: 'lines',
-    name: 'Efficiency', x: data.q, y: data.eta,
-    line: { color: '#f0c040', width: 2.5 },
-    fill: 'tozeroy', fillcolor: 'rgba(240,192,64,0.07)',
-    hovertemplate: 'Q=%{x:.1f}<br>η=%{y:.1f}%<extra></extra>' }];
-  if (showClean && data.eta_clean) {
-    traces.push({ type: 'scatter', mode: 'lines', name: 'η (water ref)',
-      x: data.q, y: data.eta_clean,
+function buildEffChart(familyData, singleData, showClean) {
+  const traces = [];
+  let family = [];
+  if (familyData && familyData.family) {
+    family = familyData.family;
+  } else if (familyData) {
+    family = [{
+      dia: familyData.pump?.impeller_dia_mm || (typeof PUMP_MAIN_DIA !== 'undefined' ? PUMP_MAIN_DIA : null) || 0,
+      is_max: true,
+      ratio: 1.0,
+      q: familyData.q,
+      h: familyData.h,
+      eta: familyData.eta,
+      power: familyData.power,
+      npsh: familyData.npsh,
+      bep: familyData.bep
+    }];
+  }
+
+  family.forEach((fam, idx) => {
+    const isMax = fam.is_max;
+    const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+    traces.push({
+      type: 'scatter', mode: 'lines',
+      name: `η Ø${fam.dia} mm`,
+      x: fam.q, y: fam.eta,
+      line: { color: col, width: isMax ? 2.5 : 1.8 },
+      hovertemplate: `Ø${fam.dia} mm<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
+    });
+
+    if (fam.bep) {
+      traces.push({
+        type: 'scatter', mode: 'markers',
+        name: `BEP Ø${fam.dia}`,
+        x: [fam.bep.q], y: [fam.bep.eta],
+        marker: { size: isMax ? 10 : 7, color: col, symbol: 'star', line: { color: '#fff', width: 1 } },
+        showlegend: false,
+        hovertemplate: `BEP Ø${fam.dia}<br>Q=${fam.bep.q}<br>η=${fam.bep.eta}%<extra></extra>`
+      });
+    }
+  });
+
+  if (showClean && singleData && singleData.eta_clean) {
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'η (water ref)',
+      x: singleData.q, y: singleData.eta_clean,
       line: { color: '#f0c040', width: 1.5, dash: 'dot' }, opacity: 0.45,
-      hovertemplate: 'Q=%{x:.1f}<br>η(clean)=%{y:.1f}%<extra></extra>' });
+      hovertemplate: 'Q=%{x:.1f}<br>η(clean)=%{y:.1f}%<extra></extra>'
+    });
   }
-  if (data.bep) {
-    traces.push({ type: 'scatter', mode: 'markers', name: 'BEP',
-      x: [data.bep.q], y: [data.bep.eta],
-      marker: { size: 10, color: '#3fb950', symbol: 'star', line: { color: '#fff', width: 1 } },
-      hovertemplate: `BEP η=${data.bep.eta}%<extra></extra>` });
-  }
+
   const layout = makeLayout('Flow Q (m³/h)', 'Efficiency η (%)');
   layout.yaxis = Object.assign({}, layout.yaxis, { range: [0, 100] });
   return { traces, layout };
 }
 
-function buildEffPowerChart(data, showClean) {
+function buildEffPowerChart(familyData, singleData, showClean) {
   const traces = [];
-  
-  // Efficiency on y1 (left side)
-  traces.push({ type: 'scatter', mode: 'lines', name: 'Efficiency',
-    x: data.q, y: data.eta, line: { color: '#f0c040', width: 2.5 },
-    hovertemplate: 'Q=%{x:.1f}<br>η=%{y:.1f}%<extra></extra>',
-    yaxis: 'y1'
-  });
-  if (showClean && data.eta_clean) {
-    traces.push({ type: 'scatter', mode: 'lines', name: 'η (water ref)',
-      x: data.q, y: data.eta_clean,
-      line: { color: '#f0c040', width: 1.5, dash: 'dot' }, opacity: 0.45,
-      hovertemplate: 'Q=%{x:.1f}<br>η(clean)=%{y:.1f}%<extra></extra>',
-      yaxis: 'y1'
-    });
-  }
-  if (data.bep) {
-    traces.push({ type: 'scatter', mode: 'markers', name: 'BEP',
-      x: [data.bep.q], y: [data.bep.eta],
-      marker: { size: 10, color: '#3fb950', symbol: 'star', line: { color: '#fff', width: 1 } },
-      hovertemplate: `BEP η=${data.bep.eta}%<extra></extra>`,
-      yaxis: 'y1'
-    });
+  let family = [];
+  if (familyData && familyData.family) {
+    family = familyData.family;
+  } else if (familyData) {
+    family = [{
+      dia: familyData.pump?.impeller_dia_mm || (typeof PUMP_MAIN_DIA !== 'undefined' ? PUMP_MAIN_DIA : null) || 0,
+      is_max: true,
+      ratio: 1.0,
+      q: familyData.q,
+      h: familyData.h,
+      eta: familyData.eta,
+      power: familyData.power,
+      npsh: familyData.npsh,
+      bep: familyData.bep
+    }];
   }
 
-  // Power on y2 (right side)
-  if (data.power) {
-    traces.push({ type: 'scatter', mode: 'lines', name: 'Power',
-      x: data.q, y: data.power, line: { color: '#f85149', width: 2.5 },
-      hovertemplate: 'Q=%{x:.1f}<br>P=%{y:.2f} kW<extra></extra>',
-      yaxis: 'y2'
+  family.forEach((fam, idx) => {
+    const isMax = fam.is_max;
+    const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+
+    // Efficiency on y1 (left side)
+    traces.push({
+      type: 'scatter', mode: 'lines',
+      name: `η Ø${fam.dia} mm`,
+      x: fam.q, y: fam.eta,
+      line: { color: col, width: isMax ? 2.5 : 1.8 },
+      yaxis: 'y1',
+      hovertemplate: `Ø${fam.dia} mm η<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
     });
-    if (showClean && data.power_clean) {
-      traces.push({ type: 'scatter', mode: 'lines', name: 'Power (water ref)',
-        x: data.q, y: data.power_clean,
+
+    if (fam.bep) {
+      traces.push({
+        type: 'scatter', mode: 'markers',
+        name: `BEP Ø${fam.dia}`,
+        x: [fam.bep.q], y: [fam.bep.eta],
+        marker: { size: isMax ? 10 : 7, color: col, symbol: 'star', line: { color: '#fff', width: 1 } },
+        yaxis: 'y1',
+        showlegend: false,
+        hovertemplate: `BEP Ø${fam.dia}<br>Q=${fam.bep.q}<br>η=${fam.bep.eta}%<extra></extra>`
+      });
+    }
+
+    // Power on y2 (right side)
+    if (fam.power) {
+      traces.push({
+        type: 'scatter', mode: 'lines',
+        name: `P Ø${fam.dia} mm`,
+        x: fam.q, y: fam.power,
+        line: { color: col, width: isMax ? 2.5 : 1.8, dash: 'dash' },
+        yaxis: 'y2',
+        hovertemplate: `Ø${fam.dia} mm P<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
+      });
+    }
+  });
+
+  if (showClean && singleData) {
+    if (singleData.eta_clean) {
+      traces.push({
+        type: 'scatter', mode: 'lines', name: 'η (water ref)',
+        x: singleData.q, y: singleData.eta_clean,
+        line: { color: '#f0c040', width: 1.5, dash: 'dot' }, opacity: 0.45,
+        yaxis: 'y1',
+        hovertemplate: 'Q=%{x:.1f}<br>η(clean)=%{y:.1f}%<extra></extra>'
+      });
+    }
+    if (singleData.power_clean) {
+      traces.push({
+        type: 'scatter', mode: 'lines', name: 'P (water ref)',
+        x: singleData.q, y: singleData.power_clean,
         line: { color: '#f85149', width: 1.5, dash: 'dot' }, opacity: 0.45,
-        hovertemplate: 'Q=%{x:.1f}<br>P(clean)=%{y:.2f} kW<extra></extra>',
-        yaxis: 'y2'
+        yaxis: 'y2',
+        hovertemplate: 'Q=%{x:.1f}<br>P(clean)=%{y:.2f} kW<extra></extra>'
       });
     }
   }
@@ -381,32 +450,95 @@ function buildEffPowerChart(data, showClean) {
   const layout = Object.assign({}, PLOTLY_LAYOUT_BASE, {
     xaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.xaxis, { title: 'Flow Q (m³/h)' }),
     yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { title: 'Efficiency η (%)', range: [0, 105] }),
-    yaxis2: { title: 'Shaft Power P (kW)', overlaying: 'y', side: 'right',
-              rangemode: 'tozero', showgrid: false,
-              titlefont: { color: '#f85149', size: 12 }, tickfont: { color: '#f85149' } }
+    yaxis2: {
+      title: 'Shaft Power P (kW)', overlaying: 'y', side: 'right',
+      rangemode: 'tozero', showgrid: false,
+      titlefont: { color: '#f85149', size: 12 }, tickfont: { color: '#f85149' }
+    }
   });
   return { traces, layout };
 }
 
-function buildPowerChart(data, showClean) {
-  const traces = [{ type: 'scatter', mode: 'lines', name: 'Power',
-    x: data.q, y: data.power, line: { color: '#f85149', width: 2.5 },
-    hovertemplate: 'Q=%{x:.1f}<br>P=%{y:.2f} kW<extra></extra>' }];
-  if (showClean && data.power_clean) {
-    traces.push({ type: 'scatter', mode: 'lines', name: 'Power (water ref)',
-      x: data.q, y: data.power_clean,
-      line: { color: '#f85149', width: 1.5, dash: 'dot' }, opacity: 0.45,
-      hovertemplate: 'Q=%{x:.1f}<br>P(clean)=%{y:.2f}<extra></extra>' });
+function buildPowerChart(familyData, singleData, showClean) {
+  const traces = [];
+  let family = [];
+  if (familyData && familyData.family) {
+    family = familyData.family;
+  } else if (familyData) {
+    family = [{
+      dia: familyData.pump?.impeller_dia_mm || (typeof PUMP_MAIN_DIA !== 'undefined' ? PUMP_MAIN_DIA : null) || 0,
+      is_max: true,
+      ratio: 1.0,
+      q: familyData.q,
+      h: familyData.h,
+      eta: familyData.eta,
+      power: familyData.power,
+      npsh: familyData.npsh,
+      bep: familyData.bep
+    }];
   }
+
+  family.forEach((fam, idx) => {
+    const isMax = fam.is_max;
+    const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+    
+    if (fam.power) {
+      traces.push({
+        type: 'scatter', mode: 'lines',
+        name: `P Ø${fam.dia} mm`,
+        x: fam.q, y: fam.power,
+        line: { color: col, width: isMax ? 2.5 : 1.8 },
+        hovertemplate: `Ø${fam.dia} mm<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
+      });
+    }
+  });
+
+  if (showClean && singleData && singleData.power_clean) {
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'Power (water ref)',
+      x: singleData.q, y: singleData.power_clean,
+      line: { color: '#f85149', width: 1.5, dash: 'dot' }, opacity: 0.45,
+      hovertemplate: 'Q=%{x:.1f}<br>P(clean)=%{y:.2f} kW<extra></extra>'
+    });
+  }
+
   const layout = makeLayout('Flow Q (m³/h)', 'Shaft Power P (kW)');
   layout.yaxis.rangemode = 'tozero';
   return { traces, layout };
 }
 
-function buildNpshChart(data) {
-  const traces = [{ type: 'scatter', mode: 'lines', name: 'NPSHr',
-    x: data.q, y: data.npsh, line: { color: '#39d3c0', width: 2.5 },
-    hovertemplate: 'Q=%{x:.1f}<br>NPSHr=%{y:.2f} m<extra></extra>' }];
+function buildNpshChart(familyData, singleData) {
+  const traces = [];
+  let family = [];
+  if (familyData && familyData.family) {
+    family = familyData.family;
+  } else if (familyData) {
+    family = [{
+      dia: familyData.pump?.impeller_dia_mm || (typeof PUMP_MAIN_DIA !== 'undefined' ? PUMP_MAIN_DIA : null) || 0,
+      is_max: true,
+      ratio: 1.0,
+      q: familyData.q,
+      h: familyData.h,
+      eta: familyData.eta,
+      power: familyData.power,
+      npsh: familyData.npsh,
+      bep: familyData.bep
+    }];
+  }
+
+  family.forEach((fam, idx) => {
+    const isMax = fam.is_max;
+    const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+    
+    traces.push({
+      type: 'scatter', mode: 'lines',
+      name: `NPSHr Ø${fam.dia} mm`,
+      x: fam.q, y: fam.npsh,
+      line: { color: col, width: isMax ? 2.5 : 1.8 },
+      hovertemplate: `Ø${fam.dia} mm<br>Q=%{x:.1f} m³/h<br>NPSHr=%{y:.2f} m<extra></extra>`
+    });
+  });
+
   const layout = makeLayout('Flow Q (m³/h)', 'NPSHr (m)');
   layout.yaxis.rangemode = 'tozero';
   return { traces, layout };
@@ -906,11 +1038,17 @@ if (typeof PUMP_ID !== 'undefined') {
     const customEta = getCustomTracesEta();
     const customPow = getCustomTracesPower();
 
+    const showHQ       = document.getElementById('chkShowHQ')?.checked !== false;
     const showEffIso   = document.getElementById('chkShowEffIso').checked;
     const showPowerIso = document.getElementById('chkShowPowerIso').checked;
     const showNpshIso  = document.getElementById('chkShowNpshIso').checked;
     const showNpshCurve= document.getElementById('chkShowNpshCurve').checked;
     const showSpeedLines= document.getElementById('chkSpeedLines').checked;
+
+    // Toggle main Performance Map panel
+    if (document.getElementById('warmanPanel')) {
+      document.getElementById('warmanPanel').style.display = showHQ ? '' : 'none';
+    }
 
     // Toggle custom inputs visibility based on checkboxes
     document.getElementById('groupEffLevels').style.display = showEffIso ? '' : 'none';
@@ -944,33 +1082,38 @@ if (typeof PUMP_ID !== 'undefined') {
     document.getElementById('standalonePanels').style.display = showOther ? '' : 'none';
     document.getElementById('otherGraphsOptions').style.display = showOther ? '' : 'none';
 
-    if (showOther && singleData) {
-      const layoutChoice = document.querySelector('input[name="otherGraphsLayout"]:checked')?.value || 'combined';
-      const showClean = singleData.liquid !== 'water';
-      const showSystem = !!singleData.system_h;
+    if (showOther && currentData) {
+      const showEff = document.getElementById('chkShowEff')?.checked;
+      const showPower = document.getElementById('chkShowPower')?.checked;
+      const showNpsh = document.getElementById('chkShowNpsh')?.checked;
+      const combineEffPower = document.getElementById('chkCombineEffPower')?.checked;
+
+      const showClean = currentData.liquid !== 'water';
 
       // Toggle panel columns
-      document.getElementById('panelHQ').style.display = (layoutChoice === 'separate') ? '' : 'none';
-      document.getElementById('panelEffPower').style.display = (layoutChoice === 'combined') ? '' : 'none';
-      document.getElementById('panelEff').style.display = (layoutChoice === 'separate') ? '' : 'none';
-      document.getElementById('panelPower').style.display = (layoutChoice === 'separate') ? '' : 'none';
-      document.getElementById('panelNpsh').style.display = ''; // NPSHr is shown in both
+      if (document.getElementById('panelHQ')) document.getElementById('panelHQ').style.display = 'none';
+      document.getElementById('panelEffPower').style.display = (showEff && showPower && combineEffPower) ? '' : 'none';
+      document.getElementById('panelEff').style.display = (showEff && (!showPower || !combineEffPower)) ? '' : 'none';
+      document.getElementById('panelPower').style.display = (showPower && (!showEff || !combineEffPower)) ? '' : 'none';
+      document.getElementById('panelNpsh').style.display = showNpsh ? '' : 'none';
 
-      if (layoutChoice === 'combined') {
-        const effPow = buildEffPowerChart(singleData, showClean);
-        const npsh = buildNpshChart(singleData);
+      if (showEff && showPower && combineEffPower) {
+        const effPow = buildEffPowerChart(currentData, singleData, showClean);
         Plotly.react('chartEffPower', [...effPow.traces, ...customEta, ...customPow], effPow.layout, PLOTLY_CONFIG);
-        Plotly.react('chartNpsh', npsh.traces, npsh.layout, PLOTLY_CONFIG);
       } else {
-        const hq    = buildHQChart(singleData, showSystem, showClean);
-        const eff   = buildEffChart(singleData, showClean);
-        const power = buildPowerChart(singleData, showClean);
-        const npsh  = buildNpshChart(singleData);
-
-        Plotly.react('chartHQ',    [...hq.traces,    ...customHQ],  hq.layout,    PLOTLY_CONFIG);
-        Plotly.react('chartEff',   [...eff.traces,   ...customEta], eff.layout,   PLOTLY_CONFIG);
-        Plotly.react('chartPower', [...power.traces, ...customPow], power.layout, PLOTLY_CONFIG);
-        Plotly.react('chartNpsh',  npsh.traces,                     npsh.layout,  PLOTLY_CONFIG);
+        if (showEff) {
+            const eff = buildEffChart(currentData, singleData, showClean);
+            Plotly.react('chartEff', [...eff.traces, ...customEta], eff.layout, PLOTLY_CONFIG);
+        }
+        if (showPower) {
+            const power = buildPowerChart(currentData, singleData, showClean);
+            Plotly.react('chartPower', [...power.traces, ...customPow], power.layout, PLOTLY_CONFIG);
+        }
+      }
+      
+      if (showNpsh) {
+        const npsh = buildNpshChart(currentData, singleData);
+        Plotly.react('chartNpsh', npsh.traces, npsh.layout, PLOTLY_CONFIG);
       }
     }
   }
@@ -1006,14 +1149,14 @@ if (typeof PUMP_ID !== 'undefined') {
   const isCurvesPage = !!document.getElementById('btnUpdate');
   if (isCurvesPage) {
     // Bind change event to checkboxes that change overlays
-    ['chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'chkShowOther'].forEach(id => {
+    ['chkShowHQ', 'chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'chkShowOther'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('change', renderAll);
     });
 
-    // Bind change event to other layout radios
-    document.querySelectorAll('input[name="otherGraphsLayout"], input[name="npshYAxisChoice"]').forEach(radio => {
-      radio.addEventListener('change', renderAll);
+    // Bind change event to other layout checkboxes
+    document.querySelectorAll('#otherGraphsOptions input[type="checkbox"], input[name="npshYAxisChoice"]').forEach(input => {
+      input.addEventListener('change', renderAll);
     });
 
     // Bind change/keypress event to custom levels to automatically fetch

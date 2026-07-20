@@ -158,9 +158,15 @@
           </div>
 
           <hr class="border-secondary my-2">
-
           <label class="form-label form-label-sm fw-semibold mb-2 text-accent">Other Performance Graphs</label>
           
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="chkShowHQ" checked>
+            <label class="form-check-label small fw-semibold text-accent" for="chkShowHQ">
+              Show H-Q Performance Map Preview
+            </label>
+          </div>
+
           <div class="form-check mb-2">
             <input class="form-check-input" type="checkbox" id="chkShowOther" checked>
             <label class="form-check-label small fw-semibold" for="chkShowOther">
@@ -169,25 +175,30 @@
           </div>
           
           <div class="ms-4" id="otherGraphsOptions">
-            <div class="form-check mb-2">
-              <input class="form-check-input" type="radio" name="otherGraphsLayout" id="radCombined" value="combined" checked>
-              <label class="form-check-label small" for="radCombined">
-                Display efficiency and power on the same graph (NPSH separate)
-              </label>
+            <div class="form-check mb-1">
+              <input class="form-check-input" type="checkbox" id="chkShowEff" checked>
+              <label class="form-check-label small" for="chkShowEff">Show Efficiency Graph</label>
             </div>
-            
-            <div class="form-check mb-2">
-              <input class="form-check-input" type="radio" name="otherGraphsLayout" id="radSeparate" value="separate">
-              <label class="form-check-label small" for="radSeparate">
-                Show each curve as a separate graph (H-Q, Efficiency, Power, NPSH)
+            <div class="form-check mb-1">
+              <input class="form-check-input" type="checkbox" id="chkShowPower" checked>
+              <label class="form-check-label small" for="chkShowPower">Show Power Graph</label>
+            </div>
+            <div class="form-check mb-1">
+              <input class="form-check-input" type="checkbox" id="chkShowNpsh" checked>
+              <label class="form-check-label small" for="chkShowNpsh">Show NPSHr Graph</label>
+            </div>
+            <div class="form-check mb-2 mt-2 border-top border-secondary pt-2" style="max-width: 280px;">
+              <input class="form-check-input" type="checkbox" id="chkCombineEffPower" checked>
+              <label class="form-check-label small" for="chkCombineEffPower">
+                Combine Efficiency & Power on one graph
               </label>
             </div>
           </div>
         </div>
       </div>
-
+ 
       <!-- Performance Map Preview Card -->
-      <div class="card card-dark mb-3">
+      <div class="card card-dark mb-3" id="panelWarmanPreview">
         <div class="card-header card-header-dark">
           <i class="bi bi-layers text-accent me-2"></i><strong>Performance Map Preview</strong>
         </div>
@@ -199,14 +210,7 @@
       <!-- Standalone panels container -->
       <div id="standalonePanels" style="display:none">
         <div class="row g-3">
-          <div class="col-12" id="panelHQ" style="display:none">
-            <div class="card card-dark">
-              <div class="card-header card-header-dark">
-                <span class="curve-label hq"><i class="bi bi-graph-down-arrow me-2"></i>Head — Flow (H-Q)</span>
-              </div>
-              <div class="card-body p-0"><div id="chartHQ" class="chart-container" style="height:260px"></div></div>
-            </div>
-          </div>
+
           <div class="col-12" id="panelEffPower" style="display:none">
             <div class="card card-dark">
               <div class="card-header card-header-dark">
@@ -498,9 +502,17 @@
             They will appear as overlaid curves on the curve viewer.
           </p>
           <div id="extraCurvesList"></div>
-          <button type="button" class="btn btn-sm btn-outline-accent mt-2" id="btnAddExtraCurve">
-            <i class="bi bi-plus-lg me-1"></i>Add Curve Table
-          </button>
+            
+            <div class="dropdown mt-2">
+              <button class="btn btn-sm btn-outline-accent dropdown-toggle" type="button" id="btnExtraCurveDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-plus-lg me-1"></i>Add Curve
+              </button>
+              <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="btnExtraCurveDropdown">
+                <li><a class="dropdown-item" href="#" id="btnAddExtraCurve"><i class="bi bi-table me-2"></i>Empty Data Table</a></li>
+                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#affinityModal"><i class="bi bi-calculator me-2"></i>Generate via Affinity Laws</a></li>
+                <li><a class="dropdown-item" href="#" id="btnLoadExtraCurve"><i class="bi bi-file-earmark-arrow-up me-2"></i>Load from CSV/TXT File</a></li>
+              </ul>
+            </div>
         </div>
       </div>
     </div>
@@ -528,8 +540,46 @@
 <input type="hidden" name="extra_curves_json" id="extra_curves_json_field" value="{{ pump.extra_curves_json if pump else '' }}">
 <input type="hidden" name="data_units" id="data_units_field" value="{{ pump.data_units if pump else '' }}">
 <input type="hidden" name="raw_table_json" id="raw_table_json_field" value="{{ pump.raw_table_json if pump else '' }}">
+<input type="file" id="extraCurveFileInp" style="display:none" accept=".csv,.txt,.dat">
 
 </form>
+
+<!-- Affinity Laws Modal -->
+<div class="modal fade" id="affinityModal" tabindex="-1" aria-labelledby="affinityModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-light border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title" id="affinityModalLabel"><i class="bi bi-calculator text-accent me-2"></i>Affinity Laws Generator</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-3">
+          This will generate a new curve by scaling the <strong>Base Curve</strong> (main data table) using affinity laws.
+        </p>
+        <div class="mb-3">
+          <label class="form-label form-label-sm fw-semibold">Scale By</label>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="affinityType" id="affTypeDiameter" value="diameter" checked>
+            <label class="form-check-label small" for="affTypeDiameter">Impeller Diameter</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="affinityType" id="affTypeSpeed" value="speed">
+            <label class="form-check-label small" for="affTypeSpeed">Rotational Speed (RPM)</label>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label form-label-sm fw-semibold" id="affinityValueLabel">Target Diameter (mm)</label>
+          <input type="number" class="form-control form-control-sm bg-dark text-light" id="affinityValue" step="any" required>
+        </div>
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-accent btn-sm" id="btnGenerateAffinity">Generate</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}

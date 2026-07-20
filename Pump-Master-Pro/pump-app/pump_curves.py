@@ -323,11 +323,10 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
             })
             continue
 
-        reached_bottom = (len(left_pts) == len(ratios))
-
-        if reached_bottom:
-            # Return left branch and right branch as two separate lines (contour style)
-            # which prevents drawing horizontal lines along the boundaries.
+        # Always return left branch and right branch as two separate lines (contour style)
+        # This prevents drawing flat horizontal lines along the lowest ratio's boundary
+        # which causes isolines to cross or run along head curves.
+        if len(left_q) > 0:
             isolines.append({
                 'eta': eta_t,
                 'q': left_q,
@@ -335,23 +334,13 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
                 'label_q': round(left_q[0], 2),
                 'label_h': round(left_h[0], 2),
             })
+        if len(right_q) > 0:
             isolines.append({
                 'eta': eta_t,
                 'q': right_q,
                 'h': right_h,
                 'label_q': round(right_q[0], 2),
                 'label_h': round(right_h[0], 2),
-            })
-        else:
-            # Closed U-shaped loop in the middle
-            iso_q = left_q + right_q[::-1]
-            iso_h = left_h + right_h[::-1]
-            isolines.append({
-                'eta': eta_t,
-                'q': iso_q,
-                'h': iso_h,
-                'label_q': round(left_q[0], 2),
-                'label_h': round(left_h[0], 2),
             })
 
     return isolines

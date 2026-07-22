@@ -236,7 +236,7 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
         can_fit  = has_poly and d != d_max
 
         def _make_fitted():
-            c = matched_extra
+            c = matched_extra or {}
             q_m = float(c.get('q_max') or (pump.q_max * r))
             q_arr = np.linspace(0, q_m, n_points)
 

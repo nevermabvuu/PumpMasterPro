@@ -11,7 +11,7 @@
 </div>
 
 <form method="post" id="pumpForm">
-<input type="hidden" name="graph_options_json" value="{{ pump.graph_options_json if pump else '' }}">
+<input type="hidden" name="graph_options_json" value='{{ (pump.get_graph_options() | tojson) if pump else "" }}'>
 <div class="row g-4">
 
   <!-- ── Column 1: Pump Details + Operating Range + Impeller Family ── -->
@@ -537,10 +537,21 @@
   {% endif %}
 </div>
 
-<!-- Hidden fields carry serialised extra curves JSON, raw table data, and current unit prefs on submit -->
-<input type="hidden" name="extra_curves_json" id="extra_curves_json_field" value="{{ pump.extra_curves_json if pump else '' }}">
+<!-- Hidden fields carry separated curve data and unit preferences on submit -->
 <input type="hidden" name="data_units" id="data_units_field" value="{{ pump.data_units if pump else '' }}">
 <input type="hidden" name="raw_table_json" id="raw_table_json_field" value="{{ pump.raw_table_json if pump else '' }}">
+<input type="hidden" name="curve_labels" id="curve_labels_field" value="{{ pump.curve_labels if pump else '' }}">
+<input type="hidden" name="curve_diameters" id="curve_diameters_field" value="{{ pump.curve_diameters if pump else '' }}">
+<input type="hidden" name="curve_colors" id="curve_colors_field" value="{{ pump.curve_colors if pump else '' }}">
+<input type="hidden" name="curve_modes" id="curve_modes_field" value="{{ pump.curve_modes if pump else '' }}">
+<input type="hidden" name="curve_units" id="curve_units_field" value="{{ pump.curve_units if pump else '' }}">
+<input type="hidden" name="curve_raw_tables" id="curve_raw_tables_field" value="{{ pump.curve_raw_tables if pump else '' }}">
+<input type="hidden" name="curve_coeffs" id="curve_coeffs_field" value="{{ pump.curve_coeffs if pump else '' }}">
+<input type="hidden" name="unit_q" id="unit_q_field" value="{{ pump.unit_q if pump else 'm3h' }}">
+<input type="hidden" name="unit_h" id="unit_h_field" value="{{ pump.unit_h if pump else 'm' }}">
+<input type="hidden" name="unit_npsh" id="unit_npsh_field" value="{{ pump.unit_npsh if pump else 'm' }}">
+<input type="hidden" name="unit_pow" id="unit_pow_field" value="{{ pump.unit_pow if pump else 'kw' }}">
+<input type="hidden" name="unit_op_q" id="unit_op_q_field" value="{{ pump.unit_op_q if pump else 'm3h' }}">
 <input type="file" id="extraCurveFileInp" style="display:none" accept=".csv,.txt,.dat">
 
 </form>
@@ -587,9 +598,21 @@
 <div id="pump-init-data"
      data-is-edit="{{ 'true' if pump else 'false' }}"
      {% if pump %}
-     data-raw-json='{{ (pump.raw_table_json if pump.raw_table_json else "[]") | safe }}'
+     data-raw-json='{{ (pump.get_raw_table() | tojson) if pump else "[]" }}'
      data-to-json='{{ pump.to_dict() | tojson }}'
-     data-extra-curves='{{ (pump.extra_curves_json if pump.extra_curves_json else "[]") | safe }}'
+     data-extra-curves='{{ (pump.get_extra_curves() | tojson) if pump else "[]" }}'
+     data-curve-labels="{{ pump.curve_labels if pump and pump.curve_labels else '' }}"
+     data-curve-diameters="{{ pump.curve_diameters if pump and pump.curve_diameters else '' }}"
+     data-curve-colors="{{ pump.curve_colors if pump and pump.curve_colors else '' }}"
+     data-curve-modes="{{ pump.curve_modes if pump and pump.curve_modes else '' }}"
+     data-curve-units="{{ pump.curve_units if pump and pump.curve_units else '' }}"
+     data-curve-raw-tables="{{ pump.curve_raw_tables if pump and pump.curve_raw_tables else '' }}"
+     data-curve-coeffs="{{ pump.curve_coeffs if pump and pump.curve_coeffs else '' }}"
+     data-unit-q="{{ pump.unit_q if pump else 'm3h' }}"
+     data-unit-h="{{ pump.unit_h if pump else 'm' }}"
+     data-unit-npsh="{{ pump.unit_npsh if pump else 'm' }}"
+     data-unit-pow="{{ pump.unit_pow if pump else 'kw' }}"
+     data-unit-op-q="{{ pump.unit_op_q if pump else 'm3h' }}"
      {% endif %}>
 </div>
 <script src="{{ url_for('static', filename='js/pump_curves.js') }}"></script>
@@ -598,10 +621,12 @@
 (function () {
   initUnitSelectors();
 
-  // Wire form submit to serialise raw table + units before POST
+  // Wire form submit to serialise raw table + units + extra curves before POST
   document.getElementById('pumpForm').addEventListener('submit', function() {
     serializeRawTable();
     serializeDataUnits();
+    serializeExtraCurves();
+    serializeGraphOptions();
   });
 
   const initEl = document.getElementById('pump-init-data');
@@ -614,8 +639,19 @@
     const restoredFromRaw = rawJson && rawJson !== '[]' && rawJson !== '""' ? restoreRawTable(rawJson) : false;
     if (!restoredFromRaw) {
       initTableFromCurves(JSON.parse(initEl.dataset.toJson));
+    } else {
+      const pumpData = JSON.parse(initEl.dataset.toJson);
+      const unitOpQ = document.getElementById('unit-op-q')?.value || 'm3h';
+      const fOpQ = CONVERSIONS.q[unitOpQ];
+      const opQMinEl = document.querySelector('[name="q_min"]');
+      const opQMaxEl = document.querySelector('[name="q_max"]');
+      const opQBepEl = document.querySelector('[name="q_bep"]');
+      if (opQMinEl && pumpData.q_min != null) opQMinEl.value = (pumpData.q_min * fOpQ).toFixed(2);
+      if (opQMaxEl && pumpData.q_max != null) opQMaxEl.value = (pumpData.q_max * fOpQ).toFixed(2);
+      if (opQBepEl && pumpData.q_bep != null) opQBepEl.value = (pumpData.q_bep * fOpQ).toFixed(2);
     }
-    initExtraCurves(JSON.parse(initEl.dataset.extraCurves));
+    const extraCurvesData = (initEl.dataset.extraCurves && initEl.dataset.extraCurves !== 'undefined') ? JSON.parse(initEl.dataset.extraCurves) : [];
+    initExtraCurves(extraCurvesData);
     // Show preview with existing fit on load
     (function() {
       const pumpData = JSON.parse(initEl.dataset.toJson);

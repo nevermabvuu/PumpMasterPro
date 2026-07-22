@@ -30,6 +30,21 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
+    try:
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            result = conn.execute(text("PRAGMA table_info(pumps)"))
+            cols = [row[1] for row in result.fetchall()]
+            for col_name in ['curve_labels', 'curve_diameters', 'curve_colors', 'curve_modes',
+                             'curve_units', 'curve_raw_tables', 'curve_coeffs',
+                             'unit_q', 'unit_h', 'unit_npsh', 'unit_pow', 'unit_op_q']:
+                if col_name not in cols:
+                    default_val = "'m3h'" if col_name in ['unit_q', 'unit_op_q'] else ("'m'" if col_name in ['unit_h', 'unit_npsh'] else ("'kw'" if col_name == 'unit_pow' else "''"))
+                    conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {col_name} TEXT DEFAULT {default_val}"))
+            conn.commit()
+    except Exception as e:
+        print("Migration notice:", e)
+
     seed_pumps(app)
 
 
@@ -95,7 +110,6 @@ def _pump_from_form(f, pump=None):
     pump.pump_type        = f.get('pump_type', pump.pump_type or 'centrifugal')
     pump.application      = f.get('application', pump.application or '')
     pump.notes            = f.get('notes', pump.notes or '')
-    pump.extra_curves_json = f.get('extra_curves_json', pump.extra_curves_json or '')
     pump.data_units        = f.get('data_units', pump.data_units or '')
     if 'graph_options_json' in f and f.get('graph_options_json'):
         try:
@@ -111,13 +125,25 @@ def _pump_from_form(f, pump=None):
             pump.main_curve_dia_mm = float(raw_dia)
         except ValueError:
             pass
-    pump.raw_table_json = f.get('raw_table_json', pump.raw_table_json or '')
+    pump.curve_labels    = f.get('curve_labels', pump.curve_labels or '')
+    pump.curve_diameters = f.get('curve_diameters', pump.curve_diameters or '')
+    pump.curve_colors    = f.get('curve_colors', pump.curve_colors or '')
+    pump.curve_modes     = f.get('curve_modes', pump.curve_modes or '')
+    pump.curve_units     = f.get('curve_units', pump.curve_units or '')
+    pump.curve_raw_tables = f.get('curve_raw_tables', pump.curve_raw_tables or '')
+    pump.curve_coeffs    = f.get('curve_coeffs', pump.curve_coeffs or '')
+
+    pump.unit_q    = f.get('unit_q', pump.unit_q or 'm3h')
+    pump.unit_h    = f.get('unit_h', pump.unit_h or 'm')
+    pump.unit_npsh = f.get('unit_npsh', pump.unit_npsh or 'm')
+    pump.unit_pow  = f.get('unit_pow', pump.unit_pow or 'kw')
+    pump.unit_op_q = f.get('unit_op_q', pump.unit_op_q or 'm3h')
+
+    if not pump.curve_diameters:
+        pump.sync_curve_fields()
 
     # Convert op-range values from display unit to SI (m³/h) before persisting
-    try:
-        units_dict = json.loads(pump.data_units) if pump.data_units else {}
-    except (ValueError, TypeError):
-        units_dict = {}
+    units_dict = pump._get_data_units()
     op_q_unit = units_dict.get('op_q', 'm3h')
     factor = Q_TO_M3H.get(op_q_unit, 1.0)
     q_min_raw = _get_float(f, 'q_min', None)
@@ -222,7 +248,7 @@ def api_curve_data(pump_id):
 
     data['bep']  = bep
     data['pump'] = pump.to_dict()
-    data['raw_table_json'] = pump.raw_table_json or ''
+    data['raw_table_json'] = json.dumps(pump.get_raw_table())
     data['data_units'] = pump._get_data_units()
     return jsonify(data)
 
@@ -273,7 +299,7 @@ def api_warman_chart(pump_id):
         data['system_q'] = q_sys
         data['system_h'] = system_curve_points(sh, pk, q_sys)
 
-    data['raw_table_json'] = pump.raw_table_json or ''
+    data['raw_table_json'] = json.dumps(pump.get_raw_table())
     data['data_units'] = pump._get_data_units()
     return jsonify(data)
 
@@ -301,11 +327,12 @@ def api_preview_warman_chart():
     elif isinstance(imp_dia, str):
         pump.impeller_diameters = imp_dia
 
-    extra_curves = data.get('extra_curves_json')
-    if isinstance(extra_curves, list) or isinstance(extra_curves, dict):
-        pump.extra_curves_json = json.dumps(extra_curves)
-    elif isinstance(extra_curves, str):
-        pump.extra_curves_json = extra_curves
+    extra_curves = data.get('extra_curves') or data.get('extra_curves_json')
+    if isinstance(extra_curves, str) and extra_curves.strip():
+        try: extra_curves = json.loads(extra_curves)
+        except Exception: extra_curves = []
+    if isinstance(extra_curves, list):
+        pump.sync_curve_fields(extra_curves_data=extra_curves)
 
     liquid = data.get('liquid', 'water')
     rho = float(data.get('rho', 1000.0))
@@ -497,7 +524,7 @@ def api_compare_pumps():
     comparison = []
     for pump in pumps:
         data = full_curve_data(pump, n_points=100, liquid=liquid, rho=rho,
-                               viscosity_cSt=vis, slurry_cv=cv,
+                           viscosity_cSt=vis, slurry_cv=cv,
                                slurry_d50=d50, rho_solid=rho_s)
         bep  = bep_point(pump, liquid, rho, vis, cv, d50, rho_s)
         comparison.append({'pump': pump.to_dict(), 'curves': data, 'bep': bep})

@@ -54,7 +54,7 @@ def seed_pumps(app):
             name='Warman 4/3 C-AH', manufacturer='Weir Minerals',
             model_number='4/3 C-AH', size='4/3 C-AH',
             speed_rpm=1450, impeller_dia_mm=330,
-            impeller_diameters=json.dumps([330, 305, 280, 255, 230]),
+            impeller_diameters='330;305;280;255;230',
             hq_a0=h[0], hq_a1=h[1], hq_a2=h[2], hq_a3=h[3],
             eff_b0=e[0], eff_b1=e[1], eff_b2=e[2], eff_b3=e[3],
             npsh_c0=1.8, npsh_c1=0.0, npsh_c2=0.0012,
@@ -74,7 +74,7 @@ def seed_pumps(app):
             name='Warman 6/4 D-AH', manufacturer='Weir Minerals',
             model_number='6/4 D-AH', size='6/4 D-AH',
             speed_rpm=1000, impeller_dia_mm=480,
-            impeller_diameters=json.dumps([480, 450, 420, 390, 360]),
+            impeller_diameters='480;450;420;390;360',
             hq_a0=h[0], hq_a1=h[1], hq_a2=h[2], hq_a3=h[3],
             eff_b0=e[0], eff_b1=e[1], eff_b2=e[2], eff_b3=e[3],
             npsh_c0=2.2, npsh_c1=0.0, npsh_c2=0.000045,
@@ -94,7 +94,7 @@ def seed_pumps(app):
             name='Warman 8/6 E-AH', manufacturer='Weir Minerals',
             model_number='8/6 E-AH', size='8/6 E-AH',
             speed_rpm=750, impeller_dia_mm=610,
-            impeller_diameters=json.dumps([610, 570, 530, 490, 450]),
+            impeller_diameters='610;570;530;490;450',
             hq_a0=h[0], hq_a1=h[1], hq_a2=h[2], hq_a3=h[3],
             eff_b0=e[0], eff_b1=e[1], eff_b2=e[2], eff_b3=e[3],
             npsh_c0=2.8, npsh_c1=0.0, npsh_c2=0.000025,
@@ -114,7 +114,7 @@ def seed_pumps(app):
             name='Warman 10/8 F-MTest', manufacturer='Weir Minerals',
             model_number='10/8 F-M', size='10/8 F-M',
             speed_rpm=600, impeller_dia_mm=760,
-            impeller_diameters=json.dumps([760, 710, 660, 610, 560]),
+            impeller_diameters='760;710;660;610;560',
             hq_a0=h[0], hq_a1=h[1], hq_a2=h[2], hq_a3=h[3],
             eff_b0=e[0], eff_b1=e[1], eff_b2=e[2], eff_b3=e[3],
             npsh_c0=3.2, npsh_c1=0.0, npsh_c2=0.000012,
@@ -134,7 +134,7 @@ def seed_pumps(app):
             name='Generic CW 50-200', manufacturer='Generic',
             model_number='CW50-200', size='50-200',
             speed_rpm=2900, impeller_dia_mm=200,
-            impeller_diameters=json.dumps([200, 185, 170, 155]),
+            impeller_diameters='200;185;170;155',
             hq_a0=h[0], hq_a1=h[1], hq_a2=h[2], hq_a3=h[3],
             eff_b0=e[0], eff_b1=e[1], eff_b2=e[2], eff_b3=e[3],
             npsh_c0=1.2, npsh_c1=0.0, npsh_c2=0.040,
@@ -154,7 +154,7 @@ def seed_pumps(app):
             name='Generic CW 100-315', manufacturer='Generic',
             model_number='CW100-315', size='100-315',
             speed_rpm=1450, impeller_dia_mm=315,
-            impeller_diameters=json.dumps([315, 290, 265, 240]),
+            impeller_diameters='315;290;265;240',
             hq_a0=h[0], hq_a1=h[1], hq_a2=h[2], hq_a3=h[3],
             eff_b0=e[0], eff_b1=e[1], eff_b2=e[2], eff_b3=e[3],
             npsh_c0=1.8, npsh_c1=0.0, npsh_c2=0.000095,
@@ -174,7 +174,7 @@ def seed_pumps(app):
             name='KSB Etanorm 32-200', manufacturer='KSB',
             model_number='Etanorm 32-200', size='32-200',
             speed_rpm=2900, impeller_dia_mm=190,
-            impeller_diameters=json.dumps([190, 175, 160]),
+            impeller_diameters='190;175;160',
             hq_a0=h[0], hq_a1=h[1], hq_a2=h[2], hq_a3=h[3],
             eff_b0=e[0], eff_b1=e[1], eff_b2=e[2], eff_b3=e[3],
             npsh_c0=1.0, npsh_c1=0.0, npsh_c2=0.10,
@@ -186,6 +186,9 @@ def seed_pumps(app):
             notes='Compact process pump for heating / cooling circuits.',
         ))
 
-        db.session.bulk_save_objects(pumps)
+        for p_obj in pumps:
+            p_obj.sync_curve_fields()
+
+        db.session.add_all(pumps)
         db.session.commit()
         print(f'Seeded {len(pumps)} pumps.')

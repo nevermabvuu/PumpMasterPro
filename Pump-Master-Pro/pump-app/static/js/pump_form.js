@@ -259,17 +259,23 @@ function initPreviewUnitSelectors() {
   });
 }
 
-/* ── Serialize current unit preferences to the hidden form field ────────── */
+/* ── Serialize current unit preferences to hidden form fields ────────── */
 function serializeDataUnits() {
-  const units = {
-    q:    document.getElementById('unit-q')?.value    || 'm3h',
-    h:    document.getElementById('unit-h')?.value    || 'm',
-    npsh: document.getElementById('unit-npsh')?.value || 'm',
-    pow:  document.getElementById('unit-pow')?.value  || 'kw',
-    op_q: document.getElementById('unit-op-q')?.value || 'm3h',
-  };
+  const uq    = document.getElementById('unit-q')?.value    || 'm3h';
+  const uh    = document.getElementById('unit-h')?.value    || 'm';
+  const unpsh = document.getElementById('unit-npsh')?.value || 'm';
+  const upow  = document.getElementById('unit-pow')?.value  || 'kw';
+  const uopq  = document.getElementById('unit-op-q')?.value || 'm3h';
+
+  const units = { q: uq, h: uh, npsh: unpsh, pow: upow, op_q: uopq };
   const field = document.getElementById('data_units_field');
   if (field) field.value = JSON.stringify(units);
+
+  if (document.getElementById('unit_q_field')) document.getElementById('unit_q_field').value = uq;
+  if (document.getElementById('unit_h_field')) document.getElementById('unit_h_field').value = uh;
+  if (document.getElementById('unit_npsh_field')) document.getElementById('unit_npsh_field').value = unpsh;
+  if (document.getElementById('unit_pow_field')) document.getElementById('unit_pow_field').value = upow;
+  if (document.getElementById('unit_op_q_field')) document.getElementById('unit_op_q_field').value = uopq;
 }
 
 /* ── Plotly minimal dark theme ─────────────────────────────────────────────── */
@@ -303,6 +309,8 @@ function restoreRawTable(rawJson) {
   let data;
   if (Array.isArray(rawJson)) {
     data = rawJson;
+  } else if (typeof rawJson === 'string' && rawJson.includes(';')) {
+    data = rawJson.split(';').map(r => r.split(',').map(s => s.trim()));
   } else if (typeof rawJson === 'object' && rawJson !== null) {
     data = rawJson;
   } else {
@@ -575,12 +583,9 @@ function getPumpFormData() {
   data['npsh_levels'] = gOpts.npsh_levels;
   data['force_affinity'] = gOpts.trim_model;
 
-  serializeExtraCurves();
+  const payload = serializeExtraCurves();
   serializeGraphOptions();
-  const extraField = document.getElementById('extra_curves_json_field');
-  if (extraField && extraField.value) {
-    data['extra_curves_json'] = extraField.value;
-  }
+  data['extra_curves'] = payload;
 
   return data;
 }
@@ -989,25 +994,31 @@ var EXTRA_CURVE_COLORS = [
 var _extraCurveIdCounter = 0;
 var extraCurves = [];   // [{id, label, color, fitted, coeffs}]
 
-/* ── Serialise all extra curves to the hidden form field ─────────────────── */
+/* ── Serialise all extra curves to hidden form fields ─────────────────── */
 function serializeExtraCurves() {
   const payload = extraCurves
-    .filter(c => c.fitted && c.coeffs)
+    .filter(c => {
+      const entry = document.getElementById(`extra-entry-${c.id}`);
+      return !!entry || c.fitted;
+    })
     .map(c => {
       const entry = document.getElementById(`extra-entry-${c.id}`);
       
-      const diaInput = entry?.querySelector('.extra-dia-input');
-      const diameter = diaInput && diaInput.value.trim() !== '' ? parseFloat(diaInput.value) : '';
+      const labelInput = entry?.querySelector('.extra-label-input');
+      const label = labelInput && labelInput.value.trim() !== '' ? labelInput.value.trim() : (c.label || `Curve ${c.id}`);
 
-      const unitQ = entry?.querySelector(`.unit-select-q`)?.value || 'm3h';
-      const unitH = entry?.querySelector(`.unit-select-h`)?.value || 'm';
-      const unitNpsh = entry?.querySelector(`.unit-select-npsh`)?.value || 'm';
-      const unitPow = entry?.querySelector(`.unit-select-pow`)?.value || 'kw';
-      const unitDia = entry?.querySelector(`.unit-select-dia`)?.value || 'mm';
-      const curveMode = entry?.querySelector(`.unit-select-mode`)?.value || 'fit';
+      const diaInput = entry?.querySelector('.extra-dia-input');
+      const diameter = diaInput && diaInput.value.trim() !== '' ? parseFloat(diaInput.value) : (c.diameter !== undefined && c.diameter !== null ? c.diameter : '');
+
+      const unitQ = entry?.querySelector(`.unit-select-q`)?.value || c.unit_q || 'm3h';
+      const unitH = entry?.querySelector(`.unit-select-h`)?.value || c.unit_h || 'm';
+      const unitNpsh = entry?.querySelector(`.unit-select-npsh`)?.value || c.unit_npsh || 'm';
+      const unitPow = entry?.querySelector(`.unit-select-pow`)?.value || c.unit_pow || 'kw';
+      const unitDia = entry?.querySelector(`.unit-select-dia`)?.value || c.unit_dia || 'mm';
+      const curveMode = entry?.querySelector(`.unit-select-mode`)?.value || c.curve_mode || 'fit';
 
       // Gather current raw table values
-      const tableRows = document.querySelectorAll(`#extraTable-${c.id} tbody tr`);
+      const tableRows = entry ? entry.querySelectorAll(`table tbody tr`) : [];
       const raw_table = [];
       tableRows.forEach(tr => {
         const q    = tr.querySelector('.col-q')?.value    ?? '';
@@ -1015,12 +1026,22 @@ function serializeExtraCurves() {
         const eta  = tr.querySelector('.col-eta')?.value  ?? '';
         const npsh = tr.querySelector('.col-npsh')?.value ?? '';
         const pow  = tr.querySelector('.col-pow')?.value  ?? '';
-        raw_table.push([q, h, eta, npsh, pow]);
+        if (q !== '' || h !== '' || eta !== '' || npsh !== '' || pow !== '') {
+          raw_table.push([q, h, eta, npsh, pow]);
+        }
       });
 
+      const defaultCoeffs = {
+        hq_a0: 0, hq_a1: 0, hq_a2: 0, hq_a3: 0,
+        eff_b0: 0, eff_b1: 0, eff_b2: 0, eff_b3: 0,
+        npsh_c0: 0, npsh_c1: 0, npsh_c2: 0,
+        pow_p0: 0, pow_p1: 0, pow_p2: 0,
+        q_max: 0, q_bep: 0
+      };
+
       return {
-        label: c.label,
-        color: c.color,
+        label: label,
+        color: c.color || '#3fb950',
         diameter: diameter,
         unit_dia: unitDia,
         curve_mode: curveMode,
@@ -1028,12 +1049,66 @@ function serializeExtraCurves() {
         unit_h: unitH,
         unit_npsh: unitNpsh,
         unit_pow: unitPow,
-        ...c.coeffs,
-        raw_table: raw_table
+        ...defaultCoeffs,
+        ...(c.coeffs || {}),
+        raw_table: raw_table.length > 0 ? raw_table : (c.raw_table || [])
       };
     });
-  const field = document.getElementById('extra_curves_json_field');
-  if (field) field.value = JSON.stringify(payload);
+
+  // Group separated curve columns
+  const mainLblInp = document.getElementById('main_curve_label');
+  const mainLbl = mainLblInp && mainLblInp.value.trim() ? mainLblInp.value.trim() : 'Curve 1';
+
+  const mainDiaInp = document.getElementById('main_curve_dia_mm') || document.querySelector('[name="impeller_dia_mm"]');
+  const mainDia = mainDiaInp && mainDiaInp.value ? mainDiaInp.value.trim() : (mainDiaInp?.placeholder || '');
+
+  const labels = [mainLbl];
+  const diasUnits = [mainDia ? `${mainDia};mm` : ';mm'];
+  const colors = ['#58a6ff'];
+  const modes = ['fit'];
+  const unitsList = [`${document.getElementById('unit-q')?.value||'m3h'},${document.getElementById('unit-h')?.value||'m'},${document.getElementById('unit-npsh')?.value||'m'},${document.getElementById('unit-pow')?.value||'kw'}`];
+  
+  // Main raw table
+  const mainRows = document.querySelectorAll('#perfTable tbody tr');
+  const mainRaw = [];
+  mainRows.forEach(r => {
+    const q = r.querySelector('.col-q')?.value ?? '';
+    const h = r.querySelector('.col-h')?.value ?? '';
+    const eta = r.querySelector('.col-eta')?.value ?? '';
+    const npsh = r.querySelector('.col-npsh')?.value ?? '';
+    const pow = r.querySelector('.col-pow')?.value ?? '';
+    mainRaw.push(`${q},${h},${eta},${npsh},${pow}`);
+  });
+  const rawTables = [mainRaw.join(';')];
+
+  // Main coeffs
+  const getF = n => document.querySelector(`[name="${n}"]`)?.value || '0';
+  const mainCoeffsStr = `${getF('hq_a0')},${getF('hq_a1')},${getF('hq_a2')},${getF('hq_a3')},${getF('eff_b0')},${getF('eff_b1')},${getF('eff_b2')},${getF('eff_b3')},${getF('npsh_c0')},${getF('npsh_c1')},${getF('npsh_c2')},${getF('pow_p0')},${getF('pow_p1')},${getF('pow_p2')},${getF('q_max')},${getF('q_bep')}`;
+  const coeffsList = [mainCoeffsStr];
+
+  payload.forEach(c => {
+    labels.push(c.label || 'Curve');
+    diasUnits.push(`${c.diameter !== '' && c.diameter !== null && c.diameter !== undefined ? c.diameter : ''};${c.unit_dia || 'mm'}`);
+    colors.push(c.color || '#3fb950');
+    modes.push(c.curve_mode || 'fit');
+    unitsList.push(`${c.unit_q || 'm3h'},${c.unit_h || 'm'},${c.unit_npsh || 'm'},${c.unit_pow || 'kw'}`);
+
+    const cRaw = (c.raw_table || []).map(r => r.join(',')).join(';');
+    rawTables.push(cRaw);
+
+    const cCoeffsStr = `${c.hq_a0||0},${c.hq_a1||0},${c.hq_a2||0},${c.hq_a3||0},${c.eff_b0||0},${c.eff_b1||0},${c.eff_b2||0},${c.eff_b3||0},${c.npsh_c0||0},${c.npsh_c1||0},${c.npsh_c2||0},${c.pow_p0||0},${c.pow_p1||0},${c.pow_p2||0},${c.q_max||0},${c.q_bep||0}`;
+    coeffsList.push(cCoeffsStr);
+  });
+
+  if (document.getElementById('curve_labels_field')) document.getElementById('curve_labels_field').value = labels.join(';');
+  if (document.getElementById('curve_diameters_field')) document.getElementById('curve_diameters_field').value = diasUnits.join('|');
+  if (document.getElementById('curve_colors_field')) document.getElementById('curve_colors_field').value = colors.join(';');
+  if (document.getElementById('curve_modes_field')) document.getElementById('curve_modes_field').value = modes.join(';');
+  if (document.getElementById('curve_units_field')) document.getElementById('curve_units_field').value = unitsList.join('|');
+  if (document.getElementById('curve_raw_tables_field')) document.getElementById('curve_raw_tables_field').value = rawTables.join('|');
+  if (document.getElementById('curve_coeffs_field')) document.getElementById('curve_coeffs_field').value = coeffsList.join('|');
+
+  return payload;
 }
 
 /* ── Update badge count ──────────────────────────────────────────────────── */
@@ -1604,7 +1679,7 @@ function addExtraCurveCard(existingData) {
 
   // Auto-open the collapse panel
   const body = document.getElementById('extraCurvesBody');
-  if (body && !body.classList.contains('show')) {
+  if (body && !body.classList.contains('show') && !body.classList.contains('collapsing')) {
     new bootstrap.Collapse(body, { toggle: true });
   }
 }
@@ -1624,7 +1699,10 @@ function initExtraCurves(curvesArray) {
 
   // Wire the Add Curve Table button
   const addBtn = document.getElementById('btnAddExtraCurve');
-  if (addBtn) addBtn.addEventListener('click', () => addExtraCurveCard());
+  if (addBtn) addBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    addExtraCurveCard();
+  });
 
   // Wire form submit to serialise extra curves and graph options before POST
   const form = document.getElementById('pumpForm');
@@ -1638,6 +1716,85 @@ function initExtraCurves(curvesArray) {
   // Load existing saved curves (edit mode)
   const data = Array.isArray(curvesArray) ? curvesArray :
                (typeof curvesArray === 'string' ? JSON.parse(curvesArray || '[]') : []);
+
+  const initEl = document.getElementById('pump-init-data');
+  const curveLabelsStr = initEl?.dataset?.curveLabels;
+  const curveDiasStr = initEl?.dataset?.curveDiameters;
+  const curveColorsStr = initEl?.dataset?.curveColors;
+  const curveModesStr = initEl?.dataset?.curveModes;
+  const curveUnitsStr = initEl?.dataset?.curveUnits;
+  const curveRawTablesStr = initEl?.dataset?.curveRawTables;
+  const curveCoeffsStr = initEl?.dataset?.curveCoeffs;
+
+  if (curveLabelsStr || curveDiasStr || curveColorsStr || curveRawTablesStr) {
+    const lblParts = (curveLabelsStr || '').split(';').map(s => s.trim()).filter(Boolean);
+    const diaEntries = (curveDiasStr || '').split('|').map(s => s.trim()).filter(Boolean);
+    const colParts = (curveColorsStr || '').split(';').map(s => s.trim()).filter(Boolean);
+    const modeParts = (curveModesStr || '').split(';').map(s => s.trim()).filter(Boolean);
+    const unitEntries = (curveUnitsStr || '').split('|').map(s => s.trim()).filter(Boolean);
+    const rawTableEntries = (curveRawTablesStr || '').split('|');
+    const coeffEntries = (curveCoeffsStr || '').split('|');
+
+    if (lblParts.length > 0) {
+      const mainLblInp = document.getElementById('main_curve_label');
+      if (mainLblInp && !mainLblInp.value) {
+        mainLblInp.value = lblParts[0];
+      }
+    }
+
+    if (diaEntries.length > 0) {
+      const mainPair = diaEntries[0].split(';');
+      if (mainPair.length > 0) {
+        const mainDiaInp = document.getElementById('main_curve_dia_mm');
+        if (mainDiaInp && !mainDiaInp.value) {
+          mainDiaInp.value = mainPair[0];
+        }
+      }
+    }
+
+    const maxExtraCount = Math.max(
+      data.length,
+      lblParts.length > 0 ? lblParts.length - 1 : 0,
+      diaEntries.length > 0 ? diaEntries.length - 1 : 0,
+      rawTableEntries.length > 0 ? rawTableEntries.length - 1 : 0
+    );
+
+    for (let idx = 0; idx < maxExtraCount; idx++) {
+      if (!data[idx]) data[idx] = {};
+      const c = data[idx];
+      const lIdx = idx + 1;
+
+      if (lIdx < lblParts.length) c.label = lblParts[lIdx];
+      if (lIdx < diaEntries.length) {
+        const pair = diaEntries[lIdx].split(';');
+        if (pair.length > 0 && pair[0]) c.diameter = pair[0];
+        if (pair.length > 1 && pair[1]) c.unit_dia = pair[1];
+      }
+      if (lIdx < colParts.length) c.color = colParts[lIdx];
+      if (lIdx < modeParts.length) c.curve_mode = modeParts[lIdx];
+      if (lIdx < unitEntries.length) {
+        const uParts = unitEntries[lIdx].split(',').map(s => s.trim());
+        if (uParts.length >= 4) {
+          c.unit_q = uParts[0]; c.unit_h = uParts[1];
+          c.unit_npsh = uParts[2]; c.unit_pow = uParts[3];
+        }
+      }
+      if (lIdx < rawTableEntries.length && rawTableEntries[lIdx].trim()) {
+        c.raw_table = rawTableEntries[lIdx].split(';').map(r => r.split(',').map(s => s.trim()));
+      }
+      if (lIdx < coeffEntries.length && coeffEntries[lIdx].trim()) {
+        const cfs = coeffEntries[lIdx].split(',').map(s => parseFloat(s.trim()));
+        if (cfs.length >= 16) {
+          c.hq_a0 = cfs[0]; c.hq_a1 = cfs[1]; c.hq_a2 = cfs[2]; c.hq_a3 = cfs[3];
+          c.eff_b0 = cfs[4]; c.eff_b1 = cfs[5]; c.eff_b2 = cfs[6]; c.eff_b3 = cfs[7];
+          c.npsh_c0 = cfs[8]; c.npsh_c1 = cfs[9]; c.npsh_c2 = cfs[10];
+          c.pow_p0 = cfs[11]; c.pow_p1 = cfs[12]; c.pow_p2 = cfs[13];
+          c.q_max = cfs[14]; c.q_bep = cfs[15];
+        }
+      }
+    }
+  }
+
   data.forEach(c => addExtraCurveCard(c));
 }
 

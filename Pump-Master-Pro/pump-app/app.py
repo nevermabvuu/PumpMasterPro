@@ -120,9 +120,16 @@ def _pump_from_form(f, pump=None):
             pass
     pump.main_curve_label  = f.get('main_curve_label', pump.main_curve_label or '')
     raw_dia = f.get('main_curve_dia_mm', '')
+    dia_unit = f.get('main_curve_dia_unit', 'mm')
     if str(raw_dia).strip():
         try:
-            pump.main_curve_dia_mm = float(raw_dia)
+            val = float(raw_dia)
+            if dia_unit == 'in':
+                pump.main_curve_dia_mm = val * 25.4
+            elif dia_unit == 'm':
+                pump.main_curve_dia_mm = val * 1000.0
+            else:
+                pump.main_curve_dia_mm = val
         except ValueError:
             pass
     pump.curve_labels    = f.get('curve_labels', pump.curve_labels or '')

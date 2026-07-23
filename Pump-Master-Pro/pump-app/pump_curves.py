@@ -225,10 +225,10 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
             eff_mode = 'affinity'
         elif force_affinity == 'both':
             eff_mode = 'both'
-        elif force_affinity == 'fit':
-            eff_mode = 'fit'
         elif matched_extra:
             eff_mode = matched_extra.get('curve_mode', 'fit')
+        elif force_affinity == 'fit':
+            eff_mode = 'fit'
         else:
             eff_mode = 'affinity'
 
@@ -527,7 +527,8 @@ def npsh_isolines(pump, liquid='water', viscosity_cSt=1.0,
                 continue
             npsh_base_target = npsh_target / r ** 2
             diffs = npsh_base_arr - npsh_base_target
-            for i in range(len(diffs) - 1):
+            # Search from right to left to get the high-flow crossing on the rising branch
+            for i in range(len(diffs) - 2, -1, -1):
                 if diffs[i] * diffs[i + 1] < 0:
                     t = diffs[i] / (diffs[i] - diffs[i + 1])
                     q_b = float(q_base[i] + t * (q_base[i + 1] - q_base[i]))
@@ -538,10 +539,11 @@ def npsh_isolines(pump, liquid='water', viscosity_cSt=1.0,
                     break
 
         if len(pts_q) >= 2:
+            sorted_pts = sorted(zip(pts_q, pts_h), key=lambda x: x[0])
             npsh_lines.append({
                 'npsh': round(float(npsh_target), 2),
-                'q': pts_q,
-                'h': pts_h,
+                'q': [p[0] for p in sorted_pts],
+                'h': [p[1] for p in sorted_pts],
             })
 
     return npsh_lines

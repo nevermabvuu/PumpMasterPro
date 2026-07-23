@@ -325,11 +325,16 @@
                  class="form-control form-control-sm form-control-dark"
                  value="{{ pump.main_curve_label if pump else '' }}"
                  placeholder="e.g. Full Trim" style="max-width:130px">
-          <span class="text-muted small">Diameter (mm):</span>
-          <input type="number" name="main_curve_dia_mm" id="main_curve_dia_mm"
+          <span class="text-muted small">Diameter:</span>
+          <input type="number" name="main_curve_dia_mm" id="main_curve_dia_mm" step="any"
                  class="form-control form-control-sm form-control-dark"
-                 value="{{ pump.main_curve_dia_mm if pump and pump.main_curve_dia_mm else '' }}"
+                 value="{% if pump and pump.get_curve_diameters_list() %}{{ pump.get_curve_diameters_list()[0]['diameter'] }}{% elif pump and pump.main_curve_dia_mm %}{{ pump.main_curve_dia_mm }}{% endif %}"
                  placeholder="{{ pump.impeller_dia_mm if pump else '' }}" style="max-width:90px">
+          <select class="header-unit-select" name="main_curve_dia_unit" id="main_curve_dia_unit" style="margin-top:0;width:70px">
+            <option value="mm" {% if pump and pump.get_curve_diameters_list() and pump.get_curve_diameters_list()[0]['unit'] == 'mm' %}selected{% elif not pump %}selected{% endif %}>mm</option>
+            <option value="in" {% if pump and pump.get_curve_diameters_list() and pump.get_curve_diameters_list()[0]['unit'] == 'in' %}selected{% endif %}>in</option>
+            <option value="m" {% if pump and pump.get_curve_diameters_list() and pump.get_curve_diameters_list()[0]['unit'] == 'm' %}selected{% endif %}>m</option>
+          </select>
         </div>
       </div>
       <div class="card-body">

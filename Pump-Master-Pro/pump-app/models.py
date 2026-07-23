@@ -156,18 +156,22 @@ class Pump(db.Model):
         entries = [x.strip() for x in raw_dias.split('|') if x.strip()]
         result = []
         for entry in entries:
-            parts = [p.strip() for p in entry.split(';') if p.strip()]
+            parts = [p.strip() for p in entry.split(';')]
             if not parts:
                 continue
             try:
-                d_val = float(parts[0])
+                dia_str = parts[0]
+                d_val = float(dia_str) if dia_str else None
                 unit = parts[1] if len(parts) > 1 else 'mm'
-                if unit == 'in':
-                    d_mm = d_val * 25.4
-                elif unit == 'm':
-                    d_mm = d_val * 1000.0
+                if d_val is not None:
+                    if unit == 'in':
+                        d_mm = d_val * 25.4
+                    elif unit == 'm':
+                        d_mm = d_val * 1000.0
+                    else:
+                        d_mm = d_val
                 else:
-                    d_mm = d_val
+                    d_mm = None
                 result.append({'diameter': d_val, 'unit': unit, 'dia_mm': d_mm})
             except ValueError:
                 pass
@@ -187,7 +191,15 @@ class Pump(db.Model):
         m_lbl = self.main_curve_label or 'Curve 1'
         main_d = self.main_curve_dia_mm or self.impeller_dia_mm or ''
         labels.append(m_lbl)
-        dias_units.append(f"{main_d};mm")
+        
+        main_dia_unit = 'mm'
+        if self.curve_diameters:
+            first_dia = self.curve_diameters.split('|')[0]
+            parts = first_dia.split(';')
+            if len(parts) > 1:
+                main_dia_unit = parts[1].strip()
+                
+        dias_units.append(f"{main_d};{main_dia_unit}")
         colors.append('#58a6ff')
         modes.append('fit')
 
@@ -277,8 +289,9 @@ class Pump(db.Model):
         loaded = self.get_curve_diameters_list()
         for item in loaded:
             d_mm = item['dia_mm']
-            if round(d_mm, 2) not in [round(x, 2) for x in dias]:
-                dias.append(round(d_mm, 2))
+            if d_mm is not None:
+                if round(d_mm, 2) not in [round(x, 2) for x in dias]:
+                    dias.append(round(d_mm, 2))
 
         if not dias:
             dias = [300.0]
@@ -324,10 +337,10 @@ class Pump(db.Model):
                 c['label'] = lbl_items[loaded_idx] if loaded_idx < len(lbl_items) else f'Curve {loaded_idx + 1}'
 
                 if loaded_idx < len(d_items):
-                    parts = [p.strip() for p in d_items[loaded_idx].split(';') if p.strip()]
+                    parts = [p.strip() for p in d_items[loaded_idx].split(';')]
                     if parts:
-                        c['diameter'] = parts[0]
-                        if len(parts) > 1: c['unit_dia'] = parts[1]
+                        c['diameter'] = parts[0] if parts[0] else ''
+                        if len(parts) > 1: c['unit_dia'] = parts[1] if parts[1] else 'mm'
 
                 c['color'] = col_items[loaded_idx] if loaded_idx < len(col_items) else '#3fb950'
                 c['curve_mode'] = m_items[loaded_idx] if loaded_idx < len(m_items) else 'fit'

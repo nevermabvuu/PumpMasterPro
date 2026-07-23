@@ -246,6 +246,25 @@ function initUnitSelectors() {
   initOpRegionUnits();
   initPowerAutoCalc();
   initPreviewUnitSelectors();
+
+  const mainDiaUnitSel = document.getElementById('main_curve_dia_unit');
+  if (mainDiaUnitSel) {
+    mainDiaUnitSel.setAttribute('data-prev', mainDiaUnitSel.value);
+    mainDiaUnitSel.addEventListener('change', (e) => {
+      const fromUnit = e.target.getAttribute('data-prev');
+      const toUnit = e.target.value;
+      if (fromUnit === toUnit) return;
+      
+      const inp = document.getElementById('main_curve_dia_mm') || document.querySelector('[name="impeller_dia_mm"]');
+      if (inp) {
+        const val = parseFloat(inp.value);
+        if (!isNaN(val)) {
+          inp.value = convertValue(val, fromUnit, toUnit, 'dia');
+        }
+      }
+      e.target.setAttribute('data-prev', toUnit);
+    });
+  }
 }
 
 function initPreviewUnitSelectors() {
@@ -1063,7 +1082,8 @@ function serializeExtraCurves() {
   const mainDia = mainDiaInp && mainDiaInp.value ? mainDiaInp.value.trim() : (mainDiaInp?.placeholder || '');
 
   const labels = [mainLbl];
-  const diasUnits = [mainDia ? `${mainDia};mm` : ';mm'];
+  const mainDiaUnit = document.getElementById('main_curve_dia_unit')?.value || 'mm';
+  const diasUnits = [mainDia ? `${mainDia};${mainDiaUnit}` : `;${mainDiaUnit}`];
   const colors = ['#58a6ff'];
   const modes = ['fit'];
   const unitsList = [`${document.getElementById('unit-q')?.value||'m3h'},${document.getElementById('unit-h')?.value||'m'},${document.getElementById('unit-npsh')?.value||'m'},${document.getElementById('unit-pow')?.value||'kw'}`];
@@ -1368,7 +1388,7 @@ function addExtraCurveCard(existingData) {
              value="${label}" placeholder="Curve label"
              style="max-width:180px;font-weight:600" data-eid="${id}">
       <span class="text-muted small ms-2">Diameter:</span>
-      <input type="number" class="form-control form-control-sm form-control-dark extra-dia-input"
+      <input type="number" class="form-control form-control-sm form-control-dark extra-dia-input" step="any"
              value="${diameter}" placeholder="e.g. 280"
              style="max-width:90px" data-eid="${id}">
       <select class="header-unit-select unit-select-dia" data-eid="${id}" style="margin-top:0">
@@ -1488,7 +1508,7 @@ function addExtraCurveCard(existingData) {
         if (!isNaN(q) && !isNaN(h)) validPts++;
       });
 
-      if (validPts >= 3) {
+      if (validPts >= 3 && modeVal !== 'affinity') {
         fitExtraCurve(id);
       } else {
         serializeExtraCurves();

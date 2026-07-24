@@ -216,21 +216,6 @@ function initUnitSelectors() {
       if (type === 'q' || type === 'h' || type === 'pow') {
         recalcAllPowerRows();
       }
-      
-      // After unit change, sync the preview dropdowns to match the new units
-      if (type === 'q') {
-        const previewSelect = document.getElementById('preview-unit-q');
-        if (previewSelect) previewSelect.value = toUnit;
-      } else if (type === 'h') {
-        const previewSelect = document.getElementById('preview-unit-h');
-        if (previewSelect) previewSelect.value = toUnit;
-      } else if (type === 'pow') {
-        const previewSelect = document.getElementById('preview-unit-pow');
-        if (previewSelect) previewSelect.value = toUnit;
-      } else if (type === 'npsh') {
-        const previewSelect = document.getElementById('preview-unit-npsh');
-        if (previewSelect) previewSelect.value = toUnit;
-      }
 
       const previewEl = document.getElementById('curvePreview');
       if (previewEl && previewEl.style.display !== 'none' && lastFitResults) {
@@ -337,11 +322,12 @@ function restoreRawTable(rawJson) {
   }
   if (!Array.isArray(data) || !data.length) return false;
 
+  const validRows = data.filter(r => Array.isArray(r) && r.some(v => v !== undefined && v !== null && String(v).trim() !== ''));
+  const rowsToRender = validRows.length > 0 ? validRows : data;
+
   const tbody = document.querySelector('#perfTable tbody');
   tbody.innerHTML = '';
-  const numRows = Math.max(data.length, 6);
-  for (let i = 0; i < numRows; i++) {
-    const row = data[i] || ['', '', '', '', ''];
+  rowsToRender.forEach(row => {
     const [q, h, eta, npsh, pow] = row;
     const tr = document.createElement('tr');
     tr.innerHTML =
@@ -352,7 +338,7 @@ function restoreRawTable(rawJson) {
       '<td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" value="' + (pow !== undefined && pow !== null ? pow : '') + '"></td>' +
       '<td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">&times;</button></td>';
     tbody.appendChild(tr);
-  }
+  });
   return true;
 }
 
@@ -1368,13 +1354,9 @@ function addExtraCurveCard(existingData) {
 
   let tableRowsHtml = '';
   if (existingData && Array.isArray(existingData.raw_table) && existingData.raw_table.length > 0) {
-    const rawRows = existingData.raw_table;
-    const numRows = Math.max(rawRows.length, 6);
-    const paddedRows = [];
-    for (let i = 0; i < numRows; i++) {
-      paddedRows.push(rawRows[i] || ['', '', '', '', '']);
-    }
-    tableRowsHtml = paddedRows.map(row => {
+    const validRows = existingData.raw_table.filter(r => Array.isArray(r) && r.some(v => v !== undefined && v !== null && String(v).trim() !== ''));
+    const rowsToRender = validRows.length > 0 ? validRows : existingData.raw_table;
+    tableRowsHtml = rowsToRender.map(row => {
       const [q, h, eta, npsh, pow] = row;
       return `<tr>
         <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" placeholder="Q (${getUnitLabel('q', qUnit)})" value="${q !== undefined && q !== null ? q : ''}"></td>

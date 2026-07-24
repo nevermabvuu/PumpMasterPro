@@ -279,8 +279,7 @@ class Pump(db.Model):
             dias = [self.impeller_dia_mm] if self.impeller_dia_mm else []
         else:
             try:
-                diameters = [float(x.strip()) for x in raw.replace(';', ',').replace('[', '').replace(']', '').split(',') if x.strip()]
-                dias = [float(d) for d in diameters]
+                dias = [float(x.strip()) for x in raw.replace(';', ',').replace('[', '').replace(']', '').split(',') if x.strip()]
             except Exception:
                 dias = [self.impeller_dia_mm] if self.impeller_dia_mm else []
 
@@ -449,11 +448,11 @@ class Pump(db.Model):
         if self.unit_op_q:
             defaults['op_q'] = self.unit_op_q
         opts = self.get_graph_options()
-        defaults['max_imp'] = opts.get('unit_max_imp', 'mm')
-        defaults['graph_q'] = opts.get('graph_unit_q', defaults['q'])
-        defaults['graph_h'] = opts.get('graph_unit_h', defaults['h'])
-        defaults['graph_npsh'] = opts.get('graph_unit_npsh', defaults['npsh'])
-        defaults['graph_pow'] = opts.get('graph_unit_pow', defaults['pow'])
+        defaults['max_imp'] = str(opts.get('unit_max_imp', 'mm'))
+        defaults['graph_q'] = str(opts.get('graph_unit_q', defaults['q']))
+        defaults['graph_h'] = str(opts.get('graph_unit_h', defaults['h']))
+        defaults['graph_npsh'] = str(opts.get('graph_unit_npsh', defaults['npsh']))
+        defaults['graph_pow'] = str(opts.get('graph_unit_pow', defaults['pow']))
         return defaults
 
     @property

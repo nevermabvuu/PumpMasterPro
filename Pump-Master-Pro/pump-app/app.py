@@ -5,18 +5,11 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify, a
 from models import db, Pump
 from pump_curves import (
     full_curve_data, operating_point, bep_point,
-    system_curve_points, warman_chart_data, fit_pump_polynomials
+    system_curve_points, warman_chart_data, fit_pump_polynomials,
+    Q_TO_M3H, H_TO_M, POW_TO_KW
 )
 from pump_selection import select_pumps
 from seed_data import seed_pumps
-
-# Conversion factors: 1 unit -> m3/h
-Q_TO_M3H = {
-    'm3h':  1.0,
-    'ls':   3.6,        # 1 L/s  = 3.6 m³/h
-    'gpm':  0.22712,    # 1 gpm  = 0.22712 m³/h
-    'lmin': 0.06,       # 1 L/min = 0.06 m³/h
-}
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH  = os.path.join(BASE_DIR, 'pumps.db')

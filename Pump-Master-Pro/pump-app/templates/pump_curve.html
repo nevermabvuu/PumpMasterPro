@@ -372,7 +372,7 @@
   const PUMP_MAIN_LABEL = metaEl.dataset.mainLabel;
   const PUMP_MAIN_DIA   = parseFloat(metaEl.dataset.mainDia);
 </script>
-<script src="{{ url_for('static', filename='js/pump_curves.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=4"></script>
 <script>
 // Pre-load any saved extra curves from the pump data into the custom curves overlay
 (function () {
@@ -384,29 +384,58 @@
   savedExtras.forEach(ec => {
     const id    = ++_curveIdCounter;
     const color = ec.color || CUSTOM_COLORS[(id - 1) % CUSTOM_COLORS.length];
-    const qMax  = ec.q_max || 200;
-    const qArr  = Array.from({ length: 80 }, (_, i) => (i / 79) * qMax);
-    const a  = [ec.hq_a0, ec.hq_a1, ec.hq_a2, ec.hq_a3];
-    const b  = [ec.eff_b0, ec.eff_b1, ec.eff_b2, ec.eff_b3];
-    const pp = [ec.pow_p0, ec.pow_p1, ec.pow_p2];
-    const hasEta = ec.eff_b1 || ec.eff_b2 || ec.eff_b3;
 
     let label = ec.label || `Curve ${id}`;
     if (ec.diameter) {
       label += ` (${ec.diameter} mm)`;
     }
 
-    customCurves.push({
-      id,
-      label: label,
-      color,
-      diameter: ec.diameter,
-      fitted: true,
-      q:     qArr.map(q => Math.round(q * 100) / 100),
-      h:     qArr.map(q => Math.max(0, evalP(a, q))),
-      eta:   hasEta ? qArr.map(q => Math.max(0, Math.min(100, evalP(b, q)))) : null,
-      power: qArr.map(q => Math.max(0, evalP(pp, q))),
-    });
+    const a  = [ec.hq_a0 || 0, ec.hq_a1 || 0, ec.hq_a2 || 0, ec.hq_a3 || 0];
+    const b  = [ec.eff_b0 || 0, ec.eff_b1 || 0, ec.eff_b2 || 0, ec.eff_b3 || 0];
+    const pp = [ec.pow_p0 || 0, ec.pow_p1 || 0, ec.pow_p2 || 0];
+    const hasCoeffs = a.some(v => v !== 0);
+
+    let qVals = [], hVals = [], etaVals = null, powVals = [];
+
+    if (hasCoeffs) {
+      const qMax = ec.q_max || 200;
+      qVals = Array.from({ length: 80 }, (_, i) => Math.round((i / 79) * qMax * 100) / 100);
+      hVals = qVals.map(q => Math.max(0, evalP(a, q)));
+      const hasEta = ec.eff_b1 || ec.eff_b2 || ec.eff_b3;
+      etaVals = hasEta ? qVals.map(q => Math.max(0, Math.min(100, evalP(b, q)))) : null;
+      powVals = qVals.map(q => Math.max(0, evalP(pp, q)));
+    } else if (ec.raw_table && Array.isArray(ec.raw_table) && ec.raw_table.length > 0) {
+      const uQ = ec.unit_q || 'm3h', uH = ec.unit_h || 'm', uP = ec.unit_pow || 'kw';
+      const fQ = CURVE_CONVERSIONS.q[uQ] || 1.0, fH = CURVE_CONVERSIONS.h[uH] || 1.0, fP = CURVE_CONVERSIONS.pow[uP] || 1.0;
+      const etaList = [], powList = [];
+      ec.raw_table.forEach(r => {
+        if (Array.isArray(r) && r.length >= 2) {
+          const qv = parseFloat(r[0]), hv = parseFloat(r[1]);
+          if (!isNaN(qv) && !isNaN(hv)) {
+            qVals.push(qv / fQ);
+            hVals.push(hv / fH);
+            if (r.length >= 3 && !isNaN(parseFloat(r[2]))) etaList.push(parseFloat(r[2]));
+            if (r.length >= 5 && !isNaN(parseFloat(r[4]))) powList.push(parseFloat(r[4]) / fP);
+          }
+        }
+      });
+      if (etaList.length === qVals.length) etaVals = etaList;
+      if (powList.length === qVals.length) powVals = powList;
+    }
+
+    if (qVals.length > 0) {
+      customCurves.push({
+        id,
+        label,
+        color,
+        diameter: ec.diameter,
+        fitted: true,
+        q: qVals,
+        h: hVals,
+        eta: etaVals,
+        power: powVals,
+      });
+    }
   });
 
   updateCurveCountBadge();

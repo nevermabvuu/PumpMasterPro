@@ -17,6 +17,10 @@ import numpy as np
 
 G = 9.81   # m/s²
 
+Q_TO_M3H = {'m3h': 1.0, 'ls': 3.6, 'gpm': 0.2271247, 'lmin': 0.06}
+H_TO_M = {'m': 1.0, 'ft': 0.3048}
+POW_TO_KW = {'kw': 1.0, 'hp': 0.745699872}
+
 
 # ── Polynomial evaluation ──────────────────────────────────────────────────────
 
@@ -232,7 +236,33 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
         else:
             eff_mode = 'affinity'
 
-        has_poly = (matched_extra is not None and matched_extra.get('hq_a0') is not None)
+        if matched_extra and (not matched_extra.get('hq_a0') or matched_extra.get('hq_a0') == 0):
+            raw_t = matched_extra.get('raw_table', [])
+            u_q = matched_extra.get('unit_q', 'm3h')
+            u_h = matched_extra.get('unit_h', 'm')
+            u_p = matched_extra.get('unit_pow', 'kw')
+            f_q = Q_TO_M3H.get(u_q, 1.0)
+            f_h = H_TO_M.get(u_h, 1.0)
+            f_p = POW_TO_KW.get(u_p, 1.0)
+
+            q_h, q_eta, q_p = [], [], []
+            for row in raw_t:
+                if isinstance(row, list) and len(row) >= 2:
+                    try:
+                        q_v, h_v = float(row[0]) * f_q, float(row[1]) * f_h
+                        q_h.append([q_v, h_v])
+                        if len(row) >= 3 and row[2] != '' and row[2] is not None: q_eta.append([q_v, float(row[2])])
+                        if len(row) >= 5 and row[4] != '' and row[4] is not None: q_p.append([q_v, float(row[4]) * f_p])
+                    except (ValueError, TypeError):
+                        pass
+            if len(q_h) >= 3:
+                try:
+                    res = fit_pump_polynomials(q_h=q_h, q_eta=q_eta or None, q_p=q_p or None)
+                    matched_extra.update(res)
+                except Exception:
+                    pass
+
+        has_poly = (matched_extra is not None and matched_extra.get('hq_a0') is not None and matched_extra.get('hq_a0') != 0)
         can_fit  = has_poly and d != d_max
 
         def _make_fitted():

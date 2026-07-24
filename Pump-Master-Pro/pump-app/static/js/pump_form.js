@@ -217,11 +217,7 @@ function initUnitSelectors() {
         recalcAllPowerRows();
       }
 
-      const previewEl = document.getElementById('curvePreview');
-      if (previewEl && previewEl.style.display !== 'none' && lastFitResults) {
-        const { q_h: q_h_raw, q_eta: q_eta_raw, q_npsh: q_npsh_raw } = getTableData('perfTable', true);
-        buildPreviewCharts(lastFitResults, q_h_raw, q_eta_raw, q_npsh_raw);
-      }
+      // Table header unit changes convert numbers in the table without re-drawing graph preview
 
       // Persist unit change immediately
       serializeDataUnits();
@@ -1098,8 +1094,11 @@ function serializeExtraCurves() {
     unitsList.push(`${unitQ},${unitH},${unitNpsh},${unitPow}`);
     rawTables.push(raw_table.map(r => r.join(',')).join(';'));
 
-    const cfs = inMemCurve.coeffs || {};
-    const cCoeffsStr = `${cfs.hq_a0||0},${cfs.hq_a1||0},${cfs.hq_a2||0},${cfs.hq_a3||0},${cfs.eff_b0||0},${cfs.eff_b1||0},${cfs.eff_b2||0},${cfs.eff_b3||0},${cfs.npsh_c0||0},${cfs.npsh_c1||0},${cfs.npsh_c2||0},${cfs.pow_p0||0},${cfs.pow_p1||0},${cfs.pow_p2||0},${cfs.q_max||0},${cfs.q_bep||0}`;
+    const getCF = f => {
+      const el = entry.querySelector(`.extra-cf-${f}`);
+      return el && el.value.trim() !== '' ? el.value.trim() : (inMemCurve.coeffs?.[f] ?? '0');
+    };
+    const cCoeffsStr = `${getCF('hq_a0')},${getCF('hq_a1')},${getCF('hq_a2')},${getCF('hq_a3')},${getCF('eff_b0')},${getCF('eff_b1')},${getCF('eff_b2')},${getCF('eff_b3')},${getCF('npsh_c0')},${getCF('npsh_c1')},${getCF('npsh_c2')},${getCF('pow_p0')},${getCF('pow_p1')},${getCF('pow_p2')},${getCF('q_max')},${getCF('q_bep')}`;
     coeffsList.push(cCoeffsStr);
 
     payload.push({
@@ -1259,6 +1258,16 @@ async function fitExtraCurve(curveId) {
       pow_p0: d.pow_p0, pow_p1: d.pow_p1, pow_p2: d.pow_p2,
       q_max: d.q_max, q_bep: d.q_bep,
     };
+
+    // Update DOM inputs inside the card's polynomial coefficients accordion
+    const setCF = (f, val) => {
+      const el = entry.querySelector(`.extra-cf-${f}`);
+      if (el && val !== undefined) el.value = val;
+    };
+    setCF('hq_a0', d.hq_a0); setCF('hq_a1', d.hq_a1); setCF('hq_a2', d.hq_a2); setCF('hq_a3', d.hq_a3);
+    setCF('eff_b0', d.eff_b0); setCF('eff_b1', d.eff_b1); setCF('eff_b2', d.eff_b2); setCF('eff_b3', d.eff_b3);
+    setCF('npsh_c0', d.npsh_c0); setCF('npsh_c1', d.npsh_c1); setCF('npsh_c2', d.npsh_c2);
+    setCF('pow_p0', d.pow_p0); setCF('pow_p1', d.pow_p1); setCF('pow_p2', d.pow_p2);
 
     statusEl.className = 'extra-curve-status ok';
     statusEl.textContent =
@@ -1472,7 +1481,67 @@ function addExtraCurveCard(existingData) {
       </button>
     </div>
 
-    <div class="extra-curve-status mb-2" id="extra-status-${id}"></div>`;
+    <div class="extra-curve-status mb-2" id="extra-status-${id}"></div>
+
+    <!-- Polynomial Coefficients Accordion -->
+    <div class="card card-dark border-secondary border-opacity-50 mt-2">
+      <div class="card-header card-header-dark py-1 px-2 d-flex justify-content-between align-items-center" style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#extraCoeffPanel_${id}">
+        <span class="small fw-semibold"><i class="bi bi-chevron-down me-1"></i>Polynomial Coefficients <span class="text-muted fw-normal">(auto-filled by Fit or entered manually)</span></span>
+        <span class="badge bg-secondary" style="font-size:0.7rem">Polynomials</span>
+      </div>
+      <div class="collapse" id="extraCoeffPanel_${id}">
+        <div class="card-body p-2" style="font-size:0.8rem">
+          <div class="row g-2">
+            <!-- H-Q -->
+            <div class="col-md-6">
+              <div class="p-1 px-2 rounded" style="background:#161b22;border:1px solid #30363d">
+                <div class="text-accent fw-semibold mb-1" style="font-size:0.75rem"><i class="bi bi-graph-down-arrow me-1"></i>H-Q: H = a₀ + a₁Q + a₂Q² + a₃Q³</div>
+                <div class="row g-1">
+                  <div class="col-3"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₀</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a0" data-eid="${id}" step="any" value="${existingData?.hq_a0 ?? 0}"></div>
+                  <div class="col-3"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₁</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a1" data-eid="${id}" step="any" value="${existingData?.hq_a1 ?? 0}"></div>
+                  <div class="col-3"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₂</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a2" data-eid="${id}" step="any" value="${existingData?.hq_a2 ?? 0}"></div>
+                  <div class="col-3"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₃</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a3" data-eid="${id}" step="any" value="${existingData?.hq_a3 ?? 0}"></div>
+                </div>
+              </div>
+            </div>
+            <!-- Efficiency -->
+            <div class="col-md-6">
+              <div class="p-1 px-2 rounded" style="background:#161b22;border:1px solid #30363d">
+                <div class="text-success fw-semibold mb-1" style="font-size:0.75rem"><i class="bi bi-speedometer2 me-1"></i>Efficiency: η = b₀ + b₁Q + b₂Q² + b₃Q³</div>
+                <div class="row g-1">
+                  <div class="col-3"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₀</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b0" data-eid="${id}" step="any" value="${existingData?.eff_b0 ?? 0}"></div>
+                  <div class="col-3"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₁</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b1" data-eid="${id}" step="any" value="${existingData?.eff_b1 ?? 0}"></div>
+                  <div class="col-3"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₂</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b2" data-eid="${id}" step="any" value="${existingData?.eff_b2 ?? 0}"></div>
+                  <div class="col-3"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₃</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b3" data-eid="${id}" step="any" value="${existingData?.eff_b3 ?? 0}"></div>
+                </div>
+              </div>
+            </div>
+            <!-- NPSH -->
+            <div class="col-md-6">
+              <div class="p-1 px-2 rounded" style="background:#161b22;border:1px solid #30363d">
+                <div class="text-warning fw-semibold mb-1" style="font-size:0.75rem"><i class="bi bi-arrow-up-right me-1"></i>NPSHr: c₀ + c₁Q + c₂Q²</div>
+                <div class="row g-1">
+                  <div class="col-4"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₀</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c0" data-eid="${id}" step="any" value="${existingData?.npsh_c0 ?? 0}"></div>
+                  <div class="col-4"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₁</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c1" data-eid="${id}" step="any" value="${existingData?.npsh_c1 ?? 0}"></div>
+                  <div class="col-4"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₂</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c2" data-eid="${id}" step="any" value="${existingData?.npsh_c2 ?? 0}"></div>
+                </div>
+              </div>
+            </div>
+            <!-- Power -->
+            <div class="col-md-6">
+              <div class="p-1 px-2 rounded" style="background:#161b22;border:1px solid #30363d">
+                <div class="text-info fw-semibold mb-1" style="font-size:0.75rem"><i class="bi bi-lightning-charge me-1"></i>Shaft Power: P = p₀ + p₁Q + p₂Q² (kW)</div>
+                <div class="row g-1">
+                  <div class="col-4"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₀</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p0" data-eid="${id}" step="any" value="${existingData?.pow_p0 ?? 0}"></div>
+                  <div class="col-4"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₁</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p1" data-eid="${id}" step="any" value="${existingData?.pow_p1 ?? 0}"></div>
+                  <div class="col-4"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₂</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p2" data-eid="${id}" step="any" value="${existingData?.pow_p2 ?? 0}"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
 
   list.appendChild(div);
 
@@ -1567,10 +1636,7 @@ function addExtraCurveCard(existingData) {
             div.querySelectorAll(`tbody tr`).forEach(row => _autoUpdateExtraPowerInRow(row, id));
           }
 
-          // Re-draw preview if fitted
-          if (curve && curve.fitted && curve.coeffs) {
-            refreshMainPreview();
-          }
+          // Unit selector changes convert numbers in the table without forcing graph refresh
         }
 
         e.target.setAttribute('data-prev', toUnit);

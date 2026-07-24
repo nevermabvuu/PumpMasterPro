@@ -69,6 +69,12 @@ const SPD_COLORS = ['#664400','#995500','#cc7700','#ff9900'];  // 70%→80%→90
 
 function buildWarmanChart(data, opts = {}) {
   const { showIsolines = true, showPowerIso = false, showNpshIso = false, showSpeedLines = false, showNpshCurve = false, npshYAxis = 'y2', dutyQ, dutyH } = opts;
+  const units = getGraphDisplayUnits();
+  const lblQ = typeof getUnitLabel === 'function' ? getUnitLabel('q', units.q) : units.q;
+  const lblH = typeof getUnitLabel === 'function' ? getUnitLabel('h', units.h) : units.h;
+  const lblNpsh = typeof getUnitLabel === 'function' ? getUnitLabel('npsh', units.npsh) : units.npsh;
+  const lblPow = typeof getUnitLabel === 'function' ? getUnitLabel('pow', units.pow) : units.pow;
+
   const traces = [];
   const family     = data.family      || [];
   const isolines   = data.isolines    || [];
@@ -89,7 +95,7 @@ function buildWarmanChart(data, opts = {}) {
       name: `Ø${d.dia} mm${tag}`,
       x: d.q, y: d.h,
       line: { color: col, width: lw, dash: dash },
-      hovertemplate: `Ø${d.dia} mm${tag}<br>Q=%{x:.1f} m³/h<br>H=%{y:.2f} m<extra></extra>`,
+      hovertemplate: `Ø${d.dia} mm${tag}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
     });
 
     /* BEP star on each curve */
@@ -101,7 +107,7 @@ function buildWarmanChart(data, opts = {}) {
         marker: { size: d.is_max ? 10 : 7, color: col, symbol: 'star',
                   line: { color: '#fff', width: 1 } },
         showlegend: false,
-        hovertemplate: `BEP Ø${d.dia}${tag}<br>Q=${d.bep.q}<br>H=${d.bep.h}<br>η=${d.bep.eta}%<extra></extra>`,
+        hovertemplate: `BEP Ø${d.dia}${tag}<br>Q=${d.bep.q} ${lblQ}<br>H=${d.bep.h} ${lblH}<br>η=${d.bep.eta}%<extra></extra>`,
       });
     }
   });
@@ -120,7 +126,7 @@ function buildWarmanChart(data, opts = {}) {
         x: iso.q, y: iso.h,
         line: { color: col, width: 1.4, dash: 'dot' },
         fill: 'none',
-        hovertemplate: `η = ${iso.eta}%<br>Q=%{x:.1f}<br>H=%{y:.2f}<extra></extra>`,
+        hovertemplate: `η = ${iso.eta}%<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
         showlegend: false,
       });
 
@@ -140,18 +146,18 @@ function buildWarmanChart(data, opts = {}) {
     pwr_iso.forEach(pl => {
       traces.push({
         type: 'scatter', mode: 'lines',
-        name: `P = ${pl.power} kW`,
+        name: `P = ${pl.power} ${lblPow}`,
         x: pl.q, y: pl.h,
         line: { color: '#f85149', width: 1.2, dash: 'longdash' },
         showlegend: false,
-        hovertemplate: `P = ${pl.power} kW<br>Q=%{x:.1f}<br>H=%{y:.2f}<extra></extra>`,
+        hovertemplate: `P = ${pl.power} ${lblPow}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
       });
       if (pl.q.length > 0) {
         const mi = Math.floor(pl.q.length / 2);
         traces.push({
           type: 'scatter', mode: 'text',
           x: [pl.q[mi]], y: [pl.h[mi]],
-          text: [`${pl.power}kW`],
+          text: [`${pl.power}${lblPow}`],
           textfont: { color: '#f85149', size: 9 },
           showlegend: false, hoverinfo: 'skip',
         });
@@ -164,18 +170,18 @@ function buildWarmanChart(data, opts = {}) {
     npsh_iso.forEach(nl => {
       traces.push({
         type: 'scatter', mode: 'lines',
-        name: `NPSHr = ${nl.npsh} m`,
+        name: `NPSHr = ${nl.npsh} ${lblNpsh}`,
         x: nl.q, y: nl.h,
         line: { color: '#39d3c0', width: 1.2, dash: 'dashdot' },
         showlegend: false,
-        hovertemplate: `NPSHr = ${nl.npsh} m<br>Q=%{x:.1f}<br>H=%{y:.2f}<extra></extra>`,
+        hovertemplate: `NPSHr = ${nl.npsh} ${lblNpsh}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
       });
       if (nl.q.length > 0) {
         const mi = Math.floor(nl.q.length / 2);
         traces.push({
           type: 'scatter', mode: 'text',
           x: [nl.q[mi]], y: [nl.h[mi]],
-          text: [`${nl.npsh}m`],
+          text: [`${nl.npsh}${lblNpsh}`],
           textfont: { color: '#39d3c0', size: 9 },
           showlegend: false, hoverinfo: 'skip',
         });
@@ -193,7 +199,7 @@ function buildWarmanChart(data, opts = {}) {
         name: `${sl.speed_rpm} rpm (${Math.round(sl.speed_ratio * 100)}%)`,
         x: sl.q, y: sl.h,
         line: { color: col, width: lw, dash: sl.speed_ratio === 1.0 ? 'solid' : 'dot' },
-        hovertemplate: `${sl.speed_rpm} rpm<br>Q=%{x:.1f} m³/h<br>H=%{y:.2f} m<extra></extra>`,
+        hovertemplate: `${sl.speed_rpm} rpm<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
       });
       /* BEP tick on speed line */
       if (sl.bep) {
@@ -204,7 +210,7 @@ function buildWarmanChart(data, opts = {}) {
           marker: { size: 6, color: col, symbol: 'diamond',
                     line: { color: '#fff', width: 0.8 } },
           showlegend: false,
-          hovertemplate: `BEP ${sl.speed_rpm}rpm<br>Q=${sl.bep.q}<br>H=${sl.bep.h}<extra></extra>`,
+          hovertemplate: `BEP ${sl.speed_rpm}rpm<br>Q=${sl.bep.q} ${lblQ}<br>H=${sl.bep.h} ${lblH}<extra></extra>`,
         });
       }
     });
@@ -220,7 +226,7 @@ function buildWarmanChart(data, opts = {}) {
         line: { color: DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)], width: 1.5, dash: 'dashdot' },
         yaxis: npshYAxis,
         showlegend: false,
-        hovertemplate: `Ø${d.dia} mm NPSHr<br>Q=%{x:.1f} m³/h<br>NPSHr=%{y:.2f} m<extra></extra>`
+        hovertemplate: `Ø${d.dia} mm NPSHr<br>Q=%{x:.1f} ${lblQ}<br>NPSHr=%{y:.2f} ${lblNpsh}<extra></extra>`
       });
     });
   }
@@ -231,7 +237,7 @@ function buildWarmanChart(data, opts = {}) {
       type: 'scatter', mode: 'lines', name: 'System Curve',
       x: data.system_q, y: data.system_h,
       line: { color: '#bc8cff', width: 2, dash: 'dash' },
-      hovertemplate: 'System<br>Q=%{x:.1f}<br>H_sys=%{y:.2f} m<extra></extra>',
+      hovertemplate: `System<br>Q=%{x:.1f} ${lblQ}<br>H_sys=%{y:.2f} ${lblH}<extra></extra>`,
     });
   }
 
@@ -739,20 +745,42 @@ function updateCurveCountBadge() {
     customCurves.length === 0 ? '' : 'none';
 }
 
+const CURVE_CONVERSIONS = {
+  q: { m3h: 1.0, ls: 0.2777777777777778, gpm: 4.402917396, lmin: 16.6666666667 },
+  h: { m: 1.0, ft: 3.280839895 },
+  pow: { kw: 1.0, hp: 1.34102209 }
+};
+
+function getGraphDisplayUnits() {
+  return {
+    q: document.getElementById('preview-unit-q')?.value || 'm3h',
+    h: document.getElementById('preview-unit-h')?.value || 'm',
+    pow: document.getElementById('preview-unit-pow')?.value || 'kw'
+  };
+}
+
 /* ── Build Plotly traces for a fitted custom curve ───────────────────────── */
 function buildCustomTraces(curve) {
   if (!curve.fitted) return [];
   const { label, color, q, h, eta } = curve;
+  const units = getGraphDisplayUnits();
+  const fQ = CURVE_CONVERSIONS.q[units.q] || 1.0;
+  const fH = CURVE_CONVERSIONS.h[units.h] || 1.0;
+  const labelH = typeof getUnitLabel === 'function' ? getUnitLabel('h', units.h) : units.h;
+
+  const qConv = q.map(v => v * fQ);
+  const hConv = h.map(v => v * fH);
+
   const traces = [];
 
   // H-Q line (drawn solid to match the impeller family)
   traces.push({
     type: 'scatter', mode: 'lines',
     name: label || 'Custom',
-    x: q, y: h,
+    x: qConv, y: hConv,
     line: { color, width: 2.2 },
     legendgroup: `custom_${curve.id}`,
-    hovertemplate: `${label || 'Custom'}<br>Q=%{x:.1f}<br>H=%{y:.2f} m<extra></extra>`,
+    hovertemplate: `${label || 'Custom'}<br>Q=%{x:.1f}<br>H=%{y:.2f} ${labelH}<extra></extra>`,
   });
 
   // η line (if available)
@@ -760,7 +788,7 @@ function buildCustomTraces(curve) {
     traces.push({
       type: 'scatter', mode: 'lines',
       name: `${label || 'Custom'} η`,
-      x: q, y: eta,
+      x: qConv, y: eta,
       line: { color, width: 1.5, dash: 'dot' },
       legendgroup: `custom_${curve.id}`,
       hovertemplate: `${label || 'Custom'}<br>η=%{y:.1f}%<extra></extra>`,
@@ -777,12 +805,14 @@ function getCustomTracesHQ() {
 }
 
 function getCustomTracesEta() {
+  const units = getGraphDisplayUnits();
+  const fQ = CURVE_CONVERSIONS.q[units.q] || 1.0;
   return customCurves.flatMap(c => {
     if (!c.fitted || !c.eta || !c.eta.length) return [];
     return [{
       type: 'scatter', mode: 'lines',
       name: `${c.label || 'Custom'} η`,
-      x: c.q, y: c.eta,
+      x: c.q.map(v => v * fQ), y: c.eta,
       line: { color: c.color, width: 1.8, dash: 'dashdot' },
       legendgroup: `custom_${c.id}`,
       hovertemplate: `${c.label || 'Custom'}<br>η=%{y:.1f}%<extra></extra>`,
@@ -791,15 +821,19 @@ function getCustomTracesEta() {
 }
 
 function getCustomTracesPower() {
+  const units = getGraphDisplayUnits();
+  const fQ = CURVE_CONVERSIONS.q[units.q] || 1.0;
+  const fP = CURVE_CONVERSIONS.pow[units.pow] || 1.0;
+  const labelP = typeof getUnitLabel === 'function' ? getUnitLabel('pow', units.pow) : units.pow;
   return customCurves.flatMap(c => {
     if (!c.fitted || !c.power || !c.power.length) return [];
     return [{
       type: 'scatter', mode: 'lines',
       name: `${c.label || 'Custom'} P`,
-      x: c.q, y: c.power,
+      x: c.q.map(v => v * fQ), y: c.power.map(v => v * fP),
       line: { color: c.color, width: 1.8, dash: 'dashdot' },
       legendgroup: `custom_${c.id}`,
-      hovertemplate: `${c.label || 'Custom'}<br>P=%{y:.2f} kW<extra></extra>`,
+      hovertemplate: `${c.label || 'Custom'}<br>P=%{y:.2f} ${labelP}<extra></extra>`,
     }];
   });
 }

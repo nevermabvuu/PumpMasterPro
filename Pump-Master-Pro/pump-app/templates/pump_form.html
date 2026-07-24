@@ -42,6 +42,9 @@
                    value="{{ pump.speed_rpm if pump else 1450 }}" step="1" required>
           </div>
           <div class="col-md-4">
+            <label class="form-label d-flex align-items-center justify-content-between">
+              <span>Max Impeller</span>
+              <select name="unit_max_imp" class="header-unit-select" style="margin-top:0;width:auto;">
                 <option value="mm" {% if not pump or pump.data_units_dict.max_imp != 'in' %}selected{% endif %}>mm</option>
                 <option value="in" {% if pump and pump.data_units_dict.max_imp == 'in' %}selected{% endif %}>in</option>
               </select>
@@ -405,86 +408,85 @@
 
         <div id="fitStatus" class="mt-1 small"></div>
 
-      </div>
-    </div>
+        <!-- Generated Coefficients (collapsible inside card) -->
+        <div class="card card-dark border-secondary border-opacity-50 mt-3">
+          <div class="card-header card-header-dark py-1 px-2 d-flex justify-content-between align-items-center" style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#coeffPanel">
+            <span class="small fw-semibold"><i class="bi bi-chevron-down me-1" id="coeffChevron"></i>Generated Polynomial Coefficients <span class="text-muted fw-normal">(auto-filled by Fit, or enter manually)</span></span>
+            <span class="badge bg-secondary" style="font-size:0.7rem">Polynomials</span>
+          </div>
+          <div class="collapse" id="coeffPanel">
+            <div class="card-body p-2">
+              <div class="row g-2">
 
-    <!-- Generated Coefficients (collapsible) -->
-    <div class="card card-dark">
-      <div class="card-header card-header-dark" style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#coeffPanel">
-        <i class="bi bi-chevron-down me-1" id="coeffChevron"></i>
-        Generated Polynomial Coefficients
-        <span class="small text-muted ms-2">(auto-filled by Fit, or enter manually)</span>
-      </div>
-      <div class="collapse" id="coeffPanel">
-        <div class="card-body">
-          <div class="row g-3">
-
-            <!-- H-Q -->
-            <div class="col-lg-6">
-              <div class="p-2 rounded" style="background:#161b22;border:1px solid #30363d">
-                <div class="small text-accent mb-2 fw-semibold"><i class="bi bi-graph-down-arrow me-1"></i>H-Q  H = a₀ + a₁Q + a₂Q² + a₃Q³</div>
-                <div class="row g-2">
-                  <div class="col-6"><label class="form-label form-label-sm">a₀ (shutoff) *</label>
-                    <input type="number" name="hq_a0" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a0 if pump else 0 }}" step="any" required></div>
-                  <div class="col-6"><label class="form-label form-label-sm">a₁</label>
-                    <input type="number" name="hq_a1" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a1 if pump else 0 }}" step="any"></div>
-                  <div class="col-6"><label class="form-label form-label-sm">a₂</label>
-                    <input type="number" name="hq_a2" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a2 if pump else 0 }}" step="any"></div>
-                  <div class="col-6"><label class="form-label form-label-sm">a₃</label>
-                    <input type="number" name="hq_a3" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a3 if pump else 0 }}" step="any"></div>
+                <!-- H-Q -->
+                <div class="col-lg-6">
+                  <div class="p-2 rounded" style="background:#161b22;border:1px solid #30363d">
+                    <div class="small text-accent mb-2 fw-semibold"><i class="bi bi-graph-down-arrow me-1"></i>H-Q  H = a₀ + a₁Q + a₂Q² + a₃Q³</div>
+                    <div class="row g-2">
+                      <div class="col-6"><label class="form-label form-label-sm">a₀ (shutoff) *</label>
+                        <input type="number" name="hq_a0" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a0 if pump else 0 }}" step="any" required></div>
+                      <div class="col-6"><label class="form-label form-label-sm">a₁</label>
+                        <input type="number" name="hq_a1" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a1 if pump else 0 }}" step="any"></div>
+                      <div class="col-6"><label class="form-label form-label-sm">a₂</label>
+                        <input type="number" name="hq_a2" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a2 if pump else 0 }}" step="any"></div>
+                      <div class="col-6"><label class="form-label form-label-sm">a₃</label>
+                        <input type="number" name="hq_a3" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a3 if pump else 0 }}" step="any"></div>
+                    </div>
+                  </div>
                 </div>
+
+                <!-- Efficiency -->
+                <div class="col-lg-6">
+                  <div class="p-2 rounded" style="background:#161b22;border:1px solid #30363d">
+                    <div class="small text-success mb-2 fw-semibold"><i class="bi bi-speedometer2 me-1"></i>Efficiency  η = b₀ + b₁Q + b₂Q² + b₃Q³</div>
+                    <div class="row g-2">
+                      <div class="col-6"><label class="form-label form-label-sm">b₀</label>
+                        <input type="number" name="eff_b0" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b0 if pump else 0 }}" step="any"></div>
+                      <div class="col-6"><label class="form-label form-label-sm">b₁</label>
+                        <input type="number" name="eff_b1" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b1 if pump else 0 }}" step="any"></div>
+                      <div class="col-6"><label class="form-label form-label-sm">b₂</label>
+                        <input type="number" name="eff_b2" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b2 if pump else 0 }}" step="any"></div>
+                      <div class="col-6"><label class="form-label form-label-sm">b₃</label>
+                        <input type="number" name="eff_b3" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b3 if pump else 0 }}" step="any"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- NPSH -->
+                <div class="col-lg-6">
+                  <div class="p-2 rounded" style="background:#161b22;border:1px solid #30363d">
+                    <div class="small text-warning mb-2 fw-semibold"><i class="bi bi-arrow-up-right me-1"></i>NPSHr  = c₀ + c₁Q + c₂Q²</div>
+                    <div class="row g-2">
+                      <div class="col-4"><label class="form-label form-label-sm">c₀</label>
+                        <input type="number" name="npsh_c0" class="form-control form-control-sm form-control-dark" value="{{ pump.npsh_c0 if pump else 1 }}" step="any"></div>
+                      <div class="col-4"><label class="form-label form-label-sm">c₁</label>
+                        <input type="number" name="npsh_c1" class="form-control form-control-sm form-control-dark" value="{{ pump.npsh_c1 if pump else 0 }}" step="any"></div>
+                      <div class="col-4"><label class="form-label form-label-sm">c₂</label>
+                        <input type="number" name="npsh_c2" class="form-control form-control-sm form-control-dark" value="{{ pump.npsh_c2 if pump else 0 }}" step="any"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Power -->
+                <div class="col-lg-6">
+                  <div class="p-2 rounded" style="background:#161b22;border:1px solid #30363d">
+                    <div class="small text-info mb-2 fw-semibold"><i class="bi bi-lightning-charge me-1"></i>Shaft Power  P = p₀ + p₁Q + p₂Q²  (kW)</div>
+                    <div class="row g-2">
+                      <div class="col-4"><label class="form-label form-label-sm">p₀ (shutoff kW)</label>
+                        <input type="number" name="pow_p0" class="form-control form-control-sm form-control-dark" value="{{ pump.pow_p0 if pump else 0 }}" step="any"></div>
+                      <div class="col-4"><label class="form-label form-label-sm">p₁</label>
+                        <input type="number" name="pow_p1" class="form-control form-control-sm form-control-dark" value="{{ pump.pow_p1 if pump else 0 }}" step="any"></div>
+                      <div class="col-4"><label class="form-label form-label-sm">p₂</label>
+                        <input type="number" name="pow_p2" class="form-control form-control-sm form-control-dark" value="{{ pump.pow_p2 if pump else 0 }}" step="any"></div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
-
-            <!-- Efficiency -->
-            <div class="col-lg-6">
-              <div class="p-2 rounded" style="background:#161b22;border:1px solid #30363d">
-                <div class="small text-success mb-2 fw-semibold"><i class="bi bi-speedometer2 me-1"></i>Efficiency  η = b₀ + b₁Q + b₂Q² + b₃Q³</div>
-                <div class="row g-2">
-                  <div class="col-6"><label class="form-label form-label-sm">b₀</label>
-                    <input type="number" name="eff_b0" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b0 if pump else 0 }}" step="any"></div>
-                  <div class="col-6"><label class="form-label form-label-sm">b₁</label>
-                    <input type="number" name="eff_b1" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b1 if pump else 0 }}" step="any"></div>
-                  <div class="col-6"><label class="form-label form-label-sm">b₂</label>
-                    <input type="number" name="eff_b2" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b2 if pump else 0 }}" step="any"></div>
-                  <div class="col-6"><label class="form-label form-label-sm">b₃</label>
-                    <input type="number" name="eff_b3" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b3 if pump else 0 }}" step="any"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- NPSH -->
-            <div class="col-lg-6">
-              <div class="p-2 rounded" style="background:#161b22;border:1px solid #30363d">
-                <div class="small text-warning mb-2 fw-semibold"><i class="bi bi-arrow-up-right me-1"></i>NPSHr  = c₀ + c₁Q + c₂Q²</div>
-                <div class="row g-2">
-                  <div class="col-4"><label class="form-label form-label-sm">c₀</label>
-                    <input type="number" name="npsh_c0" class="form-control form-control-sm form-control-dark" value="{{ pump.npsh_c0 if pump else 1 }}" step="any"></div>
-                  <div class="col-4"><label class="form-label form-label-sm">c₁</label>
-                    <input type="number" name="npsh_c1" class="form-control form-control-sm form-control-dark" value="{{ pump.npsh_c1 if pump else 0 }}" step="any"></div>
-                  <div class="col-4"><label class="form-label form-label-sm">c₂</label>
-                    <input type="number" name="npsh_c2" class="form-control form-control-sm form-control-dark" value="{{ pump.npsh_c2 if pump else 0 }}" step="any"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Power -->
-            <div class="col-lg-6">
-              <div class="p-2 rounded" style="background:#161b22;border:1px solid #30363d">
-                <div class="small text-info mb-2 fw-semibold"><i class="bi bi-lightning-charge me-1"></i>Shaft Power  P = p₀ + p₁Q + p₂Q²  (kW)</div>
-                <div class="row g-2">
-                  <div class="col-4"><label class="form-label form-label-sm">p₀ (shutoff kW)</label>
-                    <input type="number" name="pow_p0" class="form-control form-control-sm form-control-dark" value="{{ pump.pow_p0 if pump else 0 }}" step="any"></div>
-                  <div class="col-4"><label class="form-label form-label-sm">p₁</label>
-                    <input type="number" name="pow_p1" class="form-control form-control-sm form-control-dark" value="{{ pump.pow_p1 if pump else 0 }}" step="any"></div>
-                  <div class="col-4"><label class="form-label form-label-sm">p₂</label>
-                    <input type="number" name="pow_p2" class="form-control form-control-sm form-control-dark" value="{{ pump.pow_p2 if pump else 0 }}" step="any"></div>
-                </div>
-              </div>
-            </div>
-
           </div>
         </div>
+
       </div>
     </div>
 
@@ -623,8 +625,8 @@
      data-unit-op-q="{{ pump.unit_op_q if pump else 'm3h' }}"
      {% endif %}>
 </div>
-<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=2"></script>
-<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=8"></script>
+<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=4"></script>
+<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=11"></script>
 <script>
 (function () {
   initUnitSelectors();

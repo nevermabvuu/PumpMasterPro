@@ -81,6 +81,58 @@ def _get_float(d, key, default=0.0):
         return default
 
 
+def _auto_fit_coeffs(raw_tables_str, coeffs_str, units_str=''):
+    if not raw_tables_str or not raw_tables_str.strip():
+        return coeffs_str
+    tables = raw_tables_str.split('|')
+    coeffs_list = coeffs_str.split('|') if coeffs_str else []
+    units_list = units_str.split('|') if units_str else []
+    updated = []
+    for idx, t_str in enumerate(tables):
+        cur_coeff = coeffs_list[idx] if idx < len(coeffs_list) else ''
+        c_vals = [float(x.strip()) for x in cur_coeff.split(',') if x.strip()] if cur_coeff else []
+        has_hq = len(c_vals) >= 4 and any(c_vals[0:4])
+        if has_hq:
+            updated.append(cur_coeff)
+            continue
+
+        cur_unit_str = units_list[idx] if idx < len(units_list) else ''
+        u_parts = [u.strip() for u in cur_unit_str.split(',') if u.strip()]
+        u_q = u_parts[0] if len(u_parts) >= 1 else 'm3h'
+        u_h = u_parts[1] if len(u_parts) >= 2 else 'm'
+        u_p = u_parts[3] if len(u_parts) >= 4 else 'kw'
+
+        f_q = Q_TO_M3H.get(u_q, 1.0)
+        f_h = H_TO_M.get(u_h, 1.0)
+        f_p = POW_TO_KW.get(u_p, 1.0)
+
+        q_h, q_eta, q_p = [], [], []
+        for r_str in t_str.split(';'):
+            parts = [p.strip() for p in r_str.split(',') if p.strip()]
+            if len(parts) >= 2:
+                try:
+                    q_v, h_v = float(parts[0]) * f_q, float(parts[1]) * f_h
+                    q_h.append([q_v, h_v])
+                    if len(parts) >= 3 and parts[2]: q_eta.append([q_v, float(parts[2])])
+                    if len(parts) >= 5 and parts[4]: q_p.append([q_v, float(parts[4]) * f_p])
+                except ValueError:
+                    pass
+        if len(q_h) >= 3:
+            try:
+                res = fit_pump_polynomials(q_h=q_h, q_eta=q_eta or None, q_p=q_p or None)
+                fitted_c = f"{res['hq_a0']},{res['hq_a1']},{res['hq_a2']},{res['hq_a3']}," \
+                           f"{res['eff_b0']},{res['eff_b1']},{res['eff_b2']},{res['eff_b3']}," \
+                           f"{res['npsh_c0']},{res['npsh_c1']},{res['npsh_c2']}," \
+                           f"{res['pow_p0']},{res['pow_p1']},{res['pow_p2']}," \
+                           f"{res['q_max']},{res['q_bep']}"
+                updated.append(fitted_c)
+            except Exception:
+                updated.append(cur_coeff or '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0')
+        else:
+            updated.append(cur_coeff or '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0')
+    return '|'.join(updated)
+
+
 def _pump_from_form(f, pump=None):
     """Build or update a Pump object from a POST form."""
     if pump is None:
@@ -136,7 +188,9 @@ def _pump_from_form(f, pump=None):
     pump.curve_modes     = f.get('curve_modes', pump.curve_modes or '')
     pump.curve_units     = f.get('curve_units', pump.curve_units or '')
     pump.curve_raw_tables = f.get('curve_raw_tables', pump.curve_raw_tables or '')
-    pump.curve_coeffs    = f.get('curve_coeffs', pump.curve_coeffs or '')
+    
+    raw_coeffs = f.get('curve_coeffs', pump.curve_coeffs or '')
+    pump.curve_coeffs    = _auto_fit_coeffs(pump.curve_raw_tables, raw_coeffs, pump.curve_units)
 
     pump.unit_q    = f.get('unit_q', pump.unit_q or 'm3h')
     pump.unit_h    = f.get('unit_h', pump.unit_h or 'm')

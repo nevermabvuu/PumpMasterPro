@@ -339,18 +339,20 @@ function restoreRawTable(rawJson) {
 
   const tbody = document.querySelector('#perfTable tbody');
   tbody.innerHTML = '';
-  data.forEach(row => {
+  const numRows = Math.max(data.length, 6);
+  for (let i = 0; i < numRows; i++) {
+    const row = data[i] || ['', '', '', '', ''];
     const [q, h, eta, npsh, pow] = row;
     const tr = document.createElement('tr');
     tr.innerHTML =
-      '<td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" value="' + q + '"></td>' +
-      '<td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" value="' + h + '"></td>' +
-      '<td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" value="' + eta + '"></td>' +
-      '<td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" value="' + npsh + '"></td>' +
-      '<td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" value="' + pow + '"></td>' +
+      '<td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" value="' + (q !== undefined && q !== null ? q : '') + '"></td>' +
+      '<td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" value="' + (h !== undefined && h !== null ? h : '') + '"></td>' +
+      '<td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" value="' + (eta !== undefined && eta !== null ? eta : '') + '"></td>' +
+      '<td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" value="' + (npsh !== undefined && npsh !== null ? npsh : '') + '"></td>' +
+      '<td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" value="' + (pow !== undefined && pow !== null ? pow : '') + '"></td>' +
       '<td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">&times;</button></td>';
     tbody.appendChild(tr);
-  });
+  }
   return true;
 }
 
@@ -520,6 +522,11 @@ function collectGraphOptions() {
     show_npsh: document.getElementById('chkShowNpsh')?.checked !== false,
     combine_eff_power: document.getElementById('chkCombineEffPower')?.checked !== false,
     trim_model: document.querySelector('input[name="trimModelChoice"]:checked')?.value || 'fit',
+    unit_max_imp: document.querySelector('select[name="unit_max_imp"]')?.value || 'mm',
+    graph_unit_q: document.getElementById('preview-unit-q')?.value || '',
+    graph_unit_h: document.getElementById('preview-unit-h')?.value || '',
+    graph_unit_npsh: document.getElementById('preview-unit-npsh')?.value || '',
+    graph_unit_pow: document.getElementById('preview-unit-pow')?.value || ''
   };
 }
 
@@ -1014,71 +1021,15 @@ var _extraCurveIdCounter = 0;
 var extraCurves = [];   // [{id, label, color, fitted, coeffs}]
 
 /* ── Serialise all extra curves to hidden form fields ─────────────────── */
+/* ── Serialise all extra curves to hidden form fields ─────────────────── */
 function serializeExtraCurves() {
-  const payload = extraCurves
-    .filter(c => {
-      const entry = document.getElementById(`extra-entry-${c.id}`);
-      return !!entry || c.fitted;
-    })
-    .map(c => {
-      const entry = document.getElementById(`extra-entry-${c.id}`);
-      
-      const labelInput = entry?.querySelector('.extra-label-input');
-      const label = labelInput && labelInput.value.trim() !== '' ? labelInput.value.trim() : (c.label || `Curve ${c.id}`);
-
-      const diaInput = entry?.querySelector('.extra-dia-input');
-      const diameter = diaInput && diaInput.value.trim() !== '' ? parseFloat(diaInput.value) : (c.diameter !== undefined && c.diameter !== null ? c.diameter : '');
-
-      const unitQ = entry?.querySelector(`.unit-select-q`)?.value || c.unit_q || 'm3h';
-      const unitH = entry?.querySelector(`.unit-select-h`)?.value || c.unit_h || 'm';
-      const unitNpsh = entry?.querySelector(`.unit-select-npsh`)?.value || c.unit_npsh || 'm';
-      const unitPow = entry?.querySelector(`.unit-select-pow`)?.value || c.unit_pow || 'kw';
-      const unitDia = entry?.querySelector(`.unit-select-dia`)?.value || c.unit_dia || 'mm';
-      const curveMode = entry?.querySelector(`.unit-select-mode`)?.value || c.curve_mode || 'fit';
-
-      // Gather current raw table values
-      const tableRows = entry ? entry.querySelectorAll(`table tbody tr`) : [];
-      const raw_table = [];
-      tableRows.forEach(tr => {
-        const q    = tr.querySelector('.col-q')?.value    ?? '';
-        const h    = tr.querySelector('.col-h')?.value    ?? '';
-        const eta  = tr.querySelector('.col-eta')?.value  ?? '';
-        const npsh = tr.querySelector('.col-npsh')?.value ?? '';
-        const pow  = tr.querySelector('.col-pow')?.value  ?? '';
-        if (q !== '' || h !== '' || eta !== '' || npsh !== '' || pow !== '') {
-          raw_table.push([q, h, eta, npsh, pow]);
-        }
-      });
-
-      const defaultCoeffs = {
-        hq_a0: 0, hq_a1: 0, hq_a2: 0, hq_a3: 0,
-        eff_b0: 0, eff_b1: 0, eff_b2: 0, eff_b3: 0,
-        npsh_c0: 0, npsh_c1: 0, npsh_c2: 0,
-        pow_p0: 0, pow_p1: 0, pow_p2: 0,
-        q_max: 0, q_bep: 0
-      };
-
-      return {
-        label: label,
-        color: c.color || '#3fb950',
-        diameter: diameter,
-        unit_dia: unitDia,
-        curve_mode: curveMode,
-        unit_q: unitQ,
-        unit_h: unitH,
-        unit_npsh: unitNpsh,
-        unit_pow: unitPow,
-        ...defaultCoeffs,
-        ...(c.coeffs || {}),
-        raw_table: raw_table.length > 0 ? raw_table : (c.raw_table || [])
-      };
-    });
-
+  const cardEntries = document.querySelectorAll('#extraCurvesList .custom-curve-entry');
+  
   // Group separated curve columns
   const mainLblInp = document.getElementById('main_curve_label');
   const mainLbl = mainLblInp && mainLblInp.value.trim() ? mainLblInp.value.trim() : 'Curve 1';
 
-  const mainDiaInp = document.getElementById('main_curve_dia_mm') || document.querySelector('[name="impeller_dia_mm"]');
+  const mainDiaInp = document.getElementById('main_curve_dia_mm') || document.querySelector('[name="impeller_dia_val"]') || document.querySelector('[name="impeller_dia_mm"]');
   const mainDia = mainDiaInp && mainDiaInp.value ? mainDiaInp.value.trim() : (mainDiaInp?.placeholder || '');
 
   const labels = [mainLbl];
@@ -1106,18 +1057,70 @@ function serializeExtraCurves() {
   const mainCoeffsStr = `${getF('hq_a0')},${getF('hq_a1')},${getF('hq_a2')},${getF('hq_a3')},${getF('eff_b0')},${getF('eff_b1')},${getF('eff_b2')},${getF('eff_b3')},${getF('npsh_c0')},${getF('npsh_c1')},${getF('npsh_c2')},${getF('pow_p0')},${getF('pow_p1')},${getF('pow_p2')},${getF('q_max')},${getF('q_bep')}`;
   const coeffsList = [mainCoeffsStr];
 
-  payload.forEach(c => {
-    labels.push(c.label || 'Curve');
-    diasUnits.push(`${c.diameter !== '' && c.diameter !== null && c.diameter !== undefined ? c.diameter : ''};${c.unit_dia || 'mm'}`);
-    colors.push(c.color || '#3fb950');
-    modes.push(c.curve_mode || 'fit');
-    unitsList.push(`${c.unit_q || 'm3h'},${c.unit_h || 'm'},${c.unit_npsh || 'm'},${c.unit_pow || 'kw'}`);
+  const payload = [];
 
-    const cRaw = (c.raw_table || []).map(r => r.join(',')).join(';');
-    rawTables.push(cRaw);
+  cardEntries.forEach((entry, idx) => {
+    const eid = entry.id ? entry.id.replace('extra-entry-', '') : '';
+    const inMemCurve = extraCurves.find(c => String(c.id) === String(eid)) || {};
 
-    const cCoeffsStr = `${c.hq_a0||0},${c.hq_a1||0},${c.hq_a2||0},${c.hq_a3||0},${c.eff_b0||0},${c.eff_b1||0},${c.eff_b2||0},${c.eff_b3||0},${c.npsh_c0||0},${c.npsh_c1||0},${c.npsh_c2||0},${c.pow_p0||0},${c.pow_p1||0},${c.pow_p2||0},${c.q_max||0},${c.q_bep||0}`;
+    const labelInp = entry.querySelector('.extra-label-input');
+    const label = labelInp && labelInp.value.trim() !== '' ? labelInp.value.trim() : (inMemCurve.label || `Curve ${idx + 2}`);
+
+    const diaInp = entry.querySelector('.extra-dia-input');
+    const diameter = diaInp && diaInp.value.trim() !== '' ? diaInp.value.trim() : (inMemCurve.diameter ?? '');
+
+    const unitDia = entry.querySelector('.unit-select-dia')?.value || inMemCurve.unit_dia || 'mm';
+    const curveMode = entry.querySelector('.unit-select-mode')?.value || inMemCurve.curve_mode || 'fit';
+    const unitQ = entry.querySelector('.unit-select-q')?.value || inMemCurve.unit_q || 'm3h';
+    const unitH = entry.querySelector('.unit-select-h')?.value || inMemCurve.unit_h || 'm';
+    const unitNpsh = entry.querySelector('.unit-select-npsh')?.value || inMemCurve.unit_npsh || 'm';
+    const unitPow = entry.querySelector('.unit-select-pow')?.value || inMemCurve.unit_pow || 'kw';
+
+    const activeSwatch = entry.querySelector('.curve-color-swatch.active');
+    const colorDot = entry.querySelector('.curve-color-dot');
+    const color = activeSwatch?.dataset?.color || colorDot?.style?.backgroundColor || inMemCurve.color || '#3fb950';
+
+    const tableRows = entry.querySelectorAll('table tbody tr');
+    const raw_table = [];
+    tableRows.forEach(tr => {
+      const q    = tr.querySelector('.col-q')?.value    ?? '';
+      const h    = tr.querySelector('.col-h')?.value    ?? '';
+      const eta  = tr.querySelector('.col-eta')?.value  ?? '';
+      const npsh = tr.querySelector('.col-npsh')?.value ?? '';
+      const pow  = tr.querySelector('.col-pow')?.value  ?? '';
+      if (q !== '' || h !== '' || eta !== '' || npsh !== '' || pow !== '') {
+        raw_table.push([q, h, eta, npsh, pow]);
+      }
+    });
+
+    // Update in-memory curve object properties
+    inMemCurve.label = label;
+    inMemCurve.diameter = diameter;
+    inMemCurve.unit_dia = unitDia;
+    inMemCurve.unit_q = unitQ;
+    inMemCurve.unit_h = unitH;
+    inMemCurve.unit_npsh = unitNpsh;
+    inMemCurve.unit_pow = unitPow;
+    inMemCurve.curve_mode = curveMode;
+    inMemCurve.color = color;
+    if (raw_table.length > 0) inMemCurve.raw_table = raw_table;
+
+    labels.push(label);
+    diasUnits.push(`${diameter};${unitDia}`);
+    colors.push(color);
+    modes.push(curveMode);
+    unitsList.push(`${unitQ},${unitH},${unitNpsh},${unitPow}`);
+    rawTables.push(raw_table.map(r => r.join(',')).join(';'));
+
+    const cfs = inMemCurve.coeffs || {};
+    const cCoeffsStr = `${cfs.hq_a0||0},${cfs.hq_a1||0},${cfs.hq_a2||0},${cfs.hq_a3||0},${cfs.eff_b0||0},${cfs.eff_b1||0},${cfs.eff_b2||0},${cfs.eff_b3||0},${cfs.npsh_c0||0},${cfs.npsh_c1||0},${cfs.npsh_c2||0},${cfs.pow_p0||0},${cfs.pow_p1||0},${cfs.pow_p2||0},${cfs.q_max||0},${cfs.q_bep||0}`;
     coeffsList.push(cCoeffsStr);
+
+    payload.push({
+      label, color, diameter, unit_dia: unitDia, curve_mode: curveMode,
+      unit_q: unitQ, unit_h: unitH, unit_npsh: unitNpsh, unit_pow: unitPow,
+      raw_table: raw_table.length > 0 ? raw_table : (inMemCurve.raw_table || [])
+    });
   });
 
   if (document.getElementById('curve_labels_field')) document.getElementById('curve_labels_field').value = labels.join(';');
@@ -1365,14 +1368,20 @@ function addExtraCurveCard(existingData) {
 
   let tableRowsHtml = '';
   if (existingData && Array.isArray(existingData.raw_table) && existingData.raw_table.length > 0) {
-    tableRowsHtml = existingData.raw_table.map(row => {
+    const rawRows = existingData.raw_table;
+    const numRows = Math.max(rawRows.length, 6);
+    const paddedRows = [];
+    for (let i = 0; i < numRows; i++) {
+      paddedRows.push(rawRows[i] || ['', '', '', '', '']);
+    }
+    tableRowsHtml = paddedRows.map(row => {
       const [q, h, eta, npsh, pow] = row;
       return `<tr>
-        <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" placeholder="Q (${getUnitLabel('q', qUnit)})" value="${q}"></td>
-        <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" placeholder="H (${getUnitLabel('h', hUnit)})" value="${h}"></td>
-        <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" placeholder="η %" value="${eta}"></td>
-        <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" placeholder="NPSHr (${getUnitLabel('npsh', npshUnit)})" value="${npsh}"></td>
-        <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" placeholder="${getUnitLabel('pow', powUnit)} (opt)" value="${pow}"></td>
+        <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" placeholder="Q (${getUnitLabel('q', qUnit)})" value="${q !== undefined && q !== null ? q : ''}"></td>
+        <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" placeholder="H (${getUnitLabel('h', hUnit)})" value="${h !== undefined && h !== null ? h : ''}"></td>
+        <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" placeholder="η %" value="${eta !== undefined && eta !== null ? eta : ''}"></td>
+        <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" placeholder="NPSHr (${getUnitLabel('npsh', npshUnit)})" value="${npsh !== undefined && npsh !== null ? npsh : ''}"></td>
+        <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" placeholder="${getUnitLabel('pow', powUnit)} (opt)" value="${pow !== undefined && pow !== null ? pow : ''}"></td>
         <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">×</button></td>
       </tr>`;
     }).join('');
@@ -1559,6 +1568,15 @@ function addExtraCurveCard(existingData) {
             }
           });
 
+          // Update curve object in extraCurves array
+          const curve = extraCurves.find(c => c.id === id);
+          if (curve) {
+            if (type === 'q') curve.unit_q = toUnit;
+            if (type === 'h') curve.unit_h = toUnit;
+            if (type === 'npsh') curve.unit_npsh = toUnit;
+            if (type === 'pow') curve.unit_pow = toUnit;
+          }
+
           // Update placeholders
           _updateExtraPlaceholders(div, type, toUnit);
 
@@ -1568,7 +1586,6 @@ function addExtraCurveCard(existingData) {
           }
 
           // Re-draw preview if fitted
-          const curve = extraCurves.find(c => c.id === id);
           if (curve && curve.fitted && curve.coeffs) {
             refreshMainPreview();
           }
@@ -1717,6 +1734,29 @@ function initExtraCurves(curvesArray) {
     } catch (e) {}
   }
 
+  // Max Impeller Unit auto-conversion
+  const unitMaxImp = document.querySelector('select[name="unit_max_imp"]');
+  if (unitMaxImp) {
+    unitMaxImp.addEventListener('change', function(e) {
+      const oldUnit = this.dataset.prevUnit || 'mm';
+      const newUnit = this.value;
+      this.dataset.prevUnit = newUnit;
+
+      const valInp = document.querySelector('input[name="impeller_dia_val"]');
+      if (valInp && valInp.value) {
+        let val = parseFloat(valInp.value);
+        if (!isNaN(val)) {
+          if (oldUnit === 'mm' && newUnit === 'in') {
+            valInp.value = (val / 25.4).toFixed(3).replace(/\.?0+$/, '');
+          } else if (oldUnit === 'in' && newUnit === 'mm') {
+            valInp.value = (val * 25.4).toFixed(2).replace(/\.?0+$/, '');
+          }
+        }
+      }
+    });
+    unitMaxImp.dataset.prevUnit = unitMaxImp.value;
+  }
+
   // Wire the Add Curve Table button
   const addBtn = document.getElementById('btnAddExtraCurve');
   if (addBtn) addBtn.addEventListener('click', (e) => {
@@ -1724,14 +1764,7 @@ function initExtraCurves(curvesArray) {
     addExtraCurveCard();
   });
 
-  // Wire form submit to serialise extra curves and graph options before POST
-  const form = document.getElementById('pumpForm');
-  if (form) {
-    form.addEventListener('submit', () => {
-      serializeExtraCurves();
-      serializeGraphOptions();
-    });
-  }
+  // Wire form submit is handled in pump_form.html
 
   // Load existing saved curves (edit mode)
   const data = Array.isArray(curvesArray) ? curvesArray :
@@ -1747,11 +1780,11 @@ function initExtraCurves(curvesArray) {
   const curveCoeffsStr = initEl?.dataset?.curveCoeffs;
 
   if (curveLabelsStr || curveDiasStr || curveColorsStr || curveRawTablesStr) {
-    const lblParts = (curveLabelsStr || '').split(';').map(s => s.trim()).filter(Boolean);
-    const diaEntries = (curveDiasStr || '').split('|').map(s => s.trim()).filter(Boolean);
-    const colParts = (curveColorsStr || '').split(';').map(s => s.trim()).filter(Boolean);
-    const modeParts = (curveModesStr || '').split(';').map(s => s.trim()).filter(Boolean);
-    const unitEntries = (curveUnitsStr || '').split('|').map(s => s.trim()).filter(Boolean);
+    const lblParts = (curveLabelsStr || '').split(';').map(s => s.trim());
+    const diaEntries = (curveDiasStr || '').split('|').map(s => s.trim());
+    const colParts = (curveColorsStr || '').split(';').map(s => s.trim());
+    const modeParts = (curveModesStr || '').split(';').map(s => s.trim());
+    const unitEntries = (curveUnitsStr || '').split('|').map(s => s.trim());
     const rawTableEntries = (curveRawTablesStr || '').split('|');
     const coeffEntries = (curveCoeffsStr || '').split('|');
 

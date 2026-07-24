@@ -65,10 +65,6 @@ class Pump(db.Model):
     # JSON array of extra manually-defined curves:
     extra_curves_json = db.Column(db.Text, default='')
 
-    # Input-unit preferences for the main performance-data table
-    # JSON: {"q": "ls", "h": "m", "npsh": "m", "pow": "kw", "op_q": "ls"}
-    data_units = db.Column(db.Text, default='')
-
     # Saved graph & display options stored as separate database columns
     graph_show_eff_iso      = db.Column(db.Boolean, default=True)
     graph_eff_levels        = db.Column(db.String(100), default='')
@@ -87,18 +83,15 @@ class Pump(db.Model):
     graph_combine_eff_power = db.Column(db.Boolean, default=True)
     graph_trim_model        = db.Column(db.String(20), default='fit')
 
+    # Optional graph JSON options
     graph_options_json      = db.Column(db.Text, default='')
 
-    # Optional label and measured diameter for the main (first) curve
-    main_curve_label  = db.Column(db.String(100), default='')
-    main_curve_dia_mm = db.Column(db.Float, nullable=True)
-
     # Delimited fields for curve metadata & performance tables
-    # curve_labels: "curve1;curve2;curve3"
+    # curve_labels: "Main;Curve 2;Curve 3"
     # curve_diameters: "228;mm|182;mm|300;in"
     # curve_colors: "#58a6ff;#3fb950"
     # curve_modes: "fit;fit"
-    # curve_units: "m3h,m,m,kw|m3h,m,m,kw"
+    # curve_units: "m3h,m,m,kw|ls,m,m,kw"
     # curve_raw_tables: "q,h,eta,npsh,pow;...|q,h,..."
     # curve_coeffs: "hq_a0,a1,a2,a3,eff_b0,b1,b2,b3,npsh_c0,c1,c2,pow_p0,p1,p2,q_max,q_bep|..."
     curve_labels     = db.Column(db.Text, default='')
@@ -126,13 +119,11 @@ class Pump(db.Model):
         """Return list of labels for loaded curves."""
         raw_labels = (self.curve_labels or '').strip()
         if not raw_labels:
-            labels = []
-            m_lbl = self.main_curve_label or 'Curve 1'
-            labels.append(m_lbl)
+            labels = ['Curve 1']
             for idx, c in enumerate(self.get_extra_curves()):
                 labels.append(c.get('label') or f'Curve {idx + 2}')
             return labels
-        return [x.strip() for x in raw_labels.split(';') if x.strip()]
+        return [x.strip() for x in raw_labels.split(';')]
 
     def get_curve_diameters_list(self):
         """Return list of dicts for loaded curves: [{'diameter': val, 'unit': unit, 'dia_mm': mm_val}, ...]"""
@@ -140,7 +131,7 @@ class Pump(db.Model):
 
         if not raw_dias:
             items = []
-            main_d = self.main_curve_dia_mm or self.impeller_dia_mm
+            main_d = self.impeller_dia_mm
             if main_d:
                 items.append(f"{main_d};mm")
             for c in self.get_extra_curves():
@@ -188,17 +179,24 @@ class Pump(db.Model):
         coeffs_list = []
 
         # ── Main curve (Index 0) ──
-        m_lbl = self.main_curve_label or 'Curve 1'
-        main_d = self.main_curve_dia_mm or self.impeller_dia_mm or ''
-        labels.append(m_lbl)
-        
+        m_lbl = 'Curve 1'
+        if self.curve_labels:
+            lbl_parts = [x.strip() for x in self.curve_labels.split(';') if x.strip()]
+            if lbl_parts:
+                m_lbl = lbl_parts[0]
+        main_d = ''
         main_dia_unit = 'mm'
         if self.curve_diameters:
             first_dia = self.curve_diameters.split('|')[0]
             parts = first_dia.split(';')
+            if parts and parts[0].strip():
+                main_d = parts[0].strip()
             if len(parts) > 1:
                 main_dia_unit = parts[1].strip()
-                
+        if not main_d and self.impeller_dia_mm:
+            main_d = str(self.impeller_dia_mm)
+
+        labels.append(m_lbl)
         dias_units.append(f"{main_d};{main_dia_unit}")
         colors.append('#58a6ff')
         modes.append('fit')
@@ -321,11 +319,11 @@ class Pump(db.Model):
         raw_cfs    = (self.curve_coeffs or '').strip()
 
         if raw_labels or raw_dias or raw_colors or raw_tbls:
-            lbl_items = [x.strip() for x in raw_labels.split(';') if x.strip()] if raw_labels else []
-            d_items   = [x.strip() for x in raw_dias.split('|') if x.strip()] if raw_dias else []
-            col_items = [x.strip() for x in raw_colors.split(';') if x.strip()] if raw_colors else []
-            m_items   = [x.strip() for x in raw_modes.split(';') if x.strip()] if raw_modes else []
-            u_items   = [x.strip() for x in raw_units.split('|') if x.strip()] if raw_units else []
+            lbl_items = [x.strip() for x in raw_labels.split(';')] if raw_labels else []
+            d_items   = [x.strip() for x in raw_dias.split('|')] if raw_dias else []
+            col_items = [x.strip() for x in raw_colors.split(';')] if raw_colors else []
+            m_items   = [x.strip() for x in raw_modes.split(';')] if raw_modes else []
+            u_items   = [x.strip() for x in raw_units.split('|')] if raw_units else []
             t_items   = raw_tbls.split('|') if raw_tbls else []
             c_items   = raw_cfs.split('|') if raw_cfs else []
 
@@ -379,6 +377,10 @@ class Pump(db.Model):
 
     def get_graph_options(self):
         """Return saved graph display options dictionary from individual database columns."""
+        try:
+            extra_opts = json.loads(self.graph_options_json or '{}')
+        except Exception:
+            extra_opts = {}
         return {
             'show_eff_iso': self.graph_show_eff_iso if self.graph_show_eff_iso is not None else True,
             'eff_levels': self.graph_eff_levels or '',
@@ -396,6 +398,11 @@ class Pump(db.Model):
             'show_npsh': self.graph_show_npsh if self.graph_show_npsh is not None else True,
             'combine_eff_power': self.graph_combine_eff_power if self.graph_combine_eff_power is not None else True,
             'trim_model': self.graph_trim_model or 'fit',
+            'unit_max_imp': extra_opts.get('unit_max_imp', 'mm'),
+            'graph_unit_q': extra_opts.get('graph_unit_q', ''),
+            'graph_unit_h': extra_opts.get('graph_unit_h', ''),
+            'graph_unit_npsh': extra_opts.get('graph_unit_npsh', ''),
+            'graph_unit_pow': extra_opts.get('graph_unit_pow', '')
         }
 
     def set_graph_options(self, opts):
@@ -418,28 +425,36 @@ class Pump(db.Model):
         if 'show_npsh' in opts: self.graph_show_npsh = bool(opts['show_npsh'])
         if 'combine_eff_power' in opts: self.graph_combine_eff_power = bool(opts['combine_eff_power'])
         if 'trim_model' in opts: self.graph_trim_model = str(opts['trim_model'])
-        self.graph_options_json = json.dumps(opts)
+        
+        extra_opts = {}
+        if 'unit_max_imp' in opts: extra_opts['unit_max_imp'] = opts['unit_max_imp']
+        if 'graph_unit_q' in opts: extra_opts['graph_unit_q'] = opts['graph_unit_q']
+        if 'graph_unit_h' in opts: extra_opts['graph_unit_h'] = opts['graph_unit_h']
+        if 'graph_unit_npsh' in opts: extra_opts['graph_unit_npsh'] = opts['graph_unit_npsh']
+        if 'graph_unit_pow' in opts: extra_opts['graph_unit_pow'] = opts['graph_unit_pow']
+        self.graph_options_json = json.dumps(extra_opts)
 
     def _get_data_units(self):
-        """Return input-unit preferences dict from individual columns (with fallback)."""
+        """Return input-unit preferences dict derived from curve_units (index 0 for main curve)."""
         defaults = {'q': 'm3h', 'h': 'm', 'npsh': 'm', 'pow': 'kw', 'op_q': 'm3h'}
-        if self.unit_q or self.unit_h:
-            return {
-                'q': self.unit_q or 'm3h',
-                'h': self.unit_h or 'm',
-                'npsh': self.unit_npsh or 'm',
-                'pow': self.unit_pow or 'kw',
-                'op_q': self.unit_op_q or 'm3h',
-            }
-
-        raw = (self.data_units or '').strip()
-        if not raw:
-            return defaults
-        try:
-            saved = json.loads(raw)
-            return {**defaults, **saved}
-        except Exception:
-            return defaults
+        if self.curve_units:
+            u_entries = [x.strip() for x in self.curve_units.split('|') if x.strip()]
+            if u_entries:
+                u_parts = [p.strip() for p in u_entries[0].split(',') if p.strip()]
+                if len(u_parts) >= 4:
+                    defaults['q'] = u_parts[0]
+                    defaults['h'] = u_parts[1]
+                    defaults['npsh'] = u_parts[2]
+                    defaults['pow'] = u_parts[3]
+        if self.unit_op_q:
+            defaults['op_q'] = self.unit_op_q
+        opts = self.get_graph_options()
+        defaults['max_imp'] = opts.get('unit_max_imp', 'mm')
+        defaults['graph_q'] = opts.get('graph_unit_q', defaults['q'])
+        defaults['graph_h'] = opts.get('graph_unit_h', defaults['h'])
+        defaults['graph_npsh'] = opts.get('graph_unit_npsh', defaults['npsh'])
+        defaults['graph_pow'] = opts.get('graph_unit_pow', defaults['pow'])
+        return defaults
 
     @property
     def data_units_dict(self):
@@ -476,8 +491,6 @@ class Pump(db.Model):
             'extra_curves': self.get_extra_curves(),
             'graph_options': self.get_graph_options(),
             'data_units': self._get_data_units(),
-            'main_curve_label': self.main_curve_label or '',
-            'main_curve_dia_mm': self.main_curve_dia_mm,
             'curve_labels': self.curve_labels or '',
             'curve_diameters': self.curve_diameters or '',
             'curve_colors': self.curve_colors or '',

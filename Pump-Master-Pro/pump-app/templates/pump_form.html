@@ -42,9 +42,12 @@
                    value="{{ pump.speed_rpm if pump else 1450 }}" step="1" required>
           </div>
           <div class="col-md-4">
-            <label class="form-label">Max Impeller (mm)</label>
-            <input type="number" name="impeller_dia_mm" class="form-control form-control-dark"
-                   value="{{ pump.impeller_dia_mm if pump else 300 }}" step="1">
+                <option value="mm" {% if not pump or pump.data_units_dict.max_imp != 'in' %}selected{% endif %}>mm</option>
+                <option value="in" {% if pump and pump.data_units_dict.max_imp == 'in' %}selected{% endif %}>in</option>
+              </select>
+            </label>
+            <input type="number" name="impeller_dia_val" class="form-control form-control-dark"
+                   value="{{ (pump.impeller_dia_mm / 25.4)|round(2) if pump and pump.data_units_dict.max_imp == 'in' else (pump.impeller_dia_mm if pump else 300) }}" step="any">
           </div>
           <div class="col-md-4">
             <label class="form-label">Pump Type</label>
@@ -323,12 +326,13 @@
           <span class="text-muted small">Curve Label:</span>
           <input type="text" name="main_curve_label" id="main_curve_label"
                  class="form-control form-control-sm form-control-dark"
-                 value="{{ pump.main_curve_label if pump else '' }}"
+                 value="{{ pump.get_curve_labels_list()[0] if pump and pump.get_curve_labels_list() else '' }}"
                  placeholder="e.g. Full Trim" style="max-width:130px">
           <span class="text-muted small">Diameter:</span>
+          {% set main_d = pump.get_curve_diameters_list()[0]['diameter'] if pump and pump.get_curve_diameters_list() else none %}
           <input type="number" name="main_curve_dia_mm" id="main_curve_dia_mm" step="any"
                  class="form-control form-control-sm form-control-dark"
-                 value="{% if pump and pump.get_curve_diameters_list() %}{{ pump.get_curve_diameters_list()[0]['diameter'] }}{% elif pump and pump.main_curve_dia_mm %}{{ pump.main_curve_dia_mm }}{% endif %}"
+                 value="{{ main_d if main_d is not none else '' }}"
                  placeholder="{{ pump.impeller_dia_mm if pump else '' }}" style="max-width:90px">
           <select class="header-unit-select" name="main_curve_dia_unit" id="main_curve_dia_unit" style="margin-top:0;width:70px">
             <option value="mm" {% if pump and pump.get_curve_diameters_list() and pump.get_curve_diameters_list()[0]['unit'] == 'mm' %}selected{% elif not pump %}selected{% endif %}>mm</option>
@@ -529,7 +533,7 @@
 
 
 <div class="d-flex gap-3 mt-4">
-  <button type="submit" class="btn btn-primary px-4" id="saveBtn">
+  <button type="submit" class="btn btn-primary px-4" id="saveBtn" onclick="try { if (typeof serializeRawTable === 'function') serializeRawTable(); if (typeof serializeDataUnits === 'function') serializeDataUnits(); if (typeof serializeExtraCurves === 'function') serializeExtraCurves(); if (typeof serializeGraphOptions === 'function') serializeGraphOptions(); } catch(e){ console.error('Serialization error:', e); }">
     <i class="bi bi-check-lg me-1"></i>{{ 'Save Changes' if action == 'edit' else 'Add Pump' }}
   </button>
   <a href="{{ url_for('pump_data') }}" class="btn btn-outline-secondary">
@@ -543,7 +547,6 @@
 </div>
 
 <!-- Hidden fields carry separated curve data and unit preferences on submit -->
-<input type="hidden" name="data_units" id="data_units_field" value="{{ pump.data_units if pump else '' }}">
 <input type="hidden" name="raw_table_json" id="raw_table_json_field" value="{{ pump.raw_table_json if pump else '' }}">
 <input type="hidden" name="curve_labels" id="curve_labels_field" value="{{ pump.curve_labels if pump else '' }}">
 <input type="hidden" name="curve_diameters" id="curve_diameters_field" value="{{ pump.curve_diameters if pump else '' }}">
@@ -620,19 +623,26 @@
      data-unit-op-q="{{ pump.unit_op_q if pump else 'm3h' }}"
      {% endif %}>
 </div>
-<script src="{{ url_for('static', filename='js/pump_curves.js') }}"></script>
-<script src="{{ url_for('static', filename='js/pump_form.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=7"></script>
 <script>
 (function () {
   initUnitSelectors();
 
   // Wire form submit to serialise raw table + units + extra curves before POST
-  document.getElementById('pumpForm').addEventListener('submit', function() {
-    serializeRawTable();
-    serializeDataUnits();
-    serializeExtraCurves();
-    serializeGraphOptions();
-  });
+  const form = document.getElementById('pumpForm');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      try {
+        if (typeof serializeRawTable === 'function') serializeRawTable();
+        if (typeof serializeDataUnits === 'function') serializeDataUnits();
+        if (typeof serializeExtraCurves === 'function') serializeExtraCurves();
+        if (typeof serializeGraphOptions === 'function') serializeGraphOptions();
+      } catch(err) {
+        console.error('Error in form submit serialization:', err);
+      }
+    });
+  }
 
   const initEl = document.getElementById('pump-init-data');
   const isEdit = initEl.dataset.isEdit === 'true';
@@ -662,15 +672,17 @@
       const pumpData = JSON.parse(initEl.dataset.toJson);
       lastFitResults = pumpData;
 
-      // Sync preview unit selectors to match table units on load
+      // Graph units are no longer auto-synced to table units on load
       const previewQ = document.getElementById('preview-unit-q');
       const previewH = document.getElementById('preview-unit-h');
       const previewNpsh = document.getElementById('preview-unit-npsh');
       const previewPow = document.getElementById('preview-unit-pow');
-      if (previewQ) previewQ.value = document.getElementById('unit-q')?.value || 'm3h';
-      if (previewH) previewH.value = document.getElementById('unit-h')?.value || 'm';
-      if (previewNpsh) previewNpsh.value = document.getElementById('unit-npsh')?.value || 'm';
-      if (previewPow) previewPow.value = document.getElementById('unit-pow')?.value || 'kw';
+      
+      const dataUnits = pumpData.data_units || {};
+      if (previewQ && dataUnits.graph_q) previewQ.value = dataUnits.graph_q;
+      if (previewH && dataUnits.graph_h) previewH.value = dataUnits.graph_h;
+      if (previewNpsh && dataUnits.graph_npsh) previewNpsh.value = dataUnits.graph_npsh;
+      if (previewPow && dataUnits.graph_pow) previewPow.value = dataUnits.graph_pow;
 
       document.getElementById('curvePreview').style.display = 'block';
       const { q_h, q_eta, q_npsh } = getTableData('perfTable', true);

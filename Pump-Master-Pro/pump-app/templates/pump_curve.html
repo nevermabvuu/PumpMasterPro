@@ -360,8 +360,8 @@
 
 <div id="pump-meta"
      data-id="{{ pump.id }}"
-     data-main-label="{{ pump.main_curve_label or '' }}"
-     data-main-dia="{{ pump.main_curve_dia_mm if pump.main_curve_dia_mm else pump.impeller_dia_mm }}"
+     data-main-label="{{ pump.get_curve_labels_list()[0] if pump.get_curve_labels_list() else '' }}"
+     data-main-dia="{{ pump.get_curve_diameters_list()[0]['dia_mm'] if pump.get_curve_diameters_list() and pump.get_curve_diameters_list()[0]['dia_mm'] else pump.impeller_dia_mm }}"
      data-extra-curves='{{ pump.get_extra_curves() | tojson }}'
      data-graph-options='{{ pump.get_graph_options() | tojson }}'>
 </div>

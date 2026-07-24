@@ -41,6 +41,12 @@ with app.app_context():
                 if col_name not in cols:
                     default_val = "'m3h'" if col_name in ['unit_q', 'unit_op_q'] else ("'m'" if col_name in ['unit_h', 'unit_npsh'] else ("'kw'" if col_name == 'unit_pow' else "''"))
                     conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {col_name} TEXT DEFAULT {default_val}"))
+            for old_col in ['main_curve_label', 'main_curve_dia_mm', 'data_units']:
+                if old_col in cols:
+                    try:
+                        conn.execute(text(f"ALTER TABLE pumps DROP COLUMN {old_col}"))
+                    except Exception:
+                        pass
             conn.commit()
     except Exception as e:
         print("Migration notice:", e)
@@ -84,8 +90,15 @@ def _pump_from_form(f, pump=None):
     pump.manufacturer     = f.get('manufacturer', pump.manufacturer or '')
     pump.model_number     = f.get('model_number', pump.model_number or '')
     pump.size             = f.get('size', pump.size or '')
-    pump.speed_rpm        = _get_float(f, 'speed_rpm', pump.speed_rpm if pump.speed_rpm is not None else 1450.0)
-    pump.impeller_dia_mm  = _get_float(f, 'impeller_dia_mm', pump.impeller_dia_mm if pump.impeller_dia_mm is not None else 300.0)
+    pump.speed_rpm = _get_float(f, 'speed_rpm', pump.speed_rpm if pump.speed_rpm is not None else 1450.0)
+    
+    val_max_imp = _get_float(f, 'impeller_dia_val', pump.impeller_dia_mm if pump.impeller_dia_mm is not None else 300.0)
+    unit_max_imp = f.get('unit_max_imp', 'mm')
+    if unit_max_imp == 'in':
+        pump.impeller_dia_mm = val_max_imp * 25.4
+    else:
+        pump.impeller_dia_mm = val_max_imp
+
     pump.impeller_diameters = f.get('impeller_diameters', pump.impeller_diameters or '')
     pump.hq_a0 = _get_float(f, 'hq_a0', pump.hq_a0 if pump.hq_a0 is not None else 0.0)
     pump.hq_a1 = _get_float(f, 'hq_a1', pump.hq_a1 if pump.hq_a1 is not None else 0.0)
@@ -110,27 +123,12 @@ def _pump_from_form(f, pump=None):
     pump.pump_type        = f.get('pump_type', pump.pump_type or 'centrifugal')
     pump.application      = f.get('application', pump.application or '')
     pump.notes            = f.get('notes', pump.notes or '')
-    pump.data_units        = f.get('data_units', pump.data_units or '')
     if 'graph_options_json' in f and f.get('graph_options_json'):
         try:
             g_opts = json.loads(f.get('graph_options_json'))
             if isinstance(g_opts, dict):
                 pump.set_graph_options(g_opts)
         except Exception:
-            pass
-    pump.main_curve_label  = f.get('main_curve_label', pump.main_curve_label or '')
-    raw_dia = f.get('main_curve_dia_mm', '')
-    dia_unit = f.get('main_curve_dia_unit', 'mm')
-    if str(raw_dia).strip():
-        try:
-            val = float(raw_dia)
-            if dia_unit == 'in':
-                pump.main_curve_dia_mm = val * 25.4
-            elif dia_unit == 'm':
-                pump.main_curve_dia_mm = val * 1000.0
-            else:
-                pump.main_curve_dia_mm = val
-        except ValueError:
             pass
     pump.curve_labels    = f.get('curve_labels', pump.curve_labels or '')
     pump.curve_diameters = f.get('curve_diameters', pump.curve_diameters or '')
@@ -145,9 +143,6 @@ def _pump_from_form(f, pump=None):
     pump.unit_npsh = f.get('unit_npsh', pump.unit_npsh or 'm')
     pump.unit_pow  = f.get('unit_pow', pump.unit_pow or 'kw')
     pump.unit_op_q = f.get('unit_op_q', pump.unit_op_q or 'm3h')
-
-    if not pump.curve_diameters:
-        pump.sync_curve_fields()
 
     # Convert op-range values from display unit to SI (m³/h) before persisting
     units_dict = pump._get_data_units()
@@ -172,7 +167,7 @@ def pump_new():
         pump = _pump_from_form(request.form)
         db.session.add(pump)
         db.session.commit()
-        return redirect(url_for('pump_data'))
+        return redirect(url_for('pump_edit', pump_id=pump.id))
     return render_template('pump_form.html', pump=None, action='new')
 
 
@@ -182,7 +177,7 @@ def pump_edit(pump_id):
     if request.method == 'POST':
         _pump_from_form(request.form, pump)
         db.session.commit()
-        return redirect(url_for('pump_data'))
+        return redirect(url_for('pump_edit', pump_id=pump.id))
     return render_template('pump_form.html', pump=pump, action='edit')
 
 

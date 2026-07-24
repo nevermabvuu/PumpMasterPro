@@ -207,6 +207,50 @@
             </label>
           </div>
         </div>
+
+        <!-- Graph Legend & Label Options -->
+        <div class="mt-3 pt-3 border-top border-secondary border-opacity-25">
+          <label class="form-label form-label-sm fw-semibold text-accent mb-2">
+            <i class="bi bi-tags me-1"></i>Graph Legend & Label Options
+          </label>
+          <div class="row g-2 align-items-center">
+            <div class="col-12 mb-1">
+              <select id="selLegendMode" class="form-select form-select-sm form-control-dark">
+                <option value="each" selected>1. Show legend on each chart</option>
+                <option value="hq_only">2. Show legend on H-Q chart only (all traces)</option>
+                <option value="curve_labels">3. Direct labels on each impeller curve</option>
+              </select>
+            </div>
+            <div class="col-12" id="groupCurveLabelPos" style="display:none">
+              <div class="row g-2 align-items-center">
+                <div class="col-6">
+                  <label class="form-label form-label-sm mb-1 text-muted small text-nowrap">Flow Pos (% Max Q):</label>
+                  <input type="number" id="txtCurveLabelFlowPct" class="form-control form-control-sm form-control-dark" value="100" min="5" max="200" step="5" list="dlFlowPct" placeholder="100">
+                  <datalist id="dlFlowPct">
+                    <option value="25"></option>
+                    <option value="50"></option>
+                    <option value="75"></option>
+                    <option value="90"></option>
+                    <option value="100"></option>
+                    <option value="105"></option>
+                    <option value="110"></option>
+                    <option value="115"></option>
+                    <option value="120"></option>
+                  </datalist>
+                </div>
+                <div class="col-6">
+                  <label class="form-label form-label-sm mb-1 text-muted small text-nowrap">Vertical Align:</label>
+                  <select id="selCurveLabelVPos" class="form-select form-select-sm form-control-dark">
+                    <option value="top" selected>Top (Above Line)</option>
+                    <option value="middle">Middle (On Line)</option>
+                    <option value="bottom">Bottom (Below Line)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
       
     </div>
@@ -372,7 +416,7 @@
   const PUMP_MAIN_LABEL = metaEl.dataset.mainLabel;
   const PUMP_MAIN_DIA   = parseFloat(metaEl.dataset.mainDia);
 </script>
-<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=5"></script>
+<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=9"></script>
 <script>
 // Pre-load any saved extra curves from the pump data into the custom curves overlay
 (function () {

@@ -508,7 +508,11 @@ function collectGraphOptions() {
     graph_unit_q: document.getElementById('preview-unit-q')?.value || '',
     graph_unit_h: document.getElementById('preview-unit-h')?.value || '',
     graph_unit_npsh: document.getElementById('preview-unit-npsh')?.value || '',
-    graph_unit_pow: document.getElementById('preview-unit-pow')?.value || ''
+    graph_unit_pow: document.getElementById('preview-unit-pow')?.value || '',
+    legend_mode: document.getElementById('selLegendMode')?.value || 'each',
+    curve_label_flow_pct: parseFloat(document.getElementById('txtCurveLabelFlowPct')?.value) || 100,
+    curve_label_vpos: document.getElementById('selCurveLabelVPos')?.value || 'top',
+    curve_label_pos: document.getElementById('selCurveLabelPos')?.value || 'middle-top'
   };
 }
 
@@ -548,6 +552,20 @@ function applyGraphOptions(opts) {
   if (opts.combine_eff_power !== undefined && document.getElementById('chkCombineEffPower')) document.getElementById('chkCombineEffPower').checked = opts.combine_eff_power;
   if (opts.trim_model && document.querySelector(`input[name="trimModelChoice"][value="${opts.trim_model}"]`)) {
     document.querySelector(`input[name="trimModelChoice"][value="${opts.trim_model}"]`).checked = true;
+  }
+  if (opts.legend_mode && document.getElementById('selLegendMode')) {
+    document.getElementById('selLegendMode').value = opts.legend_mode;
+    const g = document.getElementById('groupCurveLabelPos');
+    if (g) g.style.display = opts.legend_mode === 'curve_labels' ? '' : 'none';
+  }
+  if (opts.curve_label_flow_pct !== undefined && document.getElementById('txtCurveLabelFlowPct')) {
+    document.getElementById('txtCurveLabelFlowPct').value = opts.curve_label_flow_pct;
+  }
+  if (opts.curve_label_vpos && document.getElementById('selCurveLabelVPos')) {
+    document.getElementById('selCurveLabelVPos').value = opts.curve_label_vpos;
+  }
+  if (opts.curve_label_pos && document.getElementById('selCurveLabelPos')) {
+    document.getElementById('selCurveLabelPos').value = opts.curve_label_pos;
   }
 }
 
@@ -699,10 +717,22 @@ function bindPreviewEvents() {
   if (isPreviewEventsBound) return;
   isPreviewEventsBound = true;
 
-  const ids = ['chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'chkShowOther'];
+  const ids = ['chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'chkShowOther', 'selLegendMode', 'txtCurveLabelFlowPct', 'selCurveLabelVPos', 'selCurveLabelPos'];
   ids.forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.addEventListener('change', () => refreshPreviewCharts());
+    if (el) {
+      el.addEventListener('change', () => {
+        if (id === 'selLegendMode') {
+          const g = document.getElementById('groupCurveLabelPos');
+          if (g) g.style.display = el.value === 'curve_labels' ? '' : 'none';
+        }
+        refreshPreviewCharts();
+      });
+      if (id === 'txtCurveLabelFlowPct') {
+        el.addEventListener('input', () => refreshPreviewCharts());
+        el.addEventListener('keyup', () => refreshPreviewCharts());
+      }
+    }
   });
 
   const txtIds = ['txtEffLevels', 'txtPowerLevels', 'txtNpshLevels'];
@@ -2074,9 +2104,21 @@ function parseCSVOrTXT(text) {
 
 function bindPreviewOptions() {
   ['chkShowHQ', 'chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'chkShowOther',
-   'chkShowEff', 'chkShowPower', 'chkShowNpsh', 'chkCombineEffPower'].forEach(id => {
+   'chkShowEff', 'chkShowPower', 'chkShowNpsh', 'chkCombineEffPower', 'selLegendMode', 'txtCurveLabelFlowPct', 'selCurveLabelVPos', 'selCurveLabelPos'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.addEventListener('change', refreshMainPreview);
+    if (el) {
+      el.addEventListener('change', () => {
+        if (id === 'selLegendMode') {
+          const g = document.getElementById('groupCurveLabelPos');
+          if (g) g.style.display = el.value === 'curve_labels' ? '' : 'none';
+        }
+        refreshMainPreview();
+      });
+      if (id === 'txtCurveLabelFlowPct') {
+        el.addEventListener('input', () => refreshMainPreview());
+        el.addEventListener('keyup', () => refreshMainPreview());
+      }
+    }
   });
   
   document.querySelectorAll('input[name="npshYAxisChoice"]').forEach(input => {

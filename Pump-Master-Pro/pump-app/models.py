@@ -401,7 +401,11 @@ class Pump(db.Model):
             'graph_unit_q': extra_opts.get('graph_unit_q', ''),
             'graph_unit_h': extra_opts.get('graph_unit_h', ''),
             'graph_unit_npsh': extra_opts.get('graph_unit_npsh', ''),
-            'graph_unit_pow': extra_opts.get('graph_unit_pow', '')
+            'graph_unit_pow': extra_opts.get('graph_unit_pow', ''),
+            'legend_mode': extra_opts.get('legend_mode', 'each'),
+            'curve_label_flow_pct': extra_opts.get('curve_label_flow_pct', 100),
+            'curve_label_vpos': extra_opts.get('curve_label_vpos', 'top'),
+            'curve_label_pos': extra_opts.get('curve_label_pos', 'middle-top')
         }
 
     def set_graph_options(self, opts):
@@ -431,6 +435,10 @@ class Pump(db.Model):
         if 'graph_unit_h' in opts: extra_opts['graph_unit_h'] = opts['graph_unit_h']
         if 'graph_unit_npsh' in opts: extra_opts['graph_unit_npsh'] = opts['graph_unit_npsh']
         if 'graph_unit_pow' in opts: extra_opts['graph_unit_pow'] = opts['graph_unit_pow']
+        if 'legend_mode' in opts: extra_opts['legend_mode'] = opts['legend_mode']
+        if 'curve_label_flow_pct' in opts: extra_opts['curve_label_flow_pct'] = opts['curve_label_flow_pct']
+        if 'curve_label_vpos' in opts: extra_opts['curve_label_vpos'] = opts['curve_label_vpos']
+        if 'curve_label_pos' in opts: extra_opts['curve_label_pos'] = opts['curve_label_pos']
         self.graph_options_json = json.dumps(extra_opts)
 
     def _get_data_units(self):

@@ -745,9 +745,40 @@ function updateCurveCountBadge() {
     customCurves.length === 0 ? '' : 'none';
 }
 
+function getUnitLabel(type, unitValue) {
+  if (!unitValue) {
+    if (type === 'q') return 'm³/h';
+    if (type === 'h' || type === 'npsh') return 'm';
+    if (type === 'pow') return 'kW';
+    if (type === 'dia') return 'mm';
+    return '';
+  }
+  if (type === 'q') {
+    if (unitValue === 'm3h') return 'm³/h';
+    if (unitValue === 'ls') return 'L/s';
+    if (unitValue === 'gpm') return 'gpm';
+    if (unitValue === 'lmin') return 'L/min';
+  }
+  if (type === 'h' || type === 'npsh') {
+    if (unitValue === 'm') return 'm';
+    if (unitValue === 'ft') return 'ft';
+  }
+  if (type === 'pow') {
+    if (unitValue === 'kw') return 'kW';
+    if (unitValue === 'hp') return 'hp';
+  }
+  if (type === 'dia') {
+    if (unitValue === 'mm') return 'mm';
+    if (unitValue === 'in') return 'in';
+    if (unitValue === 'm') return 'm';
+  }
+  return unitValue;
+}
+
 const CURVE_CONVERSIONS = {
   q: { m3h: 1.0, ls: 0.2777777777777778, gpm: 4.402917396, lmin: 16.6666666667 },
   h: { m: 1.0, ft: 3.280839895 },
+  npsh: { m: 1.0, ft: 3.280839895 },
   pow: { kw: 1.0, hp: 1.34102209 }
 };
 
@@ -755,6 +786,7 @@ function getGraphDisplayUnits() {
   return {
     q: document.getElementById('preview-unit-q')?.value || 'm3h',
     h: document.getElementById('preview-unit-h')?.value || 'm',
+    npsh: document.getElementById('preview-unit-npsh')?.value || 'm',
     pow: document.getElementById('preview-unit-pow')?.value || 'kw'
   };
 }

@@ -85,6 +85,7 @@ class Pump(db.Model):
 
     # Optional graph JSON options
     graph_options_json      = db.Column(db.Text, default='')
+    graph_custom_label_pos  = db.Column(db.Text, default='{}')
 
     # Delimited fields for curve metadata & performance tables
     # curve_labels: "Main;Curve 2;Curve 3"
@@ -403,10 +404,35 @@ class Pump(db.Model):
             'graph_unit_npsh': extra_opts.get('graph_unit_npsh', ''),
             'graph_unit_pow': extra_opts.get('graph_unit_pow', ''),
             'legend_mode': extra_opts.get('legend_mode', 'each'),
-            'curve_label_flow_pct': extra_opts.get('curve_label_flow_pct', 100),
-            'curve_label_vpos': extra_opts.get('curve_label_vpos', 'top'),
-            'curve_label_pos': extra_opts.get('curve_label_pos', 'middle-top')
+            'custom_label_pos': self.get_custom_label_pos()
         }
+
+    def get_custom_label_pos(self):
+        """Return parsed dictionary of custom dragged label coordinates."""
+        if not self.graph_custom_label_pos:
+            return {}
+        try:
+            val = json.loads(self.graph_custom_label_pos)
+            return val if isinstance(val, dict) else {}
+        except Exception:
+            return {}
+
+    def set_custom_label_pos(self, pos, overwrite=False):
+        """Set or merge graph_custom_label_pos column from dict or JSON string."""
+        if overwrite and (pos == {} or pos == '{}'):
+            self.graph_custom_label_pos = '{}'
+            return
+
+        if isinstance(pos, str):
+            try:
+                pos = json.loads(pos)
+            except Exception:
+                return
+
+        if isinstance(pos, dict) and pos:
+            existing = self.get_custom_label_pos()
+            existing.update(pos)
+            self.graph_custom_label_pos = json.dumps(existing)
 
     def set_graph_options(self, opts):
         """Set individual database columns from an options dictionary."""
@@ -428,17 +454,23 @@ class Pump(db.Model):
         if 'show_npsh' in opts: self.graph_show_npsh = bool(opts['show_npsh'])
         if 'combine_eff_power' in opts: self.graph_combine_eff_power = bool(opts['combine_eff_power'])
         if 'trim_model' in opts: self.graph_trim_model = str(opts['trim_model'])
+        if 'reset_label_pos' in opts and opts['reset_label_pos']:
+            self.graph_custom_label_pos = '{}'
+        elif 'custom_label_pos' in opts:
+            self.set_custom_label_pos(opts['custom_label_pos'])
         
-        extra_opts = {}
+        try:
+            extra_opts = json.loads(self.graph_options_json or '{}')
+        except Exception:
+            extra_opts = {}
+
         if 'unit_max_imp' in opts: extra_opts['unit_max_imp'] = opts['unit_max_imp']
         if 'graph_unit_q' in opts: extra_opts['graph_unit_q'] = opts['graph_unit_q']
         if 'graph_unit_h' in opts: extra_opts['graph_unit_h'] = opts['graph_unit_h']
         if 'graph_unit_npsh' in opts: extra_opts['graph_unit_npsh'] = opts['graph_unit_npsh']
         if 'graph_unit_pow' in opts: extra_opts['graph_unit_pow'] = opts['graph_unit_pow']
         if 'legend_mode' in opts: extra_opts['legend_mode'] = opts['legend_mode']
-        if 'curve_label_flow_pct' in opts: extra_opts['curve_label_flow_pct'] = opts['curve_label_flow_pct']
-        if 'curve_label_vpos' in opts: extra_opts['curve_label_vpos'] = opts['curve_label_vpos']
-        if 'curve_label_pos' in opts: extra_opts['curve_label_pos'] = opts['curve_label_pos']
+        extra_opts['custom_label_pos'] = self.get_custom_label_pos()
         self.graph_options_json = json.dumps(extra_opts)
 
     def _get_data_units(self):

@@ -30,9 +30,9 @@ with app.app_context():
             cols = [row[1] for row in result.fetchall()]
             for col_name in ['curve_labels', 'curve_diameters', 'curve_colors', 'curve_modes',
                              'curve_units', 'curve_raw_tables', 'curve_coeffs',
-                             'unit_q', 'unit_h', 'unit_npsh', 'unit_pow', 'unit_op_q']:
+                             'unit_q', 'unit_h', 'unit_npsh', 'unit_pow', 'unit_op_q', 'graph_custom_label_pos']:
                 if col_name not in cols:
-                    default_val = "'m3h'" if col_name in ['unit_q', 'unit_op_q'] else ("'m'" if col_name in ['unit_h', 'unit_npsh'] else ("'kw'" if col_name == 'unit_pow' else "''"))
+                    default_val = "'{}'" if col_name == 'graph_custom_label_pos' else ("'m3h'" if col_name in ['unit_q', 'unit_op_q'] else ("'m'" if col_name in ['unit_h', 'unit_npsh'] else ("'kw'" if col_name == 'unit_pow' else "''")))
                     conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {col_name} TEXT DEFAULT {default_val}"))
             for old_col in ['main_curve_label', 'main_curve_dia_mm', 'data_units']:
                 if old_col in cols:
@@ -168,11 +168,14 @@ def _pump_from_form(f, pump=None):
     pump.pump_type        = f.get('pump_type', pump.pump_type or 'centrifugal')
     pump.application      = f.get('application', pump.application or '')
     pump.notes            = f.get('notes', pump.notes or '')
-    if 'graph_options_json' in f and f.get('graph_options_json'):
+    if 'graph_options_json' in f:
         try:
-            g_opts = json.loads(f.get('graph_options_json'))
-            if isinstance(g_opts, dict):
-                pump.set_graph_options(g_opts)
+            raw_g_opts = f.getlist('graph_options_json') if hasattr(f, 'getlist') else [f.get('graph_options_json')]
+            g_opts_str = [x for x in raw_g_opts if x][-1] if any(raw_g_opts) else ''
+            if g_opts_str:
+                g_opts = json.loads(g_opts_str)
+                if isinstance(g_opts, dict):
+                    pump.set_graph_options(g_opts)
         except Exception:
             pass
     pump.curve_labels    = f.get('curve_labels', pump.curve_labels or '')
@@ -350,6 +353,7 @@ def api_warman_chart(pump_id):
 
     data['raw_table_json'] = json.dumps(pump.get_raw_table())
     data['data_units'] = pump._get_data_units()
+    data['graph_options'] = pump.get_graph_options()
     return jsonify(data)
 
 
@@ -587,6 +591,19 @@ def api_save_graph_options(pump_id):
     pump.set_graph_options(data)
     db.session.commit()
     return jsonify({'status': 'ok', 'graph_options': pump.get_graph_options()})
+
+
+@app.route('/papi/pump/<int:pump_id>/label-pos', methods=['POST'])
+def api_save_label_pos(pump_id):
+    """Save only custom label positions to graph_custom_label_pos column."""
+    pump = Pump.query.get_or_404(pump_id)
+    data = request.get_json(force=True, silent=True) or {}
+    print(f"[label-pos] pump_id={pump_id}  incoming={data!r}", flush=True)
+    pump.set_custom_label_pos(data, overwrite=False)
+    db.session.commit()
+    saved = pump.get_custom_label_pos()
+    print(f"[label-pos] saved to DB: {saved!r}", flush=True)
+    return jsonify({'status': 'ok', 'label_pos': saved})
 
 
 if __name__ == '__main__':

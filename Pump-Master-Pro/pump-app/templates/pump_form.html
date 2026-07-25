@@ -11,7 +11,7 @@
 </div>
 
 <form method="post" id="pumpForm">
-<input type="hidden" name="graph_options_json" value='{{ (pump.get_graph_options() | tojson) if pump else "" }}'>
+<input type="hidden" name="graph_options_json" id="hdnGraphOptionsJson" value='{{ (pump.get_graph_options() | tojson) if pump else "" }}'>
 <div class="row g-4">
 
   <!-- ── Column 1: Pump Details + Operating Range + Impeller Family ── -->
@@ -216,30 +216,13 @@
                 </select>
               </div>
               <div class="col-12" id="groupCurveLabelPos" style="display:none">
-                <div class="row g-2 align-items-center">
-                  <div class="col-6">
-                    <label class="form-label form-label-sm mb-1 text-muted small text-nowrap">Flow Pos (% Max Q):</label>
-                    <input type="number" id="txtCurveLabelFlowPct" class="form-control form-control-sm form-control-dark" value="100" min="5" max="200" step="5" list="dlFlowPctForm" placeholder="100">
-                    <datalist id="dlFlowPctForm">
-                      <option value="25"></option>
-                      <option value="50"></option>
-                      <option value="75"></option>
-                      <option value="90"></option>
-                      <option value="100"></option>
-                      <option value="105"></option>
-                      <option value="110"></option>
-                      <option value="115"></option>
-                      <option value="120"></option>
-                    </datalist>
-                  </div>
-                  <div class="col-6">
-                    <label class="form-label form-label-sm mb-1 text-muted small text-nowrap">Vertical Align:</label>
-                    <select id="selCurveLabelVPos" class="form-select form-select-sm form-control-dark">
-                      <option value="top" selected>Top (Above Line)</option>
-                      <option value="middle">Middle (On Line)</option>
-                      <option value="bottom">Bottom (Below Line)</option>
-                    </select>
-                  </div>
+                <div class="d-flex align-items-center justify-content-between p-2 bg-dark rounded border border-secondary border-opacity-25 mt-1">
+                  <span class="small text-muted" style="font-size: 0.78rem;">
+                    <i class="bi bi-hand-index-thumb me-1 text-accent"></i>Click & drag label badges on graph to position
+                  </span>
+                  <button type="button" id="btnResetLabelPos" class="btn btn-sm btn-outline-secondary py-0 px-2 text-nowrap" style="font-size: 0.75rem;">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Dragged Positions
+                  </button>
                 </div>
               </div>
             </div>
@@ -651,6 +634,7 @@
 {% block scripts %}
 <div id="pump-init-data"
      data-is-edit="{{ 'true' if pump else 'false' }}"
+     data-pump-id="{{ pump.id if pump else '' }}"
      {% if pump %}
      data-raw-json='{{ (pump.get_raw_table() | tojson) if pump else "[]" }}'
      data-to-json='{{ pump.to_dict() | tojson }}'
@@ -667,10 +651,11 @@
      data-unit-npsh="{{ pump.unit_npsh if pump else 'm' }}"
      data-unit-pow="{{ pump.unit_pow if pump else 'kw' }}"
      data-unit-op-q="{{ pump.unit_op_q if pump else 'm3h' }}"
+     data-graph-options='{{ (pump.get_graph_options() | tojson) if pump else "{}" }}'
      {% endif %}>
 </div>
-<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=9"></script>
-<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=14"></script>
+<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=21"></script>
+<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=21"></script>
 <script>
 (function () {
   initUnitSelectors();
@@ -711,8 +696,13 @@
       if (opQMaxEl && pumpData.q_max != null) opQMaxEl.value = (pumpData.q_max * fOpQ).toFixed(2);
       if (opQBepEl && pumpData.q_bep != null) opQBepEl.value = (pumpData.q_bep * fOpQ).toFixed(2);
     }
-    const extraCurvesData = (initEl.dataset.extraCurves && initEl.dataset.extraCurves !== 'undefined') ? JSON.parse(initEl.dataset.extraCurves) : [];
-    initExtraCurves(extraCurvesData);
+      const extraCurvesData = (initEl.dataset.extraCurves && initEl.dataset.extraCurves !== 'undefined') ? JSON.parse(initEl.dataset.extraCurves) : [];
+      initExtraCurves(extraCurvesData);
+
+      const savedGraphOpts = (initEl.dataset.graphOptions && initEl.dataset.graphOptions !== 'undefined') ? JSON.parse(initEl.dataset.graphOptions) : null;
+      if (savedGraphOpts && typeof applyGraphOptions === 'function') {
+        applyGraphOptions(savedGraphOpts);
+      }
     // Show preview with existing fit on load
     (function() {
       const pumpData = JSON.parse(initEl.dataset.toJson);

@@ -6,22 +6,41 @@
 /* ── Plotly dark theme ────────────────────────────────────────────────────── */
 const PLOTLY_LAYOUT_BASE = {
   paper_bgcolor: 'transparent',
-  plot_bgcolor:  '#0d1117',
-  font:   { color: '#8b949e', size: 11, family: 'system-ui, sans-serif' },
-  xaxis:  { gridcolor: '#21262d', zerolinecolor: '#30363d',
-             tickfont: { color: '#8b949e' }, titlefont: { color: '#c9d1d9', size: 12 } },
-  yaxis:  { gridcolor: '#21262d', zerolinecolor: '#30363d',
-             tickfont: { color: '#8b949e' }, titlefont: { color: '#c9d1d9', size: 12 } },
+  plot_bgcolor: '#0d1117',
+  font: { color: '#8b949e', size: 11, family: 'system-ui, sans-serif' },
+  xaxis: {
+    gridcolor: '#21262d', zerolinecolor: '#30363d',
+    tickfont: { color: '#8b949e' }, titlefont: { color: '#c9d1d9', size: 12 }
+  },
+  yaxis: {
+    gridcolor: '#21262d', zerolinecolor: '#30363d',
+    tickfont: { color: '#8b949e' }, titlefont: { color: '#c9d1d9', size: 12 }
+  },
   margin: { l: 58, r: 24, t: 28, b: 52 },
   showlegend: true,
-  legend: { bgcolor: 'rgba(22,27,34,0.88)', bordercolor: '#30363d', borderwidth: 1,
-            font: { color: '#c9d1d9', size: 10 }, x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top' },
+  legend: {
+    bgcolor: 'rgba(22,27,34,0.88)', bordercolor: '#30363d', borderwidth: 1,
+    font: { color: '#c9d1d9', size: 10 }, x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top'
+  },
   hovermode: 'closest',
   hoverlabel: { bgcolor: '#161b22', bordercolor: '#58a6ff', font: { color: '#e6edf3', size: 11 } },
 };
 
 const PLOTLY_CONFIG = {
-  responsive: true, displayModeBar: true,
+  responsive: true,
+  displayModeBar: true,
+  editable: true,
+  edits: {
+    annotationPosition: true,
+    annotationText: false,
+    annotationTail: false,
+    axisTitleText: false,
+    colorbarPosition: false,
+    colorbarTitleText: false,
+    legendPosition: false,
+    titleText: false,
+    shapePosition: false
+  },
   modeBarButtonsToRemove: ['select2d', 'lasso2d'],
   displaylogo: false,
   toImageButtonOptions: { format: 'png', width: 1400, height: 800 }
@@ -29,16 +48,16 @@ const PLOTLY_CONFIG = {
 
 /* ── Diameter family colour palette ──────────────────────────────────────── */
 // Blues for H-Q curves (darker = larger diameter)
-const DIA_BLUES  = ['#1c6fbf','#2a85d4','#3fa0e8','#58b8ff','#82cdff','#b3e0ff'];
-const PUMP_COLORS = ['#58a6ff','#3fb950','#f0c040','#f85149','#bc8cff','#39d3c0'];
+const DIA_BLUES = ['#1c6fbf', '#2a85d4', '#3fa0e8', '#58b8ff', '#82cdff', '#b3e0ff'];
+const PUMP_COLORS = ['#58a6ff', '#3fb950', '#f0c040', '#f85149', '#bc8cff', '#39d3c0'];
 
 // Efficiency isoline palette — warm yellows → greens
 function isoColor(eta, etaMin, etaMax) {
   const t = etaMax > etaMin ? (eta - etaMin) / (etaMax - etaMin) : 0.5;
   // lerp: yellow (#f0c040) → green (#3fb950)
-  const r = Math.round(240 + t * (63  - 240));
+  const r = Math.round(240 + t * (63 - 240));
   const g = Math.round(192 + t * (185 - 192));
-  const b = Math.round( 64 + t * ( 80 -  64));
+  const b = Math.round(64 + t * (80 - 64));
   return `rgb(${r},${g},${b})`;
 }
 
@@ -60,28 +79,152 @@ function dutyTrace(q, h) {
   };
 }
 
+let customLabelPositions = {};
+
 function getGraphDisplayUnits() {
-  const rawPct = document.getElementById('txtCurveLabelFlowPct')?.value;
-  let flowPct = parseFloat(rawPct);
-  if (isNaN(flowPct) || flowPct <= 0) flowPct = 100;
   return {
     q: document.getElementById('preview-unit-q')?.value || 'm3h',
     h: document.getElementById('preview-unit-h')?.value || 'm',
     npsh: document.getElementById('preview-unit-npsh')?.value || 'm',
     pow: document.getElementById('preview-unit-pow')?.value || 'kw',
-    legendMode: document.getElementById('selLegendMode')?.value || 'each',
-    labelFlowPct: flowPct,
-    labelVPos: document.getElementById('selCurveLabelVPos')?.value || 'top',
-    labelPos: document.getElementById('selCurveLabelPos')?.value || 'middle-top'
+    legendMode: document.getElementById('selLegendMode')?.value || 'each'
   };
 }
+
+/* ── Annotation Move Helper (click-to-select, click-to-place) ────────────── */
+// 1. Click a label badge → it highlights blue, a toast appears: "Click chart to move"
+// 2. Click anywhere on the chart → label moves there and saves
+// 3. Press Escape or click the label again → cancels
+function makeAnnotationsDraggable(chartId, annotations, pumpId) {
+  const container = document.getElementById(chartId);
+  if (!container || !pumpId) return;
+
+  // Clean up stale handlers
+  if (container._annClickHandler) {
+    try { container.off('plotly_clickannotation', container._annClickHandler); } catch(e){}
+  }
+  if (container._bgClickBound) {
+    const old = container.querySelector('.nsewdrag') || container;
+    old.removeEventListener('click', container._bgClickBound);
+  }
+
+  let selectedAnn = null;
+
+  // Toast notification inside chart
+  let toast = container.querySelector('._ann-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.className = '_ann-toast';
+    toast.style.cssText = [
+      'position:absolute', 'top:8px', 'left:50%', 'transform:translateX(-50%)',
+      'background:rgba(88,166,255,0.92)', 'color:#fff', 'padding:5px 14px',
+      'border-radius:6px', 'font-size:12px', 'font-weight:600', 'z-index:9999',
+      'pointer-events:none', 'display:none', 'white-space:nowrap'
+    ].join(';');
+    container.style.position = 'relative';
+    container.appendChild(toast);
+  }
+
+  const showToast = (msg) => { toast.textContent = msg; toast.style.display = msg ? 'block' : 'none'; };
+
+  const selectAnn = (ann) => {
+    selectedAnn = ann;
+    showToast(`"${ann.name}" selected — click chart to move`);
+    container.style.cursor = 'crosshair';
+    // Highlight the badge blue
+    const idx = annotations.indexOf(ann);
+    if (idx >= 0) Plotly.relayout(container, {
+      [`annotations[${idx}].bgcolor`]: 'rgba(88,166,255,0.5)',
+      [`annotations[${idx}].borderwidth`]: (ann.borderwidth || 1) + 2
+    });
+  };
+
+  const deselectAnn = () => {
+    if (!selectedAnn) return;
+    const idx = annotations.indexOf(selectedAnn);
+    if (idx >= 0) Plotly.relayout(container, {
+      [`annotations[${idx}].bgcolor`]: selectedAnn.bgcolor,
+      [`annotations[${idx}].borderwidth`]: selectedAnn.borderwidth
+    });
+    selectedAnn = null;
+    showToast('');
+    container.style.cursor = '';
+  };
+
+  // ① Annotation badge clicked
+  const annClickHandler = (eventData) => {
+    const ann = annotations[eventData.index];
+    if (!ann || !ann.name) return;
+    if (selectedAnn === ann) { deselectAnn(); return; }
+    deselectAnn();
+    selectAnn(ann);
+  };
+
+  // ② Click anywhere on the chart background via DOM listener on Plotly's drag layer
+  const bgClick = (e) => {
+    if (!selectedAnn) return;
+    e.stopPropagation();
+
+    const xaxis = container._fullLayout?.xaxis;
+    const yaxis = container._fullLayout?.yaxis;
+    const plotEl = container.querySelector('.plot');
+    if (!xaxis || !yaxis || !plotEl) { deselectAnn(); return; }
+
+    const rect = plotEl.getBoundingClientRect();
+    const dataX = Math.max(0, xaxis.p2c(e.clientX - rect.left));
+    const dataY = Math.max(0, yaxis.p2c(e.clientY - rect.top));
+
+    const ann = selectedAnn;
+    const origBgcolor = ann.bgcolor;
+    const origBorderwidth = ann.borderwidth;
+    deselectAnn();
+
+    ann.x = Math.round(dataX * 100) / 100;
+    ann.y = Math.round(dataY * 100) / 100;
+    ann.xanchor = 'center';
+    ann.yanchor = 'middle';
+    ann.xshift = 0;
+    ann.yshift = 0;
+    ann.bgcolor = origBgcolor;
+    ann.borderwidth = origBorderwidth;
+
+    if (!customLabelPositions[ann.name]) customLabelPositions[ann.name] = {};
+    customLabelPositions[ann.name].x = ann.x;
+    customLabelPositions[ann.name].y = ann.y;
+
+    Plotly.relayout(container, { annotations });
+
+    fetch(`/papi/pump/${pumpId}/label-pos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [ann.name]: { x: ann.x, y: ann.y } })
+    }).catch(() => {});
+  };
+
+  // Escape key cancels selection
+  const escHandler = (e) => { if (e.key === 'Escape') deselectAnn(); };
+
+  container._annClickHandler = annClickHandler;
+  container._bgClickBound = bgClick;
+  container.on('plotly_clickannotation', annClickHandler);
+  document.addEventListener('keydown', escHandler);
+
+  // Attach to Plotly's nsewdrag overlay (transparent layer covering the whole plot area)
+  setTimeout(() => {
+    const dragLayer = container.querySelector('.nsewdrag') || container.querySelector('.drag');
+    const target = dragLayer || container;
+    target.addEventListener('click', bgClick);
+  }, 300);
+}
+
+
 
 /* ══════════════════════════════════════════════════════════════════════════
    WARMAN PERFORMANCE MAP
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Speed-line colour palette — warm oranges ────────────────────────────── */
-const SPD_COLORS = ['#664400','#995500','#cc7700','#ff9900'];  // 70%→80%→90%→100%
+const SPD_COLORS = ['#664400', '#995500', '#cc7700', '#ff9900'];  // 70%→80%→90%→100%
 
 function buildWarmanChart(data, opts = {}) {
   const { showIsolines = true, showPowerIso = false, showNpshIso = false, showSpeedLines = false, showNpshCurve = false, npshYAxis = 'y2', dutyQ, dutyH } = opts;
@@ -93,21 +236,21 @@ function buildWarmanChart(data, opts = {}) {
 
   const traces = [];
   const annotations = [];
-  const family     = data.family      || [];
-  const isolines   = data.isolines    || [];
-  const pwr_iso    = data.power_isolines || [];
-  const npsh_iso   = data.npsh_isolines || [];
-  const spd_lines  = data.speed_lines || [];
+  const family = data.family || [];
+  const isolines = data.isolines || [];
+  const pwr_iso = data.power_isolines || [];
+  const npsh_iso = data.npsh_isolines || [];
+  const spd_lines = data.speed_lines || [];
 
   const legendMode = units.legendMode || 'each';
-  const labelPos   = units.labelPos || 'middle-top';
+  const labelPos = units.labelPos || 'middle-top';
 
   const nDia = family.length;
 
   /* ── H-Q curves (one per diameter) ──── */
   family.forEach((d, i) => {
     const col = d.color || DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)];
-    const lw  = d.is_max ? 2.5 : 1.8;
+    const lw = d.is_max ? 2.5 : 1.8;
     const tag = d.label_tag || (d.curve_mode === 'fit' ? ' (Fitted)' : '');
     const dash = d.label_tag ? 'dash' : 'solid';
     traces.push({
@@ -125,8 +268,10 @@ function buildWarmanChart(data, opts = {}) {
         type: 'scatter', mode: 'markers',
         name: `BEP Ø${d.dia}${tag}`,
         x: [d.bep.q], y: [d.bep.h],
-        marker: { size: d.is_max ? 10 : 7, color: col, symbol: 'star',
-                  line: { color: '#fff', width: 1 } },
+        marker: {
+          size: d.is_max ? 10 : 7, color: col, symbol: 'star',
+          line: { color: '#fff', width: 1 }
+        },
         showlegend: false,
         hovertemplate: `BEP Ø${d.dia}${tag}<br>Q=${d.bep.q} ${lblQ}<br>H=${d.bep.h} ${lblH}<br>η=${d.bep.eta}%<extra></extra>`,
       });
@@ -135,65 +280,41 @@ function buildWarmanChart(data, opts = {}) {
 
   /* ── Direct Impeller Curve Labels (if Mode 3: curve_labels) ──── */
   if (legendMode === 'curve_labels') {
-    const flowPct = units.labelFlowPct;
-    const vPos = units.labelVPos;
-
     family.forEach((d, i) => {
       if (!d.q || d.q.length === 0) return;
       const col = d.color || DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)];
       const tag = d.label_tag || (d.curve_mode === 'fit' ? ' (Fitted)' : '');
+      const curveKey = `Ø${d.dia} mm${tag}`;
 
-      const maxQ = Math.max(...d.q);
-      const targetQ = (flowPct / 100.0) * maxQ;
-
+      let targetQ = 0;
       let targetH = 0;
       let xanchor = 'center';
+      let yanchor = 'middle';
       let xshift = 0;
+      let yshift = 0;
 
-      if (targetQ <= maxQ) {
-        let j = 0;
-        while (j < d.q.length - 1 && d.q[j + 1] < targetQ) {
-          j++;
-        }
-        if (j < d.q.length - 1 && d.q[j + 1] > d.q[j]) {
-          const t = (targetQ - d.q[j]) / (d.q[j + 1] - d.q[j]);
-          targetH = d.h[j] + t * (d.h[j + 1] - d.h[j]);
-        } else {
-          targetH = d.h[j];
-        }
-        if (flowPct >= 95) {
-          xanchor = 'right';
-          xshift = -2;
-        } else if (flowPct <= 10) {
-          xanchor = 'left';
-          xshift = 2;
-        }
+      if (customLabelPositions && customLabelPositions[curveKey]) {
+        targetQ = customLabelPositions[curveKey].x;
+        targetH = customLabelPositions[curveKey].y;
+        xanchor = 'center';
+        yanchor = 'middle';
       } else {
+        // Initial default placement at tail end of curve line
         const lastIdx = d.q.length - 1;
-        const prevIdx = Math.max(0, lastIdx - 1);
-        const dq = d.q[lastIdx] - d.q[prevIdx];
-        const dh = d.h[lastIdx] - d.h[prevIdx];
-        const slope = dq > 0 ? dh / dq : 0;
-        targetH = Math.max(0, d.h[lastIdx] + slope * (targetQ - d.q[lastIdx]));
+        targetQ = d.q[lastIdx];
+        targetH = d.h[lastIdx];
         xanchor = 'left';
         xshift = 4;
-      }
-
-      let yanchor = 'middle';
-      let yshift = 0;
-      if (vPos === 'top') {
         yanchor = 'bottom';
-        yshift = 6;
-      } else if (vPos === 'bottom') {
-        yanchor = 'top';
-        yshift = -6;
+        yshift = 4;
       }
 
       annotations.push({
         x: targetQ,
         y: targetH,
-        text: `<b>Ø${d.dia} mm${tag}</b>`,
+        text: `<b>${curveKey}</b>`,
         showarrow: false,
+        captureevents: true,
         font: { color: '#ffffff', size: 10, family: 'Arial, sans-serif' },
         bgcolor: 'rgba(22, 27, 34, 0.92)',
         bordercolor: col,
@@ -202,7 +323,8 @@ function buildWarmanChart(data, opts = {}) {
         xanchor: xanchor,
         yanchor: yanchor,
         xshift: xshift,
-        yshift: yshift
+        yshift: yshift,
+        name: curveKey
       });
     });
   }
@@ -210,8 +332,8 @@ function buildWarmanChart(data, opts = {}) {
   /* ── Efficiency isolines ──── */
   if (showIsolines && isolines.length > 0) {
     const etaVals = isolines.map(l => l.eta);
-    const etaMin  = Math.min(...etaVals);
-    const etaMax  = Math.max(...etaVals);
+    const etaMin = Math.min(...etaVals);
+    const etaMax = Math.max(...etaVals);
 
     isolines.forEach(iso => {
       const col = isoColor(iso.eta, etaMin, etaMax);
@@ -227,17 +349,26 @@ function buildWarmanChart(data, opts = {}) {
 
       /* Non-clashing Efficiency Label Badge Annotation */
       if (iso.label_q !== undefined && iso.label_h !== undefined) {
+        const key = `eta_${iso.eta}`;
+        let targetQ = iso.label_q;
+        let targetH = iso.label_h;
+        if (customLabelPositions && customLabelPositions[key]) {
+          targetQ = customLabelPositions[key].x;
+          targetH = customLabelPositions[key].y;
+        }
         annotations.push({
-          x: iso.label_q, y: iso.label_h,
+          x: targetQ, y: targetH,
           text: `<b>${iso.eta}%</b>`,
           showarrow: false,
+          captureevents: true,
           font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
           bgcolor: 'rgba(15, 23, 42, 0.92)',
           bordercolor: col,
           borderwidth: 1,
           borderpad: 3,
           xanchor: 'center',
-          yanchor: 'middle'
+          yanchor: 'middle',
+          name: key
         });
       }
     });
@@ -255,18 +386,30 @@ function buildWarmanChart(data, opts = {}) {
         hovertemplate: `P = ${pl.power} ${lblPow}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
       });
       if (pl.q.length > 0) {
-        const mi = Math.floor(pl.q.length / 2);
+        const key = `pow_${pl.power}`;
+        let targetQ = 0;
+        let targetH = 0;
+        if (customLabelPositions && customLabelPositions[key]) {
+          targetQ = customLabelPositions[key].x;
+          targetH = customLabelPositions[key].y;
+        } else {
+          const mi = Math.floor(pl.q.length / 2);
+          targetQ = pl.q[mi];
+          targetH = pl.h[mi];
+        }
         annotations.push({
-          x: pl.q[mi], y: pl.h[mi],
+          x: targetQ, y: targetH,
           text: `<b>${pl.power}${lblPow}</b>`,
           showarrow: false,
+          captureevents: true,
           font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
           bgcolor: 'rgba(15, 23, 42, 0.92)',
           bordercolor: '#f85149',
           borderwidth: 1,
           borderpad: 3,
           xanchor: 'center',
-          yanchor: 'middle'
+          yanchor: 'middle',
+          name: key
         });
       }
     });
@@ -284,18 +427,30 @@ function buildWarmanChart(data, opts = {}) {
         hovertemplate: `NPSHr = ${nl.npsh} ${lblNpsh}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
       });
       if (nl.q.length > 0) {
-        const mi = Math.floor(nl.q.length / 2);
+        const key = `npsh_${nl.npsh}`;
+        let targetQ = 0;
+        let targetH = 0;
+        if (customLabelPositions && customLabelPositions[key]) {
+          targetQ = customLabelPositions[key].x;
+          targetH = customLabelPositions[key].y;
+        } else {
+          const mi = Math.floor(nl.q.length / 2);
+          targetQ = nl.q[mi];
+          targetH = nl.h[mi];
+        }
         annotations.push({
-          x: nl.q[mi], y: nl.h[mi],
+          x: targetQ, y: targetH,
           text: `<b>${nl.npsh}${lblNpsh}</b>`,
           showarrow: false,
+          captureevents: true,
           font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
           bgcolor: 'rgba(15, 23, 42, 0.92)',
           bordercolor: '#39d3c0',
           borderwidth: 1,
           borderpad: 3,
           xanchor: 'center',
-          yanchor: 'middle'
+          yanchor: 'middle',
+          name: key
         });
       }
     });
@@ -333,7 +488,7 @@ function buildWarmanChart(data, opts = {}) {
   if (showSpeedLines && spd_lines.length > 0) {
     spd_lines.forEach((sl, i) => {
       const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
-      const lw  = sl.speed_ratio === 1.0 ? 2.2 : 1.5;
+      const lw = sl.speed_ratio === 1.0 ? 2.2 : 1.5;
       traces.push({
         type: 'scatter', mode: 'lines',
         name: `${sl.speed_rpm} rpm (${Math.round(sl.speed_ratio * 100)}%)`,
@@ -348,8 +503,10 @@ function buildWarmanChart(data, opts = {}) {
           type: 'scatter', mode: 'markers',
           name: `BEP ${sl.speed_rpm}rpm`,
           x: [sl.bep.q], y: [sl.bep.h],
-          marker: { size: 6, color: col, symbol: 'diamond',
-                    line: { color: '#fff', width: 0.8 } },
+          marker: {
+            size: 6, color: col, symbol: 'diamond',
+            line: { color: '#fff', width: 0.8 }
+          },
           showlegend: false,
           hovertemplate: `BEP ${sl.speed_rpm}rpm<br>Q=${sl.bep.q} ${lblQ}<br>H=${sl.bep.h} ${lblH}<extra></extra>`,
         });
@@ -421,8 +578,10 @@ function buildNpshFamilyChart(family) {
       hovertemplate: `Ø${d.dia}${tag}<br>Q=%{x:.1f}<br>NPSHr=%{y:.2f} m<extra></extra>`,
     };
   });
-  return { traces, layout: makeLayout('Flow Q (m³/h)', 'NPSHr (m)',
-    { yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { rangemode: 'tozero' }) }) };
+  return {
+    traces, layout: makeLayout('Flow Q (m³/h)', 'NPSHr (m)',
+      { yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { rangemode: 'tozero' }) })
+  };
 }
 
 /* ── Power family chart ──────────────────────────────────────────────────── */
@@ -438,8 +597,10 @@ function buildPowerFamilyChart(family) {
       hovertemplate: `Ø${d.dia}${tag}<br>Q=%{x:.1f}<br>P=%{y:.2f} kW<extra></extra>`,
     };
   });
-  return { traces, layout: makeLayout('Flow Q (m³/h)', 'Shaft Power P (kW)',
-    { yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { rangemode: 'tozero' }) }) };
+  return {
+    traces, layout: makeLayout('Flow Q (m³/h)', 'Shaft Power P (kW)',
+      { yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { rangemode: 'tozero' }) })
+  };
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -456,21 +617,27 @@ function buildHQChart(data, showSystem, showClean) {
     hovertemplate: 'Q=%{x:.1f} m³/h<br>H=%{y:.2f} m<extra></extra>',
   });
   if (showClean && data.h_clean) {
-    traces.push({ type: 'scatter', mode: 'lines', name: 'H-Q (water ref)',
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'H-Q (water ref)',
       x: data.q, y: data.h_clean,
       line: { color: '#58a6ff', width: 1.5, dash: 'dot' }, opacity: 0.45, showlegend: true,
-      hovertemplate: 'Q=%{x:.1f}<br>H(clean)=%{y:.2f}<extra></extra>' });
+      hovertemplate: 'Q=%{x:.1f}<br>H(clean)=%{y:.2f}<extra></extra>'
+    });
   }
   if (showSystem && data.system_h) {
-    traces.push({ type: 'scatter', mode: 'lines', name: 'System Curve',
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'System Curve',
       x: data.q, y: data.system_h, line: { color: '#bc8cff', width: 2, dash: 'dash' },
-      hovertemplate: 'Q=%{x:.1f}<br>H_sys=%{y:.2f}<extra></extra>' });
+      hovertemplate: 'Q=%{x:.1f}<br>H_sys=%{y:.2f}<extra></extra>'
+    });
   }
   if (data.bep) {
-    traces.push({ type: 'scatter', mode: 'markers', name: 'BEP',
+    traces.push({
+      type: 'scatter', mode: 'markers', name: 'BEP',
       x: [data.bep.q], y: [data.bep.h],
       marker: { size: 10, color: '#3fb950', symbol: 'star', line: { color: '#fff', width: 1 } },
-      hovertemplate: `BEP<br>Q=${data.bep.q}<br>H=${data.bep.h}<extra></extra>` });
+      hovertemplate: `BEP<br>Q=${data.bep.q}<br>H=${data.bep.h}<extra></extra>`
+    });
   }
   const layout = makeLayout('Flow Q (m³/h)', 'Head H (m)');
   layout.yaxis.rangemode = 'tozero';
@@ -654,7 +821,7 @@ function buildPowerChart(familyData, singleData, showClean) {
   family.forEach((fam, idx) => {
     const isMax = fam.is_max;
     const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
-    
+
     if (fam.power) {
       traces.push({
         type: 'scatter', mode: 'lines',
@@ -706,7 +873,7 @@ function buildNpshChart(familyData, singleData) {
   family.forEach((fam, idx) => {
     const isMax = fam.is_max;
     const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
-    
+
     traces.push({
       type: 'scatter', mode: 'lines',
       name: `NPSHr Ø${fam.dia} mm`,
@@ -727,53 +894,69 @@ function buildNpshChart(familyData, singleData) {
 
 function buildOverlayChart(data, showEff, showPow, showNpsh) {
   const traces = [];
-  traces.push({ type: 'scatter', mode: 'lines', name: 'H-Q',
+  traces.push({
+    type: 'scatter', mode: 'lines', name: 'H-Q',
     x: data.q, y: data.h, line: { color: '#58a6ff', width: 3 },
-    hovertemplate: 'Q=%{x:.1f}<br>H=%{y:.2f} m<extra></extra>' });
+    hovertemplate: 'Q=%{x:.1f}<br>H=%{y:.2f} m<extra></extra>'
+  });
   if (data.system_h) {
-    traces.push({ type: 'scatter', mode: 'lines', name: 'System Curve',
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'System Curve',
       x: data.q, y: data.system_h, line: { color: '#bc8cff', width: 2, dash: 'dash' },
-      hovertemplate: 'Q=%{x:.1f}<br>H_sys=%{y:.2f}<extra></extra>' });
+      hovertemplate: 'Q=%{x:.1f}<br>H_sys=%{y:.2f}<extra></extra>'
+    });
   }
   if (showEff) {
-    traces.push({ type: 'scatter', mode: 'lines', name: 'η (%)', yaxis: 'y2',
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'η (%)', yaxis: 'y2',
       x: data.q, y: data.eta, line: { color: '#f0c040', width: 2, dash: 'longdash' },
-      hovertemplate: 'η=%{y:.1f}%<extra></extra>' });
+      hovertemplate: 'η=%{y:.1f}%<extra></extra>'
+    });
   }
   if (showPow && data.power) {
     const pMax = Math.max(...data.power), hMax = Math.max(...data.h);
     const sc = pMax > 0 ? hMax / pMax * 0.55 : 1;
-    traces.push({ type: 'scatter', mode: 'lines', name: 'Power (scaled)',
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'Power (scaled)',
       x: data.q, y: data.power.map(p => p * sc),
       line: { color: '#f85149', width: 1.5, dash: 'dot' },
       customdata: data.power,
-      hovertemplate: 'P=%{customdata:.2f} kW<extra></extra>' });
+      hovertemplate: 'P=%{customdata:.2f} kW<extra></extra>'
+    });
   }
   if (showNpsh) {
     const useY2 = !showEff && !showPow;
-    traces.push({ type: 'scatter', mode: 'lines', name: 'NPSHr', yaxis: useY2 ? 'y2' : 'y1',
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'NPSHr', yaxis: useY2 ? 'y2' : 'y1',
       x: data.q, y: data.npsh, line: { color: '#39d3c0', width: 2, dash: 'dashdot' },
-      hovertemplate: 'NPSHr=%{y:.2f} m<extra></extra>' });
+      hovertemplate: 'NPSHr=%{y:.2f} m<extra></extra>'
+    });
   }
   if (data.bep) {
-    traces.push({ type: 'scatter', mode: 'markers', name: 'BEP',
+    traces.push({
+      type: 'scatter', mode: 'markers', name: 'BEP',
       x: [data.bep.q], y: [data.bep.h],
       marker: { size: 10, color: '#3fb950', symbol: 'star', line: { color: '#fff', width: 1 } },
-      hovertemplate: `BEP Q=${data.bep.q} H=${data.bep.h}<extra></extra>` });
+      hovertemplate: `BEP Q=${data.bep.q} H=${data.bep.h}<extra></extra>`
+    });
   }
   const layout = Object.assign({}, PLOTLY_LAYOUT_BASE, {
     xaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.xaxis, { title: 'Flow Q (m³/h)' }),
     yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { title: 'Head H (m)', rangemode: 'tozero' }),
   });
   if (showEff) {
-    layout.yaxis2 = { title: 'Efficiency η (%)', overlaying: 'y', side: 'right',
-              range: [0, 105], showgrid: false,
-              titlefont: { color: '#f0c040', size: 12 }, tickfont: { color: '#f0c040' },
-              ticksuffix: '%' };
+    layout.yaxis2 = {
+      title: 'Efficiency η (%)', overlaying: 'y', side: 'right',
+      range: [0, 105], showgrid: false,
+      titlefont: { color: '#f0c040', size: 12 }, tickfont: { color: '#f0c040' },
+      ticksuffix: '%'
+    };
   } else if (showNpsh) {
-    layout.yaxis2 = { title: 'NPSHr (m)', overlaying: 'y', side: 'right',
-              rangemode: 'tozero', showgrid: false,
-              titlefont: { color: '#39d3c0', size: 12 }, tickfont: { color: '#39d3c0' } };
+    layout.yaxis2 = {
+      title: 'NPSHr (m)', overlaying: 'y', side: 'right',
+      rangemode: 'tozero', showgrid: false,
+      titlefont: { color: '#39d3c0', size: 12 }, tickfont: { color: '#39d3c0' }
+    };
   }
   return { traces, layout };
 }
@@ -782,7 +965,7 @@ function buildOverlayChart(data, showEff, showPow, showNpsh) {
 function renderPerfSummary(warmanData, containerId) {
   const family = warmanData.family || [];
   const baseDia = warmanData.pump?.impeller_dia_mm || 1.0;
-  
+
   let htmlRows = '';
 
   // 1. Auto-generated family curves
@@ -795,7 +978,7 @@ function renderPerfSummary(warmanData, containerId) {
       const mainLabel = (typeof PUMP_MAIN_LABEL !== 'undefined' && PUMP_MAIN_LABEL)
         ? PUMP_MAIN_LABEL
         : '';
-      const mainDia   = (typeof PUMP_MAIN_DIA !== 'undefined' && PUMP_MAIN_DIA)
+      const mainDia = (typeof PUMP_MAIN_DIA !== 'undefined' && PUMP_MAIN_DIA)
         ? PUMP_MAIN_DIA
         : d.dia;
       const diaStr = `Ø${mainDia} mm`;
@@ -824,10 +1007,10 @@ function renderPerfSummary(warmanData, containerId) {
     if (c.eta && c.eta.length) {
       const maxEta = Math.max(...c.eta);
       const idx = c.eta.indexOf(maxEta);
-      bepQ   = c.q[idx]?.toFixed(1)     ?? '—';
-      bepH   = c.h[idx]?.toFixed(2)     ?? '—';
-      bepEta = c.eta[idx]?.toFixed(1)   ?? '—';
-      bepP   = c.power?.[idx]?.toFixed(2) ?? '—';
+      bepQ = c.q[idx]?.toFixed(1) ?? '—';
+      bepH = c.h[idx]?.toFixed(2) ?? '—';
+      bepEta = c.eta[idx]?.toFixed(1) ?? '—';
+      bepP = c.power?.[idx]?.toFixed(2) ?? '—';
     }
 
     const dia = c.diameter || null;
@@ -1033,7 +1216,7 @@ async function fitCustomCurve(curveId) {
 
   const entry = document.getElementById(`curve-entry-${curveId}`);
   const statusEl = entry.querySelector('.curve-status');
-  const plotBtn  = entry.querySelector('.btn-plot-curve');
+  const plotBtn = entry.querySelector('.btn-plot-curve');
   const textarea = entry.querySelector('.curve-data-input');
 
   const { q_h, q_eta } = parseDataText(textarea.value);
@@ -1073,18 +1256,18 @@ async function fitCustomCurve(curveId) {
     const qMax = d.q_max;
     const qArr = Array.from({ length: 80 }, (_, i) => (i / 79) * qMax);
     const evalP = (coeffs, q) => coeffs.reduce((s, c, i) => s + c * Math.pow(q, i), 0);
-    const a  = [d.hq_a0, d.hq_a1, d.hq_a2, d.hq_a3];
-    const b  = [d.eff_b0, d.eff_b1, d.eff_b2, d.eff_b3];
+    const a = [d.hq_a0, d.hq_a1, d.hq_a2, d.hq_a3];
+    const b = [d.eff_b0, d.eff_b1, d.eff_b2, d.eff_b3];
     const pp = [d.pow_p0, d.pow_p1, d.pow_p2];
 
-    curve.q     = qArr.map(q => Math.round(q * 100) / 100);
-    curve.h     = qArr.map(q => Math.max(0, evalP(a, q)));
-    curve.eta   = q_eta.length >= 3 ? qArr.map(q => Math.max(0, Math.min(100, evalP(b, q)))) : null;
+    curve.q = qArr.map(q => Math.round(q * 100) / 100);
+    curve.h = qArr.map(q => Math.max(0, evalP(a, q)));
+    curve.eta = q_eta.length >= 3 ? qArr.map(q => Math.max(0, Math.min(100, evalP(b, q)))) : null;
     curve.power = qArr.map(q => Math.max(0, evalP(pp, q)));
     curve.fitted = true;
 
     // Also store raw points for scatter markers
-    curve.raw_q_h  = q_h;
+    curve.raw_q_h = q_h;
     curve.raw_q_eta = q_eta.length >= 3 ? q_eta : null;
 
     statusEl.className = 'curve-status ok';
@@ -1093,7 +1276,7 @@ async function fitCustomCurve(curveId) {
     updateCurveCountBadge();
     renderAll();   // re-render all charts with the new curve
 
-  } catch(e) {
+  } catch (e) {
     statusEl.className = 'curve-status error';
     statusEl.textContent = `✗ Network error: ${e.message}`;
   } finally {
@@ -1103,13 +1286,13 @@ async function fitCustomCurve(curveId) {
 
 /* ── Add a new curve UI row ──────────────────────────────────────────────── */
 function addCustomCurveRow() {
-  const id    = ++_curveIdCounter;
+  const id = ++_curveIdCounter;
   const color = CUSTOM_COLORS[(id - 1) % CUSTOM_COLORS.length];
 
   customCurves.push({ id, label: `Curve ${id}`, color, fitted: false });
 
   const list = document.getElementById('customCurvesList');
-  const div  = document.createElement('div');
+  const div = document.createElement('div');
   div.className = 'custom-curve-entry';
   div.id = `curve-entry-${id}`;
 
@@ -1179,7 +1362,7 @@ function addCustomCurveRow() {
 
   // Bind label input
   div.querySelector('.curve-label-input').addEventListener('input', (e) => {
-    const cid  = parseInt(e.target.dataset.curveId);
+    const cid = parseInt(e.target.dataset.curveId);
     const curve = customCurves.find(c => c.id === cid);
     if (curve) {
       curve.label = e.target.value || `Curve ${cid}`;
@@ -1217,9 +1400,9 @@ function addCustomCurveRow() {
 
 if (typeof PUMP_ID !== 'undefined') {
 
-  let currentData    = null;   // Warman chart data (family + isolines)
-  let singleData     = null;   // Single-dia curve data (max impeller)
-  let viewMode       = 'warman';
+  let currentData = null;   // Warman chart data (family + isolines)
+  let singleData = null;   // Single-dia curve data (max impeller)
+  let viewMode = 'warman';
 
   /* ── Query params ──── */
   function getParams() {
@@ -1227,9 +1410,9 @@ if (typeof PUMP_ID !== 'undefined') {
     const p = new URLSearchParams({ liquid });
     if (liquid === 'viscous') p.set('viscosity_cSt', document.getElementById('viscosity').value);
     if (liquid === 'slurry') {
-      p.set('slurry_cv',  document.getElementById('slurryCv').value);
+      p.set('slurry_cv', document.getElementById('slurryCv').value);
       p.set('slurry_d50', document.getElementById('slurryD50').value);
-      p.set('rho_solid',  document.getElementById('rhoSolid').value);
+      p.set('rho_solid', document.getElementById('rhoSolid').value);
     }
     const sh = document.getElementById('staticHead').value;
     const pk = document.getElementById('pipeK').value;
@@ -1270,31 +1453,38 @@ if (typeof PUMP_ID !== 'undefined') {
       combine_eff_power: document.getElementById('chkCombineEffPower')?.checked !== false,
       trim_model: document.querySelector('input[name="trimModelChoice"]:checked')?.value || 'fit',
       legend_mode: document.getElementById('selLegendMode')?.value || 'each',
-      curve_label_flow_pct: parseFloat(document.getElementById('txtCurveLabelFlowPct')?.value) || 100,
-      curve_label_vpos: document.getElementById('selCurveLabelVPos')?.value || 'top',
-      curve_label_pos: document.getElementById('selCurveLabelPos')?.value || 'middle-top'
+      custom_label_pos: customLabelPositions
     };
   }
 
   function applyGraphOptions(opts) {
     if (!opts || typeof opts !== 'object') return;
+    if (opts.custom_label_pos) {
+      let pos = opts.custom_label_pos;
+      if (typeof pos === 'string') {
+        try { pos = JSON.parse(pos); } catch (e) { pos = null; }
+      }
+      if (pos && typeof pos === 'object' && Object.keys(pos).length > 0) {
+        customLabelPositions = Object.assign({}, customLabelPositions, pos);
+      }
+    }
     if (opts.show_eff_iso !== undefined && document.getElementById('chkShowEffIso')) document.getElementById('chkShowEffIso').checked = opts.show_eff_iso;
     if (opts.eff_levels !== undefined && document.getElementById('txtEffLevels')) document.getElementById('txtEffLevels').value = opts.eff_levels;
-    
+
     if (opts.show_power_iso !== undefined && document.getElementById('chkShowPowerIso')) {
       document.getElementById('chkShowPowerIso').checked = opts.show_power_iso;
       const g = document.getElementById('groupPowerLevels');
       if (g) g.style.display = opts.show_power_iso ? '' : 'none';
     }
     if (opts.power_levels !== undefined && document.getElementById('txtPowerLevels')) document.getElementById('txtPowerLevels').value = opts.power_levels;
-    
+
     if (opts.show_npsh_iso !== undefined && document.getElementById('chkShowNpshIso')) {
       document.getElementById('chkShowNpshIso').checked = opts.show_npsh_iso;
       const g = document.getElementById('groupNpshLevels');
       if (g) g.style.display = opts.show_npsh_iso ? '' : 'none';
     }
     if (opts.npsh_levels !== undefined && document.getElementById('txtNpshLevels')) document.getElementById('txtNpshLevels').value = opts.npsh_levels;
-    
+
     if (opts.show_npsh_curve !== undefined && document.getElementById('chkShowNpshCurve')) {
       document.getElementById('chkShowNpshCurve').checked = opts.show_npsh_curve;
       const g = document.getElementById('groupNpshYAxis');
@@ -1318,18 +1508,10 @@ if (typeof PUMP_ID !== 'undefined') {
       const g = document.getElementById('groupCurveLabelPos');
       if (g) g.style.display = opts.legend_mode === 'curve_labels' ? '' : 'none';
     }
-    if (opts.curve_label_flow_pct !== undefined && document.getElementById('txtCurveLabelFlowPct')) {
-      document.getElementById('txtCurveLabelFlowPct').value = opts.curve_label_flow_pct;
-    }
-    if (opts.curve_label_vpos && document.getElementById('selCurveLabelVPos')) {
-      document.getElementById('selCurveLabelVPos').value = opts.curve_label_vpos;
-    }
-    if (opts.curve_label_pos && document.getElementById('selCurveLabelPos')) {
-      document.getElementById('selCurveLabelPos').value = opts.curve_label_pos;
-    }
   }
 
   async function saveGraphOptions() {
+    if (typeof PUMP_ID === 'undefined' || !PUMP_ID) return;
     const btn = document.getElementById('btnSaveGraphOptions');
     if (btn) {
       btn.disabled = true;
@@ -1376,16 +1558,16 @@ if (typeof PUMP_ID !== 'undefined') {
   /* ── Render all charts for current display option (+ custom curves) ──── */
   function renderAll() {
     const duty = getDuty();
-    const customHQ  = getCustomTracesHQ();
+    const customHQ = getCustomTracesHQ();
     const customEta = getCustomTracesEta();
     const customPow = getCustomTracesPower();
 
-    const showHQ       = document.getElementById('chkShowHQ')?.checked !== false;
-    const showEffIso   = document.getElementById('chkShowEffIso').checked;
+    const showHQ = document.getElementById('chkShowHQ')?.checked !== false;
+    const showEffIso = document.getElementById('chkShowEffIso').checked;
     const showPowerIso = document.getElementById('chkShowPowerIso').checked;
-    const showNpshIso  = document.getElementById('chkShowNpshIso').checked;
-    const showNpshCurve= document.getElementById('chkShowNpshCurve').checked;
-    const showSpeedLines= document.getElementById('chkSpeedLines').checked;
+    const showNpshIso = document.getElementById('chkShowNpshIso').checked;
+    const showNpshCurve = document.getElementById('chkShowNpshCurve').checked;
+    const showSpeedLines = document.getElementById('chkSpeedLines').checked;
 
     // Toggle main Performance Map panel
     if (document.getElementById('warmanPanel')) {
@@ -1409,13 +1591,16 @@ if (typeof PUMP_ID !== 'undefined') {
       const wc = buildWarmanChart(currentData, {
         showIsolines: showEffIso,
         showPowerIso: showPowerIso,
-        showNpshIso:  showNpshIso,
+        showNpshIso: showNpshIso,
         showSpeedLines: showSpeedLines,
         showNpshCurve: showNpshCurve,
         npshYAxis: npshYAxis,
         dutyQ: duty.q, dutyH: duty.h
       });
       Plotly.react('chartWarman', [...wc.traces, ...customHQ], wc.layout, PLOTLY_CONFIG);
+      if (wc.layout.annotations && wc.layout.annotations.length > 0) {
+        makeAnnotationsDraggable('chartWarman', wc.layout.annotations, PUMP_ID);
+      }
       renderPerfSummary(currentData, 'perfSummary');
     }
 
@@ -1444,15 +1629,15 @@ if (typeof PUMP_ID !== 'undefined') {
         Plotly.react('chartEffPower', [...effPow.traces, ...customEta, ...customPow], effPow.layout, PLOTLY_CONFIG);
       } else {
         if (showEff) {
-            const eff = buildEffChart(currentData, singleData, showClean);
-            Plotly.react('chartEff', [...eff.traces, ...customEta], eff.layout, PLOTLY_CONFIG);
+          const eff = buildEffChart(currentData, singleData, showClean);
+          Plotly.react('chartEff', [...eff.traces, ...customEta], eff.layout, PLOTLY_CONFIG);
         }
         if (showPower) {
-            const power = buildPowerChart(currentData, singleData, showClean);
-            Plotly.react('chartPower', [...power.traces, ...customPow], power.layout, PLOTLY_CONFIG);
+          const power = buildPowerChart(currentData, singleData, showClean);
+          Plotly.react('chartPower', [...power.traces, ...customPow], power.layout, PLOTLY_CONFIG);
         }
       }
-      
+
       if (showNpsh) {
         const npsh = buildNpshChart(currentData, singleData);
         Plotly.react('chartNpsh', npsh.traces, npsh.layout, PLOTLY_CONFIG);
@@ -1478,7 +1663,10 @@ if (typeof PUMP_ID !== 'undefined') {
         fetch(`/papi/curve-data/${PUMP_ID}?${params}`)
       ]);
       currentData = await warmanRes.json();
-      singleData  = await singleRes.json();
+      singleData = await singleRes.json();
+      if (currentData && currentData.graph_options) {
+        applyGraphOptions(currentData.graph_options);
+      }
       renderAll();
     } catch (e) {
       console.error(e);
@@ -1500,7 +1688,7 @@ if (typeof PUMP_ID !== 'undefined') {
     };
 
     // Bind change event to checkboxes and select dropdowns that change overlays
-    ['chkShowHQ', 'chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'chkShowOther', 'selLegendMode', 'txtCurveLabelFlowPct', 'selCurveLabelVPos', 'selCurveLabelPos'].forEach(id => {
+    ['chkShowHQ', 'chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'chkShowOther', 'selLegendMode'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.addEventListener('change', () => {
@@ -1547,6 +1735,26 @@ if (typeof PUMP_ID !== 'undefined') {
       saveOptBtn.addEventListener('click', saveGraphOptions);
     }
 
+    const resetPosBtn = document.getElementById('btnResetLabelPos');
+    if (resetPosBtn) {
+      resetPosBtn.addEventListener('click', async () => {
+        customLabelPositions = {};
+        if (typeof PUMP_ID !== 'undefined' && PUMP_ID) {
+          const opts = collectGraphOptions();
+          opts.reset_label_pos = true;
+          opts.custom_label_pos = {};
+          try {
+            await fetch(`/papi/pump/${PUMP_ID}/graph-options`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(opts)
+            });
+          } catch (e) { }
+        }
+        renderAll();
+      });
+    }
+
     // Custom curves: Add Curve button + chevron toggle
     document.getElementById('btnAddCurve').addEventListener('click', addCustomCurveRow);
 
@@ -1562,7 +1770,7 @@ if (typeof PUMP_ID !== 'undefined') {
     if (savedGraphOpts) {
       try {
         applyGraphOptions(JSON.parse(savedGraphOpts));
-      } catch (e) {}
+      } catch (e) { }
     }
     updateLiquidPanels();
     fetchAndRender();

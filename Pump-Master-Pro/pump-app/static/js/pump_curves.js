@@ -203,7 +203,7 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
       const cleanRaw = cleanStr(rawText);
       const numRaw = rawText.replace(/[^0-9.]/g, '');
 
-      const annObj = annotations.find(a => {
+      const candidates = annotations.filter(a => {
         if (!a || !a.name) return false;
 
         // 1. Direct exact match
@@ -223,6 +223,23 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
 
         return false;
       });
+
+      let annObj = candidates[0];
+      if (candidates.length > 1) {
+        let minDist = Infinity;
+        const elRect = textEl.getBoundingClientRect();
+        const coords = screenToDataCoords({ clientX: elRect.left + elRect.width / 2, clientY: elRect.top + elRect.height / 2 });
+        if (coords) {
+          candidates.forEach(cand => {
+            const dist = Math.hypot(cand.x - coords.x, cand.y - coords.y);
+            if (dist < minDist) {
+              minDist = dist;
+              annObj = cand;
+            }
+          });
+        }
+      }
+
       if (!annObj || !annObj.name) return;
 
       g._dragBound = true;
@@ -466,7 +483,7 @@ function buildWarmanChart(data, opts = {}) {
     const etaMin = Math.min(...etaVals);
     const etaMax = Math.max(...etaVals);
 
-    isolines.forEach(iso => {
+    isolines.forEach((iso, idx) => {
       const col = isoColor(iso.eta, etaMin, etaMax);
       traces.push({
         type: 'scatter', mode: 'lines',
@@ -480,13 +497,21 @@ function buildWarmanChart(data, opts = {}) {
 
       /* Non-clashing Efficiency Label Badge Annotation */
       if (iso.label_q !== undefined && iso.label_h !== undefined) {
-        const key = `eta_${iso.eta}`;
+        const branchKey = iso.branch ? `_${iso.branch}` : `_${idx}`;
+        const key = `eta_${iso.eta}${branchKey}`;
+        const legacyKey = `eta_${iso.eta}`;
+
         let targetQ = iso.label_q;
         let targetH = iso.label_h;
+
         if (customLabelPositions && customLabelPositions[key]) {
           targetQ = customLabelPositions[key].x;
           targetH = customLabelPositions[key].y;
+        } else if (idx === 0 && customLabelPositions && customLabelPositions[legacyKey]) {
+          targetQ = customLabelPositions[legacyKey].x;
+          targetH = customLabelPositions[legacyKey].y;
         }
+
         annotations.push({
           x: targetQ, y: targetH,
           text: `<b>${iso.eta}%</b>`,
@@ -507,7 +532,7 @@ function buildWarmanChart(data, opts = {}) {
 
   /* ── Power isolines ──── */
   if (showPowerIso && pwr_iso.length > 0) {
-    pwr_iso.forEach(pl => {
+    pwr_iso.forEach((pl, idx) => {
       traces.push({
         type: 'scatter', mode: 'lines',
         name: `P = ${pl.power} ${lblPow}`,
@@ -517,7 +542,8 @@ function buildWarmanChart(data, opts = {}) {
         hovertemplate: `P = ${pl.power} ${lblPow}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
       });
       if (pl.q.length > 0) {
-        const key = `pow_${pl.power}`;
+        const branchKey = pl.branch ? `_${pl.branch}` : `_${idx}`;
+        const key = `pow_${pl.power}${branchKey}`;
         let targetQ = 0;
         let targetH = 0;
         if (customLabelPositions && customLabelPositions[key]) {
@@ -548,7 +574,7 @@ function buildWarmanChart(data, opts = {}) {
 
   /* ── NPSH isolines ──── */
   if (showNpshIso && npsh_iso.length > 0) {
-    npsh_iso.forEach(nl => {
+    npsh_iso.forEach((nl, idx) => {
       traces.push({
         type: 'scatter', mode: 'lines',
         name: `NPSHr = ${nl.npsh} ${lblNpsh}`,
@@ -558,7 +584,8 @@ function buildWarmanChart(data, opts = {}) {
         hovertemplate: `NPSHr = ${nl.npsh} ${lblNpsh}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
       });
       if (nl.q.length > 0) {
-        const key = `npsh_${nl.npsh}`;
+        const branchKey = nl.branch ? `_${nl.branch}` : `_${idx}`;
+        const key = `npsh_${nl.npsh}${branchKey}`;
         let targetQ = 0;
         let targetH = 0;
         if (customLabelPositions && customLabelPositions[key]) {

@@ -897,24 +897,42 @@ function renderPreviewChartsData(warmanData, curveData) {
     document.getElementById('panelPower').style.display = (showPower && (!showEff || !combineEffPower)) ? '' : 'none';
     document.getElementById('panelNpsh').style.display = showNpsh ? '' : 'none';
 
+    // Check pump ID so we know which pump's label positions to save in database
+    const currentPumpId = parseInt(document.getElementById('pump-init-data')?.dataset?.pumpId) || 0;
+
     if (showEff && showPower && combineEffPower) {
       const effPow = buildEffPowerChart(warmanData, curveData, showClean);
       effPow.layout.xaxis.title = `Flow Q (${labelQ})`;
       effPow.layout.yaxis.title = 'Efficiency (%)';
       effPow.layout.yaxis2.title = `Shaft Power P (${labelPow})`;
       Plotly.react('chartEffPower', effPow.traces, effPow.layout, PLOTLY_CONFIG);
+
+      // Beginner Note: Turn on drag-and-drop & keyboard control for labels on Combined Eff/Power graph
+      if (effPow.layout.annotations && effPow.layout.annotations.length > 0 && currentPumpId) {
+        makeAnnotationsDraggable('chartEffPower', effPow.layout.annotations, currentPumpId);
+      }
     } else {
       if (showEff) {
         const eff = buildEffChart(warmanData, curveData, showClean);
         eff.layout.xaxis.title = `Flow Q (${labelQ})`;
         eff.layout.yaxis.title = 'Efficiency (%)';
         Plotly.react('chartEff', eff.traces, eff.layout, PLOTLY_CONFIG);
+
+        // Beginner Note: Turn on drag-and-drop & keyboard control for labels on Efficiency graph
+        if (eff.layout.annotations && eff.layout.annotations.length > 0 && currentPumpId) {
+          makeAnnotationsDraggable('chartEff', eff.layout.annotations, currentPumpId);
+        }
       }
       if (showPower) {
         const power = buildPowerChart(warmanData, curveData, showClean);
         power.layout.xaxis.title = `Flow Q (${labelQ})`;
         power.layout.yaxis.title = `Shaft Power P (${labelPow})`;
         Plotly.react('chartPower', power.traces, power.layout, PLOTLY_CONFIG);
+
+        // Beginner Note: Turn on drag-and-drop & keyboard control for labels on Power graph
+        if (power.layout.annotations && power.layout.annotations.length > 0 && currentPumpId) {
+          makeAnnotationsDraggable('chartPower', power.layout.annotations, currentPumpId);
+        }
       }
     }
 
@@ -923,6 +941,11 @@ function renderPreviewChartsData(warmanData, curveData) {
       npsh.layout.xaxis.title = `Flow Q (${labelQ})`;
       npsh.layout.yaxis.title = `NPSHr (${labelNpsh})`;
       Plotly.react('chartNpsh', npsh.traces, npsh.layout, PLOTLY_CONFIG);
+
+      // Beginner Note: Turn on drag-and-drop & keyboard control for labels on NPSH graph
+      if (npsh.layout.annotations && npsh.layout.annotations.length > 0 && currentPumpId) {
+        makeAnnotationsDraggable('chartNpsh', npsh.layout.annotations, currentPumpId);
+      }
     }
   }
 }

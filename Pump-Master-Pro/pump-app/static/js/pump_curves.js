@@ -92,9 +92,11 @@ function getGraphDisplayUnits() {
 }
 
 /* ── Annotation Move, Drag & Keyboard Helper ──────────────────────────────── */
-// Supports:
-// 1. Click-and-Hold Drag & Drop: Grab label badge → move cursor → release to drop at exact location
-// 2. Keyboard Navigation: Click/Select label badge → use Arrow Keys (← ↑ → ↓ / Shift+Arrows) to adjust position
+// Beginner Note: This function makes all graph label badges (like Ø228 mm or 78%) interactive!
+// It allows users to:
+// 1. Click and hold the mouse button to drag any label badge around the graph.
+// 2. Click a label badge to select it, then press Arrow Keys (← ↑ → ↓) on the keyboard to move it step-by-step.
+// 3. Automatically saves the new X and Y label positions into the database so they stay saved!
 function makeAnnotationsDraggable(chartId, annotations, pumpId) {
   const container = document.getElementById(chartId);
   if (!container || !pumpId) return;
@@ -105,6 +107,8 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
   }
   container._annCleanups = [];
 
+  // Beginner Note: Converts screen pixel position (where mouse is on screen)
+  // to graph data position (X = Flow Q, Y = Head H or Efficiency %).
   function screenToDataCoords(e) {
     const fullLayout = container._fullLayout;
     if (!fullLayout || !fullLayout.xaxis || !fullLayout.yaxis) return null;
@@ -112,19 +116,21 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
     const yaxis = fullLayout.yaxis;
     const containerRect = container.getBoundingClientRect();
 
+    // Calculate mouse position inside the graph box (in pixels)
     const relX = e.clientX - containerRect.left - xaxis._offset;
     const relY = e.clientY - containerRect.top - yaxis._offset;
 
-    // Clamp relative pixel offset strictly to the plot area bounds [0, _length]
+    // Keep mouse coordinates inside the graph grid borders so labels don't fly off screen
     const clampedRelX = Math.max(0, Math.min(xaxis._length || 9999, relX));
     const clampedRelY = Math.max(0, Math.min(yaxis._length || 9999, relY));
 
+    // Convert pixel offset to graph data values using Plotly's p2c (pixel-to-coordinate) converter
     const dataX = Math.max(0, Math.round(xaxis.p2c(clampedRelX) * 100) / 100);
     const dataY = Math.max(0, Math.round(yaxis.p2c(clampedRelY) * 100) / 100);
     return { x: dataX, y: dataY };
   }
 
-  // Toast notification banner inside chart
+  // Toast notification banner inside chart (shows quick instructions when label is selected)
   let toast = container.querySelector('._ann-toast');
   if (!toast) {
     toast = document.createElement('div');
@@ -142,13 +148,15 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
 
   const showToast = (msg) => { toast.innerHTML = msg; toast.style.display = msg ? 'block' : 'none'; };
 
-  // Debounced DB save
+  // Beginner Note: Sends the updated label position (X, Y) to the server via HTTP POST request
+  // so the database saves the label location in graph_custom_label_pos.
   let saveTimer = null;
   function savePosition(annName, xVal, yVal) {
     if (!customLabelPositions[annName]) customLabelPositions[annName] = {};
     customLabelPositions[annName].x = xVal;
     customLabelPositions[annName].y = yVal;
 
+    // Debounce timer: waits 150ms after user stops moving before sending to server (prevents spamming backend)
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       fetch(`/papi/pump/${pumpId}/label-pos`, {
@@ -802,6 +810,10 @@ function buildHQChart(data, showSystem, showClean) {
   return { traces, layout };
 }
 
+/* ── Build Efficiency Chart ── */
+// This function creates the Efficiency vs Flow (Q) graph.
+// Beginner Note: If "Direct Labels" mode is enabled, we attach label badges (e.g. Ø228 mm)
+// directly to each curve on this graph too, so the user can drag them or use Arrow keys.
 function buildEffChart(familyData, singleData, showClean) {
   const traces = [];
   let family = [];
@@ -859,9 +871,45 @@ function buildEffChart(familyData, singleData, showClean) {
   if (units.legendMode === 'hq_only' || units.legendMode === 'curve_labels') {
     layout.showlegend = false;
   }
+
+  // Add direct curve label badges if Mode 3 (curve_labels) is active
+  if (units.legendMode === 'curve_labels' && family.length > 0) {
+    layout.annotations = layout.annotations || [];
+    family.forEach((fam, idx) => {
+      if (!fam.q || fam.q.length === 0 || !fam.eta) return;
+      const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+      const curveKey = `eff_Ø${fam.dia} mm`;
+      const altKey = `Ø${fam.dia} mm`;
+
+      let targetQ = 0, targetEta = 0, xanchor = 'center', yanchor = 'middle', xshift = 0, yshift = 0;
+      if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
+        const pos = customLabelPositions[curveKey] || customLabelPositions[altKey];
+        targetQ = pos.x;
+        targetEta = pos.y;
+      } else {
+        const lastIdx = fam.q.length - 1;
+        targetQ = fam.q[lastIdx];
+        targetEta = fam.eta[lastIdx];
+        xanchor = 'left'; yanchor = 'bottom'; xshift = 4; yshift = 4;
+      }
+
+      layout.annotations.push({
+        x: targetQ, y: targetEta,
+        text: `<b>Ø${fam.dia} mm</b>`,
+        showarrow: false, captureevents: true,
+        font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
+        bgcolor: 'rgba(22, 27, 34, 0.92)',
+        bordercolor: col, borderwidth: 1.5, borderpad: 3,
+        xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
+        name: curveKey
+      });
+    });
+  }
+
   return { traces, layout };
 }
 
+/* ── Build Efficiency & Power Combined Chart ── */
 function buildEffPowerChart(familyData, singleData, showClean) {
   const traces = [];
   let family = [];
@@ -954,9 +1002,45 @@ function buildEffPowerChart(familyData, singleData, showClean) {
   if (unitsEP.legendMode === 'hq_only' || unitsEP.legendMode === 'curve_labels') {
     layout.showlegend = false;
   }
+
+  // Add direct curve label badges if Mode 3 (curve_labels) is active
+  if (unitsEP.legendMode === 'curve_labels' && family.length > 0) {
+    layout.annotations = layout.annotations || [];
+    family.forEach((fam, idx) => {
+      if (!fam.q || fam.q.length === 0 || !fam.eta) return;
+      const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+      const curveKey = `eff_Ø${fam.dia} mm`;
+      const altKey = `Ø${fam.dia} mm`;
+
+      let targetQ = 0, targetEta = 0, xanchor = 'center', yanchor = 'middle', xshift = 0, yshift = 0;
+      if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
+        const pos = customLabelPositions[curveKey] || customLabelPositions[altKey];
+        targetQ = pos.x;
+        targetEta = pos.y;
+      } else {
+        const lastIdx = fam.q.length - 1;
+        targetQ = fam.q[lastIdx];
+        targetEta = fam.eta[lastIdx];
+        xanchor = 'left'; yanchor = 'bottom'; xshift = 4; yshift = 4;
+      }
+
+      layout.annotations.push({
+        x: targetQ, y: targetEta,
+        text: `<b>Ø${fam.dia} mm</b>`,
+        showarrow: false, captureevents: true,
+        font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
+        bgcolor: 'rgba(22, 27, 34, 0.92)',
+        bordercolor: col, borderwidth: 1.5, borderpad: 3,
+        xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
+        name: curveKey
+      });
+    });
+  }
+
   return { traces, layout };
 }
 
+/* ── Build Shaft Power Chart ── */
 function buildPowerChart(familyData, singleData, showClean) {
   const traces = [];
   let family = [];
@@ -1006,9 +1090,45 @@ function buildPowerChart(familyData, singleData, showClean) {
   if (unitsP.legendMode === 'hq_only' || unitsP.legendMode === 'curve_labels') {
     layout.showlegend = false;
   }
+
+  // Add direct curve label badges if Mode 3 (curve_labels) is active
+  if (unitsP.legendMode === 'curve_labels' && family.length > 0) {
+    layout.annotations = layout.annotations || [];
+    family.forEach((fam, idx) => {
+      if (!fam.q || fam.q.length === 0 || !fam.power) return;
+      const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+      const curveKey = `pow_Ø${fam.dia} mm`;
+      const altKey = `Ø${fam.dia} mm`;
+
+      let targetQ = 0, targetPow = 0, xanchor = 'center', yanchor = 'middle', xshift = 0, yshift = 0;
+      if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
+        const pos = customLabelPositions[curveKey] || customLabelPositions[altKey];
+        targetQ = pos.x;
+        targetPow = pos.y;
+      } else {
+        const lastIdx = fam.q.length - 1;
+        targetQ = fam.q[lastIdx];
+        targetPow = fam.power[lastIdx];
+        xanchor = 'left'; yanchor = 'bottom'; xshift = 4; yshift = 4;
+      }
+
+      layout.annotations.push({
+        x: targetQ, y: targetPow,
+        text: `<b>Ø${fam.dia} mm</b>`,
+        showarrow: false, captureevents: true,
+        font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
+        bgcolor: 'rgba(22, 27, 34, 0.92)',
+        bordercolor: col, borderwidth: 1.5, borderpad: 3,
+        xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
+        name: curveKey
+      });
+    });
+  }
+
   return { traces, layout };
 }
 
+/* ── Build NPSHr Chart ── */
 function buildNpshChart(familyData, singleData) {
   const traces = [];
   let family = [];
@@ -1047,6 +1167,41 @@ function buildNpshChart(familyData, singleData) {
   if (unitsN.legendMode === 'hq_only' || unitsN.legendMode === 'curve_labels') {
     layout.showlegend = false;
   }
+
+  // Add direct curve label badges if Mode 3 (curve_labels) is active
+  if (unitsN.legendMode === 'curve_labels' && family.length > 0) {
+    layout.annotations = layout.annotations || [];
+    family.forEach((fam, idx) => {
+      if (!fam.q || fam.q.length === 0 || !fam.npsh) return;
+      const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+      const curveKey = `npsh_Ø${fam.dia} mm`;
+      const altKey = `Ø${fam.dia} mm`;
+
+      let targetQ = 0, targetNpsh = 0, xanchor = 'center', yanchor = 'middle', xshift = 0, yshift = 0;
+      if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
+        const pos = customLabelPositions[curveKey] || customLabelPositions[altKey];
+        targetQ = pos.x;
+        targetNpsh = pos.y;
+      } else {
+        const lastIdx = fam.q.length - 1;
+        targetQ = fam.q[lastIdx];
+        targetNpsh = fam.npsh[lastIdx];
+        xanchor = 'left'; yanchor = 'bottom'; xshift = 4; yshift = 4;
+      }
+
+      layout.annotations.push({
+        x: targetQ, y: targetNpsh,
+        text: `<b>Ø${fam.dia} mm</b>`,
+        showarrow: false, captureevents: true,
+        font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
+        bgcolor: 'rgba(22, 27, 34, 0.92)',
+        bordercolor: col, borderwidth: 1.5, borderpad: 3,
+        xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
+        name: curveKey
+      });
+    });
+  }
+
   return { traces, layout };
 }
 

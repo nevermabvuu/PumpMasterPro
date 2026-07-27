@@ -593,14 +593,20 @@ def api_save_graph_options(pump_id):
     return jsonify({'status': 'ok', 'graph_options': pump.get_graph_options()})
 
 
+# Beginner Note: This API endpoint receives label drag positions from JavaScript in the browser
+# whenever a user drags or moves a label on the graph. It saves the coordinates directly
+# into the 'graph_custom_label_pos' database column for this pump ID.
 @app.route('/papi/pump/<int:pump_id>/label-pos', methods=['POST'])
 def api_save_label_pos(pump_id):
-    """Save only custom label positions to graph_custom_label_pos column."""
+    """Save custom label positions to graph_custom_label_pos column in SQLite database."""
     pump = Pump.query.get_or_404(pump_id)
     data = request.get_json(force=True, silent=True) or {}
     print(f"[label-pos] pump_id={pump_id}  incoming={data!r}", flush=True)
+
+    # Save incoming (X, Y) coordinates into pump model and commit to SQLite
     pump.set_custom_label_pos(data, overwrite=False)
     db.session.commit()
+
     saved = pump.get_custom_label_pos()
     print(f"[label-pos] saved to DB: {saved!r}", flush=True)
     return jsonify({'status': 'ok', 'label_pos': saved})

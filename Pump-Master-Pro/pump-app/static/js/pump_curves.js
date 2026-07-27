@@ -91,21 +91,20 @@ function getGraphDisplayUnits() {
   };
 }
 
-/* ── Annotation Move & Drag Helper ────────────────────────────────────────── */
-// Supports both:
-// 1. Mouse Drag: Click and hold label badge → drag smoothly → drop at exact cursor location
-// 2. Click-to-Place: Click label badge once → click anywhere on chart to place
+/* ── Annotation Move, Drag & Keyboard Helper ──────────────────────────────── */
+// Supports:
+// 1. Click-and-Hold Drag & Drop: Grab label badge → move cursor → release to drop at exact location
+// 2. Keyboard Navigation: Click/Select label badge → use Arrow Keys (← ↑ → ↓ / Shift+Arrows) to adjust position
 function makeAnnotationsDraggable(chartId, annotations, pumpId) {
   const container = document.getElementById(chartId);
   if (!container || !pumpId) return;
 
-  // Cleanup old listeners
+  // Cleanup old listeners if re-initializing
   if (container._annCleanups) {
     container._annCleanups.forEach(fn => { try { fn(); } catch(e){} });
   }
   container._annCleanups = [];
 
-  // Helper to convert screen mouse coords (clientX, clientY) to exact plot (Q, H) data coords
   function screenToDataCoords(e) {
     const fullLayout = container._fullLayout;
     if (!fullLayout || !fullLayout.xaxis || !fullLayout.yaxis) return null;
@@ -116,46 +115,83 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
     const relX = e.clientX - containerRect.left - xaxis._offset;
     const relY = e.clientY - containerRect.top - yaxis._offset;
 
-    const dataX = Math.max(0, Math.round(xaxis.p2c(relX) * 100) / 100);
-    const dataY = Math.max(0, Math.round(yaxis.p2c(relY) * 100) / 100);
+    // Clamp relative pixel offset strictly to the plot area bounds [0, _length]
+    const clampedRelX = Math.max(0, Math.min(xaxis._length || 9999, relX));
+    const clampedRelY = Math.max(0, Math.min(yaxis._length || 9999, relY));
+
+    const dataX = Math.max(0, Math.round(xaxis.p2c(clampedRelX) * 100) / 100);
+    const dataY = Math.max(0, Math.round(yaxis.p2c(clampedRelY) * 100) / 100);
     return { x: dataX, y: dataY };
   }
 
-  // Toast notification inside chart
+  // Toast notification banner inside chart
   let toast = container.querySelector('._ann-toast');
   if (!toast) {
     toast = document.createElement('div');
     toast.className = '_ann-toast';
     toast.style.cssText = [
       'position:absolute', 'top:8px', 'left:50%', 'transform:translateX(-50%)',
-      'background:rgba(88,166,255,0.95)', 'color:#fff', 'padding:5px 14px',
-      'border-radius:6px', 'font-size:12px', 'font-weight:600', 'z-index:9999',
-      'pointer-events:none', 'display:none', 'white-space:nowrap',
-      'box-shadow:0 2px 8px rgba(0,0,0,0.4)'
+      'background:rgba(22, 27, 34, 0.95)', 'color:#58a6ff', 'padding:6px 16px',
+      'border:1px solid #30363d', 'border-radius:6px', 'font-size:12px', 'font-weight:600',
+      'z-index:9999', 'pointer-events:none', 'display:none', 'white-space:nowrap',
+      'box-shadow:0 4px 12px rgba(0,0,0,0.5)'
     ].join(';');
     container.style.position = 'relative';
     container.appendChild(toast);
   }
 
-  const showToast = (msg) => { toast.textContent = msg; toast.style.display = msg ? 'block' : 'none'; };
+  const showToast = (msg) => { toast.innerHTML = msg; toast.style.display = msg ? 'block' : 'none'; };
 
+  // Debounced DB save
+  let saveTimer = null;
   function savePosition(annName, xVal, yVal) {
     if (!customLabelPositions[annName]) customLabelPositions[annName] = {};
     customLabelPositions[annName].x = xVal;
     customLabelPositions[annName].y = yVal;
 
-    // Save to DB
-    fetch(`/papi/pump/${pumpId}/label-pos`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ [annName]: { x: xVal, y: yVal } })
-    }).catch(() => {});
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      fetch(`/papi/pump/${pumpId}/label-pos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [annName]: { x: xVal, y: yVal } })
+      }).catch(() => {});
+    }, 150);
   }
 
   let selectedAnn = null;
 
-  // Bind mouse drag on SVG annotation groups
-  const setupSvgDrags = () => {
+  function selectAnnotation(ann) {
+    if (!ann) return;
+    selectedAnn = ann;
+    showToast(`<strong>"${ann.name}"</strong> selected &mdash; Drag mouse or use Arrow keys (&larr; &uarr; &rarr; &darr;) to adjust`);
+
+    const idx = annotations.indexOf(ann);
+    if (idx >= 0) {
+      Plotly.relayout(container, {
+        [`annotations[${idx}].bgcolor`]: 'rgba(88,166,255,0.45)',
+        [`annotations[${idx}].bordercolor`]: '#58a6ff',
+        [`annotations[${idx}].borderwidth`]: 2
+      });
+    }
+  }
+
+  function deselectAnnotation() {
+    if (!selectedAnn) return;
+    showToast('');
+    container.style.cursor = '';
+    const ann = selectedAnn;
+    selectedAnn = null;
+    Plotly.relayout(container, { annotations });
+  }
+
+  // Helper to clean string for flexible label matching
+  function cleanStr(s) {
+    return (s || '').replace(/<[^>]*>/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  }
+
+  // Bind mouse drag and click on SVG annotation groups
+  const setupSvgEvents = () => {
     const annElements = container.querySelectorAll('.annotation-text, [class*="annotation"]');
     annElements.forEach(el => {
       let g = el.closest('g.annotation') || el.closest('g');
@@ -164,10 +200,29 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
       const textEl = g.querySelector('text');
       if (!textEl) return;
       const rawText = textEl.textContent.trim();
+      const cleanRaw = cleanStr(rawText);
+      const numRaw = rawText.replace(/[^0-9.]/g, '');
 
-      const annObj = annotations.find(a =>
-        a.name && (a.name === rawText || rawText.includes(a.name) || a.name.includes(rawText))
-      );
+      const annObj = annotations.find(a => {
+        if (!a || !a.name) return false;
+
+        // 1. Direct exact match
+        if (a.name === rawText) return true;
+
+        const cleanName = cleanStr(a.name);
+        const cleanText = cleanStr(a.text);
+
+        // 2. Clean string match
+        if (cleanName === cleanRaw || cleanText === cleanRaw) return true;
+
+        // 3. Match isolines ONLY if name starts with eta_, pow_, or npsh_
+        if (a.name.startsWith('eta_') || a.name.startsWith('pow_') || a.name.startsWith('npsh_')) {
+          const numName = a.name.replace(/[^0-9.]/g, '');
+          if (numRaw && numName && numRaw === numName) return true;
+        }
+
+        return false;
+      });
       if (!annObj || !annObj.name) return;
 
       g._dragBound = true;
@@ -175,25 +230,26 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
 
       let isDragging = false;
       let startX = 0, startY = 0;
-      let dx = 0, dy = 0;
 
       const onMouseDown = (e) => {
         if (e.button !== 0) return; // Left click only
+        e.preventDefault();
         e.stopPropagation();
 
         isDragging = false;
         startX = e.clientX;
         startY = e.clientY;
-        dx = 0;
-        dy = 0;
 
         g.style.cursor = 'grabbing';
         document.body.style.userSelect = 'none';
 
+        // Highlight selection immediately
+        selectAnnotation(annObj);
+
         const onMouseMove = (me) => {
-          dx = me.clientX - startX;
-          dy = me.clientY - startY;
-          if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+          const dx = me.clientX - startX;
+          const dy = me.clientY - startY;
+          if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
             isDragging = true;
             g.style.transform = `translate(${dx}px, ${dy}px)`;
           }
@@ -207,7 +263,7 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
           document.body.style.userSelect = '';
 
           if (isDragging) {
-            // Mouse drag completed!
+            // Drag completed -> snap to drop position
             const coords = screenToDataCoords(ue);
             if (coords) {
               annObj.x = coords.x;
@@ -218,7 +274,10 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
               annObj.yshift = 0;
 
               savePosition(annObj.name, coords.x, coords.y);
-              Plotly.relayout(container, { annotations }).then(setupSvgDrags);
+              Plotly.relayout(container, { annotations }).then(() => {
+                selectAnnotation(annObj);
+                setupSvgEvents();
+              });
             }
           }
         };
@@ -231,76 +290,58 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
     });
   };
 
-  // Click-to-select fallback
-  const annClickHandler = (eventData) => {
-    const ann = annotations[eventData.index];
-    if (!ann || !ann.name) return;
+  // Keyboard Arrow navigation for fine-tuning selected label
+  const keyHandler = (e) => {
+    if (!selectedAnn) return;
 
-    if (selectedAnn === ann) {
-      selectedAnn = null;
-      showToast('');
-      container.style.cursor = '';
-      Plotly.relayout(container, { annotations });
+    if (e.key === 'Escape') {
+      deselectAnnotation();
       return;
     }
 
-    selectedAnn = ann;
-    showToast(`"${ann.name}" selected — click anywhere on chart to place`);
-    container.style.cursor = 'crosshair';
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
 
-    const idx = annotations.indexOf(ann);
-    if (idx >= 0) {
-      Plotly.relayout(container, {
-        [`annotations[${idx}].bgcolor`]: 'rgba(88,166,255,0.5)',
-        [`annotations[${idx}].borderwidth`]: (ann.borderwidth || 1) + 2
+      const fullLayout = container._fullLayout;
+      const xDomain = (fullLayout?.xaxis?.range) ? Math.abs(fullLayout.xaxis.range[1] - fullLayout.xaxis.range[0]) : 100;
+      const yDomain = (fullLayout?.yaxis?.range) ? Math.abs(fullLayout.yaxis.range[1] - fullLayout.yaxis.range[0]) : 50;
+
+      const stepMult = e.shiftKey ? 5 : 1;
+      const stepX = (xDomain / 200) * stepMult;
+      const stepY = (yDomain / 200) * stepMult;
+
+      let newX = selectedAnn.x;
+      let newY = selectedAnn.y;
+
+      if (e.key === 'ArrowLeft')  newX = Math.max(0, newX - stepX);
+      if (e.key === 'ArrowRight') newX = newX + stepX;
+      if (e.key === 'ArrowDown')  newY = Math.max(0, newY - stepY);
+      if (e.key === 'ArrowUp')    newY = newY + stepY;
+
+      newX = Math.round(newX * 100) / 100;
+      newY = Math.round(newY * 100) / 100;
+
+      selectedAnn.x = newX;
+      selectedAnn.y = newY;
+      selectedAnn.xanchor = 'center';
+      selectedAnn.yanchor = 'middle';
+      selectedAnn.xshift = 0;
+      selectedAnn.yshift = 0;
+
+      savePosition(selectedAnn.name, newX, newY);
+      Plotly.relayout(container, { annotations }).then(() => {
+        selectAnnotation(selectedAnn);
+        setupSvgEvents();
       });
     }
   };
 
-  const bgClickHandler = (e) => {
-    if (!selectedAnn) return;
-    e.stopPropagation();
-
-    const coords = screenToDataCoords(e);
-    if (!coords) return;
-
-    const ann = selectedAnn;
-    selectedAnn = null;
-    showToast('');
-    container.style.cursor = '';
-
-    ann.x = coords.x;
-    ann.y = coords.y;
-    ann.xanchor = 'center';
-    ann.yanchor = 'middle';
-    ann.xshift = 0;
-    ann.yshift = 0;
-
-    savePosition(ann.name, coords.x, coords.y);
-    Plotly.relayout(container, { annotations }).then(setupSvgDrags);
-  };
-
-  const escHandler = (e) => {
-    if (e.key === 'Escape' && selectedAnn) {
-      selectedAnn = null;
-      showToast('');
-      container.style.cursor = '';
-      Plotly.relayout(container, { annotations });
-    }
-  };
-
-  container.on('plotly_clickannotation', annClickHandler);
-  document.addEventListener('keydown', escHandler);
+  document.addEventListener('keydown', keyHandler);
 
   setTimeout(() => {
-    setupSvgDrags();
-    const dragLayer = container.querySelector('.nsewdrag') || container.querySelector('.drag') || container;
-    dragLayer.addEventListener('click', bgClickHandler);
-
+    setupSvgEvents();
     container._annCleanups.push(() => {
-      try { container.off('plotly_clickannotation', annClickHandler); } catch(e){}
-      dragLayer.removeEventListener('click', bgClickHandler);
-      document.removeEventListener('keydown', escHandler);
+      document.removeEventListener('keydown', keyHandler);
     });
   }, 250);
 }

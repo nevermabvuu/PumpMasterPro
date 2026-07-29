@@ -62,11 +62,93 @@ function isoColor(eta, etaMin, etaMax) {
 }
 
 /* ── Generic layout builder ──────────────────────────────────────────────── */
-function makeLayout(xTitle, yTitle, extra = {}) {
-  return Object.assign({}, PLOTLY_LAYOUT_BASE, {
+/**
+ * Beginners Note: Applies custom scale settings (Min, Max, Major Intervals, Minor Intervals)
+ * to a Plotly layout axis object (e.g. layout.xaxis or layout.yaxis).
+ *
+ * @param {Object} axisObj - The Plotly axis object to configure (e.g. layout.xaxis)
+ * @param {string} axisName - The axis name identifier ('flow', 'head', 'eff', 'power', 'npsh')
+ * @param {Object} [pumpObj] - Optional pump data dictionary containing axis scale values
+ */
+function applyAxisScaleSettings(axisObj, axisName, pumpObj = {}) {
+  if (!axisObj) return axisObj;
+
+  const getScaleVal = (prop, isInt = false) => {
+    const fieldId = `axis_${axisName}_${prop}`;
+    const domEl = document.getElementById(fieldId);
+    if (domEl && domEl.value !== undefined && domEl.value.trim() !== '') {
+      const parsed = isInt ? parseInt(domEl.value.trim(), 10) : parseFloat(domEl.value.trim());
+      if (!isNaN(parsed)) return parsed;
+    }
+    const propKey = `axis_${axisName}_${prop}`;
+    if (pumpObj && pumpObj[propKey] !== undefined && pumpObj[propKey] !== null) {
+      const parsed = isInt ? parseInt(pumpObj[propKey], 10) : parseFloat(pumpObj[propKey]);
+      if (!isNaN(parsed)) return parsed;
+    }
+    return null;
+  };
+
+  const minVal = getScaleVal('min');
+  const maxVal = getScaleVal('max');
+  const majorVal = getScaleVal('major');
+  const minorVal = getScaleVal('minor', true);
+
+  // 1. Min & Max Range Bounds
+  if (minVal !== null || maxVal !== null) {
+    const currentMin = minVal !== null ? minVal : (axisObj.range ? axisObj.range[0] : 0);
+    const currentMax = maxVal !== null ? maxVal : (axisObj.range ? axisObj.range[1] : 100);
+    axisObj.range = [currentMin, currentMax];
+    axisObj.autorange = false;
+  }
+
+  // 2. Major Division Intervals / Ticks
+  if (majorVal !== null && majorVal > 0) {
+    if (minVal !== null && maxVal !== null && maxVal > minVal) {
+      axisObj.dtick = (maxVal - minVal) / majorVal;
+      axisObj.tickmode = 'linear';
+    } else {
+      axisObj.nticks = Math.round(majorVal) + 1;
+    }
+  }
+
+  // 3. Minor Subticks
+  if (minorVal !== null && minorVal > 0) {
+    axisObj.minor = {
+      nticks: minorVal + 1,
+      showgrid: true,
+      gridcolor: '#21262d',
+      gridwidth: 1,
+      ticks: 'inside',
+      ticklen: 4,
+      tickcolor: '#30363d'
+    };
+  }
+
+  return axisObj;
+}
+
+function makeLayout(xTitle, yTitle, extra = {}, pumpObj = {}) {
+  const layout = Object.assign({}, PLOTLY_LAYOUT_BASE, {
     xaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.xaxis, { title: xTitle }),
     yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { title: yTitle }),
   }, extra);
+
+  applyAxisScaleSettings(layout.xaxis, 'flow', pumpObj);
+
+  const yLower = (typeof yTitle === 'string' ? yTitle : (yTitle.text || '')).toLowerCase();
+  if (yLower.includes('head')) applyAxisScaleSettings(layout.yaxis, 'head', pumpObj);
+  else if (yLower.includes('eff')) applyAxisScaleSettings(layout.yaxis, 'eff', pumpObj);
+  else if (yLower.includes('power')) applyAxisScaleSettings(layout.yaxis, 'power', pumpObj);
+  else if (yLower.includes('npsh')) applyAxisScaleSettings(layout.yaxis, 'npsh', pumpObj);
+
+  if (layout.yaxis2) {
+    const y2Lower = (typeof layout.yaxis2.title === 'string' ? layout.yaxis2.title : (layout.yaxis2.title?.text || '')).toLowerCase();
+    if (y2Lower.includes('eff')) applyAxisScaleSettings(layout.yaxis2, 'eff', pumpObj);
+    else if (y2Lower.includes('power')) applyAxisScaleSettings(layout.yaxis2, 'power', pumpObj);
+    else if (y2Lower.includes('npsh')) applyAxisScaleSettings(layout.yaxis2, 'npsh', pumpObj);
+  }
+
+  return layout;
 }
 
 /* ── Duty point marker ───────────────────────────────────────────────────── */
@@ -1103,6 +1185,9 @@ function buildEffPowerChart(familyData, singleData, showClean) {
       titlefont: { color: '#f85149', size: 12 }, tickfont: { color: '#f85149' }
     }
   });
+  applyAxisScaleSettings(layout.xaxis, 'flow', warmanData?.pump);
+  applyAxisScaleSettings(layout.yaxis, 'eff', warmanData?.pump);
+  applyAxisScaleSettings(layout.yaxis2, 'power', warmanData?.pump);
   if (unitsEP.legendMode === 'hq_only' || unitsEP.legendMode === 'curve_labels') {
     layout.showlegend = false;
   }
@@ -1373,6 +1458,8 @@ function buildOverlayChart(data, showEff, showPow, showNpsh) {
     xaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.xaxis, { title: 'Flow Q (m³/h)' }),
     yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { title: 'Head H (m)', rangemode: 'tozero' }),
   });
+  applyAxisScaleSettings(layout.xaxis, 'flow', data?.pump);
+  applyAxisScaleSettings(layout.yaxis, 'head', data?.pump);
   if (showEff) {
     layout.yaxis2 = {
       title: 'Efficiency η (%)', overlaying: 'y', side: 'right',
@@ -1380,12 +1467,14 @@ function buildOverlayChart(data, showEff, showPow, showNpsh) {
       titlefont: { color: '#f0c040', size: 12 }, tickfont: { color: '#f0c040' },
       ticksuffix: '%'
     };
+    applyAxisScaleSettings(layout.yaxis2, 'eff', data?.pump);
   } else if (showNpsh) {
     layout.yaxis2 = {
       title: 'NPSHr (m)', overlaying: 'y', side: 'right',
       rangemode: 'tozero', showgrid: false,
       titlefont: { color: '#39d3c0', size: 12 }, tickfont: { color: '#39d3c0' }
     };
+    applyAxisScaleSettings(layout.yaxis2, 'npsh', data?.pump);
   }
   return { traces, layout };
 }

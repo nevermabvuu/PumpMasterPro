@@ -28,32 +28,43 @@ with app.app_context():
         with db.engine.connect() as conn:
             result = conn.execute(text("PRAGMA table_info(pumps)"))
             cols = [row[1] for row in result.fetchall()]
+            axis_cols = [
+                'axis_flow_min', 'axis_flow_max', 'axis_flow_major', 'axis_flow_minor',
+                'axis_head_min', 'axis_head_max', 'axis_head_major', 'axis_head_minor',
+                'axis_eff_min', 'axis_eff_max', 'axis_eff_major', 'axis_eff_minor',
+                'axis_power_min', 'axis_power_max', 'axis_power_major', 'axis_power_minor',
+                'axis_npsh_min', 'axis_npsh_max', 'axis_npsh_major', 'axis_npsh_minor',
+            ]
             for col_name in ['curve_labels', 'curve_diameters', 'curve_colors', 'curve_modes',
                              'curve_units', 'curve_raw_tables', 'curve_coeffs',
                              'unit_q', 'unit_h', 'unit_npsh', 'unit_pow', 'unit_op_q', 'graph_custom_label_pos',
-                             'head_curve_style', 'eff_curve_style', 'power_curve_style', 'npsh_curve_style', 'main_curve_style']:
+                             'head_curve_style', 'eff_curve_style', 'power_curve_style', 'npsh_curve_style', 'main_curve_style'] + axis_cols:
                 if col_name not in cols:
-                    if col_name == 'graph_custom_label_pos':
-                        default_val = "'{}'"
-                    elif col_name == 'head_curve_style':
-                        default_val = "'#58a6ff;2.0,solid'"
-                    elif col_name == 'eff_curve_style':
-                        default_val = "'#3fb950;1.5,dot'"
-                    elif col_name == 'power_curve_style':
-                        default_val = "'#f85149;1.5,longdash'"
-                    elif col_name == 'npsh_curve_style':
-                        default_val = "'#39d3c0;1.5,dashdot'"
-                    elif col_name == 'main_curve_style':
-                        default_val = "'graph'"
-                    elif col_name in ['unit_q', 'unit_op_q']:
-                        default_val = "'m3h'"
-                    elif col_name in ['unit_h', 'unit_npsh']:
-                        default_val = "'m'"
-                    elif col_name == 'unit_pow':
-                        default_val = "'kw'"
+                    if col_name in axis_cols:
+                        col_type = "INTEGER" if col_name.endswith('_minor') else "REAL"
+                        conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {col_name} {col_type} DEFAULT NULL"))
                     else:
-                        default_val = "''"
-                    conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {col_name} TEXT DEFAULT {default_val}"))
+                        if col_name == 'graph_custom_label_pos':
+                            default_val = "'{}'"
+                        elif col_name == 'head_curve_style':
+                            default_val = "'#58a6ff;2.0,solid'"
+                        elif col_name == 'eff_curve_style':
+                            default_val = "'#3fb950;1.5,dot'"
+                        elif col_name == 'power_curve_style':
+                            default_val = "'#f85149;1.5,longdash'"
+                        elif col_name == 'npsh_curve_style':
+                            default_val = "'#39d3c0;1.5,dashdot'"
+                        elif col_name == 'main_curve_style':
+                            default_val = "'graph'"
+                        elif col_name in ['unit_q', 'unit_op_q']:
+                            default_val = "'m3h'"
+                        elif col_name in ['unit_h', 'unit_npsh']:
+                            default_val = "'m'"
+                        elif col_name == 'unit_pow':
+                            default_val = "'kw'"
+                        else:
+                            default_val = "''"
+                        conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {col_name} TEXT DEFAULT {default_val}"))
             for old_col in ['main_curve_label', 'main_curve_dia_mm', 'data_units']:
                 if old_col in cols:
                     try:
@@ -92,6 +103,34 @@ def _get_float(d, key, default=0.0):
         return float(val)
     except ValueError:
         return default
+
+
+def _get_nullable_float(d, key):
+    """
+    Beginners Note: Helper function to extract a float number from form or JSON data.
+    Returns None if the value is empty, blank, or missing, allowing Plotly auto-scaling.
+    """
+    val = d.get(key)
+    if val is None or str(val).strip() == '':
+        return None
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return None
+
+
+def _get_nullable_int(d, key):
+    """
+    Beginners Note: Helper function to extract an integer number from form or JSON data.
+    Returns None if the value is empty, blank, or missing.
+    """
+    val = d.get(key)
+    if val is None or str(val).strip() == '':
+        return None
+    try:
+        return int(float(val))
+    except (ValueError, TypeError):
+        return None
 
 
 def _auto_fit_coeffs(raw_tables_str, coeffs_str, units_str=''):
@@ -220,6 +259,14 @@ def _pump_from_form(f, pump=None):
     pump.power_curve_style = f.get('power_curve_style', pump.power_curve_style or '#f85149;1.5,longdash')
     pump.npsh_curve_style  = f.get('npsh_curve_style', pump.npsh_curve_style or '#39d3c0;1.5,dashdot')
     pump.main_curve_style  = f.get('main_curve_style', pump.main_curve_style or 'graph')
+
+    # Beginners Note: Extract 20 custom axis scaling settings from form data and save to database columns
+    for axis_name in ['flow', 'head', 'eff', 'power', 'npsh']:
+        for prop in ['min', 'max', 'major']:
+            col_key = f'axis_{axis_name}_{prop}'
+            setattr(pump, col_key, _get_nullable_float(f, col_key))
+        col_minor = f'axis_{axis_name}_minor'
+        setattr(pump, col_minor, _get_nullable_int(f, col_minor))
 
     # Convert op-range values from display unit to SI (m³/h) before persisting
     units_dict = pump._get_data_units()
@@ -404,6 +451,14 @@ def api_preview_warman_chart():
     for field in ['head_curve_style', 'eff_curve_style', 'power_curve_style', 'npsh_curve_style', 'main_curve_style']:
         if field in data and data[field]:
             setattr(pump, field, str(data[field]))
+
+    # Beginners Note: Set 20 custom axis scale settings on temporary Pump object for preview chart rendering
+    for axis_name in ['flow', 'head', 'eff', 'power', 'npsh']:
+        for prop in ['min', 'max', 'major']:
+            col_key = f'axis_{axis_name}_{prop}'
+            setattr(pump, col_key, _get_nullable_float(data, col_key))
+        col_minor = f'axis_{axis_name}_minor'
+        setattr(pump, col_minor, _get_nullable_int(data, col_minor))
 
     imp_dia = data.get('impeller_diameters')
     if isinstance(imp_dia, list):

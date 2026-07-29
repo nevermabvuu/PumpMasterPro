@@ -134,7 +134,46 @@ class Pump(db.Model):
     eff_curve_style   = db.Column(db.String(50), default='#3fb950;1.5,dot')
     power_curve_style = db.Column(db.String(50), default='#f85149;1.5,longdash')
     npsh_curve_style  = db.Column(db.String(50), default='#39d3c0;1.5,dashdot')
-    main_curve_style  = db.Column(db.String(100), default='graph')
+    main_curve_style  = db.Column(db.String(50), default='graph')
+
+    # ── Custom Axis Scaling Settings ──────────────────────────────────────────────
+    # Beginners Note: These 20 columns store the custom graph axes bounds and division intervals.
+    # Each axis (Flow, Head, Efficiency, Power, NPSH) has 4 distinct properties:
+    #   1. min: lower numerical range boundary
+    #   2. max: upper numerical range boundary
+    #   3. major: number of major division steps/ticks
+    #   4. minor: number of minor subticks per major division
+    # Setting a field to None/NULL falls back to automatic scaling by Plotly.
+
+    # Flow (Q) Axis (x-axis)
+    axis_flow_min   = db.Column(db.Float, nullable=True)
+    axis_flow_max   = db.Column(db.Float, nullable=True)
+    axis_flow_major = db.Column(db.Float, nullable=True)
+    axis_flow_minor = db.Column(db.Integer, nullable=True)
+
+    # Head (H) Axis (main y-axis)
+    axis_head_min   = db.Column(db.Float, nullable=True)
+    axis_head_max   = db.Column(db.Float, nullable=True)
+    axis_head_major = db.Column(db.Float, nullable=True)
+    axis_head_minor = db.Column(db.Integer, nullable=True)
+
+    # Efficiency (η) Axis
+    axis_eff_min   = db.Column(db.Float, nullable=True)
+    axis_eff_max   = db.Column(db.Float, nullable=True)
+    axis_eff_major = db.Column(db.Float, nullable=True)
+    axis_eff_minor = db.Column(db.Integer, nullable=True)
+
+    # Power (P) Axis
+    axis_power_min   = db.Column(db.Float, nullable=True)
+    axis_power_max   = db.Column(db.Float, nullable=True)
+    axis_power_major = db.Column(db.Float, nullable=True)
+    axis_power_minor = db.Column(db.Integer, nullable=True)
+
+    # NPSH Axis
+    axis_npsh_min   = db.Column(db.Float, nullable=True)
+    axis_npsh_max   = db.Column(db.Float, nullable=True)
+    axis_npsh_major = db.Column(db.Float, nullable=True)
+    axis_npsh_minor = db.Column(db.Integer, nullable=True)
 
     created_at = db.Column(db.DateTime, default=_utcnow)
     updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow)
@@ -608,4 +647,29 @@ class Pump(db.Model):
             'power_curve_style': self.power_curve_style or '#f85149;1.5,longdash',
             'npsh_curve_style': self.npsh_curve_style or '#39d3c0;1.5,dashdot',
             'main_curve_style': self.main_curve_style or 'graph',
+            # Custom Axis Scale Settings (Flow, Head, Efficiency, Power, NPSH)
+            'axis_flow_min': self.axis_flow_min,
+            'axis_flow_max': self.axis_flow_max,
+            'axis_flow_major': self.axis_flow_major,
+            'axis_flow_minor': self.axis_flow_minor,
+
+            'axis_head_min': self.axis_head_min,
+            'axis_head_max': self.axis_head_max,
+            'axis_head_major': self.axis_head_major,
+            'axis_head_minor': self.axis_head_minor,
+
+            'axis_eff_min': self.axis_eff_min,
+            'axis_eff_max': self.axis_eff_max,
+            'axis_eff_major': self.axis_eff_major,
+            'axis_eff_minor': self.axis_eff_minor,
+
+            'axis_power_min': self.axis_power_min,
+            'axis_power_max': self.axis_power_max,
+            'axis_power_major': self.axis_power_major,
+            'axis_power_minor': self.axis_power_minor,
+
+            'axis_npsh_min': self.axis_npsh_min,
+            'axis_npsh_max': self.axis_npsh_max,
+            'axis_npsh_major': self.axis_npsh_major,
+            'axis_npsh_minor': self.axis_npsh_minor,
         }

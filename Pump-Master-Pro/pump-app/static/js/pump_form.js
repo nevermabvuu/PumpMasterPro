@@ -732,6 +732,18 @@ function getPumpFormData() {
   data['power_curve_style'] = document.getElementById('power_curve_style_field')?.value || '';
   data['npsh_curve_style'] = document.getElementById('npsh_curve_style_field')?.value || '';
 
+  // Beginners Note: Extract 20 custom axis scale settings (min, max, major, minor) for preview rendering
+  ['flow', 'head', 'eff', 'power', 'npsh'].forEach(axis => {
+    ['min', 'max', 'major'].forEach(prop => {
+      const fieldName = `axis_${axis}_${prop}`;
+      const el = document.getElementById(fieldName);
+      data[fieldName] = (el && el.value.trim() !== '') ? parseFloat(el.value.trim()) : null;
+    });
+    const minorField = `axis_${axis}_minor`;
+    const minorEl = document.getElementById(minorField);
+    data[minorField] = (minorEl && minorEl.value.trim() !== '') ? parseInt(minorEl.value.trim(), 10) : null;
+  });
+
   return data;
 }
 
@@ -875,6 +887,12 @@ function bindPreviewEvents() {
   ['preview-unit-q', 'preview-unit-h', 'preview-unit-npsh', 'preview-unit-pow'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', () => refreshPreviewCharts());
+  });
+
+  // Beginners Note: Bind change and input listeners to axis scale input fields for instant live preview updates
+  document.querySelectorAll('.axis-scale-input').forEach(input => {
+    input.addEventListener('change', () => refreshPreviewCharts());
+    input.addEventListener('input', () => refreshPreviewCharts());
   });
 }
 

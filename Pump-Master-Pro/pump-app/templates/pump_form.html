@@ -226,6 +226,136 @@
                 </div>
               </div>
             </div>
+
+            <!-- Graph Curve Styling (Head, Efficiency, Power, NPSH) -->
+            <div class="mt-3 pt-2 border-top border-secondary border-opacity-25">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <label class="form-label form-label-sm fw-semibold text-accent mb-0">
+                  <i class="bi bi-palette me-1"></i>Graph Curve Styles
+                </label>
+                <button class="btn btn-sm btn-link text-accent p-0 text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCurveStyles" aria-expanded="true" style="font-size: 0.78rem;">
+                  <i class="bi bi-sliders me-1"></i>Customize Colors & Lines
+                </button>
+              </div>
+
+              <div class="collapse show" id="collapseCurveStyles">
+                <div class="p-2 bg-dark rounded border border-secondary border-opacity-25">
+                  <div class="row g-1 align-items-center mb-1 text-muted small fw-semibold" style="font-size: 0.72rem;">
+                    <div class="col-3">Curve Type</div>
+                    <div class="col-3 text-center">Color</div>
+                    <div class="col-3 text-center">Weight</div>
+                    <div class="col-3 text-center">Line Style</div>
+                  </div>
+
+                  <!-- Head H-Q Curve Style -->
+                  <div class="row g-1 align-items-center mb-2">
+                    <div class="col-3 text-nowrap"><span class="small text-light fw-medium"><i class="bi bi-graph-up me-1 text-primary"></i>Head (H)</span></div>
+                    <div class="col-3 px-1">
+                      <input type="color" id="clrHeadColor" value="#58a6ff" class="form-control form-control-color form-control-sm w-100" title="Head Curve Color" style="height: 28px; padding: 2px;">
+                    </div>
+                    <div class="col-3 px-1">
+                      <select id="selHeadWeight" class="form-select form-select-sm form-control-dark" title="Head Line Weight" style="font-size: 0.75rem; padding: 2px 4px;">
+                        <option value="1">1 px</option>
+                        <option value="1.5">1.5 px</option>
+                        <option value="2" selected>2 px</option>
+                        <option value="2.5">2.5 px</option>
+                        <option value="3">3 px</option>
+                        <option value="4">4 px</option>
+                      </select>
+                    </div>
+                    <div class="col-3 px-1">
+                      <select id="selHeadStyle" class="form-select form-select-sm form-control-dark" title="Head Line Style" style="font-size: 0.75rem; padding: 2px 4px;">
+                        <option value="solid" selected>Solid (─)</option>
+                        <option value="dash">Dashed (---)</option>
+                        <option value="dot">Dotted (···)</option>
+                        <option value="dashdot">DashDot (-·-)</option>
+                        <option value="longdash">LongDash (——)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Efficiency Curve Style -->
+                  <div class="row g-1 align-items-center mb-2">
+                    <div class="col-3 text-nowrap"><span class="small text-light fw-medium"><i class="bi bi-speedometer2 me-1 text-success"></i>Efficiency (η)</span></div>
+                    <div class="col-3 px-1">
+                      <input type="color" id="clrEffColor" value="#3fb950" class="form-control form-control-color form-control-sm w-100" title="Efficiency Curve Color" style="height: 28px; padding: 2px;">
+                    </div>
+                    <div class="col-3 px-1">
+                      <select id="selEffWeight" class="form-select form-select-sm form-control-dark" title="Efficiency Line Weight" style="font-size: 0.75rem; padding: 2px 4px;">
+                        <option value="1">1 px</option>
+                        <option value="1.5" selected>1.5 px</option>
+                        <option value="2">2 px</option>
+                        <option value="2.5">2.5 px</option>
+                        <option value="3">3 px</option>
+                      </select>
+                    </div>
+                    <div class="col-3 px-1">
+                      <select id="selEffStyle" class="form-select form-select-sm form-control-dark" title="Efficiency Line Style" style="font-size: 0.75rem; padding: 2px 4px;">
+                        <option value="solid">Solid (─)</option>
+                        <option value="dash">Dashed (---)</option>
+                        <option value="dot" selected>Dotted (···)</option>
+                        <option value="dashdot">DashDot (-·-)</option>
+                        <option value="longdash">LongDash (——)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Power Curve Style -->
+                  <div class="row g-1 align-items-center mb-2">
+                    <div class="col-3 text-nowrap"><span class="small text-light fw-medium"><i class="bi bi-lightning-charge me-1 text-danger"></i>Power (P)</span></div>
+                    <div class="col-3 px-1">
+                      <input type="color" id="clrPowColor" value="#f85149" class="form-control form-control-color form-control-sm w-100" title="Power Curve Color" style="height: 28px; padding: 2px;">
+                    </div>
+                    <div class="col-3 px-1">
+                      <select id="selPowWeight" class="form-select form-select-sm form-control-dark" title="Power Line Weight" style="font-size: 0.75rem; padding: 2px 4px;">
+                        <option value="1">1 px</option>
+                        <option value="1.5" selected>1.5 px</option>
+                        <option value="2">2 px</option>
+                        <option value="2.5">2.5 px</option>
+                        <option value="3">3 px</option>
+                      </select>
+                    </div>
+                    <div class="col-3 px-1">
+                      <select id="selPowStyle" class="form-select form-select-sm form-control-dark" title="Power Line Style" style="font-size: 0.75rem; padding: 2px 4px;">
+                        <option value="solid">Solid (─)</option>
+                        <option value="dash">Dashed (---)</option>
+                        <option value="dot">Dotted (···)</option>
+                        <option value="dashdot">DashDot (-·-)</option>
+                        <option value="longdash" selected>LongDash (——)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- NPSH Curve Style -->
+                  <div class="row g-1 align-items-center">
+                    <div class="col-3 text-nowrap"><span class="small text-light fw-medium"><i class="bi bi-moisture me-1 text-info"></i>NPSHr</span></div>
+                    <div class="col-3 px-1">
+                      <input type="color" id="clrNpshColor" value="#39d3c0" class="form-control form-control-color form-control-sm w-100" title="NPSH Curve Color" style="height: 28px; padding: 2px;">
+                    </div>
+                    <div class="col-3 px-1">
+                      <select id="selNpshWeight" class="form-select form-select-sm form-control-dark" title="NPSH Line Weight" style="font-size: 0.75rem; padding: 2px 4px;">
+                        <option value="1">1 px</option>
+                        <option value="1.5" selected>1.5 px</option>
+                        <option value="2">2 px</option>
+                        <option value="2.5">2.5 px</option>
+                        <option value="3">3 px</option>
+                      </select>
+                    </div>
+                    <div class="col-3 px-1">
+                      <select id="selNpshStyle" class="form-select form-select-sm form-control-dark" title="NPSH Line Style" style="font-size: 0.75rem; padding: 2px 4px;">
+                        <option value="solid">Solid (─)</option>
+                        <option value="dash">Dashed (---)</option>
+                        <option value="dot">Dotted (···)</option>
+                        <option value="dashdot" selected>DashDot (-·-)</option>
+                        <option value="longdash">LongDash (——)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
           </div>
 
         </div>
@@ -369,6 +499,30 @@
             <option value="in" {% if pump and pump.get_curve_diameters_list() and pump.get_curve_diameters_list()[0]['unit'] == 'in' %}selected{% endif %}>in</option>
             <option value="m" {% if pump and pump.get_curve_diameters_list() and pump.get_curve_diameters_list()[0]['unit'] == 'm' %}selected{% endif %}>m</option>
           </select>
+          <div class="vr mx-1 opacity-50"></div>
+          <span class="text-muted small">Style:</span>
+          <select class="header-unit-select" id="main_curve_style_mode" style="margin-top:0;width:auto;">
+            <option value="graph">Use Graph Settings</option>
+            <option value="custom">Use Custom Style</option>
+          </select>
+          <div id="main_curve_custom_controls" class="align-items-center gap-1 ms-1 d-none">
+            <input type="color" id="main_curve_color" value="#58a6ff" class="form-control form-control-color form-control-sm" style="height:26px;width:32px;padding:2px;" title="Main Curve Color">
+            <select id="main_curve_weight" class="header-unit-select" style="margin-top:0;width:auto;" title="Line Weight">
+              <option value="1">1 px</option>
+              <option value="1.5">1.5 px</option>
+              <option value="2" selected>2 px</option>
+              <option value="2.5">2.5 px</option>
+              <option value="3">3 px</option>
+              <option value="4">4 px</option>
+            </select>
+            <select id="main_curve_line_style" class="header-unit-select" style="margin-top:0;width:auto;" title="Line Style">
+              <option value="solid" selected>Solid (─)</option>
+              <option value="dash">Dashed (---)</option>
+              <option value="dot">Dotted (···)</option>
+              <option value="dashdot">DashDot (-·-)</option>
+              <option value="longdash">LongDash (——)</option>
+            </select>
+          </div>
         </div>
       </div>
       <div class="card-body">
@@ -589,6 +743,11 @@
 <input type="hidden" name="unit_npsh" id="unit_npsh_field" value="{{ pump.unit_npsh if pump else 'm' }}">
 <input type="hidden" name="unit_pow" id="unit_pow_field" value="{{ pump.unit_pow if pump else 'kw' }}">
 <input type="hidden" name="unit_op_q" id="unit_op_q_field" value="{{ pump.unit_op_q if pump else 'm3h' }}">
+<input type="hidden" name="head_curve_style" id="head_curve_style_field" value="{{ pump.head_curve_style if pump and pump.head_curve_style else '#58a6ff;2.0,solid' }}">
+<input type="hidden" name="eff_curve_style" id="eff_curve_style_field" value="{{ pump.eff_curve_style if pump and pump.eff_curve_style else '#3fb950;1.5,dot' }}">
+<input type="hidden" name="power_curve_style" id="power_curve_style_field" value="{{ pump.power_curve_style if pump and pump.power_curve_style else '#f85149;1.5,longdash' }}">
+<input type="hidden" name="npsh_curve_style" id="npsh_curve_style_field" value="{{ pump.npsh_curve_style if pump and pump.npsh_curve_style else '#39d3c0;1.5,dashdot' }}">
+<input type="hidden" name="main_curve_style" id="main_curve_style_field" value="{{ pump.main_curve_style if pump and pump.main_curve_style else 'graph' }}">
 <input type="file" id="extraCurveFileInp" style="display:none" accept=".csv,.txt,.dat">
 
 </form>
@@ -646,6 +805,11 @@
      data-curve-units="{{ pump.curve_units if pump and pump.curve_units else '' }}"
      data-curve-raw-tables="{{ pump.curve_raw_tables if pump and pump.curve_raw_tables else '' }}"
      data-curve-coeffs="{{ pump.curve_coeffs if pump and pump.curve_coeffs else '' }}"
+     data-head-curve-style="{{ pump.head_curve_style if pump and pump.head_curve_style else '#58a6ff;2.0,solid' }}"
+     data-eff-curve-style="{{ pump.eff_curve_style if pump and pump.eff_curve_style else '#3fb950;1.5,dot' }}"
+     data-power-curve-style="{{ pump.power_curve_style if pump and pump.power_curve_style else '#f85149;1.5,longdash' }}"
+     data-npsh-curve-style="{{ pump.npsh_curve_style if pump and pump.npsh_curve_style else '#39d3c0;1.5,dashdot' }}"
+     data-main-curve-style="{{ pump.main_curve_style if pump and pump.main_curve_style else 'graph' }}"
      data-unit-q="{{ pump.unit_q if pump else 'm3h' }}"
      data-unit-h="{{ pump.unit_h if pump else 'm' }}"
      data-unit-npsh="{{ pump.unit_npsh if pump else 'm' }}"
@@ -654,8 +818,8 @@
      data-graph-options='{{ (pump.get_graph_options() | tojson) if pump else "{}" }}'
      {% endif %}>
 </div>
-<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=28"></script>
-<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=22"></script>
+<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=30"></script>
+<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=24"></script>
 <script>
 (function () {
   initUnitSelectors();
@@ -702,6 +866,52 @@
       const savedGraphOpts = (initEl.dataset.graphOptions && initEl.dataset.graphOptions !== 'undefined') ? JSON.parse(initEl.dataset.graphOptions) : null;
       if (savedGraphOpts && typeof applyGraphOptions === 'function') {
         applyGraphOptions(savedGraphOpts);
+      }
+
+      // Restore formatted curve styles (head, eff, power, npsh)
+      ['head', 'eff', 'power', 'npsh'].forEach(type => {
+        const attrName = type + 'CurveStyle';
+        const str = initEl.dataset[attrName];
+        if (str && str.includes(';') && str.includes(',')) {
+          const parts = str.split(';');
+          const cVal = parts[0].trim();
+          const subparts = parts[1].split(',');
+          const wVal = subparts[0]?.trim();
+          const sVal = subparts[1]?.trim();
+          const typeCap = type.charAt(0).toUpperCase() + type.slice(1);
+          const clrEl = document.getElementById(`clr${typeCap}Color`);
+          const wEl = document.getElementById(`sel${typeCap}Weight`);
+          const sEl = document.getElementById(`sel${typeCap}Style`);
+          if (clrEl && cVal) clrEl.value = cVal;
+          if (wEl && wVal) wEl.value = wVal;
+          if (sEl && sVal) sEl.value = sVal;
+        }
+      });
+
+      // Restore Main Curve style mode
+      const mainStyleStr = initEl.dataset.mainCurveStyle;
+      if (mainStyleStr) {
+        const mainModeSel = document.getElementById('main_curve_style_mode');
+        const mainControls = document.getElementById('main_curve_custom_controls');
+        if (mainStyleStr.startsWith('custom;')) {
+          if (mainModeSel) mainModeSel.value = 'custom';
+          if (mainControls) { mainControls.classList.remove('d-none'); mainControls.classList.add('d-inline-flex'); }
+          const parts = mainStyleStr.split(';');
+          if (parts[1]) {
+            const mc = document.getElementById('main_curve_color');
+            if (mc) mc.value = parts[1].trim();
+          }
+          if (parts[2]) {
+            const sub = parts[2].split(',');
+            const mw = document.getElementById('main_curve_weight');
+            const ms = document.getElementById('main_curve_line_style');
+            if (mw && sub[0]) mw.value = sub[0].trim();
+            if (ms && sub[1]) ms.value = sub[1].trim();
+          }
+        } else {
+          if (mainModeSel) mainModeSel.value = 'graph';
+          if (mainControls) { mainControls.classList.remove('d-inline-flex'); mainControls.classList.add('d-none'); }
+        }
       }
     // Show preview with existing fit on load
     (function() {

@@ -30,9 +30,29 @@ with app.app_context():
             cols = [row[1] for row in result.fetchall()]
             for col_name in ['curve_labels', 'curve_diameters', 'curve_colors', 'curve_modes',
                              'curve_units', 'curve_raw_tables', 'curve_coeffs',
-                             'unit_q', 'unit_h', 'unit_npsh', 'unit_pow', 'unit_op_q', 'graph_custom_label_pos']:
+                             'unit_q', 'unit_h', 'unit_npsh', 'unit_pow', 'unit_op_q', 'graph_custom_label_pos',
+                             'head_curve_style', 'eff_curve_style', 'power_curve_style', 'npsh_curve_style', 'main_curve_style']:
                 if col_name not in cols:
-                    default_val = "'{}'" if col_name == 'graph_custom_label_pos' else ("'m3h'" if col_name in ['unit_q', 'unit_op_q'] else ("'m'" if col_name in ['unit_h', 'unit_npsh'] else ("'kw'" if col_name == 'unit_pow' else "''")))
+                    if col_name == 'graph_custom_label_pos':
+                        default_val = "'{}'"
+                    elif col_name == 'head_curve_style':
+                        default_val = "'#58a6ff;2.0,solid'"
+                    elif col_name == 'eff_curve_style':
+                        default_val = "'#3fb950;1.5,dot'"
+                    elif col_name == 'power_curve_style':
+                        default_val = "'#f85149;1.5,longdash'"
+                    elif col_name == 'npsh_curve_style':
+                        default_val = "'#39d3c0;1.5,dashdot'"
+                    elif col_name == 'main_curve_style':
+                        default_val = "'graph'"
+                    elif col_name in ['unit_q', 'unit_op_q']:
+                        default_val = "'m3h'"
+                    elif col_name in ['unit_h', 'unit_npsh']:
+                        default_val = "'m'"
+                    elif col_name == 'unit_pow':
+                        default_val = "'kw'"
+                    else:
+                        default_val = "''"
                     conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {col_name} TEXT DEFAULT {default_val}"))
             for old_col in ['main_curve_label', 'main_curve_dia_mm', 'data_units']:
                 if old_col in cols:
@@ -184,6 +204,7 @@ def _pump_from_form(f, pump=None):
     pump.curve_modes     = f.get('curve_modes', pump.curve_modes or '')
     pump.curve_units     = f.get('curve_units', pump.curve_units or '')
     pump.curve_raw_tables = f.get('curve_raw_tables', pump.curve_raw_tables or '')
+    pump.extra_curves_json = f.get('extra_curves_json', pump.extra_curves_json or '')
     
     raw_coeffs = f.get('curve_coeffs', pump.curve_coeffs or '')
     pump.curve_coeffs    = _auto_fit_coeffs(pump.curve_raw_tables, raw_coeffs, pump.curve_units)
@@ -193,6 +214,12 @@ def _pump_from_form(f, pump=None):
     pump.unit_npsh = f.get('unit_npsh', pump.unit_npsh or 'm')
     pump.unit_pow  = f.get('unit_pow', pump.unit_pow or 'kw')
     pump.unit_op_q = f.get('unit_op_q', pump.unit_op_q or 'm3h')
+
+    pump.head_curve_style  = f.get('head_curve_style', pump.head_curve_style or '#58a6ff;2.0,solid')
+    pump.eff_curve_style   = f.get('eff_curve_style', pump.eff_curve_style or '#3fb950;1.5,dot')
+    pump.power_curve_style = f.get('power_curve_style', pump.power_curve_style or '#f85149;1.5,longdash')
+    pump.npsh_curve_style  = f.get('npsh_curve_style', pump.npsh_curve_style or '#39d3c0;1.5,dashdot')
+    pump.main_curve_style  = f.get('main_curve_style', pump.main_curve_style or 'graph')
 
     # Convert op-range values from display unit to SI (m³/h) before persisting
     units_dict = pump._get_data_units()
@@ -374,6 +401,10 @@ def api_preview_warman_chart():
         else:
             setattr(pump, field, 0.0)
 
+    for field in ['head_curve_style', 'eff_curve_style', 'power_curve_style', 'npsh_curve_style', 'main_curve_style']:
+        if field in data and data[field]:
+            setattr(pump, field, str(data[field]))
+
     imp_dia = data.get('impeller_diameters')
     if isinstance(imp_dia, list):
         pump.impeller_diameters = json.dumps(imp_dia)
@@ -385,6 +416,7 @@ def api_preview_warman_chart():
         try: extra_curves = json.loads(extra_curves)
         except Exception: extra_curves = []
     if isinstance(extra_curves, list):
+        pump._transient_extra_curves = extra_curves
         pump.sync_curve_fields(extra_curves_data=extra_curves)
 
     liquid = data.get('liquid', 'water')

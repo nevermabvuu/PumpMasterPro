@@ -302,6 +302,7 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
                 'power': round(float(pwr_arr[idx_bep]), 2)
             }
 
+            c_use_custom = c.get('use_custom_style', False) or (c.get('style_mode') == 'custom')
             return {
                 'dia': d,
                 'is_max': False,
@@ -313,12 +314,39 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
                 'power': pwr_arr.tolist(),
                 'npsh': npsh_arr.tolist(),
                 'bep': bep_dict,
-                'color': c.get('color')
+                'color': c.get('color'),
+                'use_custom_style': c_use_custom,
+                'style_mode': 'custom' if c_use_custom else 'graph',
+                'weight': c.get('weight'),
+                'style': c.get('style')
             }
 
         def _make_affinity():
             penalty = 40.0 * (1.0 - r)
             eta_trimmed = np.clip(eta_base - penalty, 0, 100)
+            use_custom = False
+            c_color = None
+            c_weight = None
+            c_style = None
+
+            if d == d_max:
+                main_style = getattr(pump, 'main_curve_style', 'graph') or 'graph'
+                if main_style.startswith('custom;'):
+                    use_custom = True
+                    parts = main_style.split(';')
+                    if len(parts) >= 2:
+                        c_color = parts[1].strip()
+                    if len(parts) >= 3:
+                        sub = parts[2].split(',')
+                        try: c_weight = float(sub[0].strip())
+                        except Exception: pass
+                        if len(sub) >= 2: c_style = sub[1].strip()
+            elif matched_extra:
+                use_custom = matched_extra.get('use_custom_style', False) or (matched_extra.get('style_mode') == 'custom')
+                c_color = matched_extra.get('color')
+                c_weight = matched_extra.get('weight')
+                c_style = matched_extra.get('style')
+
             return {
                 'dia': d,
                 'is_max': d == d_max,
@@ -330,7 +358,11 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
                 'power': (pwr_base * r ** 3).tolist(),
                 'npsh': (npsh_base * r ** 2).tolist(),
                 'bep': _bep_for_ratio(pump, r, h_base, eta_base, pwr_base, q_base),
-                'color': matched_extra.get('color') if matched_extra else None
+                'color': c_color,
+                'use_custom_style': use_custom,
+                'style_mode': 'custom' if use_custom else 'graph',
+                'weight': c_weight,
+                'style': c_style
             }
 
         if eff_mode == 'both' and can_fit:

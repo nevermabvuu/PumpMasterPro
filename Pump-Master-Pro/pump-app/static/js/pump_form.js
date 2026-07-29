@@ -228,6 +228,39 @@ function initUnitSelectors() {
   initPowerAutoCalc();
   initPreviewUnitSelectors();
 
+  // Main Curve style controls
+  const mainStyleModeSel = document.getElementById('main_curve_style_mode');
+  if (mainStyleModeSel) {
+    mainStyleModeSel.addEventListener('change', (e) => {
+      const controls = document.getElementById('main_curve_custom_controls');
+      if (controls) {
+        if (e.target.value === 'custom') {
+          controls.classList.remove('d-none');
+          controls.classList.add('d-inline-flex');
+        } else {
+          controls.classList.remove('d-inline-flex');
+          controls.classList.add('d-none');
+        }
+      }
+      if (typeof serializeGraphOptions === 'function') serializeGraphOptions();
+      refreshMainPreview();
+    });
+  }
+
+  ['main_curve_color', 'main_curve_weight', 'main_curve_line_style'].forEach(elemId => {
+    const el = document.getElementById(elemId);
+    if (el) {
+      el.addEventListener('input', () => {
+        if (typeof serializeGraphOptions === 'function') serializeGraphOptions();
+        refreshMainPreview();
+      });
+      el.addEventListener('change', () => {
+        if (typeof serializeGraphOptions === 'function') serializeGraphOptions();
+        refreshMainPreview();
+      });
+    }
+  });
+
   const mainDiaUnitSel = document.getElementById('main_curve_dia_unit');
   if (mainDiaUnitSel) {
     mainDiaUnitSel.setAttribute('data-prev', mainDiaUnitSel.value);
@@ -512,7 +545,24 @@ function collectGraphOptions() {
     legend_mode: document.getElementById('selLegendMode')?.value || 'each',
     curve_label_flow_pct: parseFloat(document.getElementById('txtCurveLabelFlowPct')?.value) || 100,
     curve_label_vpos: document.getElementById('selCurveLabelVPos')?.value || 'top',
-    curve_label_pos: document.getElementById('selCurveLabelPos')?.value || 'middle-top'
+    curve_label_pos: document.getElementById('selCurveLabelPos')?.value || 'middle-top',
+
+    // Graph Curve Styling Options (Head, Efficiency, Power, NPSH)
+    head_color: document.getElementById('clrHeadColor')?.value || '#58a6ff',
+    head_weight: parseFloat(document.getElementById('selHeadWeight')?.value) || 2.0,
+    head_style: document.getElementById('selHeadStyle')?.value || 'solid',
+
+    eff_color: document.getElementById('clrEffColor')?.value || '#3fb950',
+    eff_weight: parseFloat(document.getElementById('selEffWeight')?.value) || 1.5,
+    eff_style: document.getElementById('selEffStyle')?.value || 'dot',
+
+    pow_color: document.getElementById('clrPowColor')?.value || '#f85149',
+    pow_weight: parseFloat(document.getElementById('selPowWeight')?.value) || 1.5,
+    pow_style: document.getElementById('selPowStyle')?.value || 'longdash',
+
+    npsh_color: document.getElementById('clrNpshColor')?.value || '#39d3c0',
+    npsh_weight: parseFloat(document.getElementById('selNpshWeight')?.value) || 1.5,
+    npsh_style: document.getElementById('selNpshStyle')?.value || 'dashdot'
   };
 }
 
@@ -570,6 +620,23 @@ function applyGraphOptions(opts) {
   if (opts.custom_label_pos && typeof opts.custom_label_pos === 'object') {
     customLabelPositions = Object.assign({}, opts.custom_label_pos);
   }
+
+  // Restore Curve Style Inputs
+  if (opts.head_color && document.getElementById('clrHeadColor')) document.getElementById('clrHeadColor').value = opts.head_color;
+  if (opts.head_weight && document.getElementById('selHeadWeight')) document.getElementById('selHeadWeight').value = opts.head_weight;
+  if (opts.head_style && document.getElementById('selHeadStyle')) document.getElementById('selHeadStyle').value = opts.head_style;
+
+  if (opts.eff_color && document.getElementById('clrEffColor')) document.getElementById('clrEffColor').value = opts.eff_color;
+  if (opts.eff_weight && document.getElementById('selEffWeight')) document.getElementById('selEffWeight').value = opts.eff_weight;
+  if (opts.eff_style && document.getElementById('selEffStyle')) document.getElementById('selEffStyle').value = opts.eff_style;
+
+  if (opts.pow_color && document.getElementById('clrPowColor')) document.getElementById('clrPowColor').value = opts.pow_color;
+  if (opts.pow_weight && document.getElementById('selPowWeight')) document.getElementById('selPowWeight').value = opts.pow_weight;
+  if (opts.pow_style && document.getElementById('selPowStyle')) document.getElementById('selPowStyle').value = opts.pow_style;
+
+  if (opts.npsh_color && document.getElementById('clrNpshColor')) document.getElementById('clrNpshColor').value = opts.npsh_color;
+  if (opts.npsh_weight && document.getElementById('selNpshWeight')) document.getElementById('selNpshWeight').value = opts.npsh_weight;
+  if (opts.npsh_style && document.getElementById('selNpshStyle')) document.getElementById('selNpshStyle').value = opts.npsh_style;
 }
 
 function serializeGraphOptions() {
@@ -588,6 +655,38 @@ function serializeGraphOptions() {
     const form = document.getElementById('pumpForm');
     if (form) form.appendChild(hdn);
   }
+
+  // Persist formatted curve styles (color;weight,lineStyle) to hidden fields
+  const headColor = document.getElementById('clrHeadColor')?.value || '#58a6ff';
+  const headWeight = document.getElementById('selHeadWeight')?.value || '2.0';
+  const headStyle = document.getElementById('selHeadStyle')?.value || 'solid';
+  const fHead = document.getElementById('head_curve_style_field');
+  if (fHead) fHead.value = `${headColor};${headWeight},${headStyle}`;
+
+  const effColor = document.getElementById('clrEffColor')?.value || '#3fb950';
+  const effWeight = document.getElementById('selEffWeight')?.value || '1.5';
+  const effStyle = document.getElementById('selEffStyle')?.value || 'dot';
+  const fEff = document.getElementById('eff_curve_style_field');
+  if (fEff) fEff.value = `${effColor};${effWeight},${effStyle}`;
+
+  const powColor = document.getElementById('clrPowColor')?.value || '#f85149';
+  const powWeight = document.getElementById('selPowWeight')?.value || '1.5';
+  const powStyle = document.getElementById('selPowStyle')?.value || 'longdash';
+  const fPow = document.getElementById('power_curve_style_field');
+  if (fPow) fPow.value = `${powColor};${powWeight},${powStyle}`;
+
+  const npshColor = document.getElementById('clrNpshColor')?.value || '#39d3c0';
+  const npshWeight = document.getElementById('selNpshWeight')?.value || '1.5';
+  const npshStyle = document.getElementById('selNpshStyle')?.value || 'dashdot';
+  const fNpsh = document.getElementById('npsh_curve_style_field');
+  if (fNpsh) fNpsh.value = `${npshColor};${npshWeight},${npshStyle}`;
+
+  const mainStyleMode = document.getElementById('main_curve_style_mode')?.value || 'graph';
+  const mainColor = document.getElementById('main_curve_color')?.value || '#58a6ff';
+  const mainWeight = document.getElementById('main_curve_weight')?.value || '2.0';
+  const mainLineStyle = document.getElementById('main_curve_line_style')?.value || 'solid';
+  const fMain = document.getElementById('main_curve_style_field');
+  if (fMain) fMain.value = mainStyleMode === 'custom' ? `custom;${mainColor};${mainWeight},${mainLineStyle}` : 'graph';
 }
 
 function getPumpFormData() {
@@ -626,6 +725,12 @@ function getPumpFormData() {
   const payload = serializeExtraCurves();
   serializeGraphOptions();
   data['extra_curves'] = payload;
+
+  data['main_curve_style'] = document.getElementById('main_curve_style_field')?.value || 'graph';
+  data['head_curve_style'] = document.getElementById('head_curve_style_field')?.value || '';
+  data['eff_curve_style'] = document.getElementById('eff_curve_style_field')?.value || '';
+  data['power_curve_style'] = document.getElementById('power_curve_style_field')?.value || '';
+  data['npsh_curve_style'] = document.getElementById('npsh_curve_style_field')?.value || '';
 
   return data;
 }
@@ -1073,7 +1178,24 @@ var EXTRA_CURVE_COLORS = [
 var _extraCurveIdCounter = 0;
 var extraCurves = [];   // [{id, label, color, fitted, coeffs}]
 
-/* ── Serialise all extra curves to hidden form fields ─────────────────── */
+function sanitizeHexColor(val, fallback = '#3fb950') {
+  if (!val || typeof val !== 'string') return fallback;
+  if (val.includes(';')) {
+    const parts = val.split(';');
+    for (const p of parts) {
+      const trimmed = p.trim();
+      if (trimmed.startsWith('#')) {
+        val = trimmed;
+        break;
+      }
+    }
+  }
+  val = val.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) return val;
+  if (/^[0-9a-fA-F]{6}$/.test(val)) return '#' + val;
+  return fallback;
+}
+
 /* ── Serialise all extra curves to hidden form fields ─────────────────── */
 function serializeExtraCurves() {
   const cardEntries = document.querySelectorAll('#extraCurvesList .custom-curve-entry');
@@ -1129,9 +1251,17 @@ function serializeExtraCurves() {
     const unitNpsh = entry.querySelector('.unit-select-npsh')?.value || inMemCurve.unit_npsh || 'm';
     const unitPow = entry.querySelector('.unit-select-pow')?.value || inMemCurve.unit_pow || 'kw';
 
+
+
+    const styleMode = entry.querySelector('.unit-select-style-mode')?.value || inMemCurve.style_mode || 'graph';
+    const useCustomStyle = styleMode === 'custom';
+    const colorPickerVal = entry.querySelector('.extra-color-picker')?.value;
     const activeSwatch = entry.querySelector('.curve-color-swatch.active');
     const colorDot = entry.querySelector('.curve-color-dot');
-    const color = activeSwatch?.dataset?.color || colorDot?.style?.backgroundColor || inMemCurve.color || '#3fb950';
+    const rawColor = colorPickerVal || activeSwatch?.dataset?.color || colorDot?.style?.backgroundColor || inMemCurve.color;
+    const color = sanitizeHexColor(rawColor, '#3fb950');
+    const weight = parseFloat(entry.querySelector('.extra-weight-select')?.value) || inMemCurve.weight || 2.0;
+    const style = entry.querySelector('.extra-line-style-select')?.value || inMemCurve.style || 'solid';
 
     const tableRows = entry.querySelectorAll('table tbody tr');
     const raw_table = [];
@@ -1155,12 +1285,16 @@ function serializeExtraCurves() {
     inMemCurve.unit_npsh = unitNpsh;
     inMemCurve.unit_pow = unitPow;
     inMemCurve.curve_mode = curveMode;
+    inMemCurve.style_mode = styleMode;
+    inMemCurve.use_custom_style = useCustomStyle;
     inMemCurve.color = color;
+    inMemCurve.weight = weight;
+    inMemCurve.style = style;
     if (raw_table.length > 0) inMemCurve.raw_table = raw_table;
 
     labels.push(label);
     diasUnits.push(`${diameter};${unitDia}`);
-    colors.push(color);
+    colors.push(sanitizeHexColor(color, '#3fb950'));
     modes.push(curveMode);
     unitsList.push(`${unitQ},${unitH},${unitNpsh},${unitPow}`);
     rawTables.push(raw_table.map(r => r.join(',')).join(';'));
@@ -1175,6 +1309,7 @@ function serializeExtraCurves() {
     payload.push({
       label, color, diameter, unit_dia: unitDia, curve_mode: curveMode,
       unit_q: unitQ, unit_h: unitH, unit_npsh: unitNpsh, unit_pow: unitPow,
+      style_mode: styleMode, use_custom_style: useCustomStyle, weight, style,
       raw_table: raw_table.length > 0 ? raw_table : (inMemCurve.raw_table || [])
     });
   });
@@ -1186,6 +1321,18 @@ function serializeExtraCurves() {
   if (document.getElementById('curve_units_field')) document.getElementById('curve_units_field').value = unitsList.join('|');
   if (document.getElementById('curve_raw_tables_field')) document.getElementById('curve_raw_tables_field').value = rawTables.join('|');
   if (document.getElementById('curve_coeffs_field')) document.getElementById('curve_coeffs_field').value = coeffsList.join('|');
+
+  const jsonStr = JSON.stringify(payload);
+  let hdnJson = document.getElementById('extra_curves_json_field');
+  if (!hdnJson) {
+    hdnJson = document.createElement('input');
+    hdnJson.type = 'hidden';
+    hdnJson.name = 'extra_curves_json';
+    hdnJson.id = 'extra_curves_json_field';
+    const form = document.getElementById('pumpForm');
+    if (form) form.appendChild(hdnJson);
+  }
+  hdnJson.value = jsonStr;
 
   return payload;
 }
@@ -1371,10 +1518,8 @@ async function fitExtraCurve(curveId) {
 }
 
 function refreshMainPreview() {
-  const previewEl = document.getElementById('curvePreview');
-  if (previewEl && previewEl.style.display !== 'none') {
-    const { q_h: q_h_raw, q_eta: q_eta_raw, q_npsh: q_npsh_raw } = getTableData('perfTable', true);
-    buildPreviewCharts(lastFitResults, q_h_raw, q_eta_raw, q_npsh_raw);
+  if (typeof refreshPreviewCharts === 'function') {
+    refreshPreviewCharts();
   }
 }
 
@@ -1397,11 +1542,16 @@ function _updateExtraPlaceholders(div, type, unit) {
 /* ── Add a new extra curve card (optionally pre-filled with existingData) ── */
 function addExtraCurveCard(existingData) {
   const id = ++_extraCurveIdCounter;
-  const color = existingData?.color || EXTRA_CURVE_COLORS[(id - 1) % EXTRA_CURVE_COLORS.length];
+  const rawColor = existingData?.color || EXTRA_CURVE_COLORS[(id - 1) % EXTRA_CURVE_COLORS.length];
+  const color = sanitizeHexColor(rawColor, EXTRA_CURVE_COLORS[(id - 1) % EXTRA_CURVE_COLORS.length]);
   const label = existingData?.label || `Curve ${id}`;
   const diameter = existingData?.diameter || '';
   const diaUnit = existingData?.unit_dia || 'mm';
   const curveMode = existingData?.curve_mode || 'fit';
+  const styleMode = existingData?.style_mode || (existingData?.use_custom_style ? 'custom' : 'graph');
+  const weight = existingData?.weight || 2.0;
+  const style = existingData?.style || 'solid';
+
   const qUnit = existingData?.unit_q || document.getElementById('unit-q')?.value || 'm3h';
   const hUnit = existingData?.unit_h || document.getElementById('unit-h')?.value || 'm';
   const npshUnit = existingData?.unit_npsh || document.getElementById('unit-npsh')?.value || 'm';
@@ -1414,6 +1564,10 @@ function addExtraCurveCard(existingData) {
     diameter,
     unit_dia: diaUnit,
     curve_mode: curveMode,
+    style_mode: styleMode,
+    use_custom_style: styleMode === 'custom',
+    weight,
+    style,
     unit_q: qUnit,
     unit_h: hUnit,
     unit_npsh: npshUnit,
@@ -1426,11 +1580,6 @@ function addExtraCurveCard(existingData) {
   const div = document.createElement('div');
   div.className = 'custom-curve-entry mb-3';
   div.id = `extra-entry-${id}`;
-
-  const swatches = EXTRA_CURVE_COLORS.map(c =>
-    `<span class="curve-color-swatch ${c === color ? 'active' : ''}"
-          style="background:${c}" data-color="${c}" data-eid="${id}"></span>`
-  ).join('');
 
   let tableRowsHtml = '';
   if (existingData && Array.isArray(existingData.raw_table) && existingData.raw_table.length > 0) {
@@ -1458,17 +1607,39 @@ function addExtraCurveCard(existingData) {
       <input type="text" class="form-control form-control-sm form-control-dark extra-label-input"
              value="${label}" placeholder="Curve label"
              style="max-width:180px;font-weight:600" data-eid="${id}">
-      <span class="text-muted small ms-2">Diameter:</span>
+      <span class="text-muted small ms-1">Diameter:</span>
       <input type="number" class="form-control form-control-sm form-control-dark extra-dia-input" step="any"
              value="${diameter}" placeholder="e.g. 280"
-             style="max-width:90px" data-eid="${id}">
+             style="max-width:85px" data-eid="${id}">
       <select class="header-unit-select unit-select-dia" data-eid="${id}" style="margin-top:0">
         <option value="mm" ${diaUnit === 'mm' ? 'selected' : ''}>mm</option>
         <option value="in" ${diaUnit === 'in' ? 'selected' : ''}>in</option>
         <option value="m" ${diaUnit === 'm' ? 'selected' : ''}>m</option>
       </select>
-      <span class="text-muted small ms-2">Color:</span>
-      <div class="d-flex gap-1 flex-wrap me-2">${swatches}</div>
+      <div class="vr mx-1 opacity-50"></div>
+      <span class="text-muted small">Style:</span>
+      <select class="header-unit-select unit-select-style-mode" data-eid="${id}" style="margin-top:0;width:auto">
+        <option value="graph" ${styleMode === 'graph' ? 'selected' : ''}>Use Graph Settings</option>
+        <option value="custom" ${styleMode === 'custom' ? 'selected' : ''}>Use Custom Style</option>
+      </select>
+      <div id="extra-custom-controls-${id}" class="extra-custom-controls align-items-center gap-1 ms-1 ${styleMode === 'custom' ? 'd-inline-flex' : 'd-none'}">
+        <input type="color" class="form-control form-control-color extra-color-picker" value="${color}" data-eid="${id}" style="height:26px;width:32px;padding:2px;" title="Curve Color">
+        <select class="header-unit-select extra-weight-select" data-eid="${id}" style="margin-top:0;width:auto;" title="Line Weight">
+          <option value="1" ${String(weight) === '1' ? 'selected' : ''}>1 px</option>
+          <option value="1.5" ${String(weight) === '1.5' ? 'selected' : ''}>1.5 px</option>
+          <option value="2" ${String(weight) === '2' ? 'selected' : ''}>2 px</option>
+          <option value="2.5" ${String(weight) === '2.5' ? 'selected' : ''}>2.5 px</option>
+          <option value="3" ${String(weight) === '3' ? 'selected' : ''}>3 px</option>
+          <option value="4" ${String(weight) === '4' ? 'selected' : ''}>4 px</option>
+        </select>
+        <select class="header-unit-select extra-line-style-select" data-eid="${id}" style="margin-top:0;width:auto;" title="Line Style">
+          <option value="solid" ${style === 'solid' ? 'selected' : ''}>Solid (─)</option>
+          <option value="dash" ${style === 'dash' ? 'selected' : ''}>Dashed (---)</option>
+          <option value="dot" ${style === 'dot' ? 'selected' : ''}>Dotted (···)</option>
+          <option value="dashdot" ${style === 'dashdot' ? 'selected' : ''}>DashDot (-·-)</option>
+          <option value="longdash" ${style === 'longdash' ? 'selected' : ''}>LongDash (——)</option>
+        </select>
+      </div>
       <button type="button" class="btn btn-sm btn-outline-danger ms-auto py-0 px-2 btn-extra-remove"
               data-eid="${id}">&#x2715; Remove</button>
     </div>
@@ -1717,19 +1888,47 @@ function addExtraCurveCard(existingData) {
   };
   initExtraUnitSelectors();
 
-  // Events: color swatches
-  div.querySelectorAll('.curve-color-swatch').forEach(swatch => {
-    swatch.addEventListener('click', () => {
-      const eid = parseInt(swatch.dataset.eid);
-      const newColor = swatch.dataset.color;
-      const curve = extraCurves.find(c => c.id === eid);
-      if (!curve) return;
-      curve.color = newColor;
-      div.querySelectorAll('.curve-color-swatch').forEach(s => s.classList.remove('active'));
-      swatch.classList.add('active');
-      div.querySelector('.curve-color-dot').style.background = newColor;
-      refreshMainPreview();
+  // Events: style mode select
+  const styleModeSel = div.querySelector('.unit-select-style-mode');
+  if (styleModeSel) {
+    styleModeSel.addEventListener('change', e => {
+      const mode = e.target.value;
+      const controlsDiv = div.querySelector(`#extra-custom-controls-${id}`);
+      if (controlsDiv) {
+        if (mode === 'custom') {
+          controlsDiv.classList.remove('d-none');
+          controlsDiv.classList.add('d-inline-flex');
+        } else {
+          controlsDiv.classList.remove('d-inline-flex');
+          controlsDiv.classList.add('d-none');
+        }
+      }
       serializeExtraCurves();
+      refreshMainPreview();
+    });
+  }
+
+  // Events: color picker
+  const colorPicker = div.querySelector('.extra-color-picker');
+  if (colorPicker) {
+    ['input', 'change'].forEach(evt => {
+      colorPicker.addEventListener(evt, e => {
+        const newColor = sanitizeHexColor(e.target.value, '#3fb950');
+        const curve = extraCurves.find(c => c.id === id);
+        if (curve) curve.color = newColor;
+        const dot = div.querySelector('.curve-color-dot');
+        if (dot) dot.style.background = newColor;
+        serializeExtraCurves();
+        refreshPreviewCharts();
+      });
+    });
+  }
+
+  // Events: weight & line style select
+  div.querySelectorAll('.extra-weight-select, .extra-line-style-select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      serializeExtraCurves();
+      refreshMainPreview();
     });
   });
 
@@ -1942,7 +2141,23 @@ function initExtraCurves(curvesArray) {
         if (pair.length > 0 && pair[0]) c.diameter = pair[0];
         if (pair.length > 1 && pair[1]) c.unit_dia = pair[1];
       }
-      if (lIdx < colParts.length) c.color = colParts[lIdx];
+      if (lIdx < colParts.length && colParts[lIdx]) {
+        const rawCol = colParts[lIdx];
+        if (rawCol.startsWith('custom;') || rawCol.startsWith('graph;')) {
+          const parts = rawCol.split(';');
+          if (!c.style_mode) c.style_mode = parts[0];
+          if (c.use_custom_style === undefined) c.use_custom_style = (parts[0] === 'custom');
+          if (!c.color) c.color = sanitizeHexColor(parts[1], '#3fb950');
+          if (parts[2]) {
+            const sub = parts[2].split(',');
+            if (sub[0] && c.weight === undefined) c.weight = parseFloat(sub[0]);
+            if (sub[1] && !c.style) c.style = sub[1];
+          }
+        } else if (!c.color) {
+          c.color = sanitizeHexColor(rawCol, '#3fb950');
+        }
+      }
+      c.color = sanitizeHexColor(c.color, '#3fb950');
       if (lIdx < modeParts.length) c.curve_mode = modeParts[lIdx];
       if (lIdx < unitEntries.length) {
         const uParts = unitEntries[lIdx].split(',').map(s => s.trim());
@@ -2145,15 +2360,23 @@ function parseCSVOrTXT(text) {
 
 function bindPreviewOptions() {
   ['chkShowHQ', 'chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'chkShowOther',
-    'chkShowEff', 'chkShowPower', 'chkShowNpsh', 'chkCombineEffPower', 'selLegendMode'].forEach(id => {
+    'chkShowEff', 'chkShowPower', 'chkShowNpsh', 'chkCombineEffPower', 'selLegendMode',
+    'clrHeadColor', 'selHeadWeight', 'selHeadStyle',
+    'clrEffColor', 'selEffWeight', 'selEffStyle',
+    'clrPowColor', 'selPowWeight', 'selPowStyle',
+    'clrNpshColor', 'selNpshWeight', 'selNpshStyle'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
-        el.addEventListener('change', () => {
-          if (id === 'selLegendMode') {
-            const g = document.getElementById('groupCurveLabelPos');
-            if (g) g.style.display = el.value === 'curve_labels' ? '' : 'none';
-          }
-          refreshMainPreview();
+        const evtTypes = el.type === 'color' ? ['input', 'change'] : ['change'];
+        evtTypes.forEach(evtType => {
+          el.addEventListener(evtType, () => {
+            if (id === 'selLegendMode') {
+              const g = document.getElementById('groupCurveLabelPos');
+              if (g) g.style.display = el.value === 'curve_labels' ? '' : 'none';
+            }
+            if (typeof serializeGraphOptions === 'function') serializeGraphOptions();
+            refreshMainPreview();
+          });
         });
       }
     });

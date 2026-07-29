@@ -9,6 +9,25 @@ def _utcnow():
     return datetime.now(timezone.utc)
 
 
+def sanitize_hex_color(val, fallback='#3fb950'):
+    if not val or not isinstance(val, str):
+        return fallback
+    val = val.strip()
+    if ';' in val:
+        parts = val.split(';')
+        for p in parts:
+            p_strip = p.strip()
+            if p_strip.startswith('#'):
+                val = p_strip
+                break
+    val = val.strip()
+    if val.startswith('#') and len(val) in (4, 7):
+        return val
+    elif not val.startswith('#') and len(val) in (3, 6):
+        return '#' + val
+    return fallback
+
+
 
 class Pump(db.Model):
     __tablename__ = 'pumps'
@@ -110,6 +129,13 @@ class Pump(db.Model):
     unit_pow  = db.Column(db.String(20), default='kw')
     unit_op_q = db.Column(db.String(20), default='m3h')
 
+    # Graph curve styles stored as 'color;weight,lineStyle' format
+    head_curve_style  = db.Column(db.String(50), default='#58a6ff;2.0,solid')
+    eff_curve_style   = db.Column(db.String(50), default='#3fb950;1.5,dot')
+    power_curve_style = db.Column(db.String(50), default='#f85149;1.5,longdash')
+    npsh_curve_style  = db.Column(db.String(50), default='#39d3c0;1.5,dashdot')
+    main_curve_style  = db.Column(db.String(100), default='graph')
+
     created_at = db.Column(db.DateTime, default=_utcnow)
     updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow)
 
@@ -202,7 +228,7 @@ class Pump(db.Model):
         colors.append('#58a6ff')
         modes.append('fit')
 
-        du = self._get_data_units()
+        du = self._get_data_units() if hasattr(self, '_get_data_units') else {'q': getattr(self, 'unit_q', 'm3h') or 'm3h', 'h': getattr(self, 'unit_h', 'm') or 'm', 'npsh': getattr(self, 'unit_npsh', 'm') or 'm', 'pow': getattr(self, 'unit_pow', 'kw') or 'kw'}
         units.append(f"{du.get('q','m3h')},{du.get('h','m')},{du.get('npsh','m')},{du.get('pow','kw')}")
 
         # Main raw table
@@ -242,7 +268,7 @@ class Pump(db.Model):
             else:
                 dias_units.append(';mm')
 
-            colors.append(c.get('color', '#3fb950'))
+            colors.append(sanitize_hex_color(c.get('color'), '#3fb950'))
             modes.append(c.get('curve_mode', 'fit'))
 
             uq = c.get('unit_q', 'm3h')
@@ -272,6 +298,9 @@ class Pump(db.Model):
         if units: self.curve_units = '|'.join(units)
         if raw_tables: self.curve_raw_tables = '|'.join(raw_tables)
         if coeffs_list: self.curve_coeffs = '|'.join(coeffs_list)
+
+        if extra_list and len(extra_list) > 0:
+            self.extra_curves_json = json.dumps(extra_list)
 
     def get_diameters(self):
         """Return sorted list of impeller diameters (descending)."""
@@ -310,6 +339,25 @@ class Pump(db.Model):
 
     def get_extra_curves(self):
         """Return list of extra manually-defined curves."""
+        if getattr(self, '_transient_extra_curves', None) is not None:
+            res = self._transient_extra_curves
+            for c in res:
+                if isinstance(c, dict) and 'color' in c:
+                    c['color'] = sanitize_hex_color(c['color'], '#3fb950')
+            return res
+
+        raw_json = (self.extra_curves_json or '').strip()
+        if raw_json and raw_json != '[]' and raw_json != '""':
+            try:
+                curves = json.loads(raw_json)
+                if isinstance(curves, list) and len(curves) > 0:
+                    for c in curves:
+                        if isinstance(c, dict) and 'color' in c:
+                            c['color'] = sanitize_hex_color(c['color'], '#3fb950')
+                    return curves
+            except Exception:
+                pass
+
         raw_labels = (self.curve_labels or '').strip()
         raw_dias   = (self.curve_diameters or '').strip()
         raw_colors = (self.curve_colors or '').strip()
@@ -340,7 +388,20 @@ class Pump(db.Model):
                         c['diameter'] = parts[0] if parts[0] else ''
                         if len(parts) > 1: c['unit_dia'] = parts[1] if parts[1] else 'mm'
 
-                c['color'] = col_items[loaded_idx] if loaded_idx < len(col_items) else '#3fb950'
+                raw_col = col_items[loaded_idx] if loaded_idx < len(col_items) else '#3fb950'
+                if raw_col.startswith('custom;') or raw_col.startswith('graph;'):
+                    parts = raw_col.split(';')
+                    c['style_mode'] = parts[0]
+                    c['use_custom_style'] = (parts[0] == 'custom')
+                    c['color'] = sanitize_hex_color(parts[1] if len(parts) > 1 else '#3fb950')
+                    if len(parts) > 2:
+                        sub = parts[2].split(',')
+                        try: c['weight'] = float(sub[0])
+                        except Exception: pass
+                        if len(sub) > 1: c['style'] = sub[1]
+                else:
+                    c['color'] = sanitize_hex_color(raw_col)
+
                 c['curve_mode'] = m_items[loaded_idx] if loaded_idx < len(m_items) else 'fit'
 
                 if loaded_idx < len(u_items):
@@ -542,4 +603,9 @@ class Pump(db.Model):
             'unit_npsh': self.unit_npsh or 'm',
             'unit_pow': self.unit_pow or 'kw',
             'unit_op_q': self.unit_op_q or 'm3h',
+            'head_curve_style': self.head_curve_style or '#58a6ff;2.0,solid',
+            'eff_curve_style': self.eff_curve_style or '#3fb950;1.5,dot',
+            'power_curve_style': self.power_curve_style or '#f85149;1.5,longdash',
+            'npsh_curve_style': self.npsh_curve_style or '#39d3c0;1.5,dashdot',
+            'main_curve_style': self.main_curve_style or 'graph',
         }

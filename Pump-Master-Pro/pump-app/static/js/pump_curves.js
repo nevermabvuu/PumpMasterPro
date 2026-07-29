@@ -81,13 +81,64 @@ function dutyTrace(q, h) {
 
 let customLabelPositions = {};
 
+function _parseStyleField(fieldId, fallbackColor, fallbackWeight, fallbackStyle) {
+  const val = document.getElementById(fieldId)?.value;
+  if (val && val.includes(';') && val.includes(',')) {
+    try {
+      const parts = val.split(';');
+      const color = parts[0].trim() || fallbackColor;
+      const subparts = (parts[1] || '').split(',');
+      const weight = parseFloat(subparts[0]) || fallbackWeight;
+      const style = (subparts[1] || '').trim() || fallbackStyle;
+      return { color, weight, style };
+    } catch (e) {}
+  }
+  return { color: fallbackColor, weight: fallbackWeight, style: fallbackStyle };
+}
+
 function getGraphDisplayUnits() {
+  const getStyleObj = (colorId, weightId, styleId, fieldId, defColor, defWeight, defStyle) => {
+    const colorEl = document.getElementById(colorId);
+    const weightEl = document.getElementById(weightId);
+    const styleEl = document.getElementById(styleId);
+
+    if (colorEl || weightEl || styleEl) {
+      return {
+        color: colorEl?.value || defColor,
+        weight: parseFloat(weightEl?.value) || defWeight,
+        style: styleEl?.value || defStyle
+      };
+    }
+    return _parseStyleField(fieldId, defColor, defWeight, defStyle);
+  };
+
+  const headStyleObj = getStyleObj('clrHeadColor', 'selHeadWeight', 'selHeadStyle', 'head_curve_style_field', '#58a6ff', 2.0, 'solid');
+  const effStyleObj = getStyleObj('clrEffColor', 'selEffWeight', 'selEffStyle', 'eff_curve_style_field', '#3fb950', 1.5, 'dot');
+  const powStyleObj = getStyleObj('clrPowColor', 'selPowWeight', 'selPowStyle', 'power_curve_style_field', '#f85149', 1.5, 'longdash');
+  const npshStyleObj = getStyleObj('clrNpshColor', 'selNpshWeight', 'selNpshStyle', 'npsh_curve_style_field', '#39d3c0', 1.5, 'dashdot');
+
   return {
     q: document.getElementById('preview-unit-q')?.value || 'm3h',
     h: document.getElementById('preview-unit-h')?.value || 'm',
     npsh: document.getElementById('preview-unit-npsh')?.value || 'm',
     pow: document.getElementById('preview-unit-pow')?.value || 'kw',
-    legendMode: document.getElementById('selLegendMode')?.value || 'each'
+    legendMode: document.getElementById('selLegendMode')?.value || 'each',
+
+    headColor: headStyleObj.color,
+    headWeight: headStyleObj.weight,
+    headStyle: headStyleObj.style,
+
+    effColor: effStyleObj.color,
+    effWeight: effStyleObj.weight,
+    effStyle: effStyleObj.style,
+
+    powColor: powStyleObj.color,
+    powWeight: powStyleObj.weight,
+    powStyle: powStyleObj.style,
+
+    npshColor: npshStyleObj.color,
+    npshWeight: npshStyleObj.weight,
+    npshStyle: npshStyleObj.style
   };
 }
 
@@ -399,20 +450,41 @@ function buildWarmanChart(data, opts = {}) {
   const legendMode = units.legendMode || 'each';
   const labelPos = units.labelPos || 'middle-top';
 
+  const headColor = units.headColor || '#58a6ff';
+  const headWeight = units.headWeight || 2.0;
+  const headStyle = units.headStyle || 'solid';
+
+  const effColor = units.effColor || '#3fb950';
+  const effWeight = units.effWeight || 1.5;
+  const effStyle = units.effStyle || 'dot';
+
+  const powColor = units.powColor || '#f85149';
+  const powWeight = units.powWeight || 1.5;
+  const powStyle = units.powStyle || 'longdash';
+
+  const npshColor = units.npshColor || '#39d3c0';
+  const npshWeight = units.npshWeight || 1.5;
+  const npshStyle = units.npshStyle || 'dashdot';
+
   const nDia = family.length;
 
   /* ── H-Q curves (one per diameter) ──── */
   family.forEach((d, i) => {
-    const col = d.color || DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)];
-    const lw = d.is_max ? 2.5 : 1.8;
     const tag = d.label_tag || (d.curve_mode === 'fit' ? ' (Fitted)' : '');
-    const dash = d.label_tag ? 'dash' : 'solid';
+    const useCustom = d.use_custom_style || d.style_mode === 'custom';
+    const col = (useCustom && d.color) ? d.color : headColor;
+    const lw = (useCustom && d.weight) ? d.weight : (d.is_max ? headWeight : Math.max(1.0, headWeight - 0.5));
+    const dash = (useCustom && d.style) ? d.style : (d.label_tag ? 'dash' : headStyle);
+
+    const showInLegend = (legendMode === 'curve_labels') ? (i === 0) : (legendMode !== 'curve_labels');
+    const traceName = (legendMode === 'curve_labels') ? 'Head H' : `Ø${d.dia} mm${tag}`;
+
     traces.push({
       type: 'scatter', mode: 'lines',
-      name: `Ø${d.dia} mm${tag}`,
+      name: traceName,
       x: d.q, y: d.h,
       line: { color: col, width: lw, dash: dash },
-      showlegend: legendMode !== 'curve_labels',
+      showlegend: showInLegend,
       hovertemplate: `Ø${d.dia} mm${tag}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
     });
 
@@ -436,7 +508,7 @@ function buildWarmanChart(data, opts = {}) {
   if (legendMode === 'curve_labels') {
     family.forEach((d, i) => {
       if (!d.q || d.q.length === 0) return;
-      const col = d.color || DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)];
+      const col = d.color || headColor;
       const tag = d.label_tag || (d.curve_mode === 'fit' ? ' (Fitted)' : '');
       const curveKey = `Ø${d.dia} mm${tag}`;
 
@@ -492,15 +564,17 @@ function buildWarmanChart(data, opts = {}) {
     const etaMax = Math.max(...etaVals);
 
     isolines.forEach((iso, idx) => {
-      const col = isoColor(iso.eta, etaMin, etaMax);
+      const showInLegend = (legendMode === 'curve_labels') ? (idx === 0) : false;
+      const traceName = (legendMode === 'curve_labels') ? 'Efficiency η' : `η = ${iso.eta}%`;
+
       traces.push({
         type: 'scatter', mode: 'lines',
-        name: `η = ${iso.eta}%`,
+        name: traceName,
         x: iso.q, y: iso.h,
-        line: { color: col, width: 1.4, dash: 'dot' },
+        line: { color: effColor, width: effWeight, dash: effStyle },
         fill: 'none',
         hovertemplate: `η = ${iso.eta}%<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
-        showlegend: false,
+        showlegend: showInLegend,
       });
 
       /* Non-clashing Efficiency Label Badge Annotation */
@@ -527,7 +601,7 @@ function buildWarmanChart(data, opts = {}) {
           captureevents: true,
           font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
           bgcolor: 'rgba(15, 23, 42, 0.92)',
-          bordercolor: col,
+          bordercolor: effColor,
           borderwidth: 1,
           borderpad: 3,
           xanchor: 'center',
@@ -541,12 +615,15 @@ function buildWarmanChart(data, opts = {}) {
   /* ── Power isolines ──── */
   if (showPowerIso && pwr_iso.length > 0) {
     pwr_iso.forEach((pl, idx) => {
+      const showInLegend = (legendMode === 'curve_labels') ? (idx === 0) : false;
+      const traceName = (legendMode === 'curve_labels') ? 'Power P' : `P = ${pl.power} ${lblPow}`;
+
       traces.push({
         type: 'scatter', mode: 'lines',
-        name: `P = ${pl.power} ${lblPow}`,
+        name: traceName,
         x: pl.q, y: pl.h,
-        line: { color: '#f85149', width: 1.2, dash: 'longdash' },
-        showlegend: false,
+        line: { color: powColor, width: powWeight, dash: powStyle },
+        showlegend: showInLegend,
         hovertemplate: `P = ${pl.power} ${lblPow}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
       });
       if (pl.q.length > 0) {
@@ -583,12 +660,15 @@ function buildWarmanChart(data, opts = {}) {
   /* ── NPSH isolines ──── */
   if (showNpshIso && npsh_iso.length > 0) {
     npsh_iso.forEach((nl, idx) => {
+      const showInLegend = (legendMode === 'curve_labels') ? (idx === 0) : false;
+      const traceName = (legendMode === 'curve_labels') ? 'NPSHr' : `NPSHr = ${nl.npsh} ${lblNpsh}`;
+
       traces.push({
         type: 'scatter', mode: 'lines',
-        name: `NPSHr = ${nl.npsh} ${lblNpsh}`,
+        name: traceName,
         x: nl.q, y: nl.h,
-        line: { color: '#39d3c0', width: 1.2, dash: 'dashdot' },
-        showlegend: false,
+        line: { color: npshColor, width: npshWeight, dash: npshStyle },
+        showlegend: showInLegend,
         hovertemplate: `NPSHr = ${nl.npsh} ${lblNpsh}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
       });
       if (nl.q.length > 0) {
@@ -714,7 +794,13 @@ function buildWarmanChart(data, opts = {}) {
   });
 
   if (legendMode === 'curve_labels') {
-    layout.showlegend = false;
+    layout.showlegend = true;
+    layout.legend = Object.assign({}, layout.legend || {}, {
+      bgcolor: 'rgba(22, 27, 34, 0.88)',
+      bordercolor: '#30363d',
+      borderwidth: 1,
+      font: { color: '#c9d1d9', size: 10 }
+    });
   }
   if (annotations.length > 0) {
     layout.annotations = annotations;
@@ -833,14 +919,23 @@ function buildEffChart(familyData, singleData, showClean) {
     }];
   }
 
+  const units = getGraphDisplayUnits();
+  const effColor = units.effColor || '#3fb950';
+  const effWeight = units.effWeight || 1.5;
+  const effStyle = units.effStyle || 'dot';
+
   family.forEach((fam, idx) => {
     const isMax = fam.is_max;
-    const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+    const lw = isMax ? (effWeight + 0.7) : effWeight;
+    const showInLegend = (units.legendMode === 'curve_labels') ? (idx === 0) : (units.legendMode === 'each');
+    const traceName = (units.legendMode === 'curve_labels') ? 'Efficiency η' : `η Ø${fam.dia} mm`;
+
     traces.push({
       type: 'scatter', mode: 'lines',
-      name: `η Ø${fam.dia} mm`,
+      name: traceName,
       x: fam.q, y: fam.eta,
-      line: { color: col, width: isMax ? 2.5 : 1.8 },
+      line: { color: effColor, width: lw, dash: effStyle },
+      showlegend: showInLegend,
       hovertemplate: `Ø${fam.dia} mm<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
     });
 
@@ -849,7 +944,7 @@ function buildEffChart(familyData, singleData, showClean) {
         type: 'scatter', mode: 'markers',
         name: `BEP Ø${fam.dia}`,
         x: [fam.bep.q], y: [fam.bep.eta],
-        marker: { size: isMax ? 10 : 7, color: col, symbol: 'star', line: { color: '#fff', width: 1 } },
+        marker: { size: isMax ? 10 : 7, color: effColor, symbol: 'star', line: { color: '#fff', width: 1 } },
         showlegend: false,
         hovertemplate: `BEP Ø${fam.dia}<br>Q=${fam.bep.q}<br>η=${fam.bep.eta}%<extra></extra>`
       });
@@ -867,7 +962,6 @@ function buildEffChart(familyData, singleData, showClean) {
 
   const layout = makeLayout('Flow Q (m³/h)', 'Efficiency η (%)');
   layout.yaxis = Object.assign({}, layout.yaxis, { range: [0, 100] });
-  const units = getGraphDisplayUnits();
   if (units.legendMode === 'hq_only' || units.legendMode === 'curve_labels') {
     layout.showlegend = false;
   }
@@ -929,17 +1023,28 @@ function buildEffPowerChart(familyData, singleData, showClean) {
     }];
   }
 
+  const unitsEP = getGraphDisplayUnits();
+  const effColor = unitsEP.effColor || '#3fb950';
+  const effWeight = unitsEP.effWeight || 1.5;
+  const effStyle = unitsEP.effStyle || 'dot';
+
+  const powColor = unitsEP.powColor || '#f85149';
+  const powWeight = unitsEP.powWeight || 1.5;
+  const powStyle = unitsEP.powStyle || 'longdash';
+
   family.forEach((fam, idx) => {
     const isMax = fam.is_max;
-    const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+    const showEffLegend = (unitsEP.legendMode === 'curve_labels') ? (idx === 0) : (unitsEP.legendMode === 'each');
+    const showPowLegend = (unitsEP.legendMode === 'curve_labels') ? (idx === 0) : (unitsEP.legendMode === 'each');
 
     // Efficiency on y1 (left side)
     traces.push({
       type: 'scatter', mode: 'lines',
-      name: `η Ø${fam.dia} mm`,
+      name: (unitsEP.legendMode === 'curve_labels') ? 'Efficiency η' : `η Ø${fam.dia} mm`,
       x: fam.q, y: fam.eta,
-      line: { color: col, width: isMax ? 2.5 : 1.8 },
+      line: { color: effColor, width: isMax ? (effWeight + 0.7) : effWeight, dash: effStyle },
       yaxis: 'y1',
+      showlegend: showEffLegend,
       hovertemplate: `Ø${fam.dia} mm η<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
     });
 
@@ -948,7 +1053,7 @@ function buildEffPowerChart(familyData, singleData, showClean) {
         type: 'scatter', mode: 'markers',
         name: `BEP Ø${fam.dia}`,
         x: [fam.bep.q], y: [fam.bep.eta],
-        marker: { size: isMax ? 10 : 7, color: col, symbol: 'star', line: { color: '#fff', width: 1 } },
+        marker: { size: isMax ? 10 : 7, color: effColor, symbol: 'star', line: { color: '#fff', width: 1 } },
         yaxis: 'y1',
         showlegend: false,
         hovertemplate: `BEP Ø${fam.dia}<br>Q=${fam.bep.q}<br>η=${fam.bep.eta}%<extra></extra>`
@@ -961,7 +1066,7 @@ function buildEffPowerChart(familyData, singleData, showClean) {
         type: 'scatter', mode: 'lines',
         name: `P Ø${fam.dia} mm`,
         x: fam.q, y: fam.power,
-        line: { color: col, width: isMax ? 2.5 : 1.8, dash: 'dash' },
+        line: { color: powColor, width: isMax ? (powWeight + 0.7) : powWeight, dash: powStyle },
         yaxis: 'y2',
         hovertemplate: `Ø${fam.dia} mm P<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
       });
@@ -998,7 +1103,6 @@ function buildEffPowerChart(familyData, singleData, showClean) {
       titlefont: { color: '#f85149', size: 12 }, tickfont: { color: '#f85149' }
     }
   });
-  const unitsEP = getGraphDisplayUnits();
   if (unitsEP.legendMode === 'hq_only' || unitsEP.legendMode === 'curve_labels') {
     layout.showlegend = false;
   }
@@ -1060,16 +1164,23 @@ function buildPowerChart(familyData, singleData, showClean) {
     }];
   }
 
+  const unitsP = getGraphDisplayUnits();
+  const powColor = unitsP.powColor || '#f85149';
+  const powWeight = unitsP.powWeight || 1.5;
+  const powStyle = unitsP.powStyle || 'longdash';
+
   family.forEach((fam, idx) => {
     const isMax = fam.is_max;
-    const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+    const showInLegend = (unitsP.legendMode === 'curve_labels') ? (idx === 0) : (unitsP.legendMode === 'each');
+    const traceName = (unitsP.legendMode === 'curve_labels') ? 'Power P' : `P Ø${fam.dia} mm`;
 
     if (fam.power) {
       traces.push({
         type: 'scatter', mode: 'lines',
-        name: `P Ø${fam.dia} mm`,
+        name: traceName,
         x: fam.q, y: fam.power,
-        line: { color: col, width: isMax ? 2.5 : 1.8 },
+        line: { color: powColor, width: isMax ? (powWeight + 0.7) : powWeight, dash: powStyle },
+        showlegend: showInLegend,
         hovertemplate: `Ø${fam.dia} mm<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
       });
     }
@@ -1086,7 +1197,6 @@ function buildPowerChart(familyData, singleData, showClean) {
 
   const layout = makeLayout('Flow Q (m³/h)', 'Shaft Power P (kW)');
   layout.yaxis.rangemode = 'tozero';
-  const unitsP = getGraphDisplayUnits();
   if (unitsP.legendMode === 'hq_only' || unitsP.legendMode === 'curve_labels') {
     layout.showlegend = false;
   }
@@ -1148,22 +1258,28 @@ function buildNpshChart(familyData, singleData) {
     }];
   }
 
+  const unitsN = getGraphDisplayUnits();
+  const npshColor = unitsN.npshColor || '#39d3c0';
+  const npshWeight = unitsN.npshWeight || 1.5;
+  const npshStyle = unitsN.npshStyle || 'dashdot';
+
   family.forEach((fam, idx) => {
     const isMax = fam.is_max;
-    const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+    const showInLegend = (unitsN.legendMode === 'curve_labels') ? (idx === 0) : (unitsN.legendMode === 'each');
+    const traceName = (unitsN.legendMode === 'curve_labels') ? 'NPSHr' : `NPSHr Ø${fam.dia} mm`;
 
     traces.push({
       type: 'scatter', mode: 'lines',
-      name: `NPSHr Ø${fam.dia} mm`,
+      name: traceName,
       x: fam.q, y: fam.npsh,
-      line: { color: col, width: isMax ? 2.5 : 1.8 },
+      line: { color: npshColor, width: isMax ? (npshWeight + 0.7) : npshWeight, dash: npshStyle },
+      showlegend: showInLegend,
       hovertemplate: `Ø${fam.dia} mm<br>Q=%{x:.1f} m³/h<br>NPSHr=%{y:.2f} m<extra></extra>`
     });
   });
 
   const layout = makeLayout('Flow Q (m³/h)', 'NPSHr (m)');
   layout.yaxis.rangemode = 'tozero';
-  const unitsN = getGraphDisplayUnits();
   if (unitsN.legendMode === 'hq_only' || unitsN.legendMode === 'curve_labels') {
     layout.showlegend = false;
   }
@@ -1446,11 +1562,16 @@ const CURVE_CONVERSIONS = {
 /* ── Build Plotly traces for a fitted custom curve ───────────────────────── */
 function buildCustomTraces(curve) {
   if (!curve.fitted) return [];
-  const { label, color, q, h, eta } = curve;
+  const { label, color, weight, style, use_custom_style, style_mode, q, h, eta } = curve;
   const units = getGraphDisplayUnits();
   const fQ = CURVE_CONVERSIONS.q[units.q] || 1.0;
   const fH = CURVE_CONVERSIONS.h[units.h] || 1.0;
   const labelH = typeof getUnitLabel === 'function' ? getUnitLabel('h', units.h) : units.h;
+
+  const useCustom = use_custom_style || style_mode === 'custom';
+  const cColor = useCustom && color ? color : units.headColor;
+  const cWeight = useCustom && weight ? weight : units.headWeight;
+  const cStyle = useCustom && style ? style : units.headStyle;
 
   const qConv = q.map(v => v * fQ);
   const hConv = h.map(v => v * fH);
@@ -1462,7 +1583,7 @@ function buildCustomTraces(curve) {
     type: 'scatter', mode: 'lines',
     name: label || 'Custom',
     x: qConv, y: hConv,
-    line: { color, width: 2.2 },
+    line: { color: cColor, width: cWeight, dash: cStyle },
     legendgroup: `custom_${curve.id}`,
     hovertemplate: `${label || 'Custom'}<br>Q=%{x:.1f}<br>H=%{y:.2f} ${labelH}<extra></extra>`,
   });

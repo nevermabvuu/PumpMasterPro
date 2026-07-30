@@ -338,6 +338,70 @@ function serializeRawTable() {
   if (field) field.value = JSON.stringify(data);
 }
 
+function initBlankTable() {
+  const tbody = document.querySelector('#perfTable tbody');
+  if (tbody) {
+    tbody.innerHTML = '';
+    for (let i = 0; i < 6; i++) {
+      addRow('perfTable');
+    }
+  }
+}
+
+function initTableFromCurves(pumpData) {
+  const tbody = document.querySelector('#perfTable tbody');
+  if (!tbody || !pumpData) return;
+  tbody.innerHTML = '';
+
+  const qMax = pumpData.q_max || 100.0;
+  const qBep = pumpData.q_bep || (qMax * 0.6);
+  const qSteps = [0, qBep * 0.5, qBep, qBep * 1.25, qMax];
+
+  const a0 = pumpData.hq_a0 || 0, a1 = pumpData.hq_a1 || 0, a2 = pumpData.hq_a2 || 0, a3 = pumpData.hq_a3 || 0;
+  const b0 = pumpData.eff_b0 || 0, b1 = pumpData.eff_b1 || 0, b2 = pumpData.eff_b2 || 0, b3 = pumpData.eff_b3 || 0;
+  const c0 = pumpData.npsh_c0 || 0, c1 = pumpData.npsh_c1 || 0, c2 = pumpData.npsh_c2 || 0;
+  const p0 = pumpData.pow_p0 || 0, p1 = pumpData.pow_p1 || 0, p2 = pumpData.pow_p2 || 0;
+
+  const poly = (coeffs, q) => coeffs.reduce((acc, c, idx) => acc + c * Math.pow(q, idx), 0);
+
+  const unitQ = document.getElementById('unit-q')?.value || 'm3h';
+  const unitH = document.getElementById('unit-h')?.value || 'm';
+  const unitNpsh = document.getElementById('unit-npsh')?.value || 'm';
+  const unitPow = document.getElementById('unit-pow')?.value || 'kw';
+
+  const fQ = CONVERSIONS.q[unitQ] || 1.0;
+  const fH = CONVERSIONS.h[unitH] || 1.0;
+  const fNpsh = CONVERSIONS.npsh[unitNpsh] || 1.0;
+  const fPow = CONVERSIONS.pow[unitPow] || 1.0;
+
+  qSteps.forEach(q => {
+    const h = Math.max(0, poly([a0, a1, a2, a3], q));
+    const eta = Math.min(100, Math.max(0, poly([b0, b1, b2, b3], q)));
+    const npsh = Math.max(0, poly([c0, c1, c2], q));
+    const pow = Math.max(0, poly([p0, p1, p2], q));
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" value="${(q * fQ).toFixed(2)}"></td>
+      <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" value="${(h * fH).toFixed(2)}"></td>
+      <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" value="${eta.toFixed(1)}"></td>
+      <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" value="${(npsh * fNpsh).toFixed(2)}"></td>
+      <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" value="${(pow * fPow).toFixed(2)}"></td>
+      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">&times;</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function initExtraCurves(extraCurvesData) {
+  const container = document.getElementById('extraCurvesContainer');
+  if (container) container.innerHTML = '';
+  if (Array.isArray(extraCurvesData)) {
+    extraCurvesData.forEach(c => {
+      if (typeof addExtraCurveCard === 'function') addExtraCurveCard(c);
+    });
+  }
+}
+
 function restoreRawTable(rawJson) {
   let data;
   if (Array.isArray(rawJson)) {
@@ -454,10 +518,22 @@ async function fitAndPreview() {
   showStatus('', '');
 
   try {
+    // Beginners Note: Extract per-curve polynomial order choices for fitting API request
+    const poHq = document.getElementById('poly_order_hq')?.value || 3;
+    const poEff = document.getElementById('poly_order_eff')?.value || 3;
+    const poNpsh = document.getElementById('poly_order_npsh')?.value || 2;
+    const poPow = document.getElementById('poly_order_pow')?.value || 2;
+
     const res = await fetch('/papi/fit-curves', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q_h, q_eta, q_npsh, q_p }),
+      body: JSON.stringify({
+        q_h, q_eta, q_npsh, q_p,
+        poly_order_hq: parseInt(poHq),
+        poly_order_eff: parseInt(poEff),
+        poly_order_npsh: parseInt(poNpsh),
+        poly_order_pow: parseInt(poPow),
+      }),
     });
     const d = await res.json();
 
@@ -744,6 +820,12 @@ function getPumpFormData() {
     data[minorField] = (minorEl && minorEl.value.trim() !== '') ? parseInt(minorEl.value.trim(), 10) : null;
   });
 
+  // Beginners Note: Extract per-curve polynomial fitting orders (1 to 5) for preview rendering
+  ['poly_order_hq', 'poly_order_eff', 'poly_order_npsh', 'poly_order_pow'].forEach(key => {
+    const el = document.getElementById(key);
+    if (el) data[key] = parseInt(el.value) || 3;
+  });
+
   return data;
 }
 
@@ -894,33 +976,73 @@ function bindPreviewEvents() {
     input.addEventListener('change', () => refreshPreviewCharts());
     input.addEventListener('input', () => refreshPreviewCharts());
   });
+
+  // Beginners Note: Bind change listener on per-curve polynomial order dropdowns to automatically refit & preview
+  document.querySelectorAll('.poly-order-select').forEach(select => {
+    if (!select._hasFitListener) {
+      select._hasFitListener = true;
+      select.addEventListener('change', onPolyOrderChange);
+    }
+  });
+}
+
+// Beginners Note: Handler when any per-curve polynomial order dropdown is changed
+function onPolyOrderChange() {
+  const { q_h } = getTableData('perfTable', true);
+  if (q_h && q_h.length >= 3) {
+    // If tabular points exist, refit with the newly selected per-curve polynomial orders
+    fitAndPreview();
+  } else {
+    // If no tabular points, zero out higher order terms and refresh preview chart
+    const poHq = parseInt(document.getElementById('poly_order_hq')?.value) || 3;
+    if (poHq < 3) setField('hq_a3', 0);
+    if (poHq < 2) setField('hq_a2', 0);
+
+    const poEff = parseInt(document.getElementById('poly_order_eff')?.value) || 3;
+    if (poEff < 3) setField('eff_b3', 0);
+    if (poEff < 2) setField('eff_b2', 0);
+
+    const poNpsh = parseInt(document.getElementById('poly_order_npsh')?.value) || 2;
+    if (poNpsh < 2) setField('npsh_c2', 0);
+
+    const poPow = parseInt(document.getElementById('poly_order_pow')?.value) || 2;
+    if (poPow < 2) setField('pow_p2', 0);
+
+    refreshPreviewCharts();
+  }
 }
 
 async function refreshPreviewCharts() {
   bindPreviewEvents();
 
   const formData = getPumpFormData();
-  const showEffIso = document.getElementById('chkShowEffIso').checked;
-  const showPowerIso = document.getElementById('chkShowPowerIso').checked;
-  const showNpshIso = document.getElementById('chkShowNpshIso').checked;
-  const showNpshCurve = document.getElementById('chkShowNpshCurve').checked;
-  const showSpeedLines = document.getElementById('chkSpeedLines').checked;
-  const showOther = document.getElementById('chkShowOther').checked;
+  const showEffIso = document.getElementById('chkShowEffIso')?.checked || false;
+  const showPowerIso = document.getElementById('chkShowPowerIso')?.checked || false;
+  const showNpshIso = document.getElementById('chkShowNpshIso')?.checked || false;
+  const showNpshCurve = document.getElementById('chkShowNpshCurve')?.checked || false;
+  const showSpeedLines = document.getElementById('chkSpeedLines')?.checked || false;
+  const showOther = document.getElementById('chkShowOther')?.checked || false;
   const npshYAxis = document.querySelector('input[name="npshYAxisChoice"]:checked')?.value || 'y2';
 
-  // Toggle inputs visibility
-  document.getElementById('groupEffLevels').style.display = showEffIso ? '' : 'none';
-  document.getElementById('groupPowerLevels').style.display = showPowerIso ? '' : 'none';
-  document.getElementById('groupNpshLevels').style.display = showNpshIso ? '' : 'none';
-  document.getElementById('groupNpshYAxis').style.display = showNpshCurve ? '' : 'none';
-  document.getElementById('standalonePanels').style.display = showOther ? '' : 'none';
-  document.getElementById('otherGraphsOptions').style.display = showOther ? '' : 'none';
+  // Toggle inputs visibility safely
+  const gEff = document.getElementById('groupEffLevels');
+  if (gEff) gEff.style.display = showEffIso ? '' : 'none';
+  const gPow = document.getElementById('groupPowerLevels');
+  if (gPow) gPow.style.display = showPowerIso ? '' : 'none';
+  const gNpsh = document.getElementById('groupNpshLevels');
+  if (gNpsh) gNpsh.style.display = showNpshIso ? '' : 'none';
+  const gNpshY = document.getElementById('groupNpshYAxis');
+  if (gNpshY) gNpshY.style.display = showNpshCurve ? '' : 'none';
+  const sPanels = document.getElementById('standalonePanels');
+  if (sPanels) sPanels.style.display = showOther ? '' : 'none';
+  const oOpts = document.getElementById('otherGraphsOptions');
+  if (oOpts) oOpts.style.display = showOther ? '' : 'none';
 
   const body = {
     ...formData,
-    eff_levels: showEffIso ? document.getElementById('txtEffLevels').value : null,
-    power_levels: showPowerIso ? document.getElementById('txtPowerLevels').value : null,
-    npsh_levels: showNpshIso ? document.getElementById('txtNpshLevels').value : null,
+    eff_levels: showEffIso ? document.getElementById('txtEffLevels')?.value : null,
+    power_levels: showPowerIso ? document.getElementById('txtPowerLevels')?.value : null,
+    npsh_levels: showNpshIso ? document.getElementById('txtNpshLevels')?.value : null,
   };
 
   try {
@@ -953,11 +1075,11 @@ async function refreshPreviewCharts() {
 
 function renderPreviewChartsData(warmanData, curveData) {
   const showHQ = document.getElementById('chkShowHQ')?.checked !== false;
-  const showEffIso = document.getElementById('chkShowEffIso').checked;
-  const showPowerIso = document.getElementById('chkShowPowerIso').checked;
-  const showNpshIso = document.getElementById('chkShowNpshIso').checked;
-  const showNpshCurve = document.getElementById('chkShowNpshCurve').checked;
-  const showSpeedLines = document.getElementById('chkSpeedLines').checked;
+  const showEffIso = document.getElementById('chkShowEffIso')?.checked || false;
+  const showPowerIso = document.getElementById('chkShowPowerIso')?.checked || false;
+  const showNpshIso = document.getElementById('chkShowNpshIso')?.checked || false;
+  const showNpshCurve = document.getElementById('chkShowNpshCurve')?.checked || false;
+  const showSpeedLines = document.getElementById('chkSpeedLines')?.checked || false;
   const npshYAxis = document.querySelector('input[name="npshYAxisChoice"]:checked')?.value || 'y2';
 
   const PLOTLY_CONFIG = {
@@ -2220,9 +2342,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }));
 
-  // Bind uploader + preview options
+  // Bind uploader + preview options + per-curve polynomial order listeners
   initExtraCurveFileLoader();
   bindPreviewOptions();
+  bindPreviewEvents();
 });
 
 function generateAffinityCurve() {

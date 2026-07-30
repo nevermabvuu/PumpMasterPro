@@ -6,7 +6,7 @@
   <div class="page-header mb-0">
     <h1 class="page-title"><i class="bi bi-activity text-accent me-2"></i>{{ pump.name }}</h1>
     <p class="page-subtitle">
-      {{ pump.manufacturer }} &bull; {{ pump.size }} &bull; {{ pump.speed_rpm|int }} rpm
+      {{ pump.manufacturer or '' }} &bull; {{ pump.pump_type }} &bull; {{ pump.speed_rpm|int }} rpm
       &bull; Ø{{ pump.impeller_dia_mm|int }} mm max impeller
     </p>
   </div>
@@ -36,88 +36,4 @@
     </a>
   </div>
 </div>
-
-<div id="pump-meta"
-     data-id="{{ pump.id }}"
-     data-main-label="{{ pump.get_curve_labels_list()[0] if pump.get_curve_labels_list() else '' }}"
-     data-main-dia="{{ pump.get_curve_diameters_list()[0]['dia_mm'] if pump.get_curve_diameters_list() and pump.get_curve_diameters_list()[0]['dia_mm'] else pump.impeller_dia_mm }}"
-     data-extra-curves='{{ pump.get_extra_curves() | tojson }}'
-     data-graph-options='{{ pump.get_graph_options() | tojson }}'>
-</div>
-
-<script>
-  const metaEl = document.getElementById('pump-meta');
-  const PUMP_ID = parseInt(metaEl.dataset.id);
-  const PUMP_MAIN_LABEL = metaEl.dataset.mainLabel;
-  const PUMP_MAIN_DIA   = parseFloat(metaEl.dataset.mainDia);
-</script>
-<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=21"></script>
-<script>
-// Pre-load any saved extra curves from the pump data into the custom curves overlay
-(function () {
-  const savedExtras = JSON.parse(document.getElementById('pump-meta').dataset.extraCurves || '[]');
-  if (!Array.isArray(savedExtras) || savedExtras.length === 0) return;
-
-  const evalP = (coeffs, q) => coeffs.reduce((s, c, i) => s + c * Math.pow(q, i), 0);
-
-  savedExtras.forEach(ec => {
-    const id    = ++_curveIdCounter;
-    const color = ec.color || CUSTOM_COLORS[(id - 1) % CUSTOM_COLORS.length];
-
-    let label = ec.label || `Curve ${id}`;
-    if (ec.diameter) {
-      label += ` (${ec.diameter} mm)`;
-    }
-
-    const a  = [ec.hq_a0 || 0, ec.hq_a1 || 0, ec.hq_a2 || 0, ec.hq_a3 || 0];
-    const b  = [ec.eff_b0 || 0, ec.eff_b1 || 0, ec.eff_b2 || 0, ec.eff_b3 || 0];
-    const pp = [ec.pow_p0 || 0, ec.pow_p1 || 0, ec.pow_p2 || 0];
-    const hasCoeffs = a.some(v => v !== 0);
-
-    let qVals = [], hVals = [], etaVals = null, powVals = [];
-
-    if (hasCoeffs) {
-      const qMax = ec.q_max || 200;
-      qVals = Array.from({ length: 80 }, (_, i) => Math.round((i / 79) * qMax * 100) / 100);
-      hVals = qVals.map(q => Math.max(0, evalP(a, q)));
-      const hasEta = ec.eff_b1 || ec.eff_b2 || ec.eff_b3;
-      etaVals = hasEta ? qVals.map(q => Math.max(0, Math.min(100, evalP(b, q)))) : null;
-      powVals = qVals.map(q => Math.max(0, evalP(pp, q)));
-    } else if (ec.raw_table && Array.isArray(ec.raw_table) && ec.raw_table.length > 0) {
-      const uQ = ec.unit_q || 'm3h', uH = ec.unit_h || 'm', uP = ec.unit_pow || 'kw';
-      const fQ = CURVE_CONVERSIONS.q[uQ] || 1.0, fH = CURVE_CONVERSIONS.h[uH] || 1.0, fP = CURVE_CONVERSIONS.pow[uP] || 1.0;
-      const etaList = [], powList = [];
-      ec.raw_table.forEach(r => {
-        if (Array.isArray(r) && r.length >= 2) {
-          const qv = parseFloat(r[0]), hv = parseFloat(r[1]);
-          if (!isNaN(qv) && !isNaN(hv)) {
-            qVals.push(qv / fQ);
-            hVals.push(hv / fH);
-            if (r.length >= 3 && !isNaN(parseFloat(r[2]))) etaList.push(parseFloat(r[2]));
-            if (r.length >= 5 && !isNaN(parseFloat(r[4]))) powList.push(parseFloat(r[4]) / fP);
-          }
-        }
-      });
-      if (etaList.length === qVals.length) etaVals = etaList;
-      if (powList.length === qVals.length) powVals = powList;
-    }
-
-    if (qVals.length > 0) {
-      customCurves.push({
-        id,
-        label,
-        color,
-        diameter: ec.diameter,
-        fitted: true,
-        q: qVals,
-        h: hVals,
-        eta: etaVals,
-        power: powVals,
-      });
-    }
-  });
-
-  updateCurveCountBadge();
-})();
-</script>
 {% endblock %}

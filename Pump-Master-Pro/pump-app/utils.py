@@ -195,6 +195,12 @@ def _pump_from_form(f, pump=None):
         col_minor = f'axis_{axis_name}_minor'
         setattr(pump, col_minor, _get_nullable_int(f, col_minor))
 
+    # Beginners Note: Extract per-curve polynomial fitting orders (1 to 5) from form data
+    for order_key in ['poly_order', 'poly_order_hq', 'poly_order_eff', 'poly_order_npsh', 'poly_order_pow']:
+        po_val = _get_nullable_int(f, order_key)
+        if po_val is not None and 1 <= po_val <= 5:
+            setattr(pump, order_key, po_val)
+
     # Convert op-range values from display unit to SI (m³/h) before persisting
     units_dict = pump._get_data_units()
     op_q_unit = units_dict.get('op_q', 'm3h')

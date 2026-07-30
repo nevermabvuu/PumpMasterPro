@@ -67,6 +67,9 @@ with app.app_context():
                         else:
                             default_val = "''"
                         conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {col_name} TEXT DEFAULT {default_val}"))
+            for p_col, p_def in [('poly_order', 3), ('poly_order_hq', 3), ('poly_order_eff', 3), ('poly_order_npsh', 2), ('poly_order_pow', 2)]:
+                if p_col not in cols:
+                    conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {p_col} INTEGER DEFAULT {p_def}"))
             for old_col in ['main_curve_label', 'main_curve_dia_mm', 'data_units']:
                 if old_col in cols:
                     try:

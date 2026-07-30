@@ -35,6 +35,11 @@ def api_fit_curves():
             q_npsh= data.get('q_npsh', None),
             q_p   = data.get('q_p', None),
             rho   = float(data.get('rho', 1000)),
+            poly_order = int(data.get('poly_order', 3)),
+            poly_order_hq = int(data['poly_order_hq']) if data.get('poly_order_hq') else None,
+            poly_order_eff = int(data['poly_order_eff']) if data.get('poly_order_eff') else None,
+            poly_order_npsh = int(data['poly_order_npsh']) if data.get('poly_order_npsh') else None,
+            poly_order_pow = int(data['poly_order_pow']) if data.get('poly_order_pow') else None,
         )
         return jsonify({'ok': True, **result})
     except Exception as e:
@@ -150,6 +155,12 @@ def api_preview_warman_chart():
         col_minor = f'axis_{axis_name}_minor'
         setattr(pump, col_minor, _get_nullable_int(data, col_minor))
 
+    # Beginners Note: Set per-curve polynomial orders (1 to 5) on temporary Pump instance for preview calculation
+    for p_key in ['poly_order', 'poly_order_hq', 'poly_order_eff', 'poly_order_npsh', 'poly_order_pow']:
+        if p_key in data and data[p_key]:
+            try: setattr(pump, p_key, int(data[p_key]))
+            except (ValueError, TypeError): pass
+
     imp_dia = data.get('impeller_diameters')
     if isinstance(imp_dia, list):
         pump.impeller_diameters = json.dumps(imp_dia)
@@ -235,6 +246,12 @@ def api_preview_curve_data():
             setattr(pump, field, float(val))
         else:
             setattr(pump, field, 0.0)
+
+    # Beginners Note: Set per-curve polynomial orders (1 to 5) on temporary Pump instance for preview calculation
+    for p_key in ['poly_order', 'poly_order_hq', 'poly_order_eff', 'poly_order_npsh', 'poly_order_pow']:
+        if p_key in data and data[p_key]:
+            try: setattr(pump, p_key, int(data[p_key]))
+            except (ValueError, TypeError): pass
 
     liquid = data.get('liquid', 'water')
     rho = float(data.get('rho', 1000.0))

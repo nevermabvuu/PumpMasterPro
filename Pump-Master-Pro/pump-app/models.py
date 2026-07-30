@@ -175,6 +175,13 @@ class Pump(db.Model):
     axis_npsh_major = db.Column(db.Float, nullable=True)
     axis_npsh_minor = db.Column(db.Integer, nullable=True)
 
+    # Beginners Note: Independent polynomial fitting degrees per curve (1 to 5)
+    poly_order = db.Column(db.Integer, default=3)      # Global fallback order
+    poly_order_hq = db.Column(db.Integer, default=3)   # Head H-Q polynomial degree (default 3 - Cubic)
+    poly_order_eff = db.Column(db.Integer, default=3)  # Efficiency polynomial degree (default 3 - Cubic)
+    poly_order_npsh = db.Column(db.Integer, default=2) # NPSHr polynomial degree (default 2 - Quadratic)
+    poly_order_pow = db.Column(db.Integer, default=2)  # Power polynomial degree (default 2 - Quadratic)
+
     created_at = db.Column(db.DateTime, default=_utcnow)
     updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow)
 
@@ -672,4 +679,9 @@ class Pump(db.Model):
             'axis_npsh_max': self.axis_npsh_max,
             'axis_npsh_major': self.axis_npsh_major,
             'axis_npsh_minor': self.axis_npsh_minor,
+            'poly_order': self.poly_order or 3,
+            'poly_order_hq': self.poly_order_hq or 3,
+            'poly_order_eff': self.poly_order_eff or 3,
+            'poly_order_npsh': self.poly_order_npsh or 2,
+            'poly_order_pow': self.poly_order_pow or 2,
         }

@@ -39,32 +39,55 @@ def _poly_array(coeffs, q_array):
 
 # ── Raw curve evaluation (base diameter) ──────────────────────────────────────
 
+def _safe_deg(val, default_val=3):
+    if val is None:
+        return default_val
+    try:
+        i = int(val)
+        return i if 1 <= i <= 5 else default_val
+    except (TypeError, ValueError):
+        return default_val
+
+
 def _hq_raw(pump, q_array):
-    """H-Q curve for max impeller, no derating. Returns clipped-positive array."""
-    coeffs = [pump.hq_a0, pump.hq_a1, pump.hq_a2, pump.hq_a3]
+    """
+    H-Q curve for max impeller, no derating.
+    Beginners Note: Evaluates polynomial up to poly_order_hq degree (1 to 5).
+    """
+    deg = _safe_deg(getattr(pump, 'poly_order_hq', None), _safe_deg(getattr(pump, 'poly_order', 3), 3))
+    coeffs = [pump.hq_a0, pump.hq_a1, pump.hq_a2, pump.hq_a3][:deg + 1]
     return np.clip(_poly_array(coeffs, q_array), 0, None)
 
 
 def _eta_raw(pump, q_array):
-    """Efficiency curve for max impeller, no derating (0–100%)."""
-    coeffs = [pump.eff_b0, pump.eff_b1, pump.eff_b2, pump.eff_b3]
+    """
+    Efficiency curve for max impeller, no derating (0–100%).
+    Beginners Note: Evaluates polynomial up to poly_order_eff degree (1 to 5).
+    """
+    deg = _safe_deg(getattr(pump, 'poly_order_eff', None), _safe_deg(getattr(pump, 'poly_order', 3), 3))
+    coeffs = [pump.eff_b0, pump.eff_b1, pump.eff_b2, pump.eff_b3][:deg + 1]
     return np.clip(_poly_array(coeffs, q_array), 0, 100)
 
 
 def _npsh_raw(pump, q_array):
-    """NPSHr curve for max impeller (m)."""
-    coeffs = [pump.npsh_c0, pump.npsh_c1, pump.npsh_c2]
+    """
+    NPSHr curve for max impeller (m).
+    Beginners Note: Evaluates polynomial up to poly_order_npsh degree (1 to 5).
+    """
+    deg = _safe_deg(getattr(pump, 'poly_order_npsh', None), 2)
+    coeffs = [pump.npsh_c0, pump.npsh_c1, pump.npsh_c2][:deg + 1]
     return np.clip(_poly_array(coeffs, q_array), 0, None)
 
 
 def _pow_raw(pump, q_array, scale=1.0):
     """
     Shaft power from stored polynomial (kW), scaled by `scale` for affinity laws.
-    Falls back to None when no polynomial is stored.
+    Beginners Note: Evaluates polynomial up to poly_order_pow degree (1 to 5).
     """
     if not pump.has_power_poly():
         return None
-    coeffs = [pump.pow_p0, pump.pow_p1, pump.pow_p2]
+    deg = _safe_deg(getattr(pump, 'poly_order_pow', None), 2)
+    coeffs = [pump.pow_p0, pump.pow_p1, pump.pow_p2][:deg + 1]
     p = _poly_array(coeffs, q_array)
     return np.clip(p * scale, 0, None)
 
@@ -684,24 +707,19 @@ def warman_chart_data(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
 
 # ── Polynomial curve fitting from data points ──────────────────────────────────
 
-def fit_pump_polynomials(q_h, q_eta, q_npsh=None, q_p=None, rho=1000.0):
+def fit_pump_polynomials(q_h, q_eta, q_npsh=None, q_p=None, rho=1000.0, poly_order=3, poly_order_hq=None, poly_order_eff=None, poly_order_npsh=None, poly_order_pow=None):
     """
-    Fit polynomial curves from tabular performance data.
+    Fit polynomial performance curves from user-provided data points.
 
-    Parameters
-    ----------
-    q_h   : list of [Q, H] pairs (at least 3 required)
-    q_eta : list of [Q, η%] pairs (at least 3 required)
-    q_npsh: list of [Q, NPSHr] pairs (optional)
-    q_p   : list of [Q, P_kW] pairs (optional — overrides derived power)
-    rho   : fluid density kg/m³ (for power derivation, default 1000)
-
-    Returns
-    -------
-    dict with all polynomial coefficients and derived key values.
+    Beginners Note:
+      Allows independent polynomial fitting orders for each curve:
+        - poly_order_hq   (Head H-Q curve, 1 to 5, default 3)
+        - poly_order_eff  (Efficiency curve, 1 to 5, default 3)
+        - poly_order_npsh (NPSHr curve, 1 to 5, default 2)
+        - poly_order_pow  (Power curve, 1 to 5, default 2)
     """
-    if len(q_h) < 3 or len(q_eta) < 3:
-        raise ValueError("At least 3 data points required for H-Q and efficiency curves.")
+    if len(q_h) < 2 or len(q_eta) < 2:
+        raise ValueError("At least 2 data points required for curve fitting.")
 
     q_h   = np.array(q_h,   dtype=float)
     q_eta = np.array(q_eta, dtype=float)
@@ -711,25 +729,29 @@ def fit_pump_polynomials(q_h, q_eta, q_npsh=None, q_p=None, rho=1000.0):
     q_eta_pts = q_eta[:, 0]
     eta_pts   = q_eta[:, 1]
 
-    # ── H-Q polynomial (degree 2 or 3 based on point count) ──
-    deg_hq = min(3, len(q_hq_pts) - 1)
-    c_hq = np.polyfit(q_hq_pts, h_pts, deg_hq)
-    # np.polyfit returns highest-degree first → reverse to [a0, a1, a2, a3]
-    a = np.zeros(4)
-    for i, v in enumerate(reversed(c_hq)):
-        a[i] = v
+    # Beginners Note: Validate and bound per-curve fitting degrees by available points - 1
+    def_o = int(poly_order) if poly_order and 1 <= int(poly_order) <= 5 else 3
+    deg_hq_target   = int(poly_order_hq) if poly_order_hq and 1 <= int(poly_order_hq) <= 5 else def_o
+    deg_eff_target  = int(poly_order_eff) if poly_order_eff and 1 <= int(poly_order_eff) <= 5 else def_o
+    deg_npsh_target = int(poly_order_npsh) if poly_order_npsh and 1 <= int(poly_order_npsh) <= 5 else min(2, def_o)
+    deg_pow_target  = int(poly_order_pow) if poly_order_pow and 1 <= int(poly_order_pow) <= 5 else min(2, def_o)
 
-    # ── Efficiency polynomial (degree 2 or 3) ──
-    deg_eta = min(3, len(q_eta_pts) - 1)
+    deg_hq  = min(deg_hq_target, max(1, len(q_hq_pts) - 1))
+    deg_eta = min(deg_eff_target, max(1, len(q_eta_pts) - 1))
+
+    # ── H-Q polynomial ──
+    c_hq = np.polyfit(q_hq_pts, h_pts, deg_hq)
+    # np.polyfit returns highest-degree first → reverse to [a0, a1, a2, a3, ...]
+    a = [float(v) for v in reversed(c_hq)]
+
+    # ── Efficiency polynomial ──
     c_eta = np.polyfit(q_eta_pts, eta_pts, deg_eta)
-    b = np.zeros(4)
-    for i, v in enumerate(reversed(c_eta)):
-        b[i] = v
+    b = [float(v) for v in reversed(c_eta)]
 
     # ── Derive Q_max (where H→0) and Q_BEP (peak η) ──
     q_dense = np.linspace(0, max(q_hq_pts) * 1.1, 500)
-    H_dense = np.clip(_poly_array(a.tolist(), q_dense), 0, None)
-    eta_dense = _poly_array(b.tolist(), q_dense)
+    H_dense = np.clip(_poly_array(a, q_dense), 0, None)
+    eta_dense = _poly_array(b, q_dense)
 
     q_max_fit = float(max(q_hq_pts))
     for i in range(len(H_dense) - 1):
@@ -743,36 +765,46 @@ def fit_pump_polynomials(q_h, q_eta, q_npsh=None, q_p=None, rho=1000.0):
     h_bep_fit = float(H_dense[bep_idx])
     eta_bep_fit = float(eta_dense_clipped[bep_idx])
 
-    # ── NPSH polynomial (degree 2) ──
+    # ── NPSH polynomial ──
     c0_npsh, c1_npsh, c2_npsh = 1.0, 0.0, 0.0
     if q_npsh and len(q_npsh) >= 2:
         q_npsh_arr = np.array(q_npsh, dtype=float)
-        c_npsh = np.polyfit(q_npsh_arr[:, 0], q_npsh_arr[:, 1], min(2, len(q_npsh_arr) - 1))
+        deg_npsh = min(deg_npsh_target, max(1, len(q_npsh_arr) - 1))
+        c_npsh = np.polyfit(q_npsh_arr[:, 0], q_npsh_arr[:, 1], deg_npsh)
         c_npsh_full = np.zeros(3)
         for i, v in enumerate(reversed(c_npsh)):
-            c_npsh_full[i] = v
+            if i < 3: c_npsh_full[i] = v
         c0_npsh, c1_npsh, c2_npsh = c_npsh_full[0], c_npsh_full[1], c_npsh_full[2]
 
     # ── Power polynomial ──
     p0, p1, p2 = _fit_power_from_data(
-        q_p, a.tolist(), b.tolist(), q_bep_fit, h_bep_fit, eta_bep_fit, q_max_fit, rho)
+        q_p, a, b, q_bep_fit, h_bep_fit, eta_bep_fit, q_max_fit, rho)
 
     # ── R² quality metrics ──
-    h_pred = _poly_array(a.tolist(), q_hq_pts)
+    h_pred = _poly_array(a, q_hq_pts)
     r2_hq  = _r2(h_pts, h_pred)
-    eta_pred = _poly_array(b.tolist(), q_eta_pts)
+    eta_pred = _poly_array(b, q_eta_pts)
     r2_eta  = _r2(eta_pts, eta_pred)
 
+    # Output standard a0..a3 & b0..b3 (padded to at least 6 terms)
+    a_pad = (a + [0.0] * 6)[:6]
+    b_pad = (b + [0.0] * 6)[:6]
+
     return {
-        'hq_a0': round(float(a[0]), 6), 'hq_a1': round(float(a[1]), 8),
-        'hq_a2': round(float(a[2]), 10), 'hq_a3': round(float(a[3]), 12),
-        'eff_b0': round(float(b[0]), 6), 'eff_b1': round(float(b[1]), 8),
-        'eff_b2': round(float(b[2]), 10), 'eff_b3': round(float(b[3]), 12),
+        'poly_order': def_o,
+        'poly_order_hq': deg_hq_target,
+        'poly_order_eff': deg_eff_target,
+        'poly_order_npsh': deg_npsh_target,
+        'poly_order_pow': deg_pow_target if poly_order_pow else 2,
+        'hq_a0': round(float(a_pad[0]), 6), 'hq_a1': round(float(a_pad[1]), 8),
+        'hq_a2': round(float(a_pad[2]), 10), 'hq_a3': round(float(a_pad[3]), 12),
+        'eff_b0': round(float(b_pad[0]), 6), 'eff_b1': round(float(b_pad[1]), 8),
+        'eff_b2': round(float(b_pad[2]), 10), 'eff_b3': round(float(b_pad[3]), 12),
         'npsh_c0': round(c0_npsh, 6), 'npsh_c1': round(c1_npsh, 8), 'npsh_c2': round(c2_npsh, 10),
         'pow_p0': round(p0, 4), 'pow_p1': round(p1, 6), 'pow_p2': round(p2, 8),
         'q_max': round(q_max_fit, 2),
         'q_bep': round(q_bep_fit, 2),
-        'h_shutoff': round(float(a[0]), 2),
+        'h_shutoff': round(float(a_pad[0]), 2),
         'eta_bep': round(eta_bep_fit, 1),
         'r2_hq': round(r2_hq, 4),
         'r2_eta': round(r2_eta, 4),

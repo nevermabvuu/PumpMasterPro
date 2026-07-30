@@ -67,6 +67,15 @@ with app.app_context():
                         else:
                             default_val = "''"
                         conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {col_name} TEXT DEFAULT {default_val}"))
+            poly_cols = [
+                'hq_a4', 'hq_a5', 'eff_b4', 'eff_b5',
+                'npsh_c3', 'npsh_c4', 'npsh_c5',
+                'pow_p3', 'pow_p4', 'pow_p5'
+            ]
+            for p_col in poly_cols:
+                if p_col not in cols:
+                    conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {p_col} REAL DEFAULT 0.0"))
+
             for p_col, p_def in [('poly_order', 3), ('poly_order_hq', 3), ('poly_order_eff', 3), ('poly_order_npsh', 2), ('poly_order_pow', 2)]:
                 if p_col not in cols:
                     conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {p_col} INTEGER DEFAULT {p_def}"))

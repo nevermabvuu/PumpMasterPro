@@ -96,16 +96,16 @@ def _auto_fit_coeffs(raw_tables_str, coeffs_str, units_str=''):
         if len(q_h) >= 3:
             try:
                 res = fit_pump_polynomials(q_h=q_h, q_eta=q_eta or None, q_p=q_p or None)
-                fitted_c = f"{res['hq_a0']},{res['hq_a1']},{res['hq_a2']},{res['hq_a3']}," \
-                           f"{res['eff_b0']},{res['eff_b1']},{res['eff_b2']},{res['eff_b3']}," \
-                           f"{res['npsh_c0']},{res['npsh_c1']},{res['npsh_c2']}," \
-                           f"{res['pow_p0']},{res['pow_p1']},{res['pow_p2']}," \
+                fitted_c = f"{res['hq_a0']},{res['hq_a1']},{res['hq_a2']},{res['hq_a3']},{res['hq_a4']},{res['hq_a5']}," \
+                           f"{res['eff_b0']},{res['eff_b1']},{res['eff_b2']},{res['eff_b3']},{res['eff_b4']},{res['eff_b5']}," \
+                           f"{res['npsh_c0']},{res['npsh_c1']},{res['npsh_c2']},{res['npsh_c3']},{res['npsh_c4']},{res['npsh_c5']}," \
+                           f"{res['pow_p0']},{res['pow_p1']},{res['pow_p2']},{res['pow_p3']},{res['pow_p4']},{res['pow_p5']}," \
                            f"{res['q_max']},{res['q_bep']}"
                 updated.append(fitted_c)
             except Exception:
-                updated.append(cur_coeff or '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0')
+                updated.append(cur_coeff or '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0')
         else:
-            updated.append(cur_coeff or '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0')
+            updated.append(cur_coeff or '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0')
     return '|'.join(updated)
 
 
@@ -131,20 +131,33 @@ def _pump_from_form(f, pump=None):
         pump.impeller_dia_mm = val_max_imp
 
     pump.impeller_diameters = f.get('impeller_diameters', pump.impeller_diameters or '')
-    pump.hq_a0 = _get_float(f, 'hq_a0', pump.hq_a0 if pump.hq_a0 is not None else 0.0)
-    pump.hq_a1 = _get_float(f, 'hq_a1', pump.hq_a1 if pump.hq_a1 is not None else 0.0)
-    pump.hq_a2 = _get_float(f, 'hq_a2', pump.hq_a2 if pump.hq_a2 is not None else 0.0)
-    pump.hq_a3 = _get_float(f, 'hq_a3', pump.hq_a3 if pump.hq_a3 is not None else 0.0)
-    pump.eff_b0 = _get_float(f, 'eff_b0', pump.eff_b0 if pump.eff_b0 is not None else 0.0)
-    pump.eff_b1 = _get_float(f, 'eff_b1', pump.eff_b1 if pump.eff_b1 is not None else 0.0)
-    pump.eff_b2 = _get_float(f, 'eff_b2', pump.eff_b2 if pump.eff_b2 is not None else 0.0)
-    pump.eff_b3 = _get_float(f, 'eff_b3', pump.eff_b3 if pump.eff_b3 is not None else 0.0)
-    pump.npsh_c0 = _get_float(f, 'npsh_c0', pump.npsh_c0 if pump.npsh_c0 is not None else 1.0)
-    pump.npsh_c1 = _get_float(f, 'npsh_c1', pump.npsh_c1 if pump.npsh_c1 is not None else 0.0)
-    pump.npsh_c2 = _get_float(f, 'npsh_c2', pump.npsh_c2 if pump.npsh_c2 is not None else 0.0)
-    pump.pow_p0 = _get_float(f, 'pow_p0', pump.pow_p0 if pump.pow_p0 is not None else 0.0)
-    pump.pow_p1 = _get_float(f, 'pow_p1', pump.pow_p1 if pump.pow_p1 is not None else 0.0)
-    pump.pow_p2 = _get_float(f, 'pow_p2', pump.pow_p2 if pump.pow_p2 is not None else 0.0)
+    pump.hq_a0 = _get_float(f, 'hq_a0', getattr(pump, 'hq_a0', 0.0))
+    pump.hq_a1 = _get_float(f, 'hq_a1', getattr(pump, 'hq_a1', 0.0))
+    pump.hq_a2 = _get_float(f, 'hq_a2', getattr(pump, 'hq_a2', 0.0))
+    pump.hq_a3 = _get_float(f, 'hq_a3', getattr(pump, 'hq_a3', 0.0))
+    pump.hq_a4 = _get_float(f, 'hq_a4', getattr(pump, 'hq_a4', 0.0))
+    pump.hq_a5 = _get_float(f, 'hq_a5', getattr(pump, 'hq_a5', 0.0))
+
+    pump.eff_b0 = _get_float(f, 'eff_b0', getattr(pump, 'eff_b0', 0.0))
+    pump.eff_b1 = _get_float(f, 'eff_b1', getattr(pump, 'eff_b1', 0.0))
+    pump.eff_b2 = _get_float(f, 'eff_b2', getattr(pump, 'eff_b2', 0.0))
+    pump.eff_b3 = _get_float(f, 'eff_b3', getattr(pump, 'eff_b3', 0.0))
+    pump.eff_b4 = _get_float(f, 'eff_b4', getattr(pump, 'eff_b4', 0.0))
+    pump.eff_b5 = _get_float(f, 'eff_b5', getattr(pump, 'eff_b5', 0.0))
+
+    pump.npsh_c0 = _get_float(f, 'npsh_c0', getattr(pump, 'npsh_c0', 1.0))
+    pump.npsh_c1 = _get_float(f, 'npsh_c1', getattr(pump, 'npsh_c1', 0.0))
+    pump.npsh_c2 = _get_float(f, 'npsh_c2', getattr(pump, 'npsh_c2', 0.0))
+    pump.npsh_c3 = _get_float(f, 'npsh_c3', getattr(pump, 'npsh_c3', 0.0))
+    pump.npsh_c4 = _get_float(f, 'npsh_c4', getattr(pump, 'npsh_c4', 0.0))
+    pump.npsh_c5 = _get_float(f, 'npsh_c5', getattr(pump, 'npsh_c5', 0.0))
+
+    pump.pow_p0 = _get_float(f, 'pow_p0', getattr(pump, 'pow_p0', 0.0))
+    pump.pow_p1 = _get_float(f, 'pow_p1', getattr(pump, 'pow_p1', 0.0))
+    pump.pow_p2 = _get_float(f, 'pow_p2', getattr(pump, 'pow_p2', 0.0))
+    pump.pow_p3 = _get_float(f, 'pow_p3', getattr(pump, 'pow_p3', 0.0))
+    pump.pow_p4 = _get_float(f, 'pow_p4', getattr(pump, 'pow_p4', 0.0))
+    pump.pow_p5 = _get_float(f, 'pow_p5', getattr(pump, 'pow_p5', 0.0))
     pump.q_min  = _get_float(f, 'q_min', pump.q_min if pump.q_min is not None else 0.0)
     pump.q_max  = _get_float(f, 'q_max', pump.q_max if pump.q_max is not None else 100.0)
     pump.q_bep  = _get_float(f, 'q_bep', pump.q_bep if pump.q_bep is not None else 0.0)

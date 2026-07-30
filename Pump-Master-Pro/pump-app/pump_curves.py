@@ -55,7 +55,7 @@ def _hq_raw(pump, q_array):
     Beginners Note: Evaluates polynomial up to poly_order_hq degree (1 to 5).
     """
     deg = _safe_deg(getattr(pump, 'poly_order_hq', None), _safe_deg(getattr(pump, 'poly_order', 3), 3))
-    coeffs = [pump.hq_a0, pump.hq_a1, pump.hq_a2, pump.hq_a3][:deg + 1]
+    coeffs = [getattr(pump, 'hq_a0', 0.0), getattr(pump, 'hq_a1', 0.0), getattr(pump, 'hq_a2', 0.0), getattr(pump, 'hq_a3', 0.0), getattr(pump, 'hq_a4', 0.0), getattr(pump, 'hq_a5', 0.0)][:deg + 1]
     return np.clip(_poly_array(coeffs, q_array), 0, None)
 
 
@@ -65,7 +65,7 @@ def _eta_raw(pump, q_array):
     Beginners Note: Evaluates polynomial up to poly_order_eff degree (1 to 5).
     """
     deg = _safe_deg(getattr(pump, 'poly_order_eff', None), _safe_deg(getattr(pump, 'poly_order', 3), 3))
-    coeffs = [pump.eff_b0, pump.eff_b1, pump.eff_b2, pump.eff_b3][:deg + 1]
+    coeffs = [getattr(pump, 'eff_b0', 0.0), getattr(pump, 'eff_b1', 0.0), getattr(pump, 'eff_b2', 0.0), getattr(pump, 'eff_b3', 0.0), getattr(pump, 'eff_b4', 0.0), getattr(pump, 'eff_b5', 0.0)][:deg + 1]
     return np.clip(_poly_array(coeffs, q_array), 0, 100)
 
 
@@ -75,7 +75,7 @@ def _npsh_raw(pump, q_array):
     Beginners Note: Evaluates polynomial up to poly_order_npsh degree (1 to 5).
     """
     deg = _safe_deg(getattr(pump, 'poly_order_npsh', None), 2)
-    coeffs = [pump.npsh_c0, pump.npsh_c1, pump.npsh_c2][:deg + 1]
+    coeffs = [getattr(pump, 'npsh_c0', 1.0), getattr(pump, 'npsh_c1', 0.0), getattr(pump, 'npsh_c2', 0.0), getattr(pump, 'npsh_c3', 0.0), getattr(pump, 'npsh_c4', 0.0), getattr(pump, 'npsh_c5', 0.0)][:deg + 1]
     return np.clip(_poly_array(coeffs, q_array), 0, None)
 
 
@@ -87,7 +87,7 @@ def _pow_raw(pump, q_array, scale=1.0):
     if not pump.has_power_poly():
         return None
     deg = _safe_deg(getattr(pump, 'poly_order_pow', None), 2)
-    coeffs = [pump.pow_p0, pump.pow_p1, pump.pow_p2][:deg + 1]
+    coeffs = [getattr(pump, 'pow_p0', 0.0), getattr(pump, 'pow_p1', 0.0), getattr(pump, 'pow_p2', 0.0), getattr(pump, 'pow_p3', 0.0), getattr(pump, 'pow_p4', 0.0), getattr(pump, 'pow_p5', 0.0)][:deg + 1]
     p = _poly_array(coeffs, q_array)
     return np.clip(p * scale, 0, None)
 
@@ -766,19 +766,16 @@ def fit_pump_polynomials(q_h, q_eta, q_npsh=None, q_p=None, rho=1000.0, poly_ord
     eta_bep_fit = float(eta_dense_clipped[bep_idx])
 
     # ── NPSH polynomial ──
-    c0_npsh, c1_npsh, c2_npsh = 1.0, 0.0, 0.0
+    npsh_c = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     if q_npsh and len(q_npsh) >= 2:
         q_npsh_arr = np.array(q_npsh, dtype=float)
         deg_npsh = min(deg_npsh_target, max(1, len(q_npsh_arr) - 1))
         c_npsh = np.polyfit(q_npsh_arr[:, 0], q_npsh_arr[:, 1], deg_npsh)
-        c_npsh_full = np.zeros(3)
-        for i, v in enumerate(reversed(c_npsh)):
-            if i < 3: c_npsh_full[i] = v
-        c0_npsh, c1_npsh, c2_npsh = c_npsh_full[0], c_npsh_full[1], c_npsh_full[2]
+        npsh_c = ([float(v) for v in reversed(c_npsh)] + [0.0] * 6)[:6]
 
     # ── Power polynomial ──
-    p0, p1, p2 = _fit_power_from_data(
-        q_p, a, b, q_bep_fit, h_bep_fit, eta_bep_fit, q_max_fit, rho)
+    p_pad = _fit_power_from_data(
+        q_p, a, b, q_bep_fit, h_bep_fit, eta_bep_fit, q_max_fit, rho, deg_pow_target)
 
     # ── R² quality metrics ──
     h_pred = _poly_array(a, q_hq_pts)
@@ -786,7 +783,7 @@ def fit_pump_polynomials(q_h, q_eta, q_npsh=None, q_p=None, rho=1000.0, poly_ord
     eta_pred = _poly_array(b, q_eta_pts)
     r2_eta  = _r2(eta_pts, eta_pred)
 
-    # Output standard a0..a3 & b0..b3 (padded to at least 6 terms)
+    # Output standard a0..a5 & b0..b5 (padded to 6 terms)
     a_pad = (a + [0.0] * 6)[:6]
     b_pad = (b + [0.0] * 6)[:6]
 
@@ -798,10 +795,16 @@ def fit_pump_polynomials(q_h, q_eta, q_npsh=None, q_p=None, rho=1000.0, poly_ord
         'poly_order_pow': deg_pow_target if poly_order_pow else 2,
         'hq_a0': round(float(a_pad[0]), 6), 'hq_a1': round(float(a_pad[1]), 8),
         'hq_a2': round(float(a_pad[2]), 10), 'hq_a3': round(float(a_pad[3]), 12),
+        'hq_a4': round(float(a_pad[4]), 14), 'hq_a5': round(float(a_pad[5]), 16),
         'eff_b0': round(float(b_pad[0]), 6), 'eff_b1': round(float(b_pad[1]), 8),
         'eff_b2': round(float(b_pad[2]), 10), 'eff_b3': round(float(b_pad[3]), 12),
-        'npsh_c0': round(c0_npsh, 6), 'npsh_c1': round(c1_npsh, 8), 'npsh_c2': round(c2_npsh, 10),
-        'pow_p0': round(p0, 4), 'pow_p1': round(p1, 6), 'pow_p2': round(p2, 8),
+        'eff_b4': round(float(b_pad[4]), 14), 'eff_b5': round(float(b_pad[5]), 16),
+        'npsh_c0': round(float(npsh_c[0]), 6), 'npsh_c1': round(float(npsh_c[1]), 8),
+        'npsh_c2': round(float(npsh_c[2]), 10), 'npsh_c3': round(float(npsh_c[3]), 12),
+        'npsh_c4': round(float(npsh_c[4]), 14), 'npsh_c5': round(float(npsh_c[5]), 16),
+        'pow_p0': round(float(p_pad[0]), 4), 'pow_p1': round(float(p_pad[1]), 6),
+        'pow_p2': round(float(p_pad[2]), 8), 'pow_p3': round(float(p_pad[3]), 10),
+        'pow_p4': round(float(p_pad[4]), 12), 'pow_p5': round(float(p_pad[5]), 14),
         'q_max': round(q_max_fit, 2),
         'q_bep': round(q_bep_fit, 2),
         'h_shutoff': round(float(a_pad[0]), 2),
@@ -811,7 +814,7 @@ def fit_pump_polynomials(q_h, q_eta, q_npsh=None, q_p=None, rho=1000.0, poly_ord
     }
 
 
-def _fit_power_from_data(q_p, hq_coeffs, eff_coeffs, q_bep, h_bep, eta_bep, q_max, rho):
+def _fit_power_from_data(q_p, hq_coeffs, eff_coeffs, q_bep, h_bep, eta_bep, q_max, rho, deg_pow_target=2):
     """
     Fit a power quadratic P = p0 + p1*Q + p2*Q² using three exact anchor points:
 
@@ -820,20 +823,18 @@ def _fit_power_from_data(q_p, hq_coeffs, eff_coeffs, q_bep, h_bep, eta_bep, q_ma
       Q=Q_max   → P_runout  = 1.10 · P_BEP   (typical centrifugal runout)
 
     This guarantees a smooth, physically rising curve without singularity issues.
-    User-supplied Q-P pairs (≥3 points) override the derived anchors.
+    User-supplied Q-P pairs (≥2 points) override the derived anchors.
     """
     if eta_bep <= 0:
-        return 0.0, 0.0, 0.0
+        return [0.0] * 6
 
     P_bep = rho * G * h_bep * (q_bep / 3600.0) / (eta_bep / 100.0) / 1000.0
 
-    if q_p and len(q_p) >= 3:
+    if q_p and len(q_p) >= 2:
         q_p_arr = np.array(q_p, dtype=float)
-        c = np.polyfit(q_p_arr[:, 0], q_p_arr[:, 1], min(2, len(q_p_arr) - 1))
-        c_full = np.zeros(3)
-        for i, v in enumerate(reversed(c)):
-            c_full[i] = v
-        return float(c_full[0]), float(c_full[1]), float(c_full[2])
+        deg_pow = min(deg_pow_target, max(1, len(q_p_arr) - 1))
+        c = np.polyfit(q_p_arr[:, 0], q_p_arr[:, 1], deg_pow)
+        return ([float(v) for v in reversed(c)] + [0.0] * 6)[:6]
 
     # Three-anchor exact quadratic solve
     P_shutoff = 0.35 * P_bep
@@ -850,9 +851,9 @@ def _fit_power_from_data(q_p, hq_coeffs, eff_coeffs, q_bep, h_bep, eta_bep, q_ma
     ])
     try:
         p0, p1, p2 = np.linalg.solve(A, [P1, P2, P3])
-        return float(p0), float(p1), float(p2)
+        return [float(p0), float(p1), float(p2), 0.0, 0.0, 0.0]
     except np.linalg.LinAlgError:
-        return round(P_shutoff, 4), round((P_runout - P_shutoff) / q_max, 6), 0.0
+        return [round(P_shutoff, 4), round((P_runout - P_shutoff) / q_max, 6), 0.0, 0.0, 0.0, 0.0]
 
 
 def _r2(y_true, y_pred):

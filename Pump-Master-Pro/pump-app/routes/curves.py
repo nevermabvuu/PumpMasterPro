@@ -131,10 +131,10 @@ def api_preview_warman_chart():
     """Return full Warman performance map data for unsaved preview pump data."""
     data = request.get_json(force=True)
     pump = Pump()
-    for field in ['hq_a0', 'hq_a1', 'hq_a2', 'hq_a3',
-                  'eff_b0', 'eff_b1', 'eff_b2', 'eff_b3',
-                  'npsh_c0', 'npsh_c1', 'npsh_c2',
-                  'pow_p0', 'pow_p1', 'pow_p2',
+    for field in ['hq_a0', 'hq_a1', 'hq_a2', 'hq_a3', 'hq_a4', 'hq_a5',
+                  'eff_b0', 'eff_b1', 'eff_b2', 'eff_b3', 'eff_b4', 'eff_b5',
+                  'npsh_c0', 'npsh_c1', 'npsh_c2', 'npsh_c3', 'npsh_c4', 'npsh_c5',
+                  'pow_p0', 'pow_p1', 'pow_p2', 'pow_p3', 'pow_p4', 'pow_p5',
                   'speed_rpm', 'impeller_dia_mm', 'q_min', 'q_max', 'q_bep',
                   'hr', 'qr', 'er']:
         val = data.get(field)
@@ -235,10 +235,10 @@ def api_preview_curve_data():
     """Return single-diameter curve data for unsaved preview pump data."""
     data = request.get_json(force=True)
     pump = Pump()
-    for field in ['hq_a0', 'hq_a1', 'hq_a2', 'hq_a3',
-                  'eff_b0', 'eff_b1', 'eff_b2', 'eff_b3',
-                  'npsh_c0', 'npsh_c1', 'npsh_c2',
-                  'pow_p0', 'pow_p1', 'pow_p2',
+    for field in ['hq_a0', 'hq_a1', 'hq_a2', 'hq_a3', 'hq_a4', 'hq_a5',
+                  'eff_b0', 'eff_b1', 'eff_b2', 'eff_b3', 'eff_b4', 'eff_b5',
+                  'npsh_c0', 'npsh_c1', 'npsh_c2', 'npsh_c3', 'npsh_c4', 'npsh_c5',
+                  'pow_p0', 'pow_p1', 'pow_p2', 'pow_p3', 'pow_p4', 'pow_p5',
                   'speed_rpm', 'impeller_dia_mm', 'q_min', 'q_max', 'q_bep',
                   'hr', 'qr', 'er']:
         val = data.get(field)

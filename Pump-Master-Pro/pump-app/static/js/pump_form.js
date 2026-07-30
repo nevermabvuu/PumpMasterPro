@@ -487,7 +487,7 @@ function getTableData(tableId, toSIUnits = false) {
     if (!isNaN(q) && !isNaN(npsh)) q_npsh.push([q, npsh]);
     if (!isNaN(q) && !isNaN(pow)) q_p.push([q, pow]);
   });
-  return { q_h, q_eta, q_npsh: q_npsh.length >= 2 ? q_npsh : null, q_p: q_p.length >= 3 ? q_p : null };
+  return { q_h, q_eta: q_eta.length >= 3 ? q_eta : null, q_npsh: q_npsh.length >= 2 ? q_npsh : null, q_p: q_p.length >= 2 ? q_p : null };
 }
 
 /* ── Set field values ───────────────────────────────────────────────────────── */
@@ -545,10 +545,12 @@ async function fitAndPreview() {
     lastFitResults = d;
 
     // Populate hidden coefficient fields
-    ['hq_a0', 'hq_a1', 'hq_a2', 'hq_a3',
-      'eff_b0', 'eff_b1', 'eff_b2', 'eff_b3',
-      'npsh_c0', 'npsh_c1', 'npsh_c2',
-      'pow_p0', 'pow_p1', 'pow_p2'].forEach(k => setField(k, d[k] ?? 0));
+    ['hq_a0', 'hq_a1', 'hq_a2', 'hq_a3', 'hq_a4', 'hq_a5',
+      'eff_b0', 'eff_b1', 'eff_b2', 'eff_b3', 'eff_b4', 'eff_b5',
+      'npsh_c0', 'npsh_c1', 'npsh_c2', 'npsh_c3', 'npsh_c4', 'npsh_c5',
+      'pow_p0', 'pow_p1', 'pow_p2', 'pow_p3', 'pow_p4', 'pow_p5'].forEach(k => setField(k, d[k] ?? 0));
+
+    updatePolynomialUI();
 
     // Populate derived operating range — convert SI to the op-range display unit
     const opUnit = document.getElementById('unit-op-q')?.value || 'm3h';
@@ -769,10 +771,10 @@ function getPumpFormData() {
   const data = {};
   const fields = [
     'speed_rpm', 'impeller_dia_mm', 'q_min', 'q_max', 'q_bep',
-    'hq_a0', 'hq_a1', 'hq_a2', 'hq_a3',
-    'eff_b0', 'eff_b1', 'eff_b2', 'eff_b3',
-    'npsh_c0', 'npsh_c1', 'npsh_c2',
-    'pow_p0', 'pow_p1', 'pow_p2',
+    'hq_a0', 'hq_a1', 'hq_a2', 'hq_a3', 'hq_a4', 'hq_a5',
+    'eff_b0', 'eff_b1', 'eff_b2', 'eff_b3', 'eff_b4', 'eff_b5',
+    'npsh_c0', 'npsh_c1', 'npsh_c2', 'npsh_c3', 'npsh_c4', 'npsh_c5',
+    'pow_p0', 'pow_p1', 'pow_p2', 'pow_p3', 'pow_p4', 'pow_p5',
     'hr', 'qr', 'er', 'impeller_diameters'
   ];
 
@@ -986,33 +988,133 @@ function bindPreviewEvents() {
   });
 }
 
+function formatPolyEquation(coeffLetter, depName, degree, suffix = '') {
+  const superscripts = ['₀', '₁', '₂', '₃', '₄', '₅'];
+  const expMap = ['²', '³', '⁴', '⁵'];
+  let terms = [];
+  for (let i = 0; i <= degree; i++) {
+    const coeffSymbol = `${coeffLetter}${superscripts[i]}`;
+    if (i === 0) {
+      terms.push(coeffSymbol);
+    } else if (i === 1) {
+      terms.push(`${coeffSymbol}Q`);
+    } else {
+      terms.push(`${coeffSymbol}Q${expMap[i - 2]}`);
+    }
+  }
+  return `${depName ? depName + ' = ' : ''}${terms.join(' + ')}${suffix}`;
+}
+
+function updatePolynomialUI() {
+  const poHq = parseInt(document.getElementById('poly_order_hq')?.value) || 3;
+  const poEff = parseInt(document.getElementById('poly_order_eff')?.value) || 3;
+  const poNpsh = parseInt(document.getElementById('poly_order_npsh')?.value) || 2;
+  const poPow = parseInt(document.getElementById('poly_order_pow')?.value) || 2;
+
+  // Beginners Note: Dynamically update equation header title according to set polynomial degree
+  const eqHq = document.getElementById('eq_title_hq');
+  if (eqHq) eqHq.innerHTML = `<i class="bi bi-graph-down-arrow me-1"></i>H-Q ${formatPolyEquation('a', 'H', poHq)}`;
+
+  const eqEff = document.getElementById('eq_title_eff');
+  if (eqEff) eqEff.innerHTML = `<i class="bi bi-speedometer2 me-1"></i>Efficiency ${formatPolyEquation('b', 'η', poEff)}`;
+
+  const eqNpsh = document.getElementById('eq_title_npsh');
+  if (eqNpsh) eqNpsh.innerHTML = `<i class="bi bi-arrow-up-right me-1"></i>NPSHr ${formatPolyEquation('c', '', poNpsh)}`;
+
+  const eqPow = document.getElementById('eq_title_pow');
+  if (eqPow) eqPow.innerHTML = `<i class="bi bi-lightning-charge me-1"></i>Shaft Power ${formatPolyEquation('p', 'P', poPow, ' (kW)')}`;
+
+  // Beginners Note: Show/hide individual coefficient input fields representative of selected polynomial degree
+  const curves = [
+    { prefix: 'hq_a', order: poHq },
+    { prefix: 'eff_b', order: poEff },
+    { prefix: 'npsh_c', order: poNpsh },
+    { prefix: 'pow_p', order: poPow }
+  ];
+
+  curves.forEach(c => {
+    for (let i = 0; i <= 5; i++) {
+      const wrap = document.getElementById(`wrap_${c.prefix}${i}`);
+      const input = document.getElementById(`${c.prefix}${i}`);
+      if (wrap) {
+        if (i <= c.order) {
+          wrap.style.display = '';
+        } else {
+          wrap.style.display = 'none';
+          if (input) input.value = 0;
+        }
+      }
+    }
+  });
+
+  // Beginners Note: Also update dynamic polynomial equations & coefficient visibility for all additional curves
+  if (typeof extraCurves !== 'undefined' && Array.isArray(extraCurves)) {
+    extraCurves.forEach(c => updateExtraPolynomialUI(c.id));
+  }
+}
+
+// Beginners Note: Updates dynamic mathematical equations & shows/hides coefficient fields for an additional curve card
+function updateExtraPolynomialUI(curveId) {
+  const entry = document.getElementById(`extra-entry-${curveId}`);
+  if (!entry) return;
+
+  const poHq = parseInt(document.getElementById('poly_order_hq')?.value) || 3;
+  const poEff = parseInt(document.getElementById('poly_order_eff')?.value) || 3;
+  const poNpsh = parseInt(document.getElementById('poly_order_npsh')?.value) || 2;
+  const poPow = parseInt(document.getElementById('poly_order_pow')?.value) || 2;
+
+  // Beginners Note: Dynamic equation headers on extra curve card
+  const eqHq = entry.querySelector(`.extra-eq-title-hq`);
+  if (eqHq) eqHq.innerHTML = `<i class="bi bi-graph-down-arrow me-1"></i>H-Q ${formatPolyEquation('a', 'H', poHq)}`;
+
+  const eqEff = entry.querySelector(`.extra-eq-title-eff`);
+  if (eqEff) eqEff.innerHTML = `<i class="bi bi-speedometer2 me-1"></i>Efficiency ${formatPolyEquation('b', 'η', poEff)}`;
+
+  const eqNpsh = entry.querySelector(`.extra-eq-title-npsh`);
+  if (eqNpsh) eqNpsh.innerHTML = `<i class="bi bi-arrow-up-right me-1"></i>NPSHr ${formatPolyEquation('c', '', poNpsh)}`;
+
+  const eqPow = entry.querySelector(`.extra-eq-title-pow`);
+  if (eqPow) eqPow.innerHTML = `<i class="bi bi-lightning-charge me-1"></i>Shaft Power ${formatPolyEquation('p', 'P', poPow, ' (kW)')}`;
+
+  // Beginners Note: Show/hide coefficient inputs up to selected degree for extra curve card
+  const curves = [
+    { prefix: 'hq_a', order: poHq },
+    { prefix: 'eff_b', order: poEff },
+    { prefix: 'npsh_c', order: poNpsh },
+    { prefix: 'pow_p', order: poPow }
+  ];
+
+  curves.forEach(c => {
+    for (let i = 0; i <= 5; i++) {
+      const wrap = entry.querySelector(`#extra-wrap-${c.prefix}${i}-${curveId}`);
+      const input = entry.querySelector(`.extra-cf-${c.prefix}${i}`);
+      if (wrap) {
+        if (i <= c.order) {
+          wrap.style.display = '';
+        } else {
+          wrap.style.display = 'none';
+          if (input) input.value = 0;
+        }
+      }
+    }
+  });
+}
+
 // Beginners Note: Handler when any per-curve polynomial order dropdown is changed
 function onPolyOrderChange() {
+  updatePolynomialUI();
+
   const { q_h } = getTableData('perfTable', true);
   if (q_h && q_h.length >= 3) {
     // If tabular points exist, refit with the newly selected per-curve polynomial orders
     fitAndPreview();
   } else {
-    // If no tabular points, zero out higher order terms and refresh preview chart
-    const poHq = parseInt(document.getElementById('poly_order_hq')?.value) || 3;
-    if (poHq < 3) setField('hq_a3', 0);
-    if (poHq < 2) setField('hq_a2', 0);
-
-    const poEff = parseInt(document.getElementById('poly_order_eff')?.value) || 3;
-    if (poEff < 3) setField('eff_b3', 0);
-    if (poEff < 2) setField('eff_b2', 0);
-
-    const poNpsh = parseInt(document.getElementById('poly_order_npsh')?.value) || 2;
-    if (poNpsh < 2) setField('npsh_c2', 0);
-
-    const poPow = parseInt(document.getElementById('poly_order_pow')?.value) || 2;
-    if (poPow < 2) setField('pow_p2', 0);
-
     refreshPreviewCharts();
   }
 }
 
 async function refreshPreviewCharts() {
+  updatePolynomialUI();
   bindPreviewEvents();
 
   const formData = getPumpFormData();
@@ -1367,9 +1469,9 @@ function serializeExtraCurves() {
   });
   const rawTables = [mainRaw.join(';')];
 
-  // Main coeffs
+  // Main coeffs (24 terms: a0..a5, b0..b5, c0..c5, p0..p5, q_max, q_bep)
   const getF = n => document.querySelector(`[name="${n}"]`)?.value || '0';
-  const mainCoeffsStr = `${getF('hq_a0')},${getF('hq_a1')},${getF('hq_a2')},${getF('hq_a3')},${getF('eff_b0')},${getF('eff_b1')},${getF('eff_b2')},${getF('eff_b3')},${getF('npsh_c0')},${getF('npsh_c1')},${getF('npsh_c2')},${getF('pow_p0')},${getF('pow_p1')},${getF('pow_p2')},${getF('q_max')},${getF('q_bep')}`;
+  const mainCoeffsStr = `${getF('hq_a0')},${getF('hq_a1')},${getF('hq_a2')},${getF('hq_a3')},${getF('hq_a4')},${getF('hq_a5')},${getF('eff_b0')},${getF('eff_b1')},${getF('eff_b2')},${getF('eff_b3')},${getF('eff_b4')},${getF('eff_b5')},${getF('npsh_c0')},${getF('npsh_c1')},${getF('npsh_c2')},${getF('npsh_c3')},${getF('npsh_c4')},${getF('npsh_c5')},${getF('pow_p0')},${getF('pow_p1')},${getF('pow_p2')},${getF('pow_p3')},${getF('pow_p4')},${getF('pow_p5')},${getF('q_max')},${getF('q_bep')}`;
   const coeffsList = [mainCoeffsStr];
 
   const payload = [];
@@ -1390,8 +1492,6 @@ function serializeExtraCurves() {
     const unitH = entry.querySelector('.unit-select-h')?.value || inMemCurve.unit_h || 'm';
     const unitNpsh = entry.querySelector('.unit-select-npsh')?.value || inMemCurve.unit_npsh || 'm';
     const unitPow = entry.querySelector('.unit-select-pow')?.value || inMemCurve.unit_pow || 'kw';
-
-
 
     const styleMode = entry.querySelector('.unit-select-style-mode')?.value || inMemCurve.style_mode || 'graph';
     const useCustomStyle = styleMode === 'custom';
@@ -1443,7 +1543,7 @@ function serializeExtraCurves() {
       const el = entry.querySelector(`.extra-cf-${f}`);
       return el && el.value.trim() !== '' ? el.value.trim() : (inMemCurve.coeffs?.[f] ?? '0');
     };
-    const cCoeffsStr = `${getCF('hq_a0')},${getCF('hq_a1')},${getCF('hq_a2')},${getCF('hq_a3')},${getCF('eff_b0')},${getCF('eff_b1')},${getCF('eff_b2')},${getCF('eff_b3')},${getCF('npsh_c0')},${getCF('npsh_c1')},${getCF('npsh_c2')},${getCF('pow_p0')},${getCF('pow_p1')},${getCF('pow_p2')},${getCF('q_max')},${getCF('q_bep')}`;
+    const cCoeffsStr = `${getCF('hq_a0')},${getCF('hq_a1')},${getCF('hq_a2')},${getCF('hq_a3')},${getCF('hq_a4')},${getCF('hq_a5')},${getCF('eff_b0')},${getCF('eff_b1')},${getCF('eff_b2')},${getCF('eff_b3')},${getCF('eff_b4')},${getCF('eff_b5')},${getCF('npsh_c0')},${getCF('npsh_c1')},${getCF('npsh_c2')},${getCF('npsh_c3')},${getCF('npsh_c4')},${getCF('npsh_c5')},${getCF('pow_p0')},${getCF('pow_p1')},${getCF('pow_p2')},${getCF('pow_p3')},${getCF('pow_p4')},${getCF('pow_p5')},${getCF('q_max')},${getCF('q_bep')}`;
     coeffsList.push(cCoeffsStr);
 
     payload.push({
@@ -1588,11 +1688,21 @@ async function fitExtraCurve(curveId) {
   statusEl.textContent = '\u27f3 Fitting\u2026';
   fitBtn.disabled = true;
 
+  // Beginners Note: Extract per-curve polynomial fitting order choices for extra curve fitting
+  const poHq = document.getElementById('poly_order_hq')?.value || 3;
+  const poEff = document.getElementById('poly_order_eff')?.value || 3;
+  const poNpsh = document.getElementById('poly_order_npsh')?.value || 2;
+  const poPow = document.getElementById('poly_order_pow')?.value || 2;
+
   const payload = {
     q_h,
     q_eta: q_eta || q_h.map(([q]) => [q, 70]),
     q_npsh: null,
     q_p: q_p || null,
+    poly_order_hq: parseInt(poHq),
+    poly_order_eff: parseInt(poEff),
+    poly_order_npsh: parseInt(poNpsh),
+    poly_order_pow: parseInt(poPow),
   };
 
   try {
@@ -1610,10 +1720,10 @@ async function fitExtraCurve(curveId) {
 
     curve.fitted = true;
     curve.coeffs = {
-      hq_a0: d.hq_a0, hq_a1: d.hq_a1, hq_a2: d.hq_a2, hq_a3: d.hq_a3,
-      eff_b0: d.eff_b0, eff_b1: d.eff_b1, eff_b2: d.eff_b2, eff_b3: d.eff_b3,
-      npsh_c0: d.npsh_c0, npsh_c1: d.npsh_c1, npsh_c2: d.npsh_c2,
-      pow_p0: d.pow_p0, pow_p1: d.pow_p1, pow_p2: d.pow_p2,
+      hq_a0: d.hq_a0, hq_a1: d.hq_a1, hq_a2: d.hq_a2, hq_a3: d.hq_a3, hq_a4: d.hq_a4, hq_a5: d.hq_a5,
+      eff_b0: d.eff_b0, eff_b1: d.eff_b1, eff_b2: d.eff_b2, eff_b3: d.eff_b3, eff_b4: d.eff_b4, eff_b5: d.eff_b5,
+      npsh_c0: d.npsh_c0, npsh_c1: d.npsh_c1, npsh_c2: d.npsh_c2, npsh_c3: d.npsh_c3, npsh_c4: d.npsh_c4, npsh_c5: d.npsh_c5,
+      pow_p0: d.pow_p0, pow_p1: d.pow_p1, pow_p2: d.pow_p2, pow_p3: d.pow_p3, pow_p4: d.pow_p4, pow_p5: d.pow_p5,
       q_max: d.q_max, q_bep: d.q_bep,
     };
 
@@ -1622,10 +1732,12 @@ async function fitExtraCurve(curveId) {
       const el = entry.querySelector(`.extra-cf-${f}`);
       if (el && val !== undefined) el.value = val;
     };
-    setCF('hq_a0', d.hq_a0); setCF('hq_a1', d.hq_a1); setCF('hq_a2', d.hq_a2); setCF('hq_a3', d.hq_a3);
-    setCF('eff_b0', d.eff_b0); setCF('eff_b1', d.eff_b1); setCF('eff_b2', d.eff_b2); setCF('eff_b3', d.eff_b3);
-    setCF('npsh_c0', d.npsh_c0); setCF('npsh_c1', d.npsh_c1); setCF('npsh_c2', d.npsh_c2);
-    setCF('pow_p0', d.pow_p0); setCF('pow_p1', d.pow_p1); setCF('pow_p2', d.pow_p2);
+    setCF('hq_a0', d.hq_a0); setCF('hq_a1', d.hq_a1); setCF('hq_a2', d.hq_a2); setCF('hq_a3', d.hq_a3); setCF('hq_a4', d.hq_a4); setCF('hq_a5', d.hq_a5);
+    setCF('eff_b0', d.eff_b0); setCF('eff_b1', d.eff_b1); setCF('eff_b2', d.eff_b2); setCF('eff_b3', d.eff_b3); setCF('eff_b4', d.eff_b4); setCF('eff_b5', d.eff_b5);
+    setCF('npsh_c0', d.npsh_c0); setCF('npsh_c1', d.npsh_c1); setCF('npsh_c2', d.npsh_c2); setCF('npsh_c3', d.npsh_c3); setCF('npsh_c4', d.npsh_c4); setCF('npsh_c5', d.npsh_c5);
+    setCF('pow_p0', d.pow_p0); setCF('pow_p1', d.pow_p1); setCF('pow_p2', d.pow_p2); setCF('pow_p3', d.pow_p3); setCF('pow_p4', d.pow_p4); setCF('pow_p5', d.pow_p5);
+
+    updateExtraPolynomialUI(curveId);
 
     statusEl.className = 'extra-curve-status ok';
     statusEl.textContent =
@@ -1877,46 +1989,56 @@ function addExtraCurveCard(existingData) {
             <!-- H-Q -->
             <div class="col-md-6">
               <div class="p-1 px-2 rounded" style="background:#161b22;border:1px solid #30363d">
-                <div class="text-accent fw-semibold mb-1" style="font-size:0.75rem"><i class="bi bi-graph-down-arrow me-1"></i>H-Q: H = a₀ + a₁Q + a₂Q² + a₃Q³</div>
+                <div class="text-accent fw-semibold mb-1 extra-eq-title-hq" style="font-size:0.75rem"><i class="bi bi-graph-down-arrow me-1"></i>H-Q: H = a₀ + a₁Q + a₂Q² + a₃Q³</div>
                 <div class="row g-1">
-                  <div class="col-3"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₀</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a0" data-eid="${id}" step="any" value="${existingData?.hq_a0 ?? 0}"></div>
-                  <div class="col-3"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₁</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a1" data-eid="${id}" step="any" value="${existingData?.hq_a1 ?? 0}"></div>
-                  <div class="col-3"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₂</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a2" data-eid="${id}" step="any" value="${existingData?.hq_a2 ?? 0}"></div>
-                  <div class="col-3"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₃</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a3" data-eid="${id}" step="any" value="${existingData?.hq_a3 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-hq_a0-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₀</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a0" data-eid="${id}" step="any" value="${existingData?.hq_a0 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-hq_a1-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₁</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a1" data-eid="${id}" step="any" value="${existingData?.hq_a1 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-hq_a2-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₂</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a2" data-eid="${id}" step="any" value="${existingData?.hq_a2 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-hq_a3-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₃</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a3" data-eid="${id}" step="any" value="${existingData?.hq_a3 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-hq_a4-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₄</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a4" data-eid="${id}" step="any" value="${existingData?.hq_a4 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-hq_a5-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₅</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a5" data-eid="${id}" step="any" value="${existingData?.hq_a5 ?? 0}"></div>
                 </div>
               </div>
             </div>
             <!-- Efficiency -->
             <div class="col-md-6">
               <div class="p-1 px-2 rounded" style="background:#161b22;border:1px solid #30363d">
-                <div class="text-success fw-semibold mb-1" style="font-size:0.75rem"><i class="bi bi-speedometer2 me-1"></i>Efficiency: η = b₀ + b₁Q + b₂Q² + b₃Q³</div>
+                <div class="text-success fw-semibold mb-1 extra-eq-title-eff" style="font-size:0.75rem"><i class="bi bi-speedometer2 me-1"></i>Efficiency: η = b₀ + b₁Q + b₂Q² + b₃Q³</div>
                 <div class="row g-1">
-                  <div class="col-3"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₀</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b0" data-eid="${id}" step="any" value="${existingData?.eff_b0 ?? 0}"></div>
-                  <div class="col-3"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₁</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b1" data-eid="${id}" step="any" value="${existingData?.eff_b1 ?? 0}"></div>
-                  <div class="col-3"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₂</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b2" data-eid="${id}" step="any" value="${existingData?.eff_b2 ?? 0}"></div>
-                  <div class="col-3"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₃</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b3" data-eid="${id}" step="any" value="${existingData?.eff_b3 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-eff_b0-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₀</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b0" data-eid="${id}" step="any" value="${existingData?.eff_b0 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-eff_b1-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₁</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b1" data-eid="${id}" step="any" value="${existingData?.eff_b1 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-eff_b2-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₂</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b2" data-eid="${id}" step="any" value="${existingData?.eff_b2 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-eff_b3-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₃</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b3" data-eid="${id}" step="any" value="${existingData?.eff_b3 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-eff_b4-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₄</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b4" data-eid="${id}" step="any" value="${existingData?.eff_b4 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-eff_b5-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₅</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b5" data-eid="${id}" step="any" value="${existingData?.eff_b5 ?? 0}"></div>
                 </div>
               </div>
             </div>
             <!-- NPSH -->
             <div class="col-md-6">
               <div class="p-1 px-2 rounded" style="background:#161b22;border:1px solid #30363d">
-                <div class="text-warning fw-semibold mb-1" style="font-size:0.75rem"><i class="bi bi-arrow-up-right me-1"></i>NPSHr: c₀ + c₁Q + c₂Q²</div>
+                <div class="text-warning fw-semibold mb-1 extra-eq-title-npsh" style="font-size:0.75rem"><i class="bi bi-arrow-up-right me-1"></i>NPSHr: c₀ + c₁Q + c₂Q²</div>
                 <div class="row g-1">
-                  <div class="col-4"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₀</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c0" data-eid="${id}" step="any" value="${existingData?.npsh_c0 ?? 0}"></div>
-                  <div class="col-4"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₁</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c1" data-eid="${id}" step="any" value="${existingData?.npsh_c1 ?? 0}"></div>
-                  <div class="col-4"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₂</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c2" data-eid="${id}" step="any" value="${existingData?.npsh_c2 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-npsh_c0-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₀</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c0" data-eid="${id}" step="any" value="${existingData?.npsh_c0 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-npsh_c1-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₁</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c1" data-eid="${id}" step="any" value="${existingData?.npsh_c1 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-npsh_c2-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₂</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c2" data-eid="${id}" step="any" value="${existingData?.npsh_c2 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-npsh_c3-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₃</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c3" data-eid="${id}" step="any" value="${existingData?.npsh_c3 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-npsh_c4-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₄</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c4" data-eid="${id}" step="any" value="${existingData?.npsh_c4 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-npsh_c5-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₅</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c5" data-eid="${id}" step="any" value="${existingData?.npsh_c5 ?? 0}"></div>
                 </div>
               </div>
             </div>
             <!-- Power -->
             <div class="col-md-6">
               <div class="p-1 px-2 rounded" style="background:#161b22;border:1px solid #30363d">
-                <div class="text-info fw-semibold mb-1" style="font-size:0.75rem"><i class="bi bi-lightning-charge me-1"></i>Shaft Power: P = p₀ + p₁Q + p₂Q² (kW)</div>
+                <div class="text-info fw-semibold mb-1 extra-eq-title-pow" style="font-size:0.75rem"><i class="bi bi-lightning-charge me-1"></i>Shaft Power: P = p₀ + p₁Q + p₂Q² (kW)</div>
                 <div class="row g-1">
-                  <div class="col-4"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₀</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p0" data-eid="${id}" step="any" value="${existingData?.pow_p0 ?? 0}"></div>
-                  <div class="col-4"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₁</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p1" data-eid="${id}" step="any" value="${existingData?.pow_p1 ?? 0}"></div>
-                  <div class="col-4"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₂</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p2" data-eid="${id}" step="any" value="${existingData?.pow_p2 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-pow_p0-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₀</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p0" data-eid="${id}" step="any" value="${existingData?.pow_p0 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-pow_p1-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₁</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p1" data-eid="${id}" step="any" value="${existingData?.pow_p1 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-pow_p2-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₂</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p2" data-eid="${id}" step="any" value="${existingData?.pow_p2 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-pow_p3-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₃</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p3" data-eid="${id}" step="any" value="${existingData?.pow_p3 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-pow_p4-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₄</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p4" data-eid="${id}" step="any" value="${existingData?.pow_p4 ?? 0}"></div>
+                  <div class="col-4" id="extra-wrap-pow_p5-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₅</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p5" data-eid="${id}" step="any" value="${existingData?.pow_p5 ?? 0}"></div>
                 </div>
               </div>
             </div>

@@ -43,29 +43,37 @@ class Pump(db.Model):
     # Comma/JSON list of available impeller diameters (mm), largest first
     impeller_diameters = db.Column(db.Text, default='')
 
-    # H-Q polynomial: H = hq_a0 + hq_a1*Q + hq_a2*Q^2 + hq_a3*Q^3
+    # H-Q polynomial: H = hq_a0 + hq_a1*Q + hq_a2*Q^2 + hq_a3*Q^3 + hq_a4*Q^4 + hq_a5*Q^5
     hq_a0 = db.Column(db.Float, nullable=False)
     hq_a1 = db.Column(db.Float, default=0.0)
     hq_a2 = db.Column(db.Float, default=0.0)
     hq_a3 = db.Column(db.Float, default=0.0)
+    hq_a4 = db.Column(db.Float, default=0.0)
+    hq_a5 = db.Column(db.Float, default=0.0)
 
-    # Efficiency polynomial: η(%) = eff_b0 + eff_b1*Q + eff_b2*Q^2 + eff_b3*Q^3
+    # Efficiency polynomial: η(%) = eff_b0 + eff_b1*Q + eff_b2*Q^2 + eff_b3*Q^3 + eff_b4*Q^4 + eff_b5*Q^5
     eff_b0 = db.Column(db.Float, default=0.0)
     eff_b1 = db.Column(db.Float, default=0.0)
     eff_b2 = db.Column(db.Float, default=0.0)
     eff_b3 = db.Column(db.Float, default=0.0)
+    eff_b4 = db.Column(db.Float, default=0.0)
+    eff_b5 = db.Column(db.Float, default=0.0)
 
-    # NPSH polynomial: NPSHr (m) = npsh_c0 + npsh_c1*Q + npsh_c2*Q^2
+    # NPSH polynomial: NPSHr (m) = npsh_c0 + npsh_c1*Q + npsh_c2*Q^2 + npsh_c3*Q^3 + npsh_c4*Q^4 + npsh_c5*Q^5
     npsh_c0 = db.Column(db.Float, default=1.0)
     npsh_c1 = db.Column(db.Float, default=0.0)
     npsh_c2 = db.Column(db.Float, default=0.0)
+    npsh_c3 = db.Column(db.Float, default=0.0)
+    npsh_c4 = db.Column(db.Float, default=0.0)
+    npsh_c5 = db.Column(db.Float, default=0.0)
 
-    # Power polynomial: P (kW) = pow_p0 + pow_p1*Q + pow_p2*Q^2
-    # Fitted with a non-zero shutoff anchor (P≈0.35·P_BEP at Q=0) so the
-    # curve rises monotonically without the 1/η singularity at low flow.
+    # Power polynomial: P (kW) = pow_p0 + pow_p1*Q + pow_p2*Q^2 + pow_p3*Q^3 + pow_p4*Q^4 + pow_p5*Q^5
     pow_p0 = db.Column(db.Float, default=0.0)
     pow_p1 = db.Column(db.Float, default=0.0)
     pow_p2 = db.Column(db.Float, default=0.0)
+    pow_p3 = db.Column(db.Float, default=0.0)
+    pow_p4 = db.Column(db.Float, default=0.0)
+    pow_p5 = db.Column(db.Float, default=0.0)
 
     # Operating range (for the maximum impeller)
     q_min = db.Column(db.Float, default=0.0)
@@ -609,7 +617,14 @@ class Pump(db.Model):
 
     def has_power_poly(self):
         """True when a stored power polynomial is available."""
-        return bool(self.pow_p1 or self.pow_p2)
+        return bool(
+            getattr(self, 'pow_p0', 0) or
+            getattr(self, 'pow_p1', 0) or
+            getattr(self, 'pow_p2', 0) or
+            getattr(self, 'pow_p3', 0) or
+            getattr(self, 'pow_p4', 0) or
+            getattr(self, 'pow_p5', 0)
+        )
 
     def to_dict(self):
         return {
@@ -621,12 +636,18 @@ class Pump(db.Model):
             'speed_rpm': self.speed_rpm,
             'impeller_dia_mm': self.impeller_dia_mm,
             'impeller_diameters': self.impeller_diameters or '',
-            'hq_a0': self.hq_a0, 'hq_a1': self.hq_a1,
-            'hq_a2': self.hq_a2, 'hq_a3': self.hq_a3,
-            'eff_b0': self.eff_b0, 'eff_b1': self.eff_b1,
-            'eff_b2': self.eff_b2, 'eff_b3': self.eff_b3,
-            'npsh_c0': self.npsh_c0, 'npsh_c1': self.npsh_c1, 'npsh_c2': self.npsh_c2,
-            'pow_p0': self.pow_p0, 'pow_p1': self.pow_p1, 'pow_p2': self.pow_p2,
+            'hq_a0': getattr(self, 'hq_a0', 0.0), 'hq_a1': getattr(self, 'hq_a1', 0.0),
+            'hq_a2': getattr(self, 'hq_a2', 0.0), 'hq_a3': getattr(self, 'hq_a3', 0.0),
+            'hq_a4': getattr(self, 'hq_a4', 0.0), 'hq_a5': getattr(self, 'hq_a5', 0.0),
+            'eff_b0': getattr(self, 'eff_b0', 0.0), 'eff_b1': getattr(self, 'eff_b1', 0.0),
+            'eff_b2': getattr(self, 'eff_b2', 0.0), 'eff_b3': getattr(self, 'eff_b3', 0.0),
+            'eff_b4': getattr(self, 'eff_b4', 0.0), 'eff_b5': getattr(self, 'eff_b5', 0.0),
+            'npsh_c0': getattr(self, 'npsh_c0', 1.0), 'npsh_c1': getattr(self, 'npsh_c1', 0.0),
+            'npsh_c2': getattr(self, 'npsh_c2', 0.0), 'npsh_c3': getattr(self, 'npsh_c3', 0.0),
+            'npsh_c4': getattr(self, 'npsh_c4', 0.0), 'npsh_c5': getattr(self, 'npsh_c5', 0.0),
+            'pow_p0': getattr(self, 'pow_p0', 0.0), 'pow_p1': getattr(self, 'pow_p1', 0.0),
+            'pow_p2': getattr(self, 'pow_p2', 0.0), 'pow_p3': getattr(self, 'pow_p3', 0.0),
+            'pow_p4': getattr(self, 'pow_p4', 0.0), 'pow_p5': getattr(self, 'pow_p5', 0.0),
             'q_min': self.q_min, 'q_max': self.q_max, 'q_bep': self.q_bep,
             'hr': self.hr, 'qr': self.qr, 'er': self.er,
             'pump_type': self.pump_type,

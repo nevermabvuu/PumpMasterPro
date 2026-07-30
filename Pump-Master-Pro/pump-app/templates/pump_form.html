@@ -2,575 +2,553 @@
 {% block title %}{{ 'Edit' if action == 'edit' else 'Add' }} Pump — PumpSelect Pro{% endblock %}
 
 {% block content %}
-<div class="page-header mb-4">
-  <h1 class="page-title">
-    <i class="bi bi-{{ 'pencil-square' if action == 'edit' else 'plus-circle' }} text-accent me-2"></i>
-    {{ 'Edit Pump' if action == 'edit' else 'Add New Pump' }}
-  </h1>
-  <p class="page-subtitle">{{ pump.name if pump else 'Enter pump details and performance data to generate curves automatically' }}</p>
+<!-- Beginners Note: Full-width page header matching original Bootstrap layout -->
+<div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-[#30363d] pb-3">
+  <div>
+    <h1 class="text-xl font-bold tracking-tight text-[#e6edf3] flex items-center gap-2">
+      <i class="bi bi-{{ 'pencil-square' if action == 'edit' else 'plus-circle' }} text-[#58a6ff]"></i>
+      <span>{{ 'Edit Pump Specification' if action == 'edit' else 'Add New Pump Specification' }}</span>
+    </h1>
+    <p class="text-xs text-[#8b949e] mt-0.5">
+      {{ pump.name if pump else 'Enter pump details and performance data to generate curves automatically' }}
+    </p>
+  </div>
+  
+  <div class="flex items-center gap-2">
+    <a href="{{ url_for('pump_data') }}" class="px-3 py-1.5 rounded text-xs font-medium border border-[#30363d] bg-[#161b22] text-[#c9d1d9] hover:text-white hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5">
+      <i class="bi bi-arrow-left"></i>Back to Catalogue
+    </a>
+    {% if action == 'edit' and pump %}
+    <a href="{{ url_for('pump_curve', pump_id=pump.id) }}" class="px-3 py-1.5 rounded text-xs font-medium border border-[#3fb950]/40 bg-[#3fb950]/15 text-[#3fb950] hover:bg-[#3fb950]/25 transition-colors inline-flex items-center gap-1.5">
+      <i class="bi bi-activity"></i>View Full Curves
+    </a>
+    {% endif %}
+  </div>
 </div>
 
 <form method="post" id="pumpForm">
 <input type="hidden" name="graph_options_json" id="hdnGraphOptionsJson" value='{{ (pump.get_graph_options() | tojson) if pump else "" }}'>
-<div class="row g-4">
 
-  <!-- ── Column 1: Pump Details + Operating Range + Impeller Family ── -->
-  <div class="col-lg-5">
+<!-- ── Full-Width Responsive 2-Column Grid (col-lg-5 & col-lg-7) ── -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-    <div class="card card-dark mb-3">
-      <div class="card-header card-header-dark"><i class="bi bi-info-circle me-2"></i>Pump Details</div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-12">
-            <label class="form-label">Pump Name *</label>
-            <input type="text" name="name" class="form-control form-control-dark"
-                   value="{{ pump.name if pump else '' }}" required placeholder="e.g. Warman 6/4 D-AH">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Manufacturer</label>
-            <input type="text" name="manufacturer" class="form-control form-control-dark"
+  <!-- ── COLUMN 1: Details, Display Options, Operating Range, Impeller Family (lg:col-span-5) ── -->
+  <div class="lg:col-span-5 space-y-4">
+
+    <!-- Card 1: Pump Details (Collapsable) -->
+    <div class="bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden" id="pumpDetailsCard">
+      <div onclick="toggleCard('pumpDetailsBody', 'pumpDetailsChevron')" 
+           class="flex items-center justify-between px-4 py-2.5 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/60 transition-colors">
+        <div class="flex items-center gap-2 font-semibold text-[#e6edf3] text-sm">
+          <i class="bi bi-info-circle text-[#58a6ff]"></i>
+          <span>Pump Details</span>
+        </div>
+        <i class="bi bi-chevron-down text-[#8b949e] transition-transform duration-200" id="pumpDetailsChevron" style="transform: rotate(180deg)"></i>
+      </div>
+      <div class="p-4 space-y-3" id="pumpDetailsBody">
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Pump Name <span class="text-[#f85149]">*</span></label>
+          <input type="text" name="name" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
+                 value="{{ pump.name if pump else '' }}" required placeholder="e.g. Warman 6/4 D-AH">
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Manufacturer</label>
+            <input type="text" name="manufacturer" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
                    value="{{ pump.manufacturer if pump else '' }}" placeholder="e.g. Weir Minerals">
           </div>
-          <div class="col-md-6">
-            <label class="form-label">Model Number</label>
-            <input type="text" name="model_number" class="form-control form-control-dark"
+          <div>
+            <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Model Number</label>
+            <input type="text" name="model_number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
                    value="{{ pump.model_number if pump else '' }}" placeholder="e.g. 6/4 D-AH">
           </div>
-          <div class="col-md-4">
-            <label class="form-label">Speed (rpm)</label>
-            <input type="number" name="speed_rpm" class="form-control form-control-dark"
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Speed (rpm)</label>
+            <input type="number" name="speed_rpm" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
                    value="{{ pump.speed_rpm if pump else 1450 }}" step="1" required>
           </div>
-          <div class="col-md-4">
-            <label class="form-label d-flex align-items-center justify-content-between">
-              <span>Max Impeller</span>
-              <select name="unit_max_imp" class="header-unit-select" style="margin-top:0;width:auto;">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-xs font-semibold text-[#c9d1d9]">Max Imp.</label>
+              <select name="unit_max_imp" class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1 py-0.5 focus:outline-none">
                 <option value="mm" {% if not pump or pump.data_units_dict.max_imp != 'in' %}selected{% endif %}>mm</option>
                 <option value="in" {% if pump and pump.data_units_dict.max_imp == 'in' %}selected{% endif %}>in</option>
               </select>
-            </label>
-            <input type="number" name="impeller_dia_val" class="form-control form-control-dark"
+            </div>
+            <input type="number" name="impeller_dia_val" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
                    value="{{ (pump.impeller_dia_mm / 25.4)|round(2) if pump and pump.data_units_dict.max_imp == 'in' else (pump.impeller_dia_mm if pump else 300) }}" step="any">
           </div>
-          <div class="col-md-4">
-            <label class="form-label">Pump Type</label>
-            <select name="pump_type" class="form-select form-control-dark">
+          <div>
+            <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Pump Type</label>
+            <select name="pump_type" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors">
               {% for t in ['centrifugal', 'centrifugal slurry', 'axial flow', 'mixed flow', 'submersible'] %}
               <option value="{{ t }}" {{ 'selected' if pump and pump.pump_type == t }}>{{ t|capitalize }}</option>
               {% endfor %}
             </select>
           </div>
-          <div class="col-12">
-            <label class="form-label">Application</label>
-            <input type="text" name="application" class="form-control form-control-dark"
-                   value="{{ pump.application if pump else '' }}" placeholder="e.g. Slurry / mineral processing">
-          </div>
-          <div class="col-12">
-            <label class="form-label">Notes</label>
-            <textarea name="notes" class="form-control form-control-dark" rows="2"
-                      placeholder="Any additional notes...">{{ pump.notes if pump else '' }}</textarea>
-          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Application</label>
+          <input type="text" name="application" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
+                 value="{{ pump.application if pump else '' }}" placeholder="e.g. Slurry / mineral processing">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Notes</label>
+          <textarea name="notes" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors" rows="2"
+                    placeholder="Any additional notes...">{{ pump.notes if pump else '' }}</textarea>
         </div>
       </div>
     </div>
 
-    <!-- Curve Preview Display Options -->
-    <!-- Display Options Panel -->
-    <div class="card card-dark mb-3">
-        <div class="card-header card-header-dark d-flex align-items-center justify-content-between flex-wrap">
-          <span><i class="bi bi-display me-2 text-accent"></i><strong>Display Options</strong></span>
-          <!-- Unit Selectors -->
-          <div class="d-flex align-items-center gap-1">
-            <select class="header-unit-select" id="preview-unit-q" style="margin-top:0; font-size: 0.75rem; padding: 2px 4px;">
+    <!-- Card 2: Display Options & Chart Settings (Collapsable) -->
+    <div class="bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden" id="displayOptionsCard">
+      <div onclick="toggleCard('displayOptionsBody', 'displayOptionsChevron')"
+           class="flex items-center justify-between px-4 py-2.5 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/60 transition-colors">
+        <div class="flex items-center gap-2 font-semibold text-[#e6edf3] text-sm">
+          <i class="bi bi-display text-[#58a6ff]"></i>
+          <span>Display Options &amp; Units</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1" onclick="event.stopPropagation()">
+            <select class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1 py-0.5 focus:outline-none" id="preview-unit-q">
               <option value="m3h">m³/h</option>
               <option value="ls">L/s</option>
               <option value="gpm">gpm</option>
               <option value="lmin">L/min</option>
             </select>
-            <select class="header-unit-select" id="preview-unit-h" style="margin-top:0; font-size: 0.75rem; padding: 2px 4px;">
+            <select class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1 py-0.5 focus:outline-none" id="preview-unit-h">
               <option value="m">m</option>
               <option value="ft">ft</option>
             </select>
-            <select class="header-unit-select" id="preview-unit-npsh" style="margin-top:0; font-size: 0.75rem; padding: 2px 4px;">
+            <select class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1 py-0.5 focus:outline-none" id="preview-unit-npsh">
               <option value="m">m (NPSH)</option>
               <option value="ft">ft (NPSH)</option>
             </select>
-            <select class="header-unit-select" id="preview-unit-pow" style="margin-top:0; font-size: 0.75rem; padding: 2px 4px;">
+            <select class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1 py-0.5 focus:outline-none" id="preview-unit-pow">
               <option value="kw">kW</option>
               <option value="hp">hp</option>
             </select>
           </div>
+          <i class="bi bi-chevron-down text-[#8b949e] transition-transform duration-200" id="displayOptionsChevron" style="transform: rotate(180deg)"></i>
         </div>
-        <div class="card-body py-2">
-          <label class="form-label form-label-sm fw-semibold mb-2 text-accent">H-Q Graph Overlays</label>
-          
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" id="chkShowEffIso" checked>
-            <label class="form-check-label small text-warning" for="chkShowEffIso">
-              Show Efficiency Isolines (Warman style)
+      </div>
+      
+      <div class="p-4 space-y-3" id="displayOptionsBody">
+        <div>
+          <h4 class="text-xs font-bold text-[#58a6ff] uppercase tracking-wider mb-2">H-Q Performance Overlays</h4>
+          <div class="space-y-1.5 text-xs">
+            <label class="flex items-center gap-2 cursor-pointer text-amber-300">
+              <input type="checkbox" id="chkShowEffIso" checked class="rounded border-[#30363d] bg-[#0d1117] text-[#58a6ff]">
+              <span>Show Efficiency Isolines (Warman Style)</span>
             </label>
-            <div class="ms-4 mt-1" id="groupEffLevels">
-              <input type="text" id="txtEffLevels" class="form-control form-control-sm form-control-dark" 
-                     value="20;30;45;80" placeholder="e.g. 20;30;45;80 (empty for auto)">
-              <div class="form-text small text-muted" style="font-size:0.75rem">Semicolon or comma-separated levels.</div>
+            <div class="pl-5" id="groupEffLevels">
+              <input type="text" id="txtEffLevels" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="20;30;45;80" placeholder="e.g. 20;30;45;80">
             </div>
-          </div>
-          
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" id="chkShowPowerIso">
-            <label class="form-check-label small text-danger" for="chkShowPowerIso">
-              Show Power Isolines
-            </label>
-            <div class="ms-4 mt-1" id="groupPowerLevels" style="display:none">
-              <input type="text" id="txtPowerLevels" class="form-control form-control-sm form-control-dark" 
-                     value="" placeholder="e.g. 5;10;20;50 (empty for auto)">
-              <div class="form-text small text-muted" style="font-size:0.75rem">Semicolon or comma-separated levels.</div>
-            </div>
-          </div>
-          
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" id="chkShowNpshIso">
-            <label class="form-check-label small text-teal" style="color: #39d3c0" for="chkShowNpshIso">
-              Show NPSH Isolines
-            </label>
-            <div class="ms-4 mt-1" id="groupNpshLevels" style="display:none">
-              <input type="text" id="txtNpshLevels" class="form-control form-control-sm form-control-dark" 
-                     value="" placeholder="e.g. 2;4;6 (empty for auto)">
-              <div class="form-text small text-muted" style="font-size:0.75rem">Semicolon or comma-separated levels.</div>
-            </div>
-          </div>
 
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" id="chkShowNpshCurve">
-            <label class="form-check-label small text-info" for="chkShowNpshCurve">
-              Show NPSH standard curves
+            <label class="flex items-center gap-2 cursor-pointer text-[#f85149]">
+              <input type="checkbox" id="chkShowPowerIso" class="rounded border-[#30363d] bg-[#0d1117] text-[#58a6ff]">
+              <span>Show Power Isolines</span>
             </label>
-            <div class="ms-4 mb-2" id="groupNpshYAxis" style="display:none">
-              <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="npshYAxisChoice" id="radNpshY2" value="y2" checked>
-                <label class="form-check-label small text-muted" style="font-size:0.75rem" for="radNpshY2">Secondary Y-axis (right)</label>
-              </div>
-              <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="npshYAxisChoice" id="radNpshY1" value="y1">
-                <label class="form-check-label small text-muted" style="font-size:0.75rem" for="radNpshY1">Same Y-axis as Head (left)</label>
-              </div>
+            <div class="pl-5 hidden" id="groupPowerLevels">
+              <input type="text" id="txtPowerLevels" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="" placeholder="e.g. 5;10;20;50">
             </div>
-          </div>
 
-          <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" id="chkSpeedLines">
-            <label class="form-check-label small" for="chkSpeedLines" style="color:#ff9900">Show Speed Lines (70% - 100%)</label>
-          </div>
-
-          <hr class="border-secondary my-2">
-          <label class="form-label form-label-sm fw-semibold mb-2 text-accent">Other Performance Graphs</label>
-          
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" id="chkShowHQ" checked>
-            <label class="form-check-label small fw-semibold text-accent" for="chkShowHQ">
-              Show H-Q Performance Map Preview
+            <label class="flex items-center gap-2 cursor-pointer text-[#39d3c0]">
+              <input type="checkbox" id="chkShowNpshIso" class="rounded border-[#30363d] bg-[#0d1117] text-[#58a6ff]">
+              <span>Show NPSH Isolines</span>
             </label>
-          </div>
+            <div class="pl-5 hidden" id="groupNpshLevels">
+              <input type="text" id="txtNpshLevels" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="" placeholder="e.g. 2;4;6">
+            </div>
 
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" id="chkShowOther" checked>
-            <label class="form-check-label small fw-semibold" for="chkShowOther">
-              Show additional performance graphs below
+            <label class="flex items-center gap-2 cursor-pointer text-cyan-300">
+              <input type="checkbox" id="chkShowNpshCurve" class="rounded border-[#30363d] bg-[#0d1117] text-[#58a6ff]">
+              <span>Show NPSH Standard Curves</span>
+            </label>
+            <div class="pl-5 hidden space-x-3" id="groupNpshYAxis">
+              <label class="inline-flex items-center gap-1.5 text-[#8b949e] text-xs">
+                <input type="radio" name="npshYAxisChoice" id="radNpshY2" value="y2" checked>
+                <span>Right Y2 Axis</span>
+              </label>
+              <label class="inline-flex items-center gap-1.5 text-[#8b949e] text-xs">
+                <input type="radio" name="npshYAxisChoice" id="radNpshY1" value="y1">
+                <span>Left Y1 Axis</span>
+              </label>
+            </div>
+
+            <label class="flex items-center gap-2 cursor-pointer text-[#ff9900]">
+              <input type="checkbox" id="chkSpeedLines" class="rounded border-[#30363d] bg-[#0d1117] text-[#58a6ff]">
+              <span>Show Speed Lines (70% - 100%)</span>
             </label>
           </div>
-          
-          <div class="ms-4" id="otherGraphsOptions">
-            <div class="form-check mb-1">
-              <input class="form-check-input" type="checkbox" id="chkShowEff" checked>
-              <label class="form-check-label small" for="chkShowEff">Show Efficiency Graph</label>
-            </div>
-            <div class="form-check mb-1">
-              <input class="form-check-input" type="checkbox" id="chkShowPower" checked>
-              <label class="form-check-label small" for="chkShowPower">Show Power Graph</label>
-            </div>
-            <div class="form-check mb-1">
-              <input class="form-check-input" type="checkbox" id="chkShowNpsh" checked>
-              <label class="form-check-label small" for="chkShowNpsh">Show NPSHr Graph</label>
-            </div>
-            <div class="form-check mb-2 mt-2 border-top border-secondary pt-2" style="max-width: 280px;">
-              <input class="form-check-input" type="checkbox" id="chkCombineEffPower" checked>
-              <label class="form-check-label small" for="chkCombineEffPower">
-                Combine Efficiency & Power on one graph
+        </div>
+
+        <hr class="border-[#30363d] my-2">
+
+        <div>
+          <h4 class="text-xs font-bold text-[#58a6ff] uppercase tracking-wider mb-2">Sub-Chart Panels</h4>
+          <div class="space-y-1.5 text-xs">
+            <label class="flex items-center gap-2 cursor-pointer text-[#e6edf3] font-medium">
+              <input type="checkbox" id="chkShowHQ" checked class="rounded border-[#30363d] bg-[#0d1117]">
+              <span>Show Main H-Q Performance Map Preview</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-[#c9d1d9]">
+              <input type="checkbox" id="chkShowOther" checked class="rounded border-[#30363d] bg-[#0d1117]">
+              <span>Show additional performance graphs below</span>
+            </label>
+            <div class="pl-5 space-y-1" id="otherGraphsOptions">
+              <label class="flex items-center gap-2 cursor-pointer text-[#8b949e]">
+                <input type="checkbox" id="chkShowEff" checked class="rounded">
+                <span>Show Efficiency Graph</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer text-[#8b949e]">
+                <input type="checkbox" id="chkShowPower" checked class="rounded">
+                <span>Show Power Graph</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer text-[#8b949e]">
+                <input type="checkbox" id="chkShowNpsh" checked class="rounded">
+                <span>Show NPSHr Graph</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer text-sky-300 pt-1 border-t border-[#30363d]">
+                <input type="checkbox" id="chkCombineEffPower" checked class="rounded">
+                <span>Combine Efficiency &amp; Power on one graph</span>
               </label>
             </div>
           </div>
+        </div>
 
-          <!-- Graph Legend & Label Options -->
-          <div class="mt-3 pt-3 border-top border-secondary border-opacity-25">
-            <label class="form-label form-label-sm fw-semibold text-accent mb-2">
-              <i class="bi bi-tags me-1"></i>Graph Legend & Label Options
-            </label>
-            <div class="row g-2 align-items-center">
-              <div class="col-12 mb-1">
-                <select id="selLegendMode" class="form-select form-select-sm form-control-dark">
-                  <option value="each" selected>1. Show legend on each chart</option>
-                  <option value="hq_only">2. Show legend on H-Q chart only (all traces)</option>
-                  <option value="curve_labels">3. Direct labels on each impeller curve</option>
-                </select>
-              </div>
-              <div class="col-12" id="groupCurveLabelPos" style="display:none">
-                <div class="d-flex align-items-center justify-content-between p-2 bg-dark rounded border border-secondary border-opacity-25 mt-1">
-                  <span class="small text-muted" style="font-size: 0.78rem;">
-                    <i class="bi bi-hand-index-thumb me-1 text-accent"></i>Click & drag label badges on graph to position
-                  </span>
-                  <button type="button" id="btnResetLabelPos" class="btn btn-sm btn-outline-secondary py-0 px-2 text-nowrap" style="font-size: 0.75rem;">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Dragged Positions
-                  </button>
-                </div>
-              </div>
+        <hr class="border-[#30363d] my-2">
+
+        <!-- Legend & Curve Styling -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="text-xs font-bold text-[#58a6ff] uppercase tracking-wider">Legend &amp; Styling Options</h4>
+            <button type="button" onclick="toggleCard('collapseCurveStyles', 'curveStyleChevron')" class="text-xs text-[#58a6ff] hover:underline flex items-center gap-1">
+              <i class="bi bi-sliders"></i>Customize Lines
+              <i class="bi bi-chevron-down text-xs transition-transform" id="curveStyleChevron" style="transform: rotate(180deg)"></i>
+            </button>
+          </div>
+          
+          <div class="mb-2">
+            <select id="selLegendMode" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-[#e6edf3] focus:outline-none">
+              <option value="each" selected>1. Show legend on each chart</option>
+              <option value="hq_only">2. Show legend on H-Q chart only</option>
+              <option value="curve_labels">3. Direct labels on each impeller curve</option>
+            </select>
+          </div>
+
+          <div class="space-y-2 bg-[#0d1117] p-2.5 rounded border border-[#30363d]" id="collapseCurveStyles">
+            <div class="grid grid-cols-12 gap-2 text-[10px] font-semibold text-[#8b949e] uppercase">
+              <span class="col-span-3">Type</span>
+              <span class="col-span-3 text-center">Color</span>
+              <span class="col-span-3 text-center">Weight</span>
+              <span class="col-span-3 text-center">Style</span>
             </div>
 
-            <!-- Graph Curve Styling (Head, Efficiency, Power, NPSH) -->
-            <div class="mt-3 pt-2 border-top border-secondary border-opacity-25">
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <label class="form-label form-label-sm fw-semibold text-accent mb-0">
-                  <i class="bi bi-palette me-1"></i>Graph Curve Styles
-                </label>
-                <button class="btn btn-sm btn-link text-accent p-0 text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCurveStyles" aria-expanded="true" style="font-size: 0.78rem;">
-                  <i class="bi bi-sliders me-1"></i>Customize Colors & Lines
+            <!-- Head -->
+            <div class="grid grid-cols-12 gap-2 items-center text-xs">
+              <span class="col-span-3 font-medium text-[#58a6ff]">Head (H)</span>
+              <input type="color" id="clrHeadColor" value="#58a6ff" class="col-span-3 h-6 w-full rounded bg-transparent cursor-pointer">
+              <select id="selHeadWeight" class="col-span-3 bg-[#161b22] border border-[#30363d] rounded px-1 py-0.5 text-xs text-[#e6edf3]">
+                <option value="1">1 px</option>
+                <option value="1.5">1.5 px</option>
+                <option value="2" selected>2 px</option>
+                <option value="2.5">2.5 px</option>
+                <option value="3">3 px</option>
+              </select>
+              <select id="selHeadStyle" class="col-span-3 bg-[#161b22] border border-[#30363d] rounded px-1 py-0.5 text-xs text-[#e6edf3]">
+                <option value="solid" selected>Solid</option>
+                <option value="dash">Dashed</option>
+                <option value="dot">Dotted</option>
+                <option value="dashdot">DashDot</option>
+              </select>
+            </div>
+
+            <!-- Efficiency -->
+            <div class="grid grid-cols-12 gap-2 items-center text-xs">
+              <span class="col-span-3 font-medium text-[#3fb950]">Efficiency</span>
+              <input type="color" id="clrEffColor" value="#3fb950" class="col-span-3 h-6 w-full rounded bg-transparent cursor-pointer">
+              <select id="selEffWeight" class="col-span-3 bg-[#161b22] border border-[#30363d] rounded px-1 py-0.5 text-xs text-[#e6edf3]">
+                <option value="1">1 px</option>
+                <option value="1.5" selected>1.5 px</option>
+                <option value="2">2 px</option>
+              </select>
+              <select id="selEffStyle" class="col-span-3 bg-[#161b22] border border-[#30363d] rounded px-1 py-0.5 text-xs text-[#e6edf3]">
+                <option value="solid">Solid</option>
+                <option value="dot" selected>Dotted</option>
+                <option value="dash">Dashed</option>
+              </select>
+            </div>
+
+            <!-- Power -->
+            <div class="grid grid-cols-12 gap-2 items-center text-xs">
+              <span class="col-span-3 font-medium text-[#f85149]">Power (P)</span>
+              <input type="color" id="clrPowColor" value="#f85149" class="col-span-3 h-6 w-full rounded bg-transparent cursor-pointer">
+              <select id="selPowWeight" class="col-span-3 bg-[#161b22] border border-[#30363d] rounded px-1 py-0.5 text-xs text-[#e6edf3]">
+                <option value="1">1 px</option>
+                <option value="1.5" selected>1.5 px</option>
+                <option value="2">2 px</option>
+              </select>
+              <select id="selPowStyle" class="col-span-3 bg-[#161b22] border border-[#30363d] rounded px-1 py-0.5 text-xs text-[#e6edf3]">
+                <option value="solid">Solid</option>
+                <option value="longdash" selected>LongDash</option>
+                <option value="dash">Dashed</option>
+              </select>
+            </div>
+
+            <!-- NPSH -->
+            <div class="grid grid-cols-12 gap-2 items-center text-xs">
+              <span class="col-span-3 font-medium text-[#39d3c0]">NPSHr</span>
+              <input type="color" id="clrNpshColor" value="#39d3c0" class="col-span-3 h-6 w-full rounded bg-transparent cursor-pointer">
+              <select id="selNpshWeight" class="col-span-3 bg-[#161b22] border border-[#30363d] rounded px-1 py-0.5 text-xs text-[#e6edf3]">
+                <option value="1">1 px</option>
+                <option value="1.5" selected>1.5 px</option>
+                <option value="2">2 px</option>
+              </select>
+              <select id="selNpshStyle" class="col-span-3 bg-[#161b22] border border-[#30363d] rounded px-1 py-0.5 text-xs text-[#e6edf3]">
+                <option value="solid">Solid</option>
+                <option value="dashdot" selected>DashDot</option>
+              </select>
+            </div>
+
+            <!-- Custom Axis Boundaries -->
+            <div class="pt-2 border-t border-[#30363d] mt-2">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-semibold text-[#58a6ff]"><i class="bi bi-aspect-ratio me-1"></i>Axis Scale Bounds</span>
+                <button type="button" onclick="toggleCard('collapseAxisScales', 'axisScaleChevron')" class="text-[11px] text-[#8b949e] hover:text-white flex items-center gap-1">
+                  Min/Max Bounds
+                  <i class="bi bi-chevron-down text-xs transition-transform" id="axisScaleChevron" style="transform: rotate(180deg)"></i>
                 </button>
               </div>
 
-              <div class="collapse show" id="collapseCurveStyles">
-                <div class="p-2 bg-dark rounded border border-secondary border-opacity-25">
-                  <div class="row g-1 align-items-center mb-1 text-muted small fw-semibold" style="font-size: 0.72rem;">
-                    <div class="col-3">Curve Type</div>
-                    <div class="col-3 text-center">Color</div>
-                    <div class="col-3 text-center">Weight</div>
-                    <div class="col-3 text-center">Line Style</div>
+              <div class="space-y-1.5" id="collapseAxisScales">
+                <!-- Flow -->
+                <div class="bg-[#161b22] p-2 rounded border border-[#30363d] text-xs">
+                  <span class="text-[#58a6ff] font-semibold block mb-1">Flow Q Axis</span>
+                  <div class="grid grid-cols-4 gap-1">
+                    <input type="number" name="axis_flow_min" id="axis_flow_min" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_flow_min if pump and pump.axis_flow_min is not none else '' }}" placeholder="Min">
+                    <input type="number" name="axis_flow_max" id="axis_flow_max" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_flow_max if pump and pump.axis_flow_max is not none else '' }}" placeholder="Max">
+                    <input type="number" name="axis_flow_major" id="axis_flow_major" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_flow_major if pump and pump.axis_flow_major is not none else '' }}" placeholder="Major">
+                    <input type="number" name="axis_flow_minor" id="axis_flow_minor" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_flow_minor if pump and pump.axis_flow_minor is not none else '' }}" placeholder="Minor">
                   </div>
+                </div>
 
-                  <!-- Head H-Q Curve Style -->
-                  <div class="row g-1 align-items-center mb-2">
-                    <div class="col-3 text-nowrap"><span class="small text-light fw-medium"><i class="bi bi-graph-up me-1 text-primary"></i>Head (H)</span></div>
-                    <div class="col-3 px-1">
-                      <input type="color" id="clrHeadColor" value="#58a6ff" class="form-control form-control-color form-control-sm w-100" title="Head Curve Color" style="height: 28px; padding: 2px;">
-                    </div>
-                    <div class="col-3 px-1">
-                      <select id="selHeadWeight" class="form-select form-select-sm form-control-dark" title="Head Line Weight" style="font-size: 0.75rem; padding: 2px 4px;">
-                        <option value="1">1 px</option>
-                        <option value="1.5">1.5 px</option>
-                        <option value="2" selected>2 px</option>
-                        <option value="2.5">2.5 px</option>
-                        <option value="3">3 px</option>
-                        <option value="4">4 px</option>
-                      </select>
-                    </div>
-                    <div class="col-3 px-1">
-                      <select id="selHeadStyle" class="form-select form-select-sm form-control-dark" title="Head Line Style" style="font-size: 0.75rem; padding: 2px 4px;">
-                        <option value="solid" selected>Solid (─)</option>
-                        <option value="dash">Dashed (---)</option>
-                        <option value="dot">Dotted (···)</option>
-                        <option value="dashdot">DashDot (-·-)</option>
-                        <option value="longdash">LongDash (——)</option>
-                      </select>
-                    </div>
+                <!-- Head -->
+                <div class="bg-[#161b22] p-2 rounded border border-[#30363d] text-xs">
+                  <span class="text-[#58a6ff] font-semibold block mb-1">Head H Axis</span>
+                  <div class="grid grid-cols-4 gap-1">
+                    <input type="number" name="axis_head_min" id="axis_head_min" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_head_min if pump and pump.axis_head_min is not none else '' }}" placeholder="Min">
+                    <input type="number" name="axis_head_max" id="axis_head_max" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_head_max if pump and pump.axis_head_max is not none else '' }}" placeholder="Max">
+                    <input type="number" name="axis_head_major" id="axis_head_major" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_head_major if pump and pump.axis_head_major is not none else '' }}" placeholder="Major">
+                    <input type="number" name="axis_head_minor" id="axis_head_minor" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_head_minor if pump and pump.axis_head_minor is not none else '' }}" placeholder="Minor">
                   </div>
+                </div>
 
-                  <!-- Efficiency Curve Style -->
-                  <div class="row g-1 align-items-center mb-2">
-                    <div class="col-3 text-nowrap"><span class="small text-light fw-medium"><i class="bi bi-speedometer2 me-1 text-success"></i>Efficiency (η)</span></div>
-                    <div class="col-3 px-1">
-                      <input type="color" id="clrEffColor" value="#3fb950" class="form-control form-control-color form-control-sm w-100" title="Efficiency Curve Color" style="height: 28px; padding: 2px;">
-                    </div>
-                    <div class="col-3 px-1">
-                      <select id="selEffWeight" class="form-select form-select-sm form-control-dark" title="Efficiency Line Weight" style="font-size: 0.75rem; padding: 2px 4px;">
-                        <option value="1">1 px</option>
-                        <option value="1.5" selected>1.5 px</option>
-                        <option value="2">2 px</option>
-                        <option value="2.5">2.5 px</option>
-                        <option value="3">3 px</option>
-                      </select>
-                    </div>
-                    <div class="col-3 px-1">
-                      <select id="selEffStyle" class="form-select form-select-sm form-control-dark" title="Efficiency Line Style" style="font-size: 0.75rem; padding: 2px 4px;">
-                        <option value="solid">Solid (─)</option>
-                        <option value="dash">Dashed (---)</option>
-                        <option value="dot" selected>Dotted (···)</option>
-                        <option value="dashdot">DashDot (-·-)</option>
-                        <option value="longdash">LongDash (——)</option>
-                      </select>
-                    </div>
+                <!-- Efficiency -->
+                <div class="bg-[#161b22] p-2 rounded border border-[#30363d] text-xs">
+                  <span class="text-[#3fb950] font-semibold block mb-1">Efficiency η Axis</span>
+                  <div class="grid grid-cols-4 gap-1">
+                    <input type="number" name="axis_eff_min" id="axis_eff_min" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_eff_min if pump and pump.axis_eff_min is not none else '' }}" placeholder="Min">
+                    <input type="number" name="axis_eff_max" id="axis_eff_max" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_eff_max if pump and pump.axis_eff_max is not none else '' }}" placeholder="Max">
+                    <input type="number" name="axis_eff_major" id="axis_eff_major" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_eff_major if pump and pump.axis_eff_major is not none else '' }}" placeholder="Major">
+                    <input type="number" name="axis_eff_minor" id="axis_eff_minor" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_eff_minor if pump and pump.axis_eff_minor is not none else '' }}" placeholder="Minor">
                   </div>
+                </div>
 
-                  <!-- Power Curve Style -->
-                  <div class="row g-1 align-items-center mb-2">
-                    <div class="col-3 text-nowrap"><span class="small text-light fw-medium"><i class="bi bi-lightning-charge me-1 text-danger"></i>Power (P)</span></div>
-                    <div class="col-3 px-1">
-                      <input type="color" id="clrPowColor" value="#f85149" class="form-control form-control-color form-control-sm w-100" title="Power Curve Color" style="height: 28px; padding: 2px;">
-                    </div>
-                    <div class="col-3 px-1">
-                      <select id="selPowWeight" class="form-select form-select-sm form-control-dark" title="Power Line Weight" style="font-size: 0.75rem; padding: 2px 4px;">
-                        <option value="1">1 px</option>
-                        <option value="1.5" selected>1.5 px</option>
-                        <option value="2">2 px</option>
-                        <option value="2.5">2.5 px</option>
-                        <option value="3">3 px</option>
-                      </select>
-                    </div>
-                    <div class="col-3 px-1">
-                      <select id="selPowStyle" class="form-select form-select-sm form-control-dark" title="Power Line Style" style="font-size: 0.75rem; padding: 2px 4px;">
-                        <option value="solid">Solid (─)</option>
-                        <option value="dash">Dashed (---)</option>
-                        <option value="dot">Dotted (···)</option>
-                        <option value="dashdot">DashDot (-·-)</option>
-                        <option value="longdash" selected>LongDash (——)</option>
-                      </select>
-                    </div>
+                <!-- Power -->
+                <div class="bg-[#161b22] p-2 rounded border border-[#30363d] text-xs">
+                  <span class="text-[#f85149] font-semibold block mb-1">Power P Axis</span>
+                  <div class="grid grid-cols-4 gap-1">
+                    <input type="number" name="axis_power_min" id="axis_power_min" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_power_min if pump and pump.axis_power_min is not none else '' }}" placeholder="Min">
+                    <input type="number" name="axis_power_max" id="axis_power_max" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_power_max if pump and pump.axis_power_max is not none else '' }}" placeholder="Max">
+                    <input type="number" name="axis_power_major" id="axis_power_major" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_power_major if pump and pump.axis_power_major is not none else '' }}" placeholder="Major">
+                    <input type="number" name="axis_power_minor" id="axis_power_minor" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_power_minor if pump and pump.axis_power_minor is not none else '' }}" placeholder="Minor">
                   </div>
+                </div>
 
-                  <!-- NPSH Curve Style -->
-                  <div class="row g-1 align-items-center">
-                    <div class="col-3 text-nowrap"><span class="small text-light fw-medium"><i class="bi bi-moisture me-1 text-info"></i>NPSHr</span></div>
-                    <div class="col-3 px-1">
-                      <input type="color" id="clrNpshColor" value="#39d3c0" class="form-control form-control-color form-control-sm w-100" title="NPSH Curve Color" style="height: 28px; padding: 2px;">
-                    </div>
-                    <div class="col-3 px-1">
-                      <select id="selNpshWeight" class="form-select form-select-sm form-control-dark" title="NPSH Line Weight" style="font-size: 0.75rem; padding: 2px 4px;">
-                        <option value="1">1 px</option>
-                        <option value="1.5" selected>1.5 px</option>
-                        <option value="2">2 px</option>
-                        <option value="2.5">2.5 px</option>
-                        <option value="3">3 px</option>
-                      </select>
-                    </div>
-                    <div class="col-3 px-1">
-                      <select id="selNpshStyle" class="form-select form-select-sm form-control-dark" title="NPSH Line Style" style="font-size: 0.75rem; padding: 2px 4px;">
-                        <option value="solid">Solid (─)</option>
-                        <option value="dash">Dashed (---)</option>
-                        <option value="dot">Dotted (···)</option>
-                        <option value="dashdot" selected>DashDot (-·-)</option>
-                        <option value="longdash">LongDash (——)</option>
-                      </select>
-                    </div>
+                <!-- NPSH -->
+                <div class="bg-[#161b22] p-2 rounded border border-[#30363d] text-xs">
+                  <span class="text-[#39d3c0] font-semibold block mb-1">NPSHr Axis</span>
+                  <div class="grid grid-cols-4 gap-1">
+                    <input type="number" name="axis_npsh_min" id="axis_npsh_min" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_npsh_min if pump and pump.axis_npsh_min is not none else '' }}" placeholder="Min">
+                    <input type="number" name="axis_npsh_max" id="axis_npsh_max" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_npsh_max if pump and pump.axis_npsh_max is not none else '' }}" placeholder="Max">
+                    <input type="number" name="axis_npsh_major" id="axis_npsh_major" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_npsh_major if pump and pump.axis_npsh_major is not none else '' }}" placeholder="Major">
+                    <input type="number" name="axis_npsh_minor" id="axis_npsh_minor" class="axis-scale-input bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-[#e6edf3] text-xs" value="{{ pump.axis_npsh_minor if pump and pump.axis_npsh_minor is not none else '' }}" placeholder="Minor">
                   </div>
+                </div>
 
-                  <!-- ── Graph Axes & Scaling (Nested inside Graph Curve Styles) ── -->
-                  <div class="mt-3 pt-2 border-top border-secondary border-opacity-25">
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                      <label class="form-label form-label-sm fw-semibold text-accent mb-0">
-                        <i class="bi bi-aspect-ratio me-1"></i>Graph Axes & Scaling
-                      </label>
-                      <button class="btn btn-sm btn-link text-accent p-0 text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAxisScales" aria-expanded="true" style="font-size: 0.78rem;">
-                        <i class="bi bi-arrows-angle-expand me-1"></i>Min, Max & Intervals
-                      </button>
-                    </div>
-
-                    <div class="collapse show" id="collapseAxisScales">
-                      <div class="p-2 bg-dark rounded border border-secondary border-opacity-25">
-                        <p class="small text-muted mb-2" style="font-size: 0.75rem;">
-                          <i class="bi bi-info-circle me-1"></i>Set custom bounds, major intervals, and minor subticks per axis. Leave blank for auto scaling.
-                        </p>
-
-                        <!-- Flow (Q) Axis -->
-                        <div class="mb-2 p-2 rounded" style="background:#161b22; border:1px solid #30363d;">
-                          <div class="small fw-semibold text-accent mb-1" style="font-size: 0.75rem;"><i class="bi bi-arrows-expand me-1"></i>Flow (Q) Axis</div>
-                          <div class="row g-1">
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Min</label><input type="number" name="axis_flow_min" id="axis_flow_min" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_flow_min if pump and pump.axis_flow_min is not none else '' }}" step="any" placeholder="Auto" style="font-size:0.75rem;"></div>
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Max</label><input type="number" name="axis_flow_max" id="axis_flow_max" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_flow_max if pump and pump.axis_flow_max is not none else '' }}" step="any" placeholder="Auto" style="font-size:0.75rem;"></div>
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Major</label><input type="number" name="axis_flow_major" id="axis_flow_major" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_flow_major if pump and pump.axis_flow_major is not none else '' }}" step="any" placeholder="Auto" style="font-size:0.75rem;"></div>
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Minor</label><input type="number" name="axis_flow_minor" id="axis_flow_minor" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_flow_minor if pump and pump.axis_flow_minor is not none else '' }}" step="1" min="0" placeholder="Auto" style="font-size:0.75rem;"></div>
-                          </div>
-                        </div>
-
-                        <!-- Head (H) Axis -->
-                        <div class="mb-2 p-2 rounded" style="background:#161b22; border:1px solid #30363d;">
-                          <div class="small fw-semibold text-primary mb-1" style="font-size: 0.75rem;"><i class="bi bi-arrows-vertical me-1"></i>Head (H) Axis</div>
-                          <div class="row g-1">
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Min</label><input type="number" name="axis_head_min" id="axis_head_min" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_head_min if pump and pump.axis_head_min is not none else '' }}" step="any" placeholder="Auto" style="font-size:0.75rem;"></div>
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Max</label><input type="number" name="axis_head_max" id="axis_head_max" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_head_max if pump and pump.axis_head_max is not none else '' }}" step="any" placeholder="Auto" style="font-size:0.75rem;"></div>
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Major</label><input type="number" name="axis_head_major" id="axis_head_major" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_head_major if pump and pump.axis_head_major is not none else '' }}" step="any" placeholder="Auto" style="font-size:0.75rem;"></div>
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Minor</label><input type="number" name="axis_head_minor" id="axis_head_minor" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_head_minor if pump and pump.axis_head_minor is not none else '' }}" step="1" min="0" placeholder="Auto" style="font-size:0.75rem;"></div>
-                          </div>
-                        </div>
-
-                        <!-- Efficiency (η) Axis -->
-                        <div class="mb-2 p-2 rounded" style="background:#161b22; border:1px solid #30363d;">
-                          <div class="small fw-semibold text-success mb-1" style="font-size: 0.75rem;"><i class="bi bi-percent me-1"></i>Efficiency (η) Axis</div>
-                          <div class="row g-1">
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Min</label><input type="number" name="axis_eff_min" id="axis_eff_min" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_eff_min if pump and pump.axis_eff_min is not none else '' }}" step="any" placeholder="Auto" style="font-size:0.75rem;"></div>
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Max</label><input type="number" name="axis_eff_max" id="axis_eff_max" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_eff_max if pump and pump.axis_eff_max is not none else '' }}" step="any" placeholder="Auto" style="font-size:0.75rem;"></div>
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Major</label><input type="number" name="axis_eff_major" id="axis_eff_major" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_eff_major if pump and pump.axis_eff_major is not none else '' }}" step="any" placeholder="Auto" style="font-size:0.75rem;"></div>
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Minor</label><input type="number" name="axis_eff_minor" id="axis_eff_minor" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_eff_minor if pump and pump.axis_eff_minor is not none else '' }}" step="1" min="0" placeholder="Auto" style="font-size:0.75rem;"></div>
-                          </div>
-                        </div>
-
-                        <!-- Power (P) Axis -->
-                        <div class="mb-2 p-2 rounded" style="background:#161b22; border:1px solid #30363d;">
-                          <div class="small fw-semibold text-danger mb-1" style="font-size: 0.75rem;"><i class="bi bi-lightning-charge me-1"></i>Power (P) Axis</div>
-                          <div class="row g-1">
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Min</label><input type="number" name="axis_power_min" id="axis_power_min" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_power_min if pump and pump.axis_power_min is not none else '' }}" step="any" placeholder="Auto" style="font-size:0.75rem;"></div>
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Max</label><input type="number" name="axis_power_max" id="axis_power_max" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_power_max if pump and pump.axis_power_max is not none else '' }}" step="any" placeholder="Auto" style="font-size:0.75rem;"></div>
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Major</label><input type="number" name="axis_power_major" id="axis_power_major" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_power_major if pump and pump.axis_power_major is not none else '' }}" step="any" placeholder="Auto" style="font-size:0.75rem;"></div>
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Minor</label><input type="number" name="axis_power_minor" id="axis_power_minor" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_power_minor if pump and pump.axis_power_minor is not none else '' }}" step="1" min="0" placeholder="Auto" style="font-size:0.75rem;"></div>
-                          </div>
-                        </div>
-
-                        <!-- NPSH Axis -->
-                        <div class="p-2 rounded" style="background:#161b22; border:1px solid #30363d;">
-                          <div class="small fw-semibold text-warning mb-1" style="font-size: 0.75rem;"><i class="bi bi-water me-1"></i>NPSH Axis</div>
-                          <div class="row g-1">
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Min</label><input type="number" name="axis_npsh_min" id="axis_npsh_min" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_npsh_min if pump and pump.axis_npsh_min is not none else '' }}" step="any" placeholder="Auto" style="font-size:0.75rem;"></div>
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Max</label><input type="number" name="axis_npsh_max" id="axis_npsh_max" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_npsh_max if pump and pump.axis_npsh_max is not none else '' }}" step="any" placeholder="Auto" style="font-size:0.75rem;"></div>
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Major</label><input type="number" name="axis_npsh_major" id="axis_npsh_major" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_npsh_major if pump and pump.axis_npsh_major is not none else '' }}" step="any" placeholder="Auto" style="font-size:0.75rem;"></div>
-                            <div class="col-3"><label class="form-label form-label-sm" style="font-size:0.7rem;">Minor</label><input type="number" name="axis_npsh_minor" id="axis_npsh_minor" class="form-control form-control-sm form-control-dark axis-scale-input" value="{{ pump.axis_npsh_minor if pump and pump.axis_npsh_minor is not none else '' }}" step="1" min="0" placeholder="Auto" style="font-size:0.75rem;"></div>
-                          </div>
-                        </div><!-- /NPSH Axis div -->
-
-                      </div><!-- /p-2 bg-dark -->
-                    </div><!-- /collapseAxisScales -->
-                  </div><!-- /mt-3 pt-2 -->
-                </div><!-- /card-body of Graph Curve Styles -->
-              </div><!-- /collapseCurveStyles -->
-            </div><!-- /Graph Curve Styles Card -->
-          </div><!-- /card-body of Display Options card -->
-        </div><!-- /Display Options Card -->
-
-      <!-- ── Performance Map Preview Card & Standalone Panels Container ── -->
-      <div id="curvePreview">
-        <div class="card card-dark mb-3" id="panelWarmanPreview">
-        <div class="card-header card-header-dark">
-          <i class="bi bi-layers text-accent me-2"></i><strong>Performance Map Preview</strong>
-        </div>
-        <div class="card-body p-0">
-          <div id="chartWarman" class="chart-container" style="height:380px"></div>
-        </div>
-      </div>
-
-      <!-- Standalone panels container -->
-      <div id="standalonePanels" style="display:none">
-        <div class="row g-3">
-
-          <div class="col-12" id="panelEffPower" style="display:none">
-            <div class="card card-dark">
-              <div class="card-header card-header-dark">
-                <span class="curve-label eff"><i class="bi bi-speedometer2 me-2"></i>Efficiency &amp; Power</span>
               </div>
-              <div class="card-body p-0"><div id="chartEffPower" class="chart-container" style="height:260px"></div></div>
-            </div>
-          </div>
-          <div class="col-12" id="panelEff" style="display:none">
-            <div class="card card-dark">
-              <div class="card-header card-header-dark">
-                <span class="curve-label eff"><i class="bi bi-speedometer2 me-2"></i>Efficiency — Flow</span>
-              </div>
-              <div class="card-body p-0"><div id="chartEff" class="chart-container" style="height:260px"></div></div>
-            </div>
-          </div>
-          <div class="col-12" id="panelPower" style="display:none">
-            <div class="card card-dark">
-              <div class="card-header card-header-dark">
-                <span class="curve-label power"><i class="bi bi-lightning-fill me-2"></i>Power — Flow</span>
-              </div>
-              <div class="card-body p-0"><div id="chartPower" class="chart-container" style="height:260px"></div></div>
-            </div>
-          </div>
-          <div class="col-12" id="panelNpsh" style="display:none">
-            <div class="card card-dark">
-              <div class="card-header card-header-dark">
-                <span class="curve-label npsh"><i class="bi bi-arrow-up-right me-2"></i>NPSHr — Flow</span>
-              </div>
-              <div class="card-body p-0"><div id="chartNpsh" class="chart-container" style="height:260px"></div></div>
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-    </div><!-- /curvePreview -->
-
-    <div class="card card-dark mb-3">
-      <div class="card-header card-header-dark d-flex align-items-center justify-content-between">
-        <span><i class="bi bi-sliders me-2"></i>Operating Range</span>
-        <select class="header-unit-select" id="unit-op-q" style="margin-top:0">
-          <option value="m3h" {% if pump and pump.data_units_dict and pump.data_units_dict.op_q == 'm3h' %}selected{% elif not pump %}selected{% endif %}>m³/h</option>
-          <option value="ls" {% if pump and pump.data_units_dict and pump.data_units_dict.op_q == 'ls' %}selected{% endif %}>L/s</option>
-          <option value="gpm" {% if pump and pump.data_units_dict and pump.data_units_dict.op_q == 'gpm' %}selected{% endif %}>gpm</option>
-          <option value="lmin" {% if pump and pump.data_units_dict and pump.data_units_dict.op_q == 'lmin' %}selected{% endif %}>L/min</option>
-        </select>
+    <!-- Live Preview Chart Container (Collapsable) -->
+    <div class="space-y-3" id="curvePreview">
+      <div class="bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden" id="curvePreviewCard">
+        <div onclick="toggleCard('curvePreviewBody', 'curvePreviewChevron')"
+             class="flex items-center justify-between px-4 py-2.5 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/60 transition-colors">
+          <div class="flex items-center gap-2 font-semibold text-[#e6edf3] text-sm">
+            <i class="bi bi-layers text-[#58a6ff]"></i>
+            <span>Performance Map Preview</span>
+          </div>
+          <i class="bi bi-chevron-down text-[#8b949e] transition-transform duration-200" id="curvePreviewChevron" style="transform: rotate(180deg)"></i>
+        </div>
+        <div class="p-1" id="curvePreviewBody">
+          <div id="chartWarman" class="w-full" style="height:380px"></div>
+        </div>
       </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-4">
-            <label class="form-label" id="lbl-q-min">Q<sub>min</sub> (m³/h)</label>
-            <input type="number" name="q_min" class="form-control form-control-dark"
+
+      <div id="standalonePanels" class="hidden space-y-3">
+        <div class="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden hidden" id="panelEffPower">
+          <div class="px-3 py-2 bg-[#1c2330] border-b border-[#30363d] font-semibold text-xs text-[#58a6ff]">
+            <i class="bi bi-speedometer2 me-1"></i>Efficiency &amp; Power
+          </div>
+          <div id="chartEffPower" style="height:260px"></div>
+        </div>
+        <div class="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden hidden" id="panelEff">
+          <div class="px-3 py-2 bg-[#1c2330] border-b border-[#30363d] font-semibold text-xs text-[#3fb950]">
+            <i class="bi bi-speedometer2 me-1"></i>Efficiency — Flow
+          </div>
+          <div id="chartEff" style="height:260px"></div>
+        </div>
+        <div class="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden hidden" id="panelPower">
+          <div class="px-3 py-2 bg-[#1c2330] border-b border-[#30363d] font-semibold text-xs text-[#f85149]">
+            <i class="bi bi-lightning-fill me-1"></i>Power — Flow
+          </div>
+          <div id="chartPower" style="height:260px"></div>
+        </div>
+        <div class="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden hidden" id="panelNpsh">
+          <div class="px-3 py-2 bg-[#1c2330] border-b border-[#30363d] font-semibold text-xs text-[#39d3c0]">
+            <i class="bi bi-arrow-up-right me-1"></i>NPSHr — Flow
+          </div>
+          <div id="chartNpsh" style="height:260px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Operating Range Card (Collapsable) -->
+    <div class="bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden" id="opRangeCard">
+      <div onclick="toggleCard('opRangeBody', 'opRangeChevron')"
+           class="flex items-center justify-between px-4 py-2.5 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/60 transition-colors">
+        <div class="flex items-center gap-2 font-semibold text-[#e6edf3] text-sm">
+          <i class="bi bi-sliders text-[#58a6ff]"></i>
+          <span>Operating Range</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <select class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1.5 py-0.5 focus:outline-none" id="unit-op-q" onclick="event.stopPropagation()">
+            <option value="m3h" {% if pump and pump.data_units_dict and pump.data_units_dict.op_q == 'm3h' %}selected{% elif not pump %}selected{% endif %}>m³/h</option>
+            <option value="ls" {% if pump and pump.data_units_dict and pump.data_units_dict.op_q == 'ls' %}selected{% endif %}>L/s</option>
+            <option value="gpm" {% if pump and pump.data_units_dict and pump.data_units_dict.op_q == 'gpm' %}selected{% endif %}>gpm</option>
+            <option value="lmin" {% if pump and pump.data_units_dict and pump.data_units_dict.op_q == 'lmin' %}selected{% endif %}>L/min</option>
+          </select>
+          <i class="bi bi-chevron-down text-[#8b949e] transition-transform duration-200" id="opRangeChevron" style="transform: rotate(180deg)"></i>
+        </div>
+      </div>
+      <div class="p-4" id="opRangeBody">
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-[#c9d1d9] mb-1" id="lbl-q-min">Q<sub>min</sub> (m³/h)</label>
+            <input type="number" name="q_min" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
                    value="{{ pump.q_min if pump else 0 }}" step="any">
           </div>
-          <div class="col-4">
-            <label class="form-label" id="lbl-q-max">Q<sub>max</sub> (m³/h) <span class="text-danger">*</span></label>
-            <input type="number" name="q_max" class="form-control form-control-dark"
+          <div>
+            <label class="block text-xs font-semibold text-[#c9d1d9] mb-1" id="lbl-q-max">Q<sub>max</sub> (m³/h) <span class="text-[#f85149]">*</span></label>
+            <input type="number" name="q_max" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
                    value="{{ pump.q_max if pump else '' }}" step="any" required id="inp_q_max">
           </div>
-          <div class="col-4">
-            <label class="form-label" id="lbl-q-bep">Q<sub>bep</sub> (m³/h)</label>
-            <input type="number" name="q_bep" class="form-control form-control-dark"
+          <div>
+            <label class="block text-xs font-semibold text-[#c9d1d9] mb-1" id="lbl-q-bep">Q<sub>bep</sub> (m³/h)</label>
+            <input type="number" name="q_bep" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
                    value="{{ pump.q_bep if pump else 0 }}" step="any" id="inp_q_bep">
           </div>
         </div>
       </div>
     </div>
 
-    <div class="card card-dark mb-3">
-      <div class="card-header card-header-dark"><i class="bi bi-record-circle me-2 text-accent"></i>Impeller Diameter Family</div>
-      <div class="card-body">
-        <p class="small text-muted mb-2">Comma-separated diameters (mm), largest first. Diameters with data tables in <strong>Additional Curves</strong> plot from fitted loaded data; remaining diameters are generated via affinity laws.</p>
-        <input type="text" name="impeller_diameters" class="form-control form-control-dark"
+    <!-- Impeller Family Card (Collapsable) -->
+    <div class="bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden" id="impellerFamilyCard">
+      <div onclick="toggleCard('impellerFamilyBody', 'impellerFamilyChevron')"
+           class="flex items-center justify-between px-4 py-2.5 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/60 transition-colors">
+        <div class="flex items-center gap-2 font-semibold text-[#e6edf3] text-sm">
+          <i class="bi bi-record-circle text-[#58a6ff]"></i>
+          <span>Impeller Diameter Family</span>
+        </div>
+        <i class="bi bi-chevron-down text-[#8b949e] transition-transform duration-200" id="impellerFamilyChevron" style="transform: rotate(180deg)"></i>
+      </div>
+      <div class="p-4" id="impellerFamilyBody">
+        <p class="text-xs text-[#8b949e] mb-2">
+          Comma-separated diameters (mm), largest first. Diameters with data tables in Additional Curves plot from fitted loaded data; remaining diameters are generated via affinity laws.
+        </p>
+        <input type="text" name="impeller_diameters" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
                value="{{ pump.impeller_diameters if pump else '' }}"
                placeholder="e.g. 480, 450, 420, 390, 360">
       </div>
     </div>
 
-    <div class="card card-dark mb-3">
-      <div class="card-header card-header-dark"><i class="bi bi-layers me-2"></i>Slurry Derating (Warman)</div>
-      <div class="card-body">
-        <p class="small text-muted mb-2">HR = Head Ratio, QR = Flow Ratio, ER = Efficiency Ratio for slurry duty.</p>
-        <div class="row g-3">
-          <div class="col-4">
-            <label class="form-label">HR</label>
-            <input type="number" name="hr" class="form-control form-control-dark"
+    <!-- Slurry Derating Card (Collapsable) -->
+    <div class="bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden" id="slurryCard">
+      <div onclick="toggleCard('slurryBody', 'slurryChevron')"
+           class="flex items-center justify-between px-4 py-2.5 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/60 transition-colors">
+        <div class="flex items-center gap-2 font-semibold text-[#e6edf3] text-sm">
+          <i class="bi bi-layers text-[#58a6ff]"></i>
+          <span>Slurry Derating (Warman)</span>
+        </div>
+        <i class="bi bi-chevron-down text-[#8b949e] transition-transform duration-200" id="slurryChevron" style="transform: rotate(180deg)"></i>
+      </div>
+      <div class="p-4" id="slurryBody">
+        <p class="text-xs text-[#8b949e] mb-2">HR = Head Ratio, QR = Flow Ratio, ER = Efficiency Ratio for slurry duty.</p>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">HR</label>
+            <input type="number" name="hr" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
                    value="{{ pump.hr if pump else 1.0 }}" step="any" min="0" max="1">
           </div>
-          <div class="col-4">
-            <label class="form-label">QR</label>
-            <input type="number" name="qr" class="form-control form-control-dark"
+          <div>
+            <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">QR</label>
+            <input type="number" name="qr" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
                    value="{{ pump.qr if pump else 1.0 }}" step="any" min="0" max="1">
           </div>
-          <div class="col-4">
-            <label class="form-label">ER</label>
-            <input type="number" name="er" class="form-control form-control-dark"
+          <div>
+            <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">ER</label>
+            <input type="number" name="er" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
                    value="{{ pump.er if pump else 1.0 }}" step="any" min="0" max="1">
           </div>
         </div>
       </div>
     </div>
-  </div><!-- /card-dark -->
-</div><!-- /col-lg-5 -->
 
-  <!-- ── Column 2: Performance Data Entry ── -->
-  <div class="col-lg-7">
+  </div><!-- /lg:col-span-5 -->
 
-    <!-- ── Top Polynomial Curve Fitting Orders Card (Before Main Curve Headings) ── -->
-    <!-- Beginners Note: Set independent polynomial degrees (1st to 5th degree) for each performance curve -->
-    <div class="card card-dark mb-3">
-      <div class="card-header card-header-dark py-2 d-flex align-items-center justify-content-between">
-        <span class="fw-semibold text-accent" style="font-size: 0.85rem;">
-          <i class="bi bi-diagram-3 me-2"></i>Polynomial Curve Fitting Orders
-        </span>
-        <span class="badge bg-secondary" style="font-size:0.7rem">Applies to all curves</span>
+  <!-- ── COLUMN 2: Performance Data, Polynomial Fitting, Additional Curves (lg:col-span-7) ── -->
+  <div class="lg:col-span-7 space-y-4">
+
+    <!-- Card 3: Polynomial Fitting Orders (Collapsable) -->
+    <div class="bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden" id="polyOrdersCard">
+      <div onclick="toggleCard('polyOrdersBody', 'polyOrdersChevron')"
+           class="flex items-center justify-between px-4 py-2.5 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/60 transition-colors">
+        <div class="flex items-center gap-2 font-semibold text-[#e6edf3] text-sm">
+          <i class="bi bi-diagram-3 text-[#58a6ff]"></i>
+          <span>Polynomial Curve Fitting Orders</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#30363d] text-[#8b949e]">Applies to all curves</span>
+          <i class="bi bi-chevron-down text-[#8b949e] transition-transform duration-200" id="polyOrdersChevron" style="transform: rotate(180deg)"></i>
+        </div>
       </div>
-      <div class="card-body p-3">
-        <div class="row g-2 align-items-center">
-
-          <!-- Head H(Q) Order -->
-          <div class="col-md-3 col-6">
-            <label for="poly_order_hq" class="form-label form-label-sm mb-1 text-light fw-medium" style="font-size:0.75rem;">
-              <i class="bi bi-graph-up me-1 text-primary"></i>Head H(Q):
+      <div class="p-4" id="polyOrdersBody">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div>
+            <label for="poly_order_hq" class="block text-xs font-semibold text-[#58a6ff] mb-1">
+              <i class="bi bi-graph-up me-1"></i>Head H(Q):
             </label>
-            <select name="poly_order_hq" id="poly_order_hq" class="form-select form-select-sm form-control-dark poly-order-select" style="font-size:0.75rem; padding: 3px 6px;">
+            <select name="poly_order_hq" id="poly_order_hq" class="poly-order-select w-full bg-[#0d1117] border border-[#30363d] text-[#e6edf3] text-xs rounded px-2 py-1.5 focus:outline-none focus:border-[#58a6ff]">
               <option value="1" {{ 'selected' if pump and pump.poly_order_hq == 1 }}>Order 1 (Linear)</option>
               <option value="2" {{ 'selected' if pump and pump.poly_order_hq == 2 }}>Order 2 (Quadratic)</option>
               <option value="3" {{ 'selected' if not pump or pump.poly_order_hq == 3 or not pump.poly_order_hq }}>Order 3 (Cubic)</option>
@@ -579,12 +557,11 @@
             </select>
           </div>
 
-          <!-- Efficiency η(Q) Order -->
-          <div class="col-md-3 col-6">
-            <label for="poly_order_eff" class="form-label form-label-sm mb-1 text-light fw-medium" style="font-size:0.75rem;">
-              <i class="bi bi-speedometer2 me-1 text-success"></i>Efficiency η(Q):
+          <div>
+            <label for="poly_order_eff" class="block text-xs font-semibold text-[#3fb950] mb-1">
+              <i class="bi bi-speedometer2 me-1"></i>Efficiency η(Q):
             </label>
-            <select name="poly_order_eff" id="poly_order_eff" class="form-select form-select-sm form-control-dark poly-order-select" style="font-size:0.75rem; padding: 3px 6px;">
+            <select name="poly_order_eff" id="poly_order_eff" class="poly-order-select w-full bg-[#0d1117] border border-[#30363d] text-[#e6edf3] text-xs rounded px-2 py-1.5 focus:outline-none focus:border-[#58a6ff]">
               <option value="1" {{ 'selected' if pump and pump.poly_order_eff == 1 }}>Order 1 (Linear)</option>
               <option value="2" {{ 'selected' if pump and pump.poly_order_eff == 2 }}>Order 2 (Quadratic)</option>
               <option value="3" {{ 'selected' if not pump or pump.poly_order_eff == 3 or not pump.poly_order_eff }}>Order 3 (Cubic)</option>
@@ -593,12 +570,11 @@
             </select>
           </div>
 
-          <!-- Power P(Q) Order -->
-          <div class="col-md-3 col-6">
-            <label for="poly_order_pow" class="form-label form-label-sm mb-1 text-light fw-medium" style="font-size:0.75rem;">
-              <i class="bi bi-lightning-charge me-1 text-danger"></i>Power P(Q):
+          <div>
+            <label for="poly_order_pow" class="block text-xs font-semibold text-[#f85149] mb-1">
+              <i class="bi bi-lightning-charge me-1"></i>Power P(Q):
             </label>
-            <select name="poly_order_pow" id="poly_order_pow" class="form-select form-select-sm form-control-dark poly-order-select" style="font-size:0.75rem; padding: 3px 6px;">
+            <select name="poly_order_pow" id="poly_order_pow" class="poly-order-select w-full bg-[#0d1117] border border-[#30363d] text-[#e6edf3] text-xs rounded px-2 py-1.5 focus:outline-none focus:border-[#58a6ff]">
               <option value="1" {{ 'selected' if pump and pump.poly_order_pow == 1 }}>Order 1 (Linear)</option>
               <option value="2" {{ 'selected' if not pump or pump.poly_order_pow == 2 or not pump.poly_order_pow }}>Order 2 (Quadratic)</option>
               <option value="3" {{ 'selected' if pump and pump.poly_order_pow == 3 }}>Order 3 (Cubic)</option>
@@ -607,12 +583,11 @@
             </select>
           </div>
 
-          <!-- NPSHr Order -->
-          <div class="col-md-3 col-6">
-            <label for="poly_order_npsh" class="form-label form-label-sm mb-1 text-light fw-medium" style="font-size:0.75rem;">
-              <i class="bi bi-water me-1 text-warning"></i>NPSHr:
+          <div>
+            <label for="poly_order_npsh" class="block text-xs font-semibold text-[#ff9900] mb-1">
+              <i class="bi bi-water me-1"></i>NPSHr:
             </label>
-            <select name="poly_order_npsh" id="poly_order_npsh" class="form-select form-select-sm form-control-dark poly-order-select" style="font-size:0.75rem; padding: 3px 6px;">
+            <select name="poly_order_npsh" id="poly_order_npsh" class="poly-order-select w-full bg-[#0d1117] border border-[#30363d] text-[#e6edf3] text-xs rounded px-2 py-1.5 focus:outline-none focus:border-[#58a6ff]">
               <option value="1" {{ 'selected' if pump and pump.poly_order_npsh == 1 }}>Order 1 (Linear)</option>
               <option value="2" {{ 'selected' if not pump or pump.poly_order_npsh == 2 or not pump.poly_order_npsh }}>Order 2 (Quadratic)</option>
               <option value="3" {{ 'selected' if pump and pump.poly_order_npsh == 3 }}>Order 3 (Cubic)</option>
@@ -620,216 +595,166 @@
               <option value="5" {{ 'selected' if pump and pump.poly_order_npsh == 5 }}>Order 5 (Quintic)</option>
             </select>
           </div>
-
         </div>
       </div>
     </div>
 
-    <div class="card card-dark mb-3">
-      <div class="card-header card-header-dark d-flex align-items-center gap-2 flex-wrap">
-        <i class="bi bi-table me-1"></i>Performance Data
-        <span class="badge bg-accent ms-1">Enter real data points</span>
-        <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
-          <span class="text-muted small">Curve Label:</span>
-          <input type="text" name="main_curve_label" id="main_curve_label"
-                 class="form-control form-control-sm form-control-dark"
-                 value="{{ pump.get_curve_labels_list()[0] if pump and pump.get_curve_labels_list() else '' }}"
-                 placeholder="e.g. Full Trim" style="max-width:130px">
-          <span class="text-muted small">Diameter:</span>
-          {% set main_d = pump.get_curve_diameters_list()[0]['diameter'] if pump and pump.get_curve_diameters_list() else none %}
-          <input type="number" name="main_curve_dia_mm" id="main_curve_dia_mm" step="any"
-                 class="form-control form-control-sm form-control-dark"
-                 value="{{ main_d if main_d is not none else '' }}"
-                 placeholder="{{ pump.impeller_dia_mm if pump else '' }}" style="max-width:90px">
-          <select class="header-unit-select" name="main_curve_dia_unit" id="main_curve_dia_unit" style="margin-top:0;width:70px">
-            <option value="mm" {% if pump and pump.get_curve_diameters_list() and pump.get_curve_diameters_list()[0]['unit'] == 'mm' %}selected{% elif not pump %}selected{% endif %}>mm</option>
-            <option value="in" {% if pump and pump.get_curve_diameters_list() and pump.get_curve_diameters_list()[0]['unit'] == 'in' %}selected{% endif %}>in</option>
-            <option value="m" {% if pump and pump.get_curve_diameters_list() and pump.get_curve_diameters_list()[0]['unit'] == 'm' %}selected{% endif %}>m</option>
-          </select>
-          <div class="vr mx-1 opacity-50"></div>
-          <span class="text-muted small">Style:</span>
-          <select class="header-unit-select" id="main_curve_style_mode" style="margin-top:0;width:auto;">
-            <option value="graph">Use Graph Settings</option>
-            <option value="custom">Use Custom Style</option>
-          </select>
-          <div id="main_curve_custom_controls" class="align-items-center gap-1 ms-1 d-none">
-            <input type="color" id="main_curve_color" value="#58a6ff" class="form-control form-control-color form-control-sm" style="height:26px;width:32px;padding:2px;" title="Main Curve Color">
-            <select id="main_curve_weight" class="header-unit-select" style="margin-top:0;width:auto;" title="Line Weight">
-              <option value="1">1 px</option>
-              <option value="1.5">1.5 px</option>
-              <option value="2" selected>2 px</option>
-              <option value="2.5">2.5 px</option>
-              <option value="3">3 px</option>
-              <option value="4">4 px</option>
-            </select>
-            <select id="main_curve_line_style" class="header-unit-select" style="margin-top:0;width:auto;" title="Line Style">
-              <option value="solid" selected>Solid (─)</option>
-              <option value="dash">Dashed (---)</option>
-              <option value="dot">Dotted (···)</option>
-              <option value="dashdot">DashDot (-·-)</option>
-              <option value="longdash">LongDash (——)</option>
+    <!-- Card 4: Tabular Performance Data (Collapsable) -->
+    <div class="bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden" id="perfDataCard">
+      <div onclick="toggleCard('perfDataBody', 'perfDataChevron')"
+           class="flex items-center justify-between px-4 py-2.5 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/60 transition-colors">
+        <div class="flex items-center gap-2 font-semibold text-[#e6edf3] text-sm">
+          <i class="bi bi-table text-[#58a6ff]"></i>
+          <span>Performance Data</span>
+          <span class="badge bg-[#58a6ff]/20 text-[#58a6ff] text-[10px] px-2 py-0.5 rounded border border-[#58a6ff]/30">Enter real data points</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2" onclick="event.stopPropagation()">
+            <span class="text-[#8b949e] text-xs hidden sm:inline">Label:</span>
+            <input type="text" name="main_curve_label" id="main_curve_label"
+                   class="bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] w-28"
+                   value="{{ pump.get_curve_labels_list()[0] if pump and pump.get_curve_labels_list() else '' }}"
+                   placeholder="e.g. Full Trim">
+            <span class="text-[#8b949e] text-xs hidden sm:inline">Dia:</span>
+            {% set main_d = pump.get_curve_diameters_list()[0]['diameter'] if pump and pump.get_curve_diameters_list() else none %}
+            <input type="number" name="main_curve_dia_mm" id="main_curve_dia_mm" step="any"
+                   class="bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] w-20"
+                   value="{{ main_d if main_d is not none else '' }}"
+                   placeholder="{{ pump.impeller_dia_mm if pump else '' }}">
+            <select class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1.5 py-1 focus:outline-none" name="main_curve_dia_unit" id="main_curve_dia_unit">
+              <option value="mm" {% if pump and pump.get_curve_diameters_list() and pump.get_curve_diameters_list()[0]['unit'] == 'mm' %}selected{% elif not pump %}selected{% endif %}>mm</option>
+              <option value="in" {% if pump and pump.get_curve_diameters_list() and pump.get_curve_diameters_list()[0]['unit'] == 'in' %}selected{% endif %}>in</option>
+              <option value="m" {% if pump and pump.get_curve_diameters_list() and pump.get_curve_diameters_list()[0]['unit'] == 'm' %}selected{% endif %}>m</option>
             </select>
           </div>
+          <i class="bi bi-chevron-down text-[#8b949e] transition-transform duration-200" id="perfDataChevron" style="transform: rotate(180deg)"></i>
         </div>
       </div>
-      <div class="card-body">
 
-        <div class="alert alert-info-dark small p-2 mb-3">
-          <i class="bi bi-lightbulb me-1"></i>
-          Enter Q, H, and η (%) values from the pump datasheet or test report. At least
-          <strong>3 points each for H and η</strong> are required. Include the shutoff head (Q=0),
-          BEP, and runout point for best accuracy. Then click <strong>Fit &amp; Preview</strong>.
+      <div class="p-4" id="perfDataBody">
+        <div class="p-2.5 rounded bg-[#58a6ff]/10 border border-[#58a6ff]/20 text-xs text-[#58a6ff] mb-3 flex items-start gap-2">
+          <i class="bi bi-lightbulb text-sm mt-0.5"></i>
+          <span>Enter Q, H, and η (%) values from the pump datasheet or test report. At least <strong>3 points each for H and η</strong> are required. Include shutoff (Q=0), BEP, and runout point for best accuracy. Then click <strong>Fit &amp; Preview</strong>.</span>
         </div>
 
-        <div class="table-responsive mb-2">
-          <table class="table table-sm table-dark mb-0 align-middle" id="perfTable" style="font-size:0.85rem">
+        <div class="overflow-x-auto mb-3">
+          <table class="w-full text-xs text-[#c9d1d9] border-collapse" id="perfTable">
             <thead>
-              <tr style="background:#21262d">
-                <th style="width:120px">
+              <tr class="bg-[#1c2330] text-[#8b949e] border-b border-[#30363d] font-semibold">
+                <th class="p-2 text-left w-32">
                   Flow Q<br>
-                  <select class="header-unit-select unit-select" id="unit-q">
+                  <select class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1 py-0.5 mt-0.5 focus:outline-none" id="unit-q">
                     <option value="m3h" {% if pump and pump.data_units_dict and pump.data_units_dict.q == 'm3h' %}selected{% elif not pump %}selected{% endif %}>m³/h</option>
                     <option value="ls" {% if pump and pump.data_units_dict and pump.data_units_dict.q == 'ls' %}selected{% endif %}>L/s</option>
                     <option value="gpm" {% if pump and pump.data_units_dict and pump.data_units_dict.q == 'gpm' %}selected{% endif %}>gpm</option>
                     <option value="lmin" {% if pump and pump.data_units_dict and pump.data_units_dict.q == 'lmin' %}selected{% endif %}>L/min</option>
                   </select>
                 </th>
-                <th style="width:100px">
+                <th class="p-2 text-left w-28">
                   Head H<br>
-                  <select class="header-unit-select unit-select" id="unit-h">
+                  <select class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1 py-0.5 mt-0.5 focus:outline-none" id="unit-h">
                     <option value="m" {% if pump and pump.data_units_dict and pump.data_units_dict.h == 'm' %}selected{% elif not pump %}selected{% endif %}>m</option>
                     <option value="ft" {% if pump and pump.data_units_dict and pump.data_units_dict.h == 'ft' %}selected{% endif %}>ft</option>
                   </select>
                 </th>
-                <th style="width:85px">Effic. η<br><span class="fw-normal text-muted">(%)</span></th>
-                <th style="width:115px">
+                <th class="p-2 text-left w-24">Effic. η<br><span class="text-[#8b949e] font-normal">(%)</span></th>
+                <th class="p-2 text-left w-28">
                   NPSHr<br>
-                  <select class="header-unit-select unit-select" id="unit-npsh">
+                  <select class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1 py-0.5 mt-0.5 focus:outline-none" id="unit-npsh">
                     <option value="m" {% if pump and pump.data_units_dict and pump.data_units_dict.npsh == 'm' %}selected{% elif not pump %}selected{% endif %}>m (opt.)</option>
                     <option value="ft" {% if pump and pump.data_units_dict and pump.data_units_dict.npsh == 'ft' %}selected{% endif %}>ft (opt.)</option>
                   </select>
                 </th>
-                <th style="width:120px">
+                <th class="p-2 text-left w-28">
                   Power<br>
-                  <select class="header-unit-select unit-select" id="unit-pow">
+                  <select class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1 py-0.5 mt-0.5 focus:outline-none" id="unit-pow">
                     <option value="kw" {% if pump and pump.data_units_dict and pump.data_units_dict.pow == 'kw' %}selected{% elif not pump %}selected{% endif %}>kW (opt.)</option>
                     <option value="hp" {% if pump and pump.data_units_dict and pump.data_units_dict.pow == 'hp' %}selected{% endif %}>hp (opt.)</option>
                   </select>
                 </th>
-                <th style="width:30px"></th>
+                <th class="p-2 text-center w-8"></th>
               </tr>
             </thead>
-            <tbody>
-              <!-- Rows injected by pump_form.js -->
+            <tbody class="divide-y divide-[#30363d]">
+              <!-- Rows injected dynamically by pump_form.js -->
             </tbody>
           </table>
         </div>
 
-        <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addRow('perfTable')">
-            <i class="bi bi-plus-lg me-1"></i>Add Row
+        <div class="flex items-center justify-between gap-3">
+          <button type="button" class="px-3 py-1 rounded border border-[#30363d] bg-[#161b22] text-[#c9d1d9] text-xs font-medium hover:bg-slate-800 transition-colors inline-flex items-center gap-1" onclick="addRow('perfTable')">
+            <i class="bi bi-plus-lg"></i>Add Row
           </button>
-          <button type="button" class="btn btn-sm btn-primary ms-auto" id="fitBtn" onclick="fitAndPreview()">
-            <i class="bi bi-calculator me-1"></i>Fit &amp; Preview
+          <button type="button" class="px-4 py-1.5 rounded bg-[#238636] hover:bg-[#2ea043] text-white text-xs font-semibold transition-colors inline-flex items-center gap-1.5 shadow" id="fitBtn" onclick="fitAndPreview()">
+            <i class="bi bi-calculator"></i>Fit &amp; Preview
           </button>
         </div>
 
-        <div id="fitStatus" class="mt-1 small"></div>
+        <div id="fitStatus" class="mt-2 text-xs font-medium"></div>
 
-        <!-- Generated Coefficients (collapsible inside card) -->
-        <div class="card card-dark border-secondary border-opacity-50 mt-3">
-          <div class="card-header card-header-dark py-1 px-2 d-flex justify-content-between align-items-center" style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#coeffPanel">
-            <span class="small fw-semibold"><i class="bi bi-chevron-down me-1" id="coeffChevron"></i>Generated Polynomial Coefficients <span class="text-muted fw-normal">(auto-filled by Fit, or enter manually)</span></span>
-            <span class="badge bg-secondary" style="font-size:0.7rem">Polynomials</span>
+        <!-- Generated Coefficients Card (Collapsable Inside Data Table Card) -->
+        <div class="bg-[#0d1117] border border-[#30363d] rounded-lg mt-3 overflow-hidden" id="polyCoeffsCard">
+          <div onclick="toggleCard('coeffPanel', 'coeffChevron')"
+               class="flex items-center justify-between p-2.5 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/40 transition-colors">
+            <div class="flex items-center gap-2 font-semibold text-[#e6edf3] text-xs">
+              <i class="bi bi-chevron-down text-[#8b949e] transition-transform duration-200" id="coeffChevron" style="transform: rotate(0deg)"></i>
+              <span>Generated Polynomial Coefficients <span class="text-[#8b949e] font-normal">(auto-filled by Fit, or enter manually)</span></span>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#30363d] text-[#8b949e]">Polynomials</span>
           </div>
-          <div class="collapse" id="coeffPanel">
-            <div class="card-body p-2">
-              <div class="row g-2">
 
-                <!-- H-Q -->
-                <div class="col-lg-6">
-                  <div class="p-2 rounded" style="background:#161b22;border:1px solid #30363d">
-                    <div class="small text-accent mb-2 fw-semibold" id="eq_title_hq"><i class="bi bi-graph-down-arrow me-1"></i>H-Q H = a₀ + a₁Q + a₂Q² + a₃Q³</div>
-                    <div class="row g-2">
-                      <div class="col-4" id="wrap_hq_a0"><label class="form-label form-label-sm">a₀ (shutoff) *</label>
-                        <input type="number" name="hq_a0" id="hq_a0" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a0 if pump else 0 }}" step="any" required></div>
-                      <div class="col-4" id="wrap_hq_a1"><label class="form-label form-label-sm">a₁</label>
-                        <input type="number" name="hq_a1" id="hq_a1" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a1 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_hq_a2"><label class="form-label form-label-sm">a₂</label>
-                        <input type="number" name="hq_a2" id="hq_a2" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a2 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_hq_a3"><label class="form-label form-label-sm">a₃</label>
-                        <input type="number" name="hq_a3" id="hq_a3" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a3 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_hq_a4"><label class="form-label form-label-sm">a₄</label>
-                        <input type="number" name="hq_a4" id="hq_a4" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a4 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_hq_a5"><label class="form-label form-label-sm">a₅</label>
-                        <input type="number" name="hq_a5" id="hq_a5" class="form-control form-control-sm form-control-dark" value="{{ pump.hq_a5 if pump else 0 }}" step="any"></div>
-                    </div>
-                  </div>
+          <div class="p-3 hidden" id="coeffPanel">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <!-- H-Q -->
+              <div class="p-2.5 rounded bg-[#161b22] border border-[#30363d] space-y-2">
+                <div class="text-xs font-bold text-[#58a6ff]" id="eq_title_hq"><i class="bi bi-graph-down-arrow me-1"></i>H-Q H = a₀ + a₁Q + a₂Q² + a₃Q³</div>
+                <div class="grid grid-cols-3 gap-2">
+                  <div id="wrap_hq_a0"><label class="block text-[10px] text-[#8b949e]">a₀ (shutoff) *</label><input type="number" name="hq_a0" id="hq_a0" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.hq_a0 if pump else 0 }}" step="any" required></div>
+                  <div id="wrap_hq_a1"><label class="block text-[10px] text-[#8b949e]">a₁</label><input type="number" name="hq_a1" id="hq_a1" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.hq_a1 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_hq_a2"><label class="block text-[10px] text-[#8b949e]">a₂</label><input type="number" name="hq_a2" id="hq_a2" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.hq_a2 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_hq_a3"><label class="block text-[10px] text-[#8b949e]">a₃</label><input type="number" name="hq_a3" id="hq_a3" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.hq_a3 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_hq_a4"><label class="block text-[10px] text-[#8b949e]">a₄</label><input type="number" name="hq_a4" id="hq_a4" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.hq_a4 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_hq_a5"><label class="block text-[10px] text-[#8b949e]">a₅</label><input type="number" name="hq_a5" id="hq_a5" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.hq_a5 if pump else 0 }}" step="any"></div>
                 </div>
+              </div>
 
-                <!-- Efficiency -->
-                <div class="col-lg-6">
-                  <div class="p-2 rounded" style="background:#161b22;border:1px solid #30363d">
-                    <div class="small text-success mb-2 fw-semibold" id="eq_title_eff"><i class="bi bi-speedometer2 me-1"></i>Efficiency η = b₀ + b₁Q + b₂Q² + b₃Q³</div>
-                    <div class="row g-2">
-                      <div class="col-4" id="wrap_eff_b0"><label class="form-label form-label-sm">b₀</label>
-                        <input type="number" name="eff_b0" id="eff_b0" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b0 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_eff_b1"><label class="form-label form-label-sm">b₁</label>
-                        <input type="number" name="eff_b1" id="eff_b1" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b1 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_eff_b2"><label class="form-label form-label-sm">b₂</label>
-                        <input type="number" name="eff_b2" id="eff_b2" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b2 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_eff_b3"><label class="form-label form-label-sm">b₃</label>
-                        <input type="number" name="eff_b3" id="eff_b3" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b3 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_eff_b4"><label class="form-label form-label-sm">b₄</label>
-                        <input type="number" name="eff_b4" id="eff_b4" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b4 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_eff_b5"><label class="form-label form-label-sm">b₅</label>
-                        <input type="number" name="eff_b5" id="eff_b5" class="form-control form-control-sm form-control-dark" value="{{ pump.eff_b5 if pump else 0 }}" step="any"></div>
-                    </div>
-                  </div>
+              <!-- Efficiency -->
+              <div class="p-2.5 rounded bg-[#161b22] border border-[#30363d] space-y-2">
+                <div class="text-xs font-bold text-[#3fb950]" id="eq_title_eff"><i class="bi bi-speedometer2 me-1"></i>Efficiency η = b₀ + b₁Q + b₂Q² + b₃Q³</div>
+                <div class="grid grid-cols-3 gap-2">
+                  <div id="wrap_eff_b0"><label class="block text-[10px] text-[#8b949e]">b₀</label><input type="number" name="eff_b0" id="eff_b0" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.eff_b0 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_eff_b1"><label class="block text-[10px] text-[#8b949e]">b₁</label><input type="number" name="eff_b1" id="eff_b1" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.eff_b1 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_eff_b2"><label class="block text-[10px] text-[#8b949e]">b₂</label><input type="number" name="eff_b2" id="eff_b2" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.eff_b2 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_eff_b3"><label class="block text-[10px] text-[#8b949e]">b₃</label><input type="number" name="eff_b3" id="eff_b3" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.eff_b3 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_eff_b4"><label class="block text-[10px] text-[#8b949e]">b₄</label><input type="number" name="eff_b4" id="eff_b4" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.eff_b4 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_eff_b5"><label class="block text-[10px] text-[#8b949e]">b₅</label><input type="number" name="eff_b5" id="eff_b5" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.eff_b5 if pump else 0 }}" step="any"></div>
                 </div>
+              </div>
 
-                <!-- NPSH -->
-                <div class="col-lg-6">
-                  <div class="p-2 rounded" style="background:#161b22;border:1px solid #30363d">
-                    <div class="small text-warning mb-2 fw-semibold" id="eq_title_npsh"><i class="bi bi-arrow-up-right me-1"></i>NPSHr = c₀ + c₁Q + c₂Q²</div>
-                    <div class="row g-2">
-                      <div class="col-4" id="wrap_npsh_c0"><label class="form-label form-label-sm">c₀</label>
-                        <input type="number" name="npsh_c0" id="npsh_c0" class="form-control form-control-sm form-control-dark" value="{{ pump.npsh_c0 if pump else 1 }}" step="any"></div>
-                      <div class="col-4" id="wrap_npsh_c1"><label class="form-label form-label-sm">c₁</label>
-                        <input type="number" name="npsh_c1" id="npsh_c1" class="form-control form-control-sm form-control-dark" value="{{ pump.npsh_c1 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_npsh_c2"><label class="form-label form-label-sm">c₂</label>
-                        <input type="number" name="npsh_c2" id="npsh_c2" class="form-control form-control-sm form-control-dark" value="{{ pump.npsh_c2 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_npsh_c3"><label class="form-label form-label-sm">c₃</label>
-                        <input type="number" name="npsh_c3" id="npsh_c3" class="form-control form-control-sm form-control-dark" value="{{ pump.npsh_c3 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_npsh_c4"><label class="form-label form-label-sm">c₄</label>
-                        <input type="number" name="npsh_c4" id="npsh_c4" class="form-control form-control-sm form-control-dark" value="{{ pump.npsh_c4 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_npsh_c5"><label class="form-label form-label-sm">c₅</label>
-                        <input type="number" name="npsh_c5" id="npsh_c5" class="form-control form-control-sm form-control-dark" value="{{ pump.npsh_c5 if pump else 0 }}" step="any"></div>
-                    </div>
-                  </div>
+              <!-- NPSH -->
+              <div class="p-2.5 rounded bg-[#161b22] border border-[#30363d] space-y-2">
+                <div class="text-xs font-bold text-[#ff9900]" id="eq_title_npsh"><i class="bi bi-water me-1"></i>NPSHr = c₀ + c₁Q + c₂Q²</div>
+                <div class="grid grid-cols-3 gap-2">
+                  <div id="wrap_npsh_c0"><label class="block text-[10px] text-[#8b949e]">c₀</label><input type="number" name="npsh_c0" id="npsh_c0" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.npsh_c0 if pump else 1 }}" step="any"></div>
+                  <div id="wrap_npsh_c1"><label class="block text-[10px] text-[#8b949e]">c₁</label><input type="number" name="npsh_c1" id="npsh_c1" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.npsh_c1 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_npsh_c2"><label class="block text-[10px] text-[#8b949e]">c₂</label><input type="number" name="npsh_c2" id="npsh_c2" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.npsh_c2 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_npsh_c3"><label class="block text-[10px] text-[#8b949e]">c₃</label><input type="number" name="npsh_c3" id="npsh_c3" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.npsh_c3 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_npsh_c4"><label class="block text-[10px] text-[#8b949e]">c₄</label><input type="number" name="npsh_c4" id="npsh_c4" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.npsh_c4 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_npsh_c5"><label class="block text-[10px] text-[#8b949e]">c₅</label><input type="number" name="npsh_c5" id="npsh_c5" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.npsh_c5 if pump else 0 }}" step="any"></div>
                 </div>
+              </div>
 
-                <!-- Power -->
-                <div class="col-lg-6">
-                  <div class="p-2 rounded" style="background:#161b22;border:1px solid #30363d">
-                    <div class="small text-info mb-2 fw-semibold" id="eq_title_pow"><i class="bi bi-lightning-charge me-1"></i>Shaft Power P = p₀ + p₁Q + p₂Q² (kW)</div>
-                    <div class="row g-2">
-                      <div class="col-4" id="wrap_pow_p0"><label class="form-label form-label-sm">p₀ (shutoff kW)</label>
-                        <input type="number" name="pow_p0" id="pow_p0" class="form-control form-control-sm form-control-dark" value="{{ pump.pow_p0 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_pow_p1"><label class="form-label form-label-sm">p₁</label>
-                        <input type="number" name="pow_p1" id="pow_p1" class="form-control form-control-sm form-control-dark" value="{{ pump.pow_p1 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_pow_p2"><label class="form-label form-label-sm">p₂</label>
-                        <input type="number" name="pow_p2" id="pow_p2" class="form-control form-control-sm form-control-dark" value="{{ pump.pow_p2 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_pow_p3"><label class="form-label form-label-sm">p₃</label>
-                        <input type="number" name="pow_p3" id="pow_p3" class="form-control form-control-sm form-control-dark" value="{{ pump.pow_p3 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_pow_p4"><label class="form-label form-label-sm">p₄</label>
-                        <input type="number" name="pow_p4" id="pow_p4" class="form-control form-control-sm form-control-dark" value="{{ pump.pow_p4 if pump else 0 }}" step="any"></div>
-                      <div class="col-4" id="wrap_pow_p5"><label class="form-label form-label-sm">p₅</label>
-                        <input type="number" name="pow_p5" id="pow_p5" class="form-control form-control-sm form-control-dark" value="{{ pump.pow_p5 if pump else 0 }}" step="any"></div>
-                    </div>
-                  </div>
+              <!-- Power -->
+              <div class="p-2.5 rounded bg-[#161b22] border border-[#30363d] space-y-2">
+                <div class="text-xs font-bold text-[#f85149]" id="eq_title_pow"><i class="bi bi-lightning-charge me-1"></i>Shaft Power P = p₀ + p₁Q + p₂Q² (kW)</div>
+                <div class="grid grid-cols-3 gap-2">
+                  <div id="wrap_pow_p0"><label class="block text-[10px] text-[#8b949e]">p₀ (shutoff kW)</label><input type="number" name="pow_p0" id="pow_p0" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.pow_p0 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_pow_p1"><label class="block text-[10px] text-[#8b949e]">p₁</label><input type="number" name="pow_p1" id="pow_p1" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.pow_p1 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_pow_p2"><label class="block text-[10px] text-[#8b949e]">p₂</label><input type="number" name="pow_p2" id="pow_p2" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.pow_p2 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_pow_p3"><label class="block text-[10px] text-[#8b949e]">p₃</label><input type="number" name="pow_p3" id="pow_p3" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.pow_p3 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_pow_p4"><label class="block text-[10px] text-[#8b949e]">p₄</label><input type="number" name="pow_p4" id="pow_p4" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.pow_p4 if pump else 0 }}" step="any"></div>
+                  <div id="wrap_pow_p5"><label class="block text-[10px] text-[#8b949e]">p₅</label><input type="number" name="pow_p5" id="pow_p5" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3]" value="{{ pump.pow_p5 if pump else 0 }}" step="any"></div>
                 </div>
-
               </div>
             </div>
           </div>
@@ -838,64 +763,57 @@
       </div>
     </div>
 
-
-    <!-- ── Additional Curves ─────────────────────────────────────────────── -->
-    <div class="card card-dark mt-3" id="extraCurvesCard">
-      <div class="card-header card-header-dark d-flex align-items-center justify-content-between"
-           style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#extraCurvesBody">
-        <span>
-          <i class="bi bi-layers-half text-accent me-2"></i>
-          <strong>Additional Curves</strong>
-          <span class="text-muted small ms-2">— Extra impeller trims or speed variants</span>
-        </span>
-        <div class="d-flex align-items-center gap-2">
-          <span class="badge bg-accent" id="extraCurveBadge" style="display:none">0</span>
-          <i class="bi bi-chevron-down" id="extraCurvesChevron"></i>
+    <!-- Card 5: Additional Curves (Collapsable) -->
+    <div class="bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden" id="extraCurvesCard">
+      <div onclick="toggleCard('extraCurvesBody', 'extraCurvesChevron')"
+           class="flex items-center justify-between px-4 py-2.5 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/60 transition-colors">
+        <div class="flex items-center gap-2 font-semibold text-[#e6edf3] text-sm">
+          <i class="bi bi-layers-half text-[#58a6ff]"></i>
+          <span>Additional Curves</span>
+          <span class="text-[#8b949e] text-xs font-normal ms-1">— Extra impeller trims or speed variants</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="hidden px-2 py-0.5 rounded text-[10px] font-bold bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30" id="extraCurveBadge">0</span>
+          <i class="bi bi-chevron-down text-[#8b949e] transition-transform duration-200" id="extraCurvesChevron" style="transform: rotate(0deg)"></i>
         </div>
       </div>
-      <div class="collapse" id="extraCurvesBody">
-        <div class="card-body">
-          <p class="small text-muted mb-3">
-            <i class="bi bi-info-circle me-1"></i>
-            Add data tables for additional curves (e.g. trimmed impellers, different speeds).
-            Each curve is fitted independently and stored with the pump.
-            They will appear as overlaid curves on the curve viewer.
-          </p>
-          <div id="extraCurvesList"></div>
-            
-            <div class="dropdown mt-2">
-              <button class="btn btn-sm btn-outline-accent dropdown-toggle" type="button" id="btnExtraCurveDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-plus-lg me-1"></i>Add Curve
-              </button>
-              <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="btnExtraCurveDropdown">
-                <li><a class="dropdown-item" href="#" id="btnAddExtraCurve"><i class="bi bi-table me-2"></i>Empty Data Table</a></li>
-                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#affinityModal"><i class="bi bi-calculator me-2"></i>Generate via Affinity Laws</a></li>
-                <li><a class="dropdown-item" href="#" id="btnLoadExtraCurve"><i class="bi bi-file-earmark-arrow-up me-2"></i>Load from CSV/TXT File</a></li>
-              </ul>
-            </div>
+
+      <div class="p-4 hidden" id="extraCurvesBody">
+        <p class="text-xs text-[#8b949e] mb-3">
+          <i class="bi bi-info-circle me-1"></i>
+          Add data tables for additional curves (e.g. trimmed impellers, different speeds). Each curve is fitted independently and stored with the pump. They will appear as overlaid curves on the curve viewer.
+        </p>
+
+        <div id="extraCurvesList" class="space-y-3"></div>
+          
+        <div class="mt-3 flex items-center gap-2">
+          <button type="button" class="px-3 py-1.5 rounded border border-[#58a6ff]/40 bg-[#58a6ff]/10 text-[#58a6ff] text-xs font-semibold hover:bg-[#58a6ff]/20 transition-colors inline-flex items-center gap-1.5" id="btnAddExtraCurve">
+            <i class="bi bi-plus-lg"></i>Add Empty Table
+          </button>
+          <button type="button" class="px-3 py-1.5 rounded border border-[#30363d] bg-[#161b22] text-[#c9d1d9] text-xs font-semibold hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#affinityModal">
+            <i class="bi bi-calculator"></i>Affinity Laws Generator
+          </button>
+          <button type="button" class="px-3 py-1.5 rounded border border-[#30363d] bg-[#161b22] text-[#c9d1d9] text-xs font-semibold hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5" id="btnLoadExtraCurve">
+            <i class="bi bi-file-earmark-arrow-up"></i>Load from File
+          </button>
         </div>
       </div>
-    </div><!-- /extraCurvesCard -->
+    </div>
 
-  </div><!-- /col-lg-7 -->
-</div><!-- /row g-4 -->
+  </div><!-- /lg:col-span-7 -->
+</div><!-- /grid -->
 
-
-<div class="d-flex gap-3 mt-4">
-  <button type="submit" class="btn btn-primary px-4" id="saveBtn" onclick="try { if (typeof serializeRawTable === 'function') serializeRawTable(); if (typeof serializeDataUnits === 'function') serializeDataUnits(); if (typeof serializeExtraCurves === 'function') serializeExtraCurves(); if (typeof serializeGraphOptions === 'function') serializeGraphOptions(); } catch(e){ console.error('Serialization error:', e); }">
-    <i class="bi bi-check-lg me-1"></i>{{ 'Save Changes' if action == 'edit' else 'Add Pump' }}
+<!-- Form Footer Actions -->
+<div class="flex items-center gap-3 mt-6 pt-4 border-t border-[#30363d]">
+  <button type="submit" class="px-5 py-2 rounded border border-[#238636] bg-[#238636] hover:bg-[#2ea043] text-white font-semibold text-sm shadow transition-all inline-flex items-center gap-2" id="saveBtn" onclick="try { if (typeof serializeRawTable === 'function') serializeRawTable(); if (typeof serializeDataUnits === 'function') serializeDataUnits(); if (typeof serializeExtraCurves === 'function') serializeExtraCurves(); if (typeof serializeGraphOptions === 'function') serializeGraphOptions(); } catch(e){ console.error('Serialization error:', e); }">
+    <i class="bi bi-check-lg text-base"></i>{{ 'Save Changes' if action == 'edit' else 'Add Pump' }}
   </button>
-  <a href="{{ url_for('pump_data') }}" class="btn btn-outline-secondary">
-    <i class="bi bi-x-lg me-1"></i>Cancel
+  <a href="{{ url_for('pump_data') }}" class="px-4 py-2 rounded border border-[#30363d] bg-[#161b22] text-[#c9d1d9] text-sm font-medium hover:bg-slate-800 transition-colors inline-flex items-center gap-2">
+    <i class="bi bi-x-lg"></i>Cancel
   </a>
-  {% if action == 'edit' and pump %}
-  <a href="{{ url_for('pump_curve', pump_id=pump.id) }}" class="btn btn-outline-success ms-auto">
-    <i class="bi bi-activity me-1"></i>View Curves
-  </a>
-  {% endif %}
 </div>
 
-<!-- Hidden fields carry separated curve data and unit preferences on submit -->
+<!-- Hidden fields carrying curve data and unit preferences on submit -->
 <input type="hidden" name="raw_table_json" id="raw_table_json_field" value="{{ pump.raw_table_json if pump else '' }}">
 <input type="hidden" name="curve_labels" id="curve_labels_field" value="{{ pump.curve_labels if pump else '' }}">
 <input type="hidden" name="curve_diameters" id="curve_diameters_field" value="{{ pump.curve_diameters if pump else '' }}">
@@ -921,34 +839,38 @@
 <!-- Affinity Laws Modal -->
 <div class="modal fade" id="affinityModal" tabindex="-1" aria-labelledby="affinityModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content bg-dark text-light border-secondary">
-      <div class="modal-header border-secondary">
-        <h5 class="modal-title" id="affinityModalLabel"><i class="bi bi-calculator text-accent me-2"></i>Affinity Laws Generator</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-content bg-[#161b22] text-[#c9d1d9] border border-[#30363d] rounded-lg shadow-2xl">
+      <div class="modal-header border-b border-[#30363d] px-4 py-3 flex items-center justify-between">
+        <h5 class="modal-title font-bold text-white text-base flex items-center gap-2" id="affinityModalLabel">
+          <i class="bi bi-calculator text-[#58a6ff]"></i>Affinity Laws Generator
+        </h5>
+        <button type="button" class="text-[#8b949e] hover:text-white" data-bs-dismiss="modal" aria-label="Close"><i class="bi bi-x-lg"></i></button>
       </div>
-      <div class="modal-body">
-        <p class="small text-muted mb-3">
-          This will generate a new curve by scaling the <strong>Base Curve</strong> (main data table) using affinity laws.
+      <div class="modal-body p-4 space-y-3 text-xs">
+        <p class="text-[#8b949e]">
+          Scales the <strong>Base Curve</strong> (main data table) using affinity laws to create a new impeller trim or speed curve.
         </p>
-        <div class="mb-3">
-          <label class="form-label form-label-sm fw-semibold">Scale By</label>
-          <div class="form-check">
-            <input class="form-check-input" type="radio" name="affinityType" id="affTypeDiameter" value="diameter" checked>
-            <label class="form-check-label small" for="affTypeDiameter">Impeller Diameter</label>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="radio" name="affinityType" id="affTypeSpeed" value="speed">
-            <label class="form-check-label small" for="affTypeSpeed">Rotational Speed (RPM)</label>
+        <div>
+          <label class="block font-semibold text-[#c9d1d9] mb-1.5">Scale By</label>
+          <div class="space-y-1">
+            <label class="flex items-center gap-2 cursor-pointer text-[#c9d1d9]">
+              <input type="radio" name="affinityType" id="affTypeDiameter" value="diameter" checked>
+              <span>Impeller Diameter (mm)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-[#c9d1d9]">
+              <input type="radio" name="affinityType" id="affTypeSpeed" value="speed">
+              <span>Rotational Speed (RPM)</span>
+            </label>
           </div>
         </div>
-        <div class="mb-3">
-          <label class="form-label form-label-sm fw-semibold" id="affinityValueLabel">Target Diameter (mm)</label>
-          <input type="number" class="form-control form-control-sm bg-dark text-light" id="affinityValue" step="any" required>
+        <div>
+          <label class="block font-semibold text-[#c9d1d9] mb-1" id="affinityValueLabel">Target Diameter (mm)</label>
+          <input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]" id="affinityValue" step="any" required>
         </div>
       </div>
-      <div class="modal-footer border-secondary">
-        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-accent btn-sm" id="btnGenerateAffinity">Generate</button>
+      <div class="modal-footer border-t border-[#30363d] p-3 flex items-center justify-end gap-2">
+        <button type="button" class="px-3 py-1.5 rounded border border-[#30363d] text-[#8b949e] hover:text-white text-xs font-medium" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="px-3.5 py-1.5 rounded bg-[#58a6ff] text-white text-xs font-bold hover:bg-[#388bfd] shadow" id="btnGenerateAffinity">Generate</button>
       </div>
     </div>
   </div>
@@ -985,8 +907,23 @@
      {% endif %}>
 </div>
 <script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=30"></script>
-<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=34"></script>
+<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=35"></script>
 <script>
+// Beginners Note: Generic card toggle helper for smooth card collapse & expand
+function toggleCard(bodyId, chevronId) {
+  const body = document.getElementById(bodyId);
+  const chevron = document.getElementById(chevronId);
+  if (!body) return;
+
+  if (body.classList.contains('hidden')) {
+    body.classList.remove('hidden');
+    if (chevron) chevron.style.transform = 'rotate(180deg)';
+  } else {
+    body.classList.add('hidden');
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
+  }
+}
+
 (function () {
   initUnitSelectors();
 
@@ -1009,8 +946,7 @@
   const isEdit = initEl.dataset.isEdit === 'true';
 
   if (isEdit) {
-    // Edit mode: restore table from raw saved data (prevents polynomial drift)
-    // Fall back to polynomial reconstruction only if no raw data saved yet
+    // Edit mode: restore table from raw saved data
     const rawJson = initEl.dataset.rawJson;
     const restoredFromRaw = rawJson && rawJson !== '[]' && rawJson !== '""' ? restoreRawTable(rawJson) : false;
     if (!restoredFromRaw) {
@@ -1084,7 +1020,6 @@
       const pumpData = JSON.parse(initEl.dataset.toJson);
       lastFitResults = pumpData;
 
-      // Graph units are no longer auto-synced to table units on load
       const previewQ = document.getElementById('preview-unit-q');
       const previewH = document.getElementById('preview-unit-h');
       const previewNpsh = document.getElementById('preview-unit-npsh');
@@ -1105,35 +1040,6 @@
     // New pump: blank suggestion rows
     initBlankTable();
     initExtraCurves([]);
-  }
-
-  // Chevron toggle for coeff panel
-  document.getElementById('coeffPanel').addEventListener('show.bs.collapse', () => {
-    document.getElementById('coeffChevron').className = 'bi bi-chevron-up me-1';
-  });
-  document.getElementById('coeffPanel').addEventListener('hide.bs.collapse', () => {
-    document.getElementById('coeffChevron').className = 'bi bi-chevron-down me-1';
-  });
-
-  // Chevron toggle for extra curves panel
-  document.getElementById('extraCurvesBody').addEventListener('show.bs.collapse', () => {
-    document.getElementById('extraCurvesChevron').className = 'bi bi-chevron-up';
-  });
-  document.getElementById('extraCurvesBody').addEventListener('hide.bs.collapse', () => {
-    document.getElementById('extraCurvesChevron').className = 'bi bi-chevron-down';
-  });
-
-  // Chevron toggle for graph axes scaling panel
-  const axisScaleBody = document.getElementById('axisScaleBody');
-  if (axisScaleBody) {
-    axisScaleBody.addEventListener('show.bs.collapse', () => {
-      const chv = document.getElementById('axisScaleChevron');
-      if (chv) chv.className = 'bi bi-chevron-up';
-    });
-    axisScaleBody.addEventListener('hide.bs.collapse', () => {
-      const chv = document.getElementById('axisScaleChevron');
-      if (chv) chv.className = 'bi bi-chevron-down';
-    });
   }
 })();
 </script>

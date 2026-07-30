@@ -423,13 +423,14 @@ function restoreRawTable(rawJson) {
   rowsToRender.forEach(row => {
     const [q, h, eta, npsh, pow] = row;
     const tr = document.createElement('tr');
+    tr.className = 'hover:bg-slate-800/30 transition-colors';
     tr.innerHTML =
-      '<td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" value="' + (q !== undefined && q !== null ? q : '') + '"></td>' +
-      '<td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" value="' + (h !== undefined && h !== null ? h : '') + '"></td>' +
-      '<td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" value="' + (eta !== undefined && eta !== null ? eta : '') + '"></td>' +
-      '<td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" value="' + (npsh !== undefined && npsh !== null ? npsh : '') + '"></td>' +
-      '<td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" value="' + (pow !== undefined && pow !== null ? pow : '') + '"></td>' +
-      '<td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">&times;</button></td>';
+      '<td class="p-1"><input type="number" class="w-full bg-dark-input border border-dark-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-500 col-q" step="any" value="' + (q !== undefined && q !== null ? q : '') + '"></td>' +
+      '<td class="p-1"><input type="number" class="w-full bg-dark-input border border-dark-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-500 col-h" step="any" value="' + (h !== undefined && h !== null ? h : '') + '"></td>' +
+      '<td class="p-1"><input type="number" class="w-full bg-dark-input border border-dark-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-500 col-eta" step="any" min="0" max="100" value="' + (eta !== undefined && eta !== null ? eta : '') + '"></td>' +
+      '<td class="p-1"><input type="number" class="w-full bg-dark-input border border-dark-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-500 col-npsh" step="any" value="' + (npsh !== undefined && npsh !== null ? npsh : '') + '"></td>' +
+      '<td class="p-1"><input type="number" class="w-full bg-dark-input border border-dark-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-500 col-pow" step="any" value="' + (pow !== undefined && pow !== null ? pow : '') + '"></td>' +
+      '<td class="p-1 text-center"><button type="button" class="text-slate-400 hover:text-rose-400 p-1 text-sm focus:outline-none" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>';
     tbody.appendChild(tr);
   });
   return true;
@@ -439,17 +440,18 @@ function restoreRawTable(rawJson) {
 function addRow(tableId) {
   const tbody = document.querySelector(`#${tableId} tbody`);
   const row = document.createElement('tr');
+  row.className = 'hover:bg-slate-800/30 transition-colors';
   const unitQ = document.getElementById('unit-q')?.value || 'm3h';
   const unitH = document.getElementById('unit-h')?.value || 'm';
   const unitNpsh = document.getElementById('unit-npsh')?.value || 'm';
   const unitPow = document.getElementById('unit-pow')?.value || 'kw';
   row.innerHTML = `
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" placeholder="Q (${getUnitLabel('q', unitQ)})"></td>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" placeholder="H (${getUnitLabel('h', unitH)})"></td>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" placeholder="η %"></td>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" placeholder="NPSHr (${getUnitLabel('npsh', unitNpsh)})"></td>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" placeholder="${getUnitLabel('pow', unitPow)} (opt)"></td>
-    <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">×</button></td>`;
+    <td class="p-1"><input type="number" class="w-full bg-dark-input border border-dark-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-500 col-q" step="any" placeholder="Q (${getUnitLabel('q', unitQ)})"></td>
+    <td class="p-1"><input type="number" class="w-full bg-dark-input border border-dark-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-500 col-h" step="any" placeholder="H (${getUnitLabel('h', unitH)})"></td>
+    <td class="p-1"><input type="number" class="w-full bg-dark-input border border-dark-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-500 col-eta" step="any" min="0" max="100" placeholder="η %"></td>
+    <td class="p-1"><input type="number" class="w-full bg-dark-input border border-dark-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-500 col-npsh" step="any" placeholder="NPSHr (${getUnitLabel('npsh', unitNpsh)})"></td>
+    <td class="p-1"><input type="number" class="w-full bg-dark-input border border-dark-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-500 col-pow" step="any" placeholder="${getUnitLabel('pow', unitPow)} (opt)"></td>
+    <td class="p-1 text-center"><button type="button" class="text-slate-400 hover:text-rose-400 p-1 text-sm focus:outline-none" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>`;
   tbody.appendChild(row);
 }
 

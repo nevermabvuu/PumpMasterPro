@@ -509,3 +509,16 @@ select.form-select.form-control-dark option {
   color: #c9d1d9;
 }
 
+/* ── Card Collapse Transitions ──────────────────────────────────── */
+.card-collapse-content {
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease-out;
+  overflow: hidden;
+}
+.card-collapse-content.collapsed {
+  max-height: 0 !important;
+  opacity: 0;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  pointer-events: none;
+}
+

@@ -524,6 +524,9 @@ function buildWarmanChart(data, opts = {}) {
   const traces = [];
   const annotations = [];
   const family = data.family || [];
+  const famType = data.pump?.family_type || 'trimmed_impeller';
+  const isVarSpeed = (famType === 'variable_speed');
+  const formatFamLabel = (val) => isVarSpeed ? `${val} RPM` : `Ø${val} mm`;
   const isolines = data.isolines || [];
   const pwr_iso = data.power_isolines || [];
   const npsh_iso = data.npsh_isolines || [];
@@ -550,7 +553,7 @@ function buildWarmanChart(data, opts = {}) {
 
   const nDia = family.length;
 
-  /* ── H-Q curves (one per diameter) ──── */
+  /* ── H-Q curves (one per diameter / speed) ──── */
   family.forEach((d, i) => {
     const tag = d.label_tag || (d.curve_mode === 'fit' ? ' (Fitted)' : '');
     const useCustom = d.use_custom_style || d.style_mode === 'custom';
@@ -558,8 +561,9 @@ function buildWarmanChart(data, opts = {}) {
     const lw = (useCustom && d.weight) ? d.weight : (d.is_max ? headWeight : Math.max(1.0, headWeight - 0.5));
     const dash = (useCustom && d.style) ? d.style : (d.label_tag ? 'dash' : headStyle);
 
+    const lblText = formatFamLabel(d.dia);
     const showInLegend = (legendMode === 'curve_labels') ? (i === 0) : (legendMode !== 'curve_labels');
-    const traceName = (legendMode === 'curve_labels') ? 'Head H' : `Ø${d.dia} mm${tag}`;
+    const traceName = (legendMode === 'curve_labels') ? 'Head H' : `${lblText}${tag}`;
 
     traces.push({
       type: 'scatter', mode: 'lines',
@@ -567,21 +571,21 @@ function buildWarmanChart(data, opts = {}) {
       x: d.q, y: d.h,
       line: { color: col, width: lw, dash: dash },
       showlegend: showInLegend,
-      hovertemplate: `Ø${d.dia} mm${tag}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
+      hovertemplate: `${lblText}${tag}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
     });
 
     /* BEP star on each curve */
     if (d.bep) {
       traces.push({
         type: 'scatter', mode: 'markers',
-        name: `BEP Ø${d.dia}${tag}`,
+        name: `BEP ${lblText}${tag}`,
         x: [d.bep.q], y: [d.bep.h],
         marker: {
           size: d.is_max ? 10 : 7, color: col, symbol: 'star',
           line: { color: '#fff', width: 1 }
         },
         showlegend: false,
-        hovertemplate: `BEP Ø${d.dia}${tag}<br>Q=${d.bep.q} ${lblQ}<br>H=${d.bep.h} ${lblH}<br>η=${d.bep.eta}%<extra></extra>`,
+        hovertemplate: `BEP ${lblText}${tag}<br>Q=${d.bep.q} ${lblQ}<br>H=${d.bep.h} ${lblH}<br>η=${d.bep.eta}%<extra></extra>`,
       });
     }
   });
@@ -592,7 +596,8 @@ function buildWarmanChart(data, opts = {}) {
       if (!d.q || d.q.length === 0) return;
       const col = d.color || headColor;
       const tag = d.label_tag || (d.curve_mode === 'fit' ? ' (Fitted)' : '');
-      const curveKey = `Ø${d.dia} mm${tag}`;
+      const lblText = formatFamLabel(d.dia);
+      const curveKey = `${lblText}${tag}`;
 
       let targetQ = 0;
       let targetH = 0;
@@ -1006,11 +1011,15 @@ function buildEffChart(familyData, singleData, showClean) {
   const effWeight = units.effWeight || 1.5;
   const effStyle = units.effStyle || 'dot';
 
+  const isVarSpeed = (familyData?.pump?.family_type === 'variable_speed');
+  const formatFamLbl = (v) => isVarSpeed ? `${v} RPM` : `Ø${v} mm`;
+
   family.forEach((fam, idx) => {
     const isMax = fam.is_max;
     const lw = isMax ? (effWeight + 0.7) : effWeight;
     const showInLegend = (units.legendMode === 'curve_labels') ? (idx === 0) : (units.legendMode === 'each');
-    const traceName = (units.legendMode === 'curve_labels') ? 'Efficiency η' : `η Ø${fam.dia} mm`;
+    const lblText = formatFamLbl(fam.dia);
+    const traceName = (units.legendMode === 'curve_labels') ? 'Efficiency η' : `η ${lblText}`;
 
     traces.push({
       type: 'scatter', mode: 'lines',
@@ -1018,17 +1027,17 @@ function buildEffChart(familyData, singleData, showClean) {
       x: fam.q, y: fam.eta,
       line: { color: effColor, width: lw, dash: effStyle },
       showlegend: showInLegend,
-      hovertemplate: `Ø${fam.dia} mm<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
+      hovertemplate: `${lblText}<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
     });
 
     if (fam.bep) {
       traces.push({
         type: 'scatter', mode: 'markers',
-        name: `BEP Ø${fam.dia}`,
+        name: `BEP ${lblText}`,
         x: [fam.bep.q], y: [fam.bep.eta],
         marker: { size: isMax ? 10 : 7, color: effColor, symbol: 'star', line: { color: '#fff', width: 1 } },
         showlegend: false,
-        hovertemplate: `BEP Ø${fam.dia}<br>Q=${fam.bep.q}<br>η=${fam.bep.eta}%<extra></extra>`
+        hovertemplate: `BEP ${lblText}<br>Q=${fam.bep.q}<br>η=${fam.bep.eta}%<extra></extra>`
       });
     }
   });
@@ -1114,31 +1123,36 @@ function buildEffPowerChart(familyData, singleData, showClean) {
   const powWeight = unitsEP.powWeight || 1.5;
   const powStyle = unitsEP.powStyle || 'longdash';
 
+  const famType = familyData?.pump?.family_type || singleData?.pump?.family_type || 'trimmed_impeller';
+  const isVarSpeed = (famType === 'variable_speed');
+  const formatFamLbl = (v) => isVarSpeed ? `${v} RPM` : `Ø${v} mm`;
+
   family.forEach((fam, idx) => {
     const isMax = fam.is_max;
     const showEffLegend = (unitsEP.legendMode === 'curve_labels') ? (idx === 0) : (unitsEP.legendMode === 'each');
     const showPowLegend = (unitsEP.legendMode === 'curve_labels') ? (idx === 0) : (unitsEP.legendMode === 'each');
+    const lblText = formatFamLbl(fam.dia);
 
     // Efficiency on y1 (left side)
     traces.push({
       type: 'scatter', mode: 'lines',
-      name: (unitsEP.legendMode === 'curve_labels') ? 'Efficiency η' : `η Ø${fam.dia} mm`,
+      name: (unitsEP.legendMode === 'curve_labels') ? 'Efficiency η' : `η ${lblText}`,
       x: fam.q, y: fam.eta,
       line: { color: effColor, width: isMax ? (effWeight + 0.7) : effWeight, dash: effStyle },
       yaxis: 'y1',
       showlegend: showEffLegend,
-      hovertemplate: `Ø${fam.dia} mm η<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
+      hovertemplate: `${lblText} η<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
     });
 
     if (fam.bep) {
       traces.push({
         type: 'scatter', mode: 'markers',
-        name: `BEP Ø${fam.dia}`,
+        name: `BEP ${lblText}`,
         x: [fam.bep.q], y: [fam.bep.eta],
         marker: { size: isMax ? 10 : 7, color: effColor, symbol: 'star', line: { color: '#fff', width: 1 } },
         yaxis: 'y1',
         showlegend: false,
-        hovertemplate: `BEP Ø${fam.dia}<br>Q=${fam.bep.q}<br>η=${fam.bep.eta}%<extra></extra>`
+        hovertemplate: `BEP ${lblText}<br>Q=${fam.bep.q}<br>η=${fam.bep.eta}%<extra></extra>`
       });
     }
 
@@ -1146,11 +1160,11 @@ function buildEffPowerChart(familyData, singleData, showClean) {
     if (fam.power) {
       traces.push({
         type: 'scatter', mode: 'lines',
-        name: `P Ø${fam.dia} mm`,
+        name: `P ${lblText}`,
         x: fam.q, y: fam.power,
         line: { color: powColor, width: isMax ? (powWeight + 0.7) : powWeight, dash: powStyle },
         yaxis: 'y2',
-        hovertemplate: `Ø${fam.dia} mm P<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
+        hovertemplate: `${lblText} P<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
       });
     }
   });
@@ -1254,10 +1268,15 @@ function buildPowerChart(familyData, singleData, showClean) {
   const powWeight = unitsP.powWeight || 1.5;
   const powStyle = unitsP.powStyle || 'longdash';
 
+  const famType = familyData?.pump?.family_type || singleData?.pump?.family_type || 'trimmed_impeller';
+  const isVarSpeed = (famType === 'variable_speed');
+  const formatFamLbl = (v) => isVarSpeed ? `${v} RPM` : `Ø${v} mm`;
+
   family.forEach((fam, idx) => {
     const isMax = fam.is_max;
     const showInLegend = (unitsP.legendMode === 'curve_labels') ? (idx === 0) : (unitsP.legendMode === 'each');
-    const traceName = (unitsP.legendMode === 'curve_labels') ? 'Power P' : `P Ø${fam.dia} mm`;
+    const lblText = formatFamLbl(fam.dia);
+    const traceName = (unitsP.legendMode === 'curve_labels') ? 'Power P' : `P ${lblText}`;
 
     if (fam.power) {
       traces.push({
@@ -1266,7 +1285,7 @@ function buildPowerChart(familyData, singleData, showClean) {
         x: fam.q, y: fam.power,
         line: { color: powColor, width: isMax ? (powWeight + 0.7) : powWeight, dash: powStyle },
         showlegend: showInLegend,
-        hovertemplate: `Ø${fam.dia} mm<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
+        hovertemplate: `${lblText}<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
       });
     }
   });
@@ -1292,8 +1311,9 @@ function buildPowerChart(familyData, singleData, showClean) {
     family.forEach((fam, idx) => {
       if (!fam.q || fam.q.length === 0 || !fam.power) return;
       const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
-      const curveKey = `pow_Ø${fam.dia} mm`;
-      const altKey = `Ø${fam.dia} mm`;
+      const lblText = formatFamLbl(fam.dia);
+      const curveKey = `pow_${lblText}`;
+      const altKey = lblText;
 
       let targetQ = 0, targetPow = 0, xanchor = 'center', yanchor = 'middle', xshift = 0, yshift = 0;
       if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
@@ -1309,7 +1329,7 @@ function buildPowerChart(familyData, singleData, showClean) {
 
       layout.annotations.push({
         x: targetQ, y: targetPow,
-        text: `<b>Ø${fam.dia} mm</b>`,
+        text: `<b>${lblText}</b>`,
         showarrow: false, captureevents: true,
         font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
         bgcolor: 'rgba(22, 27, 34, 0.92)',
@@ -1348,10 +1368,15 @@ function buildNpshChart(familyData, singleData) {
   const npshWeight = unitsN.npshWeight || 1.5;
   const npshStyle = unitsN.npshStyle || 'dashdot';
 
+  const famType = familyData?.pump?.family_type || singleData?.pump?.family_type || 'trimmed_impeller';
+  const isVarSpeed = (famType === 'variable_speed');
+  const formatFamLbl = (v) => isVarSpeed ? `${v} RPM` : `Ø${v} mm`;
+
   family.forEach((fam, idx) => {
     const isMax = fam.is_max;
     const showInLegend = (unitsN.legendMode === 'curve_labels') ? (idx === 0) : (unitsN.legendMode === 'each');
-    const traceName = (unitsN.legendMode === 'curve_labels') ? 'NPSHr' : `NPSHr Ø${fam.dia} mm`;
+    const lblText = formatFamLbl(fam.dia);
+    const traceName = (unitsN.legendMode === 'curve_labels') ? 'NPSHr' : `NPSHr ${lblText}`;
 
     traces.push({
       type: 'scatter', mode: 'lines',
@@ -1359,7 +1384,7 @@ function buildNpshChart(familyData, singleData) {
       x: fam.q, y: fam.npsh,
       line: { color: npshColor, width: isMax ? (npshWeight + 0.7) : npshWeight, dash: npshStyle },
       showlegend: showInLegend,
-      hovertemplate: `Ø${fam.dia} mm<br>Q=%{x:.1f} m³/h<br>NPSHr=%{y:.2f} m<extra></extra>`
+      hovertemplate: `${lblText}<br>Q=%{x:.1f} m³/h<br>NPSHr=%{y:.2f} m<extra></extra>`
     });
   });
 
@@ -1375,8 +1400,9 @@ function buildNpshChart(familyData, singleData) {
     family.forEach((fam, idx) => {
       if (!fam.q || fam.q.length === 0 || !fam.npsh) return;
       const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
-      const curveKey = `npsh_Ø${fam.dia} mm`;
-      const altKey = `Ø${fam.dia} mm`;
+      const lblText = formatFamLbl(fam.dia);
+      const curveKey = `npsh_${lblText}`;
+      const altKey = lblText;
 
       let targetQ = 0, targetNpsh = 0, xanchor = 'center', yanchor = 'middle', xshift = 0, yshift = 0;
       if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
@@ -1392,7 +1418,7 @@ function buildNpshChart(familyData, singleData) {
 
       layout.annotations.push({
         x: targetQ, y: targetNpsh,
-        text: `<b>Ø${fam.dia} mm</b>`,
+        text: `<b>${lblText}</b>`,
         showarrow: false, captureevents: true,
         font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
         bgcolor: 'rgba(22, 27, 34, 0.92)',

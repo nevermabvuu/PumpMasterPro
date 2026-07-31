@@ -147,6 +147,9 @@ def api_preview_warman_chart():
         if field in data and data[field]:
             setattr(pump, field, str(data[field]))
 
+    if 'family_type' in data:
+        pump.family_type = str(data['family_type'])
+
     # Set 20 custom axis scale settings on temporary Pump object
     for axis_name in ['flow', 'head', 'eff', 'power', 'npsh']:
         for prop in ['min', 'max', 'major']:

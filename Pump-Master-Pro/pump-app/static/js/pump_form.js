@@ -10,6 +10,8 @@
  */
 
 var lastFitResults = null;
+var TABLE_INPUT_CLS = 'w-full bg-[#0d1117] border border-[#30363d] rounded-md px-2.5 py-1 text-xs text-[#e6edf3] font-mono tracking-tight shadow-inner focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]/40 transition-all focus:outline-none';
+
 var CONVERSIONS = {
   q: {
     m3h: 1.0,
@@ -381,13 +383,14 @@ function initTableFromCurves(pumpData) {
     const pow = Math.max(0, poly([p0, p1, p2], q));
 
     const tr = document.createElement('tr');
+    tr.className = 'hover:bg-[#1c2330]/50 transition-colors border-b border-[#30363d]/40';
     tr.innerHTML = `
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" value="${(q * fQ).toFixed(2)}"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" value="${(h * fH).toFixed(2)}"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" value="${eta.toFixed(1)}"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" value="${(npsh * fNpsh).toFixed(2)}"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" value="${(pow * fPow).toFixed(2)}"></td>
-      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">&times;</button></td>`;
+      <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-q" step="any" value="${(q * fQ).toFixed(2)}"></td>
+      <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-h" step="any" value="${(h * fH).toFixed(2)}"></td>
+      <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-eta" step="any" min="0" max="100" value="${eta.toFixed(1)}"></td>
+      <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-npsh" step="any" value="${(npsh * fNpsh).toFixed(2)}"></td>
+      <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-pow" step="any" value="${(pow * fPow).toFixed(2)}"></td>
+      <td class="p-1.5 text-center"><button type="button" class="text-[#8b949e] hover:text-red-400 hover:bg-red-950/30 p-1.5 rounded transition-colors text-xs font-medium" onclick="removeRow(this)" title="Delete Row"><i class="bi bi-trash text-sm"></i></button></td>`;
     tbody.appendChild(tr);
   });
 }
@@ -809,6 +812,8 @@ function getPumpFormData() {
       }
     }
   });
+
+  data['family_type'] = document.getElementById('selFamilyType')?.value || 'trimmed_impeller';
 
   const gOpts = collectGraphOptions();
   data['eff_levels'] = gOpts.eff_levels;
@@ -1382,14 +1387,15 @@ function initTableFromCurves(pumpData) {
     const npsh = Math.max(0, evalP(c, q));
     const pow = Math.max(0, evalP(pp, q));
     const row = document.createElement('tr');
+    row.className = 'hover:bg-[#1c2330]/50 transition-colors border-b border-[#30363d]/40';
     // Display values are converted from SI to the selected unit
     row.innerHTML = `
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" value="${(q * fQ).toFixed(3)}"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" value="${H > 0 ? (H * fH).toFixed(3) : ''}"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" value="${eta > 0 ? eta.toFixed(1) : ''}"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" value="${npsh > 0 ? (npsh * fNpsh).toFixed(3) : ''}"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" value="${pow > 0 ? (pow * fPow).toFixed(3) : ''}"></td>
-      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">×</button></td>`;
+      <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-q" step="any" value="${(q * fQ).toFixed(3)}"></td>
+      <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-h" step="any" value="${H > 0 ? (H * fH).toFixed(3) : ''}"></td>
+      <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-eta" step="any" min="0" max="100" value="${eta > 0 ? eta.toFixed(1) : ''}"></td>
+      <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-npsh" step="any" value="${npsh > 0 ? (npsh * fNpsh).toFixed(3) : ''}"></td>
+      <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-pow" step="any" value="${pow > 0 ? (pow * fPow).toFixed(3) : ''}"></td>
+      <td class="p-1.5 text-center"><button type="button" class="text-[#8b949e] hover:text-red-400 hover:bg-red-950/30 p-1.5 rounded transition-colors text-xs font-medium" onclick="removeRow(this)" title="Delete Row"><i class="bi bi-trash text-sm"></i></button></td>`;
     tbody.appendChild(row);
   });
 
@@ -1428,13 +1434,14 @@ function initBlankTable() {
   ];
   suggestions.forEach(s => {
     const row = document.createElement('tr');
+    row.className = 'hover:bg-[#1c2330]/50 transition-colors border-b border-[#30363d]/40';
     row.innerHTML = `
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" value="${s.q}" placeholder="Q (${labelQ})"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" placeholder="${s.hNote}"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" placeholder="${s.etaNote || 'η %'}"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" placeholder="NPSHr (${labelNpsh})"></td>
-      <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" placeholder="${labelPow} (opt)"></td>
-      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">×</button></td>`;
+      <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-q" step="any" value="${s.q}" placeholder="Q (${labelQ})"></td>
+      <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-h" step="any" placeholder="${s.hNote}"></td>
+      <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-eta" step="any" min="0" max="100" placeholder="${s.etaNote || 'η %'}"></td>
+      <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-npsh" step="any" placeholder="NPSHr (${labelNpsh})"></td>
+      <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-pow" step="any" placeholder="${labelPow} (opt)"></td>
+      <td class="p-1.5 text-center"><button type="button" class="text-[#8b949e] hover:text-red-400 hover:bg-red-950/30 p-1.5 rounded transition-colors text-xs font-medium" onclick="removeRow(this)" title="Delete Row"><i class="bi bi-trash text-sm"></i></button></td>`;
     tbody.appendChild(row);
   });
 }
@@ -1663,13 +1670,13 @@ function _extraRow(qUnit, hUnit, npshUnit, powUnit) {
   const lblNpsh = getUnitLabel('npsh', npshUnit);
   const lblPow = getUnitLabel('pow', powUnit);
 
-  return `<tr>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" placeholder="Q (${lblQ})"></td>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" placeholder="H (${lblH})"></td>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" placeholder="η %"></td>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" placeholder="NPSHr (${lblNpsh})"></td>
-    <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" placeholder="${lblPow} (opt)"></td>
-    <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">×</button></td>
+  return `<tr class="hover:bg-[#1c2330]/50 transition-colors border-b border-[#30363d]/40">
+    <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-q" step="any" placeholder="Q (${lblQ})"></td>
+    <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-h" step="any" placeholder="H (${lblH})"></td>
+    <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-eta" step="any" min="0" max="100" placeholder="η %"></td>
+    <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-npsh" step="any" placeholder="NPSHr (${lblNpsh})"></td>
+    <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-pow" step="any" placeholder="${lblPow} (opt)"></td>
+    <td class="p-1.5 text-center"><button type="button" class="text-[#8b949e] hover:text-red-400 hover:bg-red-950/30 p-1.5 rounded transition-colors text-xs font-medium" onclick="removeRow(this)" title="Delete Row"><i class="bi bi-trash text-sm"></i></button></td>
   </tr>`;
 }
 
@@ -1869,7 +1876,7 @@ function addExtraCurveCard(existingData) {
 
   const list = document.getElementById('extraCurvesList');
   const div = document.createElement('div');
-  div.className = 'custom-curve-entry mb-3';
+  div.className = 'custom-curve-entry mb-4 bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden';
   div.id = `extra-entry-${id}`;
 
   let tableRowsHtml = '';
@@ -1878,104 +1885,143 @@ function addExtraCurveCard(existingData) {
     const rowsToRender = validRows.length > 0 ? validRows : existingData.raw_table;
     tableRowsHtml = rowsToRender.map(row => {
       const [q, h, eta, npsh, pow] = row;
-      return `<tr>
-        <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" placeholder="Q (${getUnitLabel('q', qUnit)})" value="${q !== undefined && q !== null ? q : ''}"></td>
-        <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" placeholder="H (${getUnitLabel('h', hUnit)})" value="${h !== undefined && h !== null ? h : ''}"></td>
-        <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" placeholder="η %" value="${eta !== undefined && eta !== null ? eta : ''}"></td>
-        <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" placeholder="NPSHr (${getUnitLabel('npsh', npshUnit)})" value="${npsh !== undefined && npsh !== null ? npsh : ''}"></td>
-        <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" placeholder="${getUnitLabel('pow', powUnit)} (opt)" value="${pow !== undefined && pow !== null ? pow : ''}"></td>
-        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">×</button></td>
+      return `<tr class="hover:bg-[#1c2330]/50 transition-colors border-b border-[#30363d]/40">
+        <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-q" step="any" placeholder="Q (${getUnitLabel('q', qUnit)})" value="${q !== undefined && q !== null ? q : ''}"></td>
+        <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-h" step="any" placeholder="H (${getUnitLabel('h', hUnit)})" value="${h !== undefined && h !== null ? h : ''}"></td>
+        <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-eta" step="any" min="0" max="100" placeholder="η %" value="${eta !== undefined && eta !== null ? eta : ''}"></td>
+        <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-npsh" step="any" placeholder="NPSHr (${getUnitLabel('npsh', npshUnit)})" value="${npsh !== undefined && npsh !== null ? npsh : ''}"></td>
+        <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-pow" step="any" placeholder="${getUnitLabel('pow', powUnit)} (opt)" value="${pow !== undefined && pow !== null ? pow : ''}"></td>
+        <td class="p-1.5 text-center"><button type="button" class="text-[#8b949e] hover:text-red-400 hover:bg-red-950/30 p-1.5 rounded transition-colors text-xs font-medium" onclick="removeRow(this)" title="Delete Row"><i class="bi bi-trash text-sm"></i></button></td>
       </tr>`;
     }).join('');
   } else {
     tableRowsHtml = Array.from({ length: 6 }, () => _extraRow(qUnit, hUnit, npshUnit, powUnit)).join('');
   }
 
+  const famType = document.getElementById('selFamilyType')?.value || 'trimmed_impeller';
+  const isVarSpeed = (famType === 'variable_speed');
+
   div.innerHTML = `
-    <div class="flex items-center gap-2 mb-2 flex-wrap text-xs">
-      <span class="curve-color-dot inline-block w-3 h-3 rounded-full" style="background:${color}"></span>
-      <input type="text" class="bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] font-semibold w-44 focus:outline-none focus:border-[#58a6ff] extra-label-input"
-             value="${label}" placeholder="Curve label" data-eid="${id}">
-      <span class="text-[#8b949e]">Diameter:</span>
-      <input type="number" class="bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] w-20 focus:outline-none focus:border-[#58a6ff] extra-dia-input" step="any"
-             value="${diameter}" placeholder="e.g. 280" data-eid="${id}">
-      <select class="header-unit-select unit-select-dia bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1.5 py-1 focus:outline-none" data-eid="${id}">
-        <option value="mm" ${diaUnit === 'mm' ? 'selected' : ''}>mm</option>
-        <option value="in" ${diaUnit === 'in' ? 'selected' : ''}>in</option>
-        <option value="m" ${diaUnit === 'm' ? 'selected' : ''}>m</option>
-      </select>
-      <span class="text-[#30363d] px-1">|</span>
-      <span class="text-[#8b949e]">Style:</span>
-      <select class="header-unit-select unit-select-style-mode bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1.5 py-1 focus:outline-none" data-eid="${id}">
-        <option value="graph" ${styleMode === 'graph' ? 'selected' : ''}>Use Graph Settings</option>
-        <option value="custom" ${styleMode === 'custom' ? 'selected' : ''}>Use Custom Style</option>
-      </select>
-      <div id="extra-custom-controls-${id}" class="extra-custom-controls items-center gap-1.5 ${styleMode === 'custom' ? 'inline-flex' : 'hidden'}">
-        <input type="color" class="extra-color-picker bg-[#0d1117] border border-[#30363d] rounded h-6 w-8 p-0.5 cursor-pointer" value="${color}" data-eid="${id}" title="Curve Color">
-        <select class="header-unit-select extra-weight-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1.5 py-1 focus:outline-none" data-eid="${id}" title="Line Weight">
-          <option value="1" ${String(weight) === '1' ? 'selected' : ''}>1 px</option>
-          <option value="1.5" ${String(weight) === '1.5' ? 'selected' : ''}>1.5 px</option>
-          <option value="2" ${String(weight) === '2' ? 'selected' : ''}>2 px</option>
-          <option value="2.5" ${String(weight) === '2.5' ? 'selected' : ''}>2.5 px</option>
-          <option value="3" ${String(weight) === '3' ? 'selected' : ''}>3 px</option>
-          <option value="4" ${String(weight) === '4' ? 'selected' : ''}>4 px</option>
-        </select>
-        <select class="header-unit-select extra-line-style-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1.5 py-1 focus:outline-none" data-eid="${id}" title="Line Style">
-          <option value="solid" ${style === 'solid' ? 'selected' : ''}>Solid (─)</option>
-          <option value="dash" ${style === 'dash' ? 'selected' : ''}>Dashed (---)</option>
-          <option value="dot" ${style === 'dot' ? 'selected' : ''}>Dotted (···)</option>
-          <option value="dashdot" ${style === 'dashdot' ? 'selected' : ''}>DashDot (-·-)</option>
-          <option value="longdash" ${style === 'longdash' ? 'selected' : ''}>LongDash (——)</option>
-        </select>
+    <div onclick="toggleCard('extraCardBody-${id}', 'extraCardChevron-${id}')"
+         class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/60 transition-colors space-y-2.5">
+      <!-- Row 1: Title, Identity Fields, Remove Button, and Far-Right Chevron -->
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center gap-2 font-semibold text-[#e6edf3] text-sm">
+          <span class="curve-color-dot inline-block w-3 h-3 rounded-full" style="background:${color}"></span>
+          <span>Additional Curve</span>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs ml-auto">
+          <div class="flex items-center gap-2" onclick="event.stopPropagation()">
+            <span class="text-[#8b949e] font-medium">Label:</span>
+            <input type="text" class="bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-[#e6edf3] font-semibold w-36 focus:outline-none focus:border-[#58a6ff] extra-label-input"
+                   value="${label}" placeholder="Curve label" data-eid="${id}">
+            <span class="text-[#8b949e] font-medium ms-1 extra-dia-label">${isVarSpeed ? 'Speed:' : 'Dia:'}</span>
+            <input type="number" class="bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-[#e6edf3] w-24 focus:outline-none focus:border-[#58a6ff] extra-dia-input" step="any"
+                   value="${diameter}" placeholder="${isVarSpeed ? 'e.g. 1200' : 'e.g. 280'}" data-eid="${id}">
+            <select class="header-unit-select unit-select-dia bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1.5 py-1 focus:outline-none" data-eid="${id}">
+              ${isVarSpeed
+                ? `<option value="rpm" ${diaUnit === 'rpm' || diaUnit === 'mm' ? 'selected' : ''}>RPM</option><option value="hz" ${diaUnit === 'hz' ? 'selected' : ''}>Hz</option><option value="percent" ${diaUnit === 'percent' ? 'selected' : ''}>%</option>`
+                : `<option value="mm" ${diaUnit === 'mm' ? 'selected' : ''}>mm</option><option value="in" ${diaUnit === 'in' ? 'selected' : ''}>in</option><option value="m" ${diaUnit === 'm' ? 'selected' : ''}>m</option>`
+              }
+            </select>
+            <button type="button" class="btn-extra-remove extra-btn-remove inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs border border-red-700/40 text-red-400 hover:bg-red-900/20 transition-colors ms-1" data-eid="${id}">
+              <i class="bi bi-trash text-xs"></i>Remove
+            </button>
+          </div>
+          <i class="bi bi-chevron-down text-[#8b949e] hover:text-white transition-transform duration-200 ms-2 p-1 cursor-pointer"
+             id="extraCardChevron-${id}"
+             onclick="toggleCard('extraCardBody-${id}', 'extraCardChevron-${id}'); event.stopPropagation();"
+             style="transform: rotate(180deg)"></i>
+        </div>
       </div>
-      <button type="button" class="btn-extra-remove extra-btn-remove inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border border-red-700/40 text-red-400 hover:bg-red-900/20 transition-colors ml-auto" data-eid="${id}">&#x2715; Remove</button>
+
+      <!-- Row 2: Custom Curve Line Style Bar (Below Row 1) -->
+      <div class="flex items-center gap-2 text-xs pt-2 border-t border-[#30363d]/60" onclick="event.stopPropagation()">
+        <span class="text-[#8b949e] font-medium flex items-center gap-1">
+          <i class="bi bi-palette text-[#58a6ff]"></i>Line Style:
+        </span>
+        <select class="header-unit-select unit-select-style-mode bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-2 py-1 focus:outline-none" data-eid="${id}">
+          <option value="graph" ${styleMode === 'graph' ? 'selected' : ''}>Default Palette</option>
+          <option value="custom" ${styleMode === 'custom' ? 'selected' : ''}>Custom Style</option>
+        </select>
+        <div id="extra-custom-controls-${id}" class="extra-custom-controls items-center gap-2 bg-[#0d1117] border border-[#30363d] px-2 py-0.5 rounded ${styleMode === 'custom' ? 'inline-flex' : 'hidden'}">
+          <input type="color" class="extra-color-picker bg-transparent h-5 w-6 p-0 border-0 cursor-pointer rounded" value="${color}" data-eid="${id}" title="Curve Color">
+          <select class="extra-weight-select bg-[#161b22] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1.5 py-0.5 focus:outline-none" data-eid="${id}" title="Line Weight">
+            <option value="1" ${String(weight) === '1' ? 'selected' : ''}>1 px</option>
+            <option value="1.5" ${String(weight) === '1.5' ? 'selected' : ''}>1.5 px</option>
+            <option value="2" ${String(weight) === '2' ? 'selected' : ''}>2 px</option>
+            <option value="2.5" ${String(weight) === '2.5' ? 'selected' : ''}>2.5 px</option>
+            <option value="3" ${String(weight) === '3' ? 'selected' : ''}>3 px</option>
+            <option value="4" ${String(weight) === '4' ? 'selected' : ''}>4 px</option>
+          </select>
+          <select class="extra-line-style-select bg-[#161b22] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1.5 py-0.5 focus:outline-none" data-eid="${id}" title="Line Style">
+            <option value="solid" ${style === 'solid' ? 'selected' : ''}>Solid</option>
+            <option value="dash" ${style === 'dash' ? 'selected' : ''}>Dashed</option>
+            <option value="dot" ${style === 'dot' ? 'selected' : ''}>Dotted</option>
+            <option value="dashdot" ${style === 'dashdot' ? 'selected' : ''}>DashDot</option>
+            <option value="longdash" ${style === 'longdash' ? 'selected' : ''}>LongDash</option>
+          </select>
+        </div>
+      </div>
     </div>
 
-    <select class="unit-select-mode" data-eid="${id}" style="display:none">
-      <option value="fit" ${curveMode === 'fit' ? 'selected' : ''}>Fitted</option>
-      <option value="affinity" ${curveMode === 'affinity' ? 'selected' : ''}>Affinity</option>
-      <option value="both" ${curveMode === 'both' ? 'selected' : ''}>Both</option>
-    </select>
+      <div class="p-4" id="extraCardBody-${id}">
+        <select class="unit-select-mode" data-eid="${id}" style="display:none">
+          <option value="fit" ${curveMode === 'fit' ? 'selected' : ''}>Fitted</option>
+          <option value="affinity" ${curveMode === 'affinity' ? 'selected' : ''}>Affinity</option>
+          <option value="both" ${curveMode === 'both' ? 'selected' : ''}>Both</option>
+        </select>
 
-    <div class="overflow-x-auto mb-2">
-      <table class="table-dark w-full text-xs border-collapse" id="extraTable-${id}" style="font-size:0.83rem">
-        <thead>
-          <tr style="background:#21262d">
-            <th style="width:115px">
-              Flow Q<br>
-              <select class="header-unit-select unit-select-q" data-eid="${id}">
-                <option value="m3h" ${qUnit === 'm3h' ? 'selected' : ''}>m³/h</option>
-                <option value="ls" ${qUnit === 'ls' ? 'selected' : ''}>L/s</option>
-                <option value="gpm" ${qUnit === 'gpm' ? 'selected' : ''}>gpm</option>
-                <option value="lmin" ${qUnit === 'lmin' ? 'selected' : ''}>L/min</option>
-              </select>
-            </th>
-            <th style="width:100px">
-              Head H<br>
-              <select class="header-unit-select unit-select-h" data-eid="${id}">
-                <option value="m" ${hUnit === 'm' ? 'selected' : ''}>m</option>
-                <option value="ft" ${hUnit === 'ft' ? 'selected' : ''}>ft</option>
-              </select>
-            </th>
-            <th style="width:85px">Effic. η<br><span class="font-normal text-[#8b949e]" style="font-size:0.7rem">(%)</span></th>
-            <th style="width:115px">
-              NPSHr<br>
-              <select class="header-unit-select unit-select-npsh" data-eid="${id}">
-                <option value="m" ${npshUnit === 'm' ? 'selected' : ''}>m (opt.)</option>
-                <option value="ft" ${npshUnit === 'ft' ? 'selected' : ''}>ft (opt.)</option>
-              </select>
-            </th>
-            <th style="width:120px">
-              Power<br>
-              <select class="header-unit-select unit-select-pow" data-eid="${id}">
-                <option value="kw" ${powUnit === 'kw' ? 'selected' : ''}>kW (opt.)</option>
-                <option value="hp" ${powUnit === 'hp' ? 'selected' : ''}>hp (opt.)</option>
-              </select>
-            </th>
-            <th style="width:30px"></th>
-          </tr>
-        </thead>
-        <tbody>${tableRowsHtml}</tbody>
+        <div class="overflow-x-auto mb-3 rounded-lg border border-[#30363d] bg-[#0d1117]">
+          <table class="w-full text-xs text-[#c9d1d9] border-collapse" id="extraTable-${id}">
+            <thead>
+              <tr class="bg-[#161b22] text-[#8b949e] border-b border-[#30363d] font-semibold text-[11px] tracking-wide">
+                <th class="p-2.5 text-left w-32">
+                  <div class="flex items-center justify-between gap-1">
+                    <span>Flow Q</span>
+                    <select class="header-unit-select unit-select-q bg-[#0d1117] border border-[#30363d] text-[#58a6ff] text-[11px] font-semibold rounded px-1.5 py-0.5 focus:outline-none focus:border-[#58a6ff]" data-eid="${id}">
+                      <option value="m3h" ${qUnit === 'm3h' ? 'selected' : ''}>m³/h</option>
+                      <option value="ls" ${qUnit === 'ls' ? 'selected' : ''}>L/s</option>
+                      <option value="gpm" ${qUnit === 'gpm' ? 'selected' : ''}>gpm</option>
+                      <option value="lmin" ${qUnit === 'lmin' ? 'selected' : ''}>L/min</option>
+                    </select>
+                  </div>
+                </th>
+                <th class="p-2.5 text-left w-28">
+                  <div class="flex items-center justify-between gap-1">
+                    <span>Head H</span>
+                    <select class="header-unit-select unit-select-h bg-[#0d1117] border border-[#30363d] text-[#58a6ff] text-[11px] font-semibold rounded px-1.5 py-0.5 focus:outline-none focus:border-[#58a6ff]" data-eid="${id}">
+                      <option value="m" ${hUnit === 'm' ? 'selected' : ''}>m</option>
+                      <option value="ft" ${hUnit === 'ft' ? 'selected' : ''}>ft</option>
+                    </select>
+                  </div>
+                </th>
+                <th class="p-2.5 text-left w-24">
+                  <span>Effic. η (%)</span>
+                </th>
+                <th class="p-2.5 text-left w-28">
+                  <div class="flex items-center justify-between gap-1">
+                    <span>NPSHr</span>
+                    <select class="header-unit-select unit-select-npsh bg-[#0d1117] border border-[#30363d] text-[#58a6ff] text-[11px] font-semibold rounded px-1.5 py-0.5 focus:outline-none focus:border-[#58a6ff]" data-eid="${id}">
+                      <option value="m" ${npshUnit === 'm' ? 'selected' : ''}>m</option>
+                      <option value="ft" ${npshUnit === 'ft' ? 'selected' : ''}>ft</option>
+                    </select>
+                  </div>
+                </th>
+                <th class="p-2.5 text-left w-28">
+                  <div class="flex items-center justify-between gap-1">
+                    <span>Power</span>
+                    <select class="header-unit-select unit-select-pow bg-[#0d1117] border border-[#30363d] text-[#58a6ff] text-[11px] font-semibold rounded px-1.5 py-0.5 focus:outline-none focus:border-[#58a6ff]" data-eid="${id}">
+                      <option value="kw" ${powUnit === 'kw' ? 'selected' : ''}>kW</option>
+                      <option value="hp" ${powUnit === 'hp' ? 'selected' : ''}>hp</option>
+                    </select>
+                  </div>
+                </th>
+                <th class="p-2.5 text-center w-8"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#30363d]/50">${tableRowsHtml}</tbody>
       </table>
     </div>
 
@@ -2310,13 +2356,14 @@ function addExtraCurveCard(existingData) {
       parsedRows.forEach(row => {
         const [q, h, eta, npsh, pow] = row;
         const tr = document.createElement('tr');
+        tr.className = 'hover:bg-[#1c2330]/50 transition-colors border-b border-[#30363d]/40';
         tr.innerHTML = `
-          <td><input type="number" class="form-control form-control-sm form-control-dark col-q" step="any" placeholder="Q (${getUnitLabel('q', qUnit)})" value="${q}"></td>
-          <td><input type="number" class="form-control form-control-sm form-control-dark col-h" step="any" placeholder="H (${getUnitLabel('h', hUnit)})" value="${h}"></td>
-          <td><input type="number" class="form-control form-control-sm form-control-dark col-eta" step="any" min="0" max="100" placeholder="η %" value="${eta}"></td>
-          <td><input type="number" class="form-control form-control-sm form-control-dark col-npsh" step="any" placeholder="NPSHr (${getUnitLabel('npsh', npshUnit)})" value="${npsh}"></td>
-          <td><input type="number" class="form-control form-control-sm form-control-dark col-pow" step="any" placeholder="${getUnitLabel('pow', powUnit)} (opt)" value="${pow}"></td>
-          <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeRow(this)">×</button></td>`;
+          <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-q" step="any" placeholder="Q (${getUnitLabel('q', qUnit)})" value="${q}"></td>
+          <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-h" step="any" placeholder="H (${getUnitLabel('h', hUnit)})" value="${h}"></td>
+          <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-eta" step="any" min="0" max="100" placeholder="η %" value="${eta}"></td>
+          <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-npsh" step="any" placeholder="NPSHr (${getUnitLabel('npsh', npshUnit)})" value="${npsh}"></td>
+          <td class="p-1.5"><input type="number" class="${TABLE_INPUT_CLS} col-pow" step="any" placeholder="${getUnitLabel('pow', powUnit)} (opt)" value="${pow}"></td>
+          <td class="p-1.5 text-center"><button type="button" class="text-[#8b949e] hover:text-red-400 hover:bg-red-950/30 p-1.5 rounded transition-colors text-xs font-medium" onclick="removeRow(this)" title="Delete Row"><i class="bi bi-trash text-sm"></i></button></td>`;
         tbody.appendChild(tr);
         _wireExtraRow(tr, id);
       });
@@ -2485,8 +2532,84 @@ function initExtraCurves(curvesArray) {
   data.forEach(c => addExtraCurveCard(c));
 }
 
+function updateFamilyTypeUI() {
+  const famType = document.getElementById('selFamilyType')?.value || 'trimmed_impeller';
+  const isVarSpeed = (famType === 'variable_speed');
+
+  const titleEl = document.getElementById('impellerFamilyTitle');
+  const descEl = document.getElementById('impellerFamilyDesc');
+  const inputEl = document.querySelector('input[name="impeller_diameters"]');
+
+  if (titleEl) {
+    titleEl.textContent = isVarSpeed ? 'Speed Family (Variable Speed)' : 'Impeller Diameter Family';
+  }
+  if (descEl) {
+    descEl.textContent = isVarSpeed
+      ? 'Comma-separated speeds (RPM), highest speed first. Speeds with data tables in Additional Curves plot from fitted loaded data; remaining speeds are generated via affinity laws.'
+      : 'Comma-separated diameters (mm), largest first. Diameters with data tables in Additional Curves plot from fitted loaded data; remaining diameters are generated via affinity laws.';
+  }
+  if (inputEl) {
+    inputEl.placeholder = isVarSpeed ? 'e.g. 1450, 1200, 960, 720' : 'e.g. 480, 450, 420, 390, 360';
+  }
+
+  // Update Main Curve Property Label & Unit Selector in Card 3 Header
+  const lblMainProp = document.getElementById('lblMainCurveProperty');
+  if (lblMainProp) {
+    lblMainProp.textContent = isVarSpeed ? 'Speed:' : 'Dia:';
+  }
+
+  const mainDiaInp = document.getElementById('main_curve_dia_mm');
+  if (mainDiaInp) {
+    mainDiaInp.placeholder = isVarSpeed ? '1450' : '300';
+  }
+
+  const mainUnitSel = document.getElementById('main_curve_dia_unit');
+  if (mainUnitSel) {
+    const curVal = mainUnitSel.value;
+    if (isVarSpeed) {
+      mainUnitSel.innerHTML = `<option value="rpm" ${curVal === 'rpm' || curVal === 'mm' ? 'selected' : ''}>RPM</option><option value="hz" ${curVal === 'hz' ? 'selected' : ''}>Hz</option><option value="percent" ${curVal === 'percent' ? 'selected' : ''}>%</option>`;
+    } else {
+      mainUnitSel.innerHTML = `<option value="mm" ${curVal === 'mm' || curVal === 'rpm' ? 'selected' : ''}>mm</option><option value="in" ${curVal === 'in' ? 'selected' : ''}>in</option><option value="m" ${curVal === 'm' ? 'selected' : ''}>m</option>`;
+    }
+  }
+
+  // Update Card 1 Labels
+  const lblSpeedRpm = document.getElementById('lblSpeedRpm');
+  if (lblSpeedRpm) {
+    lblSpeedRpm.textContent = isVarSpeed ? 'Max Speed (rpm)' : 'Speed (rpm)';
+  }
+  const lblMaxImp = document.getElementById('lblMaxImp');
+  if (lblMaxImp) {
+    lblMaxImp.textContent = isVarSpeed ? 'Impeller Dia' : 'Max Imp.';
+  }
+
+  // Update additional curve card labels & units
+  document.querySelectorAll('.extra-dia-label').forEach(lbl => {
+    lbl.textContent = isVarSpeed ? 'Speed:' : 'Dia:';
+  });
+
+  document.querySelectorAll('.unit-select-dia').forEach(select => {
+    const curVal = select.value;
+    if (isVarSpeed) {
+      select.innerHTML = `<option value="rpm" ${curVal === 'rpm' || curVal === 'mm' ? 'selected' : ''}>RPM</option><option value="hz" ${curVal === 'hz' ? 'selected' : ''}>Hz</option><option value="percent" ${curVal === 'percent' ? 'selected' : ''}>%</option>`;
+    } else {
+      select.innerHTML = `<option value="mm" ${curVal === 'mm' || curVal === 'rpm' ? 'selected' : ''}>mm</option><option value="in" ${curVal === 'in' ? 'selected' : ''}>in</option><option value="m" ${curVal === 'm' ? 'selected' : ''}>m</option>`;
+    }
+  });
+
+  if (typeof refreshPreviewCharts === 'function') {
+    refreshPreviewCharts();
+  }
+}
+
 // Add listener to the Generate button in the Affinity Laws Modal
 document.addEventListener('DOMContentLoaded', () => {
+  const selFam = document.getElementById('selFamilyType');
+  if (selFam) {
+    selFam.addEventListener('change', updateFamilyTypeUI);
+    updateFamilyTypeUI();
+  }
+
   const btnGenerateAffinity = document.getElementById('btnGenerateAffinity');
   if (btnGenerateAffinity) {
     btnGenerateAffinity.addEventListener('click', generateAffinityCurve);

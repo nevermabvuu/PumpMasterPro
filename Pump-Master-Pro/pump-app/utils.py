@@ -165,6 +165,7 @@ def _pump_from_form(f, pump=None):
     pump.qr     = _get_float(f, 'qr', pump.qr if pump.qr is not None else 1.0)
     pump.er     = _get_float(f, 'er', pump.er if pump.er is not None else 1.0)
     pump.pump_type        = f.get('pump_type', pump.pump_type or 'centrifugal')
+    pump.family_type      = f.get('family_type', pump.family_type or 'trimmed_impeller')
     pump.application      = f.get('application', pump.application or '')
     pump.notes            = f.get('notes', pump.notes or '')
     if 'graph_options_json' in f:

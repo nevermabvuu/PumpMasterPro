@@ -37,7 +37,7 @@ with app.app_context():
                 'axis_power_min', 'axis_power_max', 'axis_power_major', 'axis_power_minor',
                 'axis_npsh_min', 'axis_npsh_max', 'axis_npsh_major', 'axis_npsh_minor',
             ]
-            for col_name in ['curve_labels', 'curve_diameters', 'curve_colors', 'curve_modes',
+            for col_name in ['family_type', 'curve_labels', 'curve_diameters', 'curve_colors', 'curve_modes',
                              'curve_units', 'curve_raw_tables', 'curve_coeffs',
                              'unit_q', 'unit_h', 'unit_npsh', 'unit_pow', 'unit_op_q', 'graph_custom_label_pos',
                              'head_curve_style', 'eff_curve_style', 'power_curve_style', 'npsh_curve_style', 'main_curve_style'] + axis_cols:
@@ -46,7 +46,9 @@ with app.app_context():
                         col_type = "INTEGER" if col_name.endswith('_minor') else "REAL"
                         conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {col_name} {col_type} DEFAULT NULL"))
                     else:
-                        if col_name == 'graph_custom_label_pos':
+                        if col_name == 'family_type':
+                            default_val = "'trimmed_impeller'"
+                        elif col_name == 'graph_custom_label_pos':
                             default_val = "'{}'"
                         elif col_name == 'head_curve_style':
                             default_val = "'#58a6ff;2.0,solid'"

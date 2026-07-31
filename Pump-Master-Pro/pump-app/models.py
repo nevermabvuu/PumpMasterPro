@@ -40,6 +40,9 @@ class Pump(db.Model):
     speed_rpm = db.Column(db.Float, default=1450.0)
     impeller_dia_mm = db.Column(db.Float, default=300.0)
 
+    # Test Basis / Family Type: 'trimmed_impeller' (constant speed) or 'variable_speed' (constant diameter)
+    family_type = db.Column(db.String(50), default='trimmed_impeller')
+
     # Comma/JSON list of available impeller diameters (mm), largest first
     impeller_diameters = db.Column(db.Text, default='')
 
@@ -651,6 +654,7 @@ class Pump(db.Model):
             'q_min': self.q_min, 'q_max': self.q_max, 'q_bep': self.q_bep,
             'hr': self.hr, 'qr': self.qr, 'er': self.er,
             'pump_type': self.pump_type,
+            'family_type': self.family_type or 'trimmed_impeller',
             'application': self.application,
             'notes': self.notes,
             'extra_curves_json': self.extra_curves_json or '',

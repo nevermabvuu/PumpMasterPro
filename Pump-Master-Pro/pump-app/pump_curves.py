@@ -345,7 +345,8 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
             }
 
         def _make_affinity():
-            penalty = 40.0 * (1.0 - r)
+            fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+            penalty = 0.0 if fam_type == 'variable_speed' else 40.0 * (1.0 - r)
             eta_trimmed = np.clip(eta_base - penalty, 0, 100)
             use_custom = False
             c_color = None

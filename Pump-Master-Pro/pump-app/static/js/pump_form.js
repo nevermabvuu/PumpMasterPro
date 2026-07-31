@@ -593,8 +593,22 @@ async function fitAndPreview() {
 
 function showStatus(type, msg) {
   const el = document.getElementById('fitStatus');
-  el.className = 'mt-2 small ' + (type === 'error' ? 'text-danger' : type === 'ok' ? 'text-success' : '');
-  el.textContent = msg;
+  if (!el) return;
+  if (!msg) {
+    el.innerHTML = '';
+    el.className = 'mt-2 text-xs font-medium';
+    return;
+  }
+  if (type === 'error') {
+    el.className = 'mt-3 p-2.5 rounded bg-[#da3633]/15 border border-[#da3633]/30 text-xs font-semibold text-[#f85149] flex items-center gap-2';
+    el.innerHTML = `<i class="bi bi-exclamation-triangle-fill"></i><span>${msg}</span>`;
+  } else if (type === 'ok') {
+    el.className = 'mt-3 p-2.5 rounded bg-[#238636]/15 border border-[#238636]/30 text-xs font-semibold text-[#3fb950] flex items-center gap-2';
+    el.innerHTML = `<i class="bi bi-check-circle-fill"></i><span>${msg}</span>`;
+  } else {
+    el.className = 'mt-2 text-xs text-[#8b949e]';
+    el.textContent = msg;
+  }
 }
 
 var isPreviewEventsBound = false;
@@ -1602,7 +1616,13 @@ function updateExtraBadge() {
   if (!badge) return;
   const n = extraCurves.length;
   badge.textContent = n;
-  badge.style.display = n > 0 ? '' : 'none';
+  if (n > 0) {
+    badge.classList.remove('hidden');
+    badge.style.display = 'inline-block';
+  } else {
+    badge.classList.add('hidden');
+    badge.style.display = 'none';
+  }
 }
 
 /* ── Extract data from an extra curve table ──────────────────────────────── */

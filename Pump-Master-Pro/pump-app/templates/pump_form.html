@@ -773,7 +773,7 @@
           <span class="text-[#8b949e] text-xs font-normal ms-1">— Extra impeller trims or speed variants</span>
         </div>
         <div class="flex items-center gap-3">
-          <span class="hidden px-2 py-0.5 rounded text-[10px] font-bold bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30" id="extraCurveBadge">0</span>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30" id="extraCurveBadge" style="display:none">0</span>
           <i class="bi bi-chevron-down text-[#8b949e] transition-transform duration-200" id="extraCurvesChevron" style="transform: rotate(0deg)"></i>
         </div>
       </div>
@@ -930,7 +930,7 @@
      {% endif %}>
 </div>
 <script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=35"></script>
-<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=45"></script>
+<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=50"></script>
 <script>
 // Beginners Note: Generic card toggle helper for smooth card collapse & expand
 function toggleCard(bodyId, chevronId) {

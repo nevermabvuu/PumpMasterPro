@@ -1185,9 +1185,9 @@ function buildEffPowerChart(familyData, singleData, showClean) {
       titlefont: { color: '#f85149', size: 12 }, tickfont: { color: '#f85149' }
     }
   });
-  applyAxisScaleSettings(layout.xaxis, 'flow', warmanData?.pump);
-  applyAxisScaleSettings(layout.yaxis, 'eff', warmanData?.pump);
-  applyAxisScaleSettings(layout.yaxis2, 'power', warmanData?.pump);
+  applyAxisScaleSettings(layout.xaxis, 'flow', familyData?.pump);
+  applyAxisScaleSettings(layout.yaxis, 'eff', familyData?.pump);
+  applyAxisScaleSettings(layout.yaxis2, 'power', familyData?.pump);
   if (unitsEP.legendMode === 'hq_only' || unitsEP.legendMode === 'curve_labels') {
     layout.showlegend = false;
   }

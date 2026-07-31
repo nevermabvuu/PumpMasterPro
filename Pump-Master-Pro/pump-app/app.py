@@ -110,6 +110,10 @@ def handle_url_build_error(error, endpoint, values):
                 return flask_url_for(target, **values)
     raise error
 
+@app.route('/favicon.ico')
+def favicon():
+    return ('', 204)
+
 app.url_build_error_handlers.append(handle_url_build_error)
 
 if __name__ == '__main__':

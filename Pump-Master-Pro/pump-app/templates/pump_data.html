@@ -2,77 +2,108 @@
 {% block title %}Pump Catalogue — PumpSelect Pro{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+
+<!-- Page header -->
+<div class="flex justify-between items-center mb-4">
   <div class="page-header mb-0">
-    <h1 class="page-title"><i class="bi bi-database me-2 text-accent"></i>Pump Catalogue</h1>
-    <p class="page-subtitle">{{ pumps|length }} pump{{ 's' if pumps|length != 1 else '' }} — click <i class="bi bi-activity"></i> on any card to open the full Warman performance map</p>
+    <h1 class="page-title"><i class="bi bi-database mr-2 text-accent"></i>Pump Catalogue</h1>
+    <p class="page-subtitle">
+      {{ pumps|length }} pump{{ 's' if pumps|length != 1 else '' }} —
+      click <i class="bi bi-activity"></i> on any card to open the full Warman performance map
+    </p>
   </div>
-  <a href="{{ url_for('pump_new') }}" class="btn btn-primary">
-    <i class="bi bi-plus-lg me-1"></i>Add Pump
+  <a href="{{ url_for('pump_new') }}"
+     class="inline-flex items-center gap-1 px-4 py-2 rounded font-semibold text-sm transition-colors"
+     style="background:#58a6ff;color:#0d1117;"
+     onmouseover="this.style.background='#79baff'" onmouseout="this.style.background='#58a6ff'">
+    <i class="bi bi-plus-lg"></i>Add Pump
   </a>
 </div>
 
 {% if pumps %}
-<div class="row g-4" id="catalogueGrid">
+<!-- Pump card grid: 3 columns on xl, 2 on sm -->
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4" id="catalogueGrid">
   {% for pump in pumps %}
-  <div class="col-sm-6 col-xl-4">
-    <div class="card card-dark h-100 pump-card" id="card-{{ pump.id }}">
-      <div class="card-body p-3">
+  <div>
+    <div class="card-dark h-full flex flex-col" id="card-{{ pump.id }}">
+      <div class="p-3 flex flex-col h-full">
 
         <!-- Header row -->
-        <div class="d-flex align-items-start gap-2 mb-2">
-          <div class="flex-grow-1 min-w-0">
-            <div class="fw-semibold text-truncate" style="font-size:1rem">{{ pump.name }}</div>
-            <div class="text-muted small">{{ pump.manufacturer or '' }}{% if pump.model_number %} · {{ pump.model_number }}{% endif %}</div>
+        <div class="flex items-start gap-2 mb-2">
+          <div class="flex-1 min-w-0">
+            <div class="font-semibold truncate" style="font-size:1rem">{{ pump.name }}</div>
+            <div class="text-muted text-sm">{{ pump.manufacturer or '' }}{% if pump.model_number %} · {{ pump.model_number }}{% endif %}</div>
           </div>
-          <span class="badge flex-shrink-0 {{ 'bg-warning text-dark' if 'slurry' in pump.pump_type else 'bg-info text-dark' }}">
+          <!-- Badge -->
+          <span class="shrink-0 inline-block px-2 py-0.5 rounded text-xs font-bold"
+                style="{% if 'slurry' in pump.pump_type %}background:rgba(210,153,34,0.2);color:#d29922;{% else %}background:rgba(88,166,255,0.15);color:#58a6ff;{% endif %}">
             {{ pump.pump_type }}
           </span>
         </div>
 
         <!-- Mini H-Q sparkline -->
-        <div class="sparkline-area mb-2" style="height:100px;border-radius:6px;overflow:hidden;background:#0d1117">
+        <div class="mb-2 rounded overflow-hidden" style="height:100px;background:#0d1117;">
           <div id="spark-{{ pump.id }}" style="width:100%;height:100%"></div>
         </div>
 
-        <!-- Key specs row -->
-        <div class="row g-2 text-center mb-3" style="font-size:0.78rem">
-          <div class="col-3">
+        <!-- Key specs: 4 equal columns -->
+        <div class="grid grid-cols-4 gap-2 text-center mb-3" style="font-size:0.78rem">
+          <div>
             <div class="text-muted">Q<sub>max</sub></div>
-            <div class="fw-semibold">{{ pump.q_max|round(0)|int }}</div>
+            <div class="font-semibold">{{ pump.q_max|round(0)|int }}</div>
             <div class="text-muted" style="font-size:0.7rem">m³/h</div>
           </div>
-          <div class="col-3">
+          <div>
             <div class="text-muted">H<sub>shut</sub></div>
-            <div class="fw-semibold">{{ pump.hq_a0|round(0)|int }}</div>
+            <div class="font-semibold">{{ pump.hq_a0|round(0)|int }}</div>
             <div class="text-muted" style="font-size:0.7rem">m</div>
           </div>
-          <div class="col-3">
+          <div>
             <div class="text-muted">Speed</div>
-            <div class="fw-semibold">{{ pump.speed_rpm|int }}</div>
+            <div class="font-semibold">{{ pump.speed_rpm|int }}</div>
             <div class="text-muted" style="font-size:0.7rem">rpm</div>
           </div>
-          <div class="col-3">
+          <div>
             <div class="text-muted">Imp.</div>
-            <div class="fw-semibold">{{ pump.impeller_dia_mm|int }}</div>
+            <div class="font-semibold">{{ pump.impeller_dia_mm|int }}</div>
             <div class="text-muted" style="font-size:0.7rem">mm</div>
           </div>
         </div>
 
         <!-- Action buttons -->
-        <div class="d-flex gap-1">
-          <a href="{{ url_for('pump_curve', pump_id=pump.id) }}" class="btn btn-sm btn-success flex-grow-1" title="Warman performance map">
-            <i class="bi bi-activity me-1"></i>Curves
+        <div class="flex gap-1 mt-auto">
+          <!-- Curves (green) -->
+          <a href="{{ url_for('pump_curve', pump_id=pump.id) }}"
+             class="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded text-sm font-medium transition-colors"
+             style="background:rgba(63,185,80,0.15);color:#3fb950;border:1px solid rgba(63,185,80,0.35);"
+             onmouseover="this.style.background='rgba(63,185,80,0.25)'" onmouseout="this.style.background='rgba(63,185,80,0.15)'"
+             title="Warman performance map">
+            <i class="bi bi-activity"></i>Curves
           </a>
-          <a href="{{ url_for('pump_edit', pump_id=pump.id) }}" class="btn btn-sm btn-outline-primary" title="Edit pump data">
+          <!-- Edit (blue outline) -->
+          <a href="{{ url_for('pump_edit', pump_id=pump.id) }}"
+             class="inline-flex items-center justify-center px-2.5 py-1.5 rounded text-sm transition-colors"
+             style="border:1px solid rgba(88,166,255,0.35);color:#58a6ff;"
+             onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'"
+             title="Edit pump data">
             <i class="bi bi-pencil"></i>
           </a>
-          <a href="{{ url_for('pump_comparison') }}?ids={{ pump.id }}" class="btn btn-sm btn-outline-info" title="Compare">
+          <!-- Compare (teal outline) -->
+          <a href="{{ url_for('pump_comparison') }}?ids={{ pump.id }}"
+             class="inline-flex items-center justify-center px-2.5 py-1.5 rounded text-sm transition-colors"
+             style="border:1px solid rgba(57,211,192,0.35);color:#39d3c0;"
+             onmouseover="this.style.background='rgba(57,211,192,0.1)'" onmouseout="this.style.background='transparent'"
+             title="Compare">
             <i class="bi bi-bar-chart-line"></i>
           </a>
+          <!-- Delete (red outline) -->
           <form method="post" action="{{ url_for('pump_delete', pump_id=pump.id) }}"
-                onsubmit="return confirm('Delete {{ pump.name }}?')" class="d-inline">
-            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                onsubmit="return confirm('Delete {{ pump.name }}?')" class="inline">
+            <button type="submit"
+                    class="inline-flex items-center justify-center px-2.5 py-1.5 rounded text-sm transition-colors"
+                    style="border:1px solid rgba(248,81,73,0.35);color:#f85149;background:transparent;"
+                    onmouseover="this.style.background='rgba(248,81,73,0.1)'" onmouseout="this.style.background='transparent'"
+                    title="Delete">
               <i class="bi bi-trash"></i>
             </button>
           </form>
@@ -89,8 +120,10 @@
   <i class="bi bi-database-slash"></i>
   <h4>No pumps in catalogue</h4>
   <p>Add your first pump to get started.</p>
-  <a href="{{ url_for('pump_new') }}" class="btn btn-primary">
-    <i class="bi bi-plus-lg me-1"></i>Add Pump
+  <a href="{{ url_for('pump_new') }}"
+     class="inline-flex items-center gap-1 px-4 py-2 rounded font-semibold text-sm"
+     style="background:#58a6ff;color:#0d1117;">
+    <i class="bi bi-plus-lg"></i>Add Pump
   </a>
 </div>
 {% endif %}
@@ -156,4 +189,3 @@
   }
 </script>
 {% endblock %}
-

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}PumpSelect Pro &mdash; Industrial Pump Analysis{% endblock %}</title>
   
-  <!-- Beginners Note: Tailwind CSS CDN with exact dark theme color tokens (#0d1117, #161b22, #1c2330, #30363d, #58a6ff) -->
+  <!-- Beginners Note: Tailwind CSS CDN for utility classes and custom animations -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -13,118 +13,298 @@
       theme: {
         extend: {
           colors: {
-            brand: {
-              50: '#f0f9ff',
-              100: '#e0f2fe',
-              500: '#58a6ff',
-              600: '#388bfd',
-              900: '#0c4a6e',
-            },
-            accent: {
-              blue: '#58a6ff',
-              green: '#3fb950',
-              amber: '#ff9900',
-              rose: '#f85149',
-              teal: '#39d3c0',
-              cyan: '#58a6ff'
-            },
             dark: {
-              base: '#0d1117',
+              base:    '#0d1117',
               surface: '#161b22',
-              card: '#161b22',
-              header: '#1c2330',
-              input: '#0d1117',
-              border: '#30363d'
+              card:    '#161b22',
+              header:  '#1c2330',
+              input:   '#0d1117',
+              border:  '#30363d'
             }
-          }
+          },
+          keyframes: {
+            /* ── Water Droplet lifecycle ──────────────────────────────────
+               Phase 1 (0-18%):  Droplet falls from above, stretching tall
+               Phase 2 (18-28%): Impact — squishes wide and flat
+               Phase 3 (28-58%): Splash + crown rebound — shoots back up tall
+               Phase 4 (58-88%): Settles back into round droplet
+               Phase 5 (88-100%): Hangs, then rises to start again
+            ────────────────────────────────────────────────────────────── */
+            dropletFall: {
+              '0%':   { transform: 'translateY(-6px) scaleY(1.15) scaleX(0.88)', opacity: '0.7' },
+              '18%':  { transform: 'translateY(0px) scaleY(1.05) scaleX(0.95)',  opacity: '1' },
+              '28%':  { transform: 'translateY(3px) scaleY(0.70) scaleX(1.35)',  opacity: '1' },
+              '42%':  { transform: 'translateY(2px) scaleY(0.80) scaleX(1.20)',  opacity: '1' },
+              '58%':  { transform: 'translateY(-2px) scaleY(1.20) scaleX(0.88)', opacity: '1' },
+              '72%':  { transform: 'translateY(0px) scaleY(1.05) scaleX(0.97)', opacity: '1' },
+              '88%':  { transform: 'translateY(0px) scaleY(1.0) scaleX(1.0)',   opacity: '0.9' },
+              '100%': { transform: 'translateY(-6px) scaleY(1.15) scaleX(0.88)', opacity: '0.7' },
+            },
+            /* Ripple ring 1 — spreads outward on impact */
+            rippleSpread: {
+              '0%':   { transform: 'scale(0.6)', opacity: '0.7' },
+              '28%':  { transform: 'scale(0.6)', opacity: '0.7' },
+              '50%':  { transform: 'scale(1.6)', opacity: '0' },
+              '100%': { transform: 'scale(0.6)', opacity: '0' },
+            },
+            /* Ripple ring 2 — delayed second ring */
+            rippleSpread2: {
+              '0%':   { transform: 'scale(0.6)', opacity: '0' },
+              '35%':  { transform: 'scale(0.6)', opacity: '0.45' },
+              '65%':  { transform: 'scale(1.9)', opacity: '0' },
+              '100%': { transform: 'scale(0.6)', opacity: '0' },
+            },
+            /* Glow pulse on the logo container */
+            logoPulse: {
+              '0%, 100%': { boxShadow: '0 0 0 0 rgba(88,166,255,0)' },
+              '30%':       { boxShadow: '0 0 0 8px rgba(88,166,255,0.18)' },
+              '50%':       { boxShadow: '0 0 0 2px rgba(88,166,255,0.05)' },
+            },
+            /* Drifting ambient background orbs */
+            orbDrift1: {
+              '0%, 100%': { transform: 'translate(0,0) scale(1)' },
+              '33%':      { transform: 'translate(40px,-30px) scale(1.08)' },
+              '66%':      { transform: 'translate(-20px,20px) scale(0.95)' },
+            },
+            orbDrift2: {
+              '0%, 100%': { transform: 'translate(0,0) scale(1)' },
+              '33%':      { transform: 'translate(-35px,25px) scale(1.06)' },
+              '66%':      { transform: 'translate(25px,-15px) scale(0.97)' },
+            },
+            orbDrift3: {
+              '0%, 100%': { transform: 'translate(0,0) scale(1)' },
+              '50%':      { transform: 'translate(-20px,-20px) scale(1.04)' },
+            },
+            /* Shimmer sweep on brand "Pro" text */
+            shimmer: {
+              '0%':   { backgroundPosition: '-200% center' },
+              '100%': { backgroundPosition: '200% center' },
+            },
+            /* Page content entrance animation */
+            fadeUp: {
+              '0%':   { opacity: '0', transform: 'translateY(12px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            slideDown: {
+              '0%':   { opacity: '0', transform: 'translateY(-8px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+          },
+          animation: {
+            'droplet-fall':   'dropletFall 2.4s cubic-bezier(0.4,0,0.2,1) infinite',
+            'ripple-1':       'rippleSpread 2.4s ease-out infinite',
+            'ripple-2':       'rippleSpread2 2.4s ease-out infinite',
+            'logo-pulse':     'logoPulse 2.4s ease-in-out infinite',
+            'orb-drift-1':    'orbDrift1 18s ease-in-out infinite',
+            'orb-drift-2':    'orbDrift2 22s ease-in-out infinite',
+            'orb-drift-3':    'orbDrift3 26s ease-in-out infinite',
+            'shimmer':        'shimmer 3s linear infinite',
+            'fade-up':        'fadeUp 0.45s ease-out both',
+            'slide-down':     'slideDown 0.3s ease-out both',
+          },
         }
       }
     }
   </script>
-  
-  <!-- Bootstrap Icons & Font -->
+
+  <!-- Bootstrap Icons (icon font only, no CSS framework) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
   
-  <!-- Custom CSS for application utilities -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=41" />
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=43" />
+
+  <style>
+    /* ── Shimmer brand text ─────────────────────────────────────────── */
+    .brand-shimmer {
+      background: linear-gradient(90deg,
+        #58a6ff 0%, #a8d4ff 40%, #ffffff 50%, #a8d4ff 60%, #58a6ff 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 3s linear infinite;
+    }
+
+    /* ── Animated underline on nav links ───────────────────────────── */
+    .nav-link-anim { position: relative; }
+    .nav-link-anim::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: 50%; right: 50%;
+      height: 2px;
+      background: #58a6ff;
+      border-radius: 2px;
+      transition: left 0.22s ease, right 0.22s ease;
+    }
+    .nav-link-anim:hover::after,
+    .nav-link-anim.tw-active::after { left: 8px; right: 8px; }
+
+    /* ── Drifting ambient background orbs ───────────────────────────── */
+    .bg-orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(90px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.04;
+    }
+
+    /* ── Ripple rings on the droplet logo ───────────────────────────── */
+    .ripple-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1.5px solid rgba(88,166,255,0.6);
+      pointer-events: none;
+    }
+
+    /* ── Vanilla modal (replaces Bootstrap modal) ───────────────────── */
+    .pmp-modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .pmp-modal-backdrop.open { display: flex; }
+  </style>
+
   {% block head %}{% endblock %}
 </head>
-<body class="bg-dark-base text-[#c9d1d9] font-sans min-h-screen flex flex-col antialiased">
+<body style="background:#0d1117;color:#c9d1d9;min-height:100vh;display:flex;flex-direction:column;">
 
-<!-- Beginners Note: Full width sticky navbar matching original Bootstrap layout -->
-<nav class="bg-dark-surface border-b border-dark-border sticky top-0 z-50">
-  <div class="w-full px-4 sm:px-6 lg:px-8">
-    <div class="flex items-center justify-between h-14">
-      <a class="flex items-center gap-2.5 text-lg font-bold text-white group" href="{{ url_for('index') }}">
-        <div class="w-8 h-8 rounded bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
-          <i class="bi bi-droplet-fill text-base"></i>
+<!-- Beginners Note: Drifting ambient background orbs — fixed, blurred, very low opacity -->
+<div class="bg-orb" style="width:500px;height:500px;background:#58a6ff;top:-120px;left:-100px;animation:orbDrift1 18s ease-in-out infinite;"></div>
+<div class="bg-orb" style="width:420px;height:420px;background:#3fb950;bottom:-80px;right:-80px;animation:orbDrift2 22s ease-in-out infinite;"></div>
+<div class="bg-orb" style="width:320px;height:320px;background:#39d3c0;top:40%;left:55%;animation:orbDrift3 26s ease-in-out infinite;"></div>
+
+<!-- ─────────────────────────────────────────────────────────────────────
+     Navbar — pure Tailwind + vanilla JS (zero Bootstrap dependency)
+     Desktop links use hidden md:flex. Mobile hamburger toggles #mobileNav.
+     ───────────────────────────────────────────────────────────────────── -->
+<nav style="background:#161b22;border-bottom:1px solid #30363d;position:sticky;top:0;z-index:50;">
+  <div style="width:100%;padding:0 1.5rem;">
+    <div class="flex items-center justify-between" style="height:56px;">
+
+      <!-- Brand: animated droplet logo + shimmer text -->
+      <a class="flex items-center gap-2.5" href="{{ url_for('index') }}" style="text-decoration:none;">
+        <!-- Beginners Note: The logo container holds the droplet icon + two ripple rings
+             The icon animates through: fall → squish → splash → crown rebound cycle. -->
+        <div class="relative flex items-center justify-center animate-logo-pulse"
+             style="width:36px;height:36px;border-radius:50%;background:rgba(88,166,255,0.08);border:1.5px solid rgba(88,166,255,0.35);flex-shrink:0;">
+          <div class="ripple-ring animate-ripple-1"></div>
+          <div class="ripple-ring animate-ripple-2"></div>
+          <i class="bi bi-droplet-fill animate-droplet-fall"
+             style="font-size:1rem;display:block;color:#58a6ff;transform-origin:center bottom;position:relative;z-index:1;"></i>
         </div>
-        <span>PumpSelect <span class="text-[#58a6ff]">Pro</span></span>
+        <div class="flex flex-col" style="line-height:1.1;">
+          <span style="color:#e6edf3;font-weight:700;font-size:1rem;letter-spacing:-0.02em;">
+            PumpSelect <span class="brand-shimmer" style="font-weight:800;">Pro</span>
+          </span>
+          <span style="color:#8b949e;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;">Curve Engine v5.0</span>
+        </div>
       </a>
 
-      <!-- Mobile menu button -->
-      <button type="button" onclick="document.getElementById('mobileNav').classList.toggle('hidden')" class="md:hidden p-2 rounded text-slate-400 hover:text-white hover:bg-slate-800 focus:outline-none">
-        <i class="bi bi-list text-xl"></i>
-      </button>
-
+      <!-- Desktop nav links — visible on md+ screens -->
       <div class="hidden md:flex items-center gap-1">
-        <a class="px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-2 {% if request.endpoint == 'index' %}bg-[#58a6ff]/15 text-[#58a6ff] border border-[#58a6ff]/30{% else %}text-slate-300 hover:text-white hover:bg-slate-800/60{% endif %}"
-           href="{{ url_for('index') }}">
+        <a class="nav-link-anim {% if request.endpoint == 'index' %}tw-active{% endif %}"
+           href="{{ url_for('index') }}"
+           style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 0.75rem;border-radius:6px;font-size:0.9rem;text-decoration:none;color:{% if request.endpoint == 'index' %}#58a6ff{% else %}#8b949e{% endif %};"
+           onmouseover="if(!this.classList.contains('tw-active')){this.style.color='#e6edf3';this.style.background='#1c2330';}"
+           onmouseout="if(!this.classList.contains('tw-active')){this.style.color='#8b949e';this.style.background='transparent';}">
           <i class="bi bi-house-door"></i>Dashboard
         </a>
-        <a class="px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-2 {% if 'pump_data' in request.endpoint or 'pump_new' in request.endpoint or 'pump_edit' in request.endpoint %}bg-[#58a6ff]/15 text-[#58a6ff] border border-[#58a6ff]/30{% else %}text-slate-300 hover:text-white hover:bg-slate-800/60{% endif %}"
-           href="{{ url_for('pump_data') }}">
+        <a class="nav-link-anim {% if 'pump_data' in request.endpoint or 'pump_new' in request.endpoint or 'pump_edit' in request.endpoint %}tw-active{% endif %}"
+           href="{{ url_for('pump_data') }}"
+           style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 0.75rem;border-radius:6px;font-size:0.9rem;text-decoration:none;color:{% if 'pump_data' in request.endpoint or 'pump_new' in request.endpoint or 'pump_edit' in request.endpoint %}#58a6ff{% else %}#8b949e{% endif %};"
+           onmouseover="if(!this.classList.contains('tw-active')){this.style.color='#e6edf3';this.style.background='#1c2330';}"
+           onmouseout="if(!this.classList.contains('tw-active')){this.style.color='#8b949e';this.style.background='transparent';}">
           <i class="bi bi-database"></i>Pump Catalogue
         </a>
-        <a class="px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-2 {% if request.endpoint == 'pump_selection' %}bg-[#58a6ff]/15 text-[#58a6ff] border border-[#58a6ff]/30{% else %}text-slate-300 hover:text-white hover:bg-slate-800/60{% endif %}"
-           href="{{ url_for('pump_selection') }}">
+        <a class="nav-link-anim {% if request.endpoint == 'pump_selection' %}tw-active{% endif %}"
+           href="{{ url_for('pump_selection') }}"
+           style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 0.75rem;border-radius:6px;font-size:0.9rem;text-decoration:none;color:{% if request.endpoint == 'pump_selection' %}#58a6ff{% else %}#8b949e{% endif %};"
+           onmouseover="if(!this.classList.contains('tw-active')){this.style.color='#e6edf3';this.style.background='#1c2330';}"
+           onmouseout="if(!this.classList.contains('tw-active')){this.style.color='#8b949e';this.style.background='transparent';}">
           <i class="bi bi-bullseye"></i>Pump Selection
         </a>
-        <a class="px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-2 {% if request.endpoint == 'pump_comparison' %}bg-[#58a6ff]/15 text-[#58a6ff] border border-[#58a6ff]/30{% else %}text-slate-300 hover:text-white hover:bg-slate-800/60{% endif %}"
-           href="{{ url_for('pump_comparison') }}">
+        <a class="nav-link-anim {% if request.endpoint == 'pump_comparison' %}tw-active{% endif %}"
+           href="{{ url_for('pump_comparison') }}"
+           style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 0.75rem;border-radius:6px;font-size:0.9rem;text-decoration:none;color:{% if request.endpoint == 'pump_comparison' %}#58a6ff{% else %}#8b949e{% endif %};"
+           onmouseover="if(!this.classList.contains('tw-active')){this.style.color='#e6edf3';this.style.background='#1c2330';}"
+           onmouseout="if(!this.classList.contains('tw-active')){this.style.color='#8b949e';this.style.background='transparent';}">
           <i class="bi bi-bar-chart-line"></i>Comparison
         </a>
       </div>
+
+      <!-- Beginners Note: Hamburger button — only visible on mobile (<md). Toggles #mobileNav -->
+      <button class="md:hidden p-2 rounded"
+              style="color:#8b949e;background:transparent;border:none;cursor:pointer;"
+              onclick="document.getElementById('mobileNav').classList.toggle('hidden')"
+              onmouseover="this.style.background='#1c2330'" onmouseout="this.style.background='transparent'">
+        <i class="bi bi-list" style="font-size:1.4rem;"></i>
+      </button>
     </div>
   </div>
 
-  <!-- Mobile navigation panel -->
-  <div class="hidden md:hidden border-t border-dark-border bg-dark-surface px-4 pt-2 pb-3 space-y-1" id="mobileNav">
-    <a class="block px-3 py-2 rounded text-sm font-medium {% if request.endpoint == 'index' %}bg-[#58a6ff]/15 text-[#58a6ff]{% else %}text-slate-300 hover:bg-slate-800{% endif %}" href="{{ url_for('index') }}"><i class="bi bi-house-door me-2"></i>Dashboard</a>
-    <a class="block px-3 py-2 rounded text-sm font-medium {% if 'pump_data' in request.endpoint or 'pump_new' in request.endpoint or 'pump_edit' in request.endpoint %}bg-[#58a6ff]/15 text-[#58a6ff]{% else %}text-slate-300 hover:bg-slate-800{% endif %}" href="{{ url_for('pump_data') }}"><i class="bi bi-database me-2"></i>Pump Catalogue</a>
-    <a class="block px-3 py-2 rounded text-sm font-medium {% if request.endpoint == 'pump_selection' %}bg-[#58a6ff]/15 text-[#58a6ff]{% else %}text-slate-300 hover:bg-slate-800{% endif %}" href="{{ url_for('pump_selection') }}"><i class="bi bi-bullseye me-2"></i>Pump Selection</a>
-    <a class="block px-3 py-2 rounded text-sm font-medium {% if request.endpoint == 'pump_comparison' %}bg-[#58a6ff]/15 text-[#58a6ff]{% else %}text-slate-300 hover:bg-slate-800{% endif %}" href="{{ url_for('pump_comparison') }}"><i class="bi bi-bar-chart-line me-2"></i>Comparison</a>
+  <!-- Mobile nav panel — hidden by default, shown when hamburger is tapped -->
+  <div id="mobileNav" class="hidden md:hidden"
+       style="border-top:1px solid #30363d;background:#161b22;padding:0.5rem 1.5rem 0.75rem;">
+    <a href="{{ url_for('index') }}"
+       style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;font-size:0.9rem;margin-bottom:2px;color:{% if request.endpoint == 'index' %}#58a6ff{% else %}#8b949e{% endif %};">
+      <i class="bi bi-house-door"></i>Dashboard</a>
+    <a href="{{ url_for('pump_data') }}"
+       style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;font-size:0.9rem;margin-bottom:2px;color:{% if 'pump_data' in request.endpoint or 'pump_new' in request.endpoint or 'pump_edit' in request.endpoint %}#58a6ff{% else %}#8b949e{% endif %};">
+      <i class="bi bi-database"></i>Pump Catalogue</a>
+    <a href="{{ url_for('pump_selection') }}"
+       style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;font-size:0.9rem;margin-bottom:2px;color:{% if request.endpoint == 'pump_selection' %}#58a6ff{% else %}#8b949e{% endif %};">
+      <i class="bi bi-bullseye"></i>Pump Selection</a>
+    <a href="{{ url_for('pump_comparison') }}"
+       style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;font-size:0.9rem;color:{% if request.endpoint == 'pump_comparison' %}#58a6ff{% else %}#8b949e{% endif %};">
+      <i class="bi bi-bar-chart-line"></i>Comparison</a>
   </div>
 </nav>
 
-<!-- Flash messages -->
+<!-- Flash messages — vanilla JS dismiss (no Bootstrap data-bs-dismiss) -->
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
-    <div class="w-full px-4 sm:px-6 lg:px-8 pt-4">
+    <div style="width:100%;padding:0.75rem 1.5rem 0;position:relative;z-index:1;">
       {% for cat, msg in messages %}
-        <div class="p-3 rounded border flex items-center justify-between mb-3 text-sm {% if cat == 'error' or cat == 'danger' %}bg-[#f85149]/10 border-[#f85149]/30 text-[#f85149]{% elif cat == 'success' %}bg-[#3fb950]/10 border-[#3fb950]/30 text-[#3fb950]{% else %}bg-[#58a6ff]/10 border-[#58a6ff]/30 text-[#58a6ff]{% endif %}">
+        <div class="animate-slide-down flex items-center justify-between"
+             style="padding:0.5rem 0.75rem;border-radius:8px;margin-bottom:0.75rem;font-size:0.875rem;
+                    background:{% if cat == 'error' or cat == 'danger' %}rgba(248,81,73,0.1){% elif cat == 'success' %}rgba(63,185,80,0.1){% else %}rgba(88,166,255,0.1){% endif %};
+                    border:1px solid {% if cat == 'error' or cat == 'danger' %}rgba(248,81,73,0.35){% elif cat == 'success' %}rgba(63,185,80,0.35){% else %}rgba(88,166,255,0.35){% endif %};
+                    color:{% if cat == 'error' or cat == 'danger' %}#f85149{% elif cat == 'success' %}#3fb950{% else %}#58a6ff{% endif %};">
           <span>{{ msg }}</span>
-          <button type="button" onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white"><i class="bi bi-x-lg"></i></button>
+          <button onclick="this.parentElement.remove()"
+                  style="background:none;border:none;color:#8b949e;cursor:pointer;font-size:1rem;padding:0 0 0 0.5rem;"
+                  aria-label="Close"><i class="bi bi-x-lg"></i></button>
         </div>
       {% endfor %}
     </div>
   {% endif %}
 {% endwith %}
 
-<!-- Beginners Note: Full-width container matching Bootstrap container-fluid -->
-<main class="flex-1 w-full px-4 sm:px-6 lg:px-8 py-4">
+<!-- Beginners Note: Main content — full width, fade-up entrance animation -->
+<main class="flex-1 animate-fade-up" style="padding:1rem 1.5rem;position:relative;z-index:1;">
   {% block content %}{% endblock %}
 </main>
 
 <!-- Footer -->
-<footer class="bg-dark-surface border-t border-dark-border mt-auto py-3">
-  <div class="w-full px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-400 gap-2">
-    <span>PumpSelect Pro &mdash; Industrial Pump Performance &amp; Curve Fitting Analysis</span>
-    <span class="text-[#58a6ff] font-medium">Warman Curve Engine v5.0</span>
+<footer style="background:#161b22;border-top:1px solid #30363d;padding:0.75rem 0;margin-top:auto;position:relative;z-index:1;">
+  <div class="flex flex-col sm:flex-row justify-between items-center gap-2"
+       style="width:100%;padding:0 1.5rem;font-size:0.75rem;color:#8b949e;">
+    <span class="flex items-center gap-2">
+      <i class="bi bi-droplet-fill animate-droplet-fall" style="color:#58a6ff;font-size:0.85rem;transform-origin:center bottom;"></i>
+      PumpSelect Pro &mdash; Industrial Pump Performance &amp; Curve Fitting Analysis
+    </span>
+    <span class="brand-shimmer" style="font-weight:600;">Warman Curve Engine v5.0</span>
   </div>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Plotly for charts — Bootstrap JS completely removed -->
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 {% block scripts %}{% endblock %}
 </body>

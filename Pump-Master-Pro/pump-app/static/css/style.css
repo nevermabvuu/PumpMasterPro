@@ -522,3 +522,152 @@ select.form-select.form-control-dark option {
   pointer-events: none;
 }
 
+/* ── Bootstrap .table (non-.table-dark variants) ─────────────────── */
+.table {
+  --bs-table-bg: var(--bg-card);
+  --bs-table-color: var(--text-primary);
+  --bs-table-border-color: var(--border-light);
+  --bs-table-striped-bg: var(--bg-card-2);
+  --bs-table-hover-bg: var(--bg-card-2);
+  color: var(--text-primary) !important;
+  border-color: var(--border-light) !important;
+}
+.table thead th {
+  background-color: var(--bg-card-2) !important;
+  color: var(--text-muted) !important;
+  border-bottom-color: var(--border) !important;
+}
+.table td, .table th {
+  border-color: var(--border-light) !important;
+  color: var(--text-primary) !important;
+}
+
+/* ── Bootstrap .modal ────────────────────────────────────────────── */
+.modal-content {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+.modal-header {
+  background-color: var(--bg-card-2) !important;
+  border-bottom-color: var(--border) !important;
+}
+.modal-footer {
+  background-color: var(--bg-card-2) !important;
+  border-top-color: var(--border) !important;
+}
+.modal-title { color: var(--text-primary) !important; }
+.btn-close { filter: invert(0.7) brightness(1.5); }
+
+/* ── Bootstrap .list-group ───────────────────────────────────────── */
+.list-group-item {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+.list-group-item.active {
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #0d1117 !important;
+}
+
+/* ── Bootstrap .badge ────────────────────────────────────────────── */
+.badge.bg-secondary { background-color: var(--bg-card-2) !important; color: var(--text-muted) !important; }
+.badge.bg-light     { background-color: var(--bg-card-2) !important; color: var(--text-primary) !important; }
+
+/* ── Bootstrap .alert ────────────────────────────────────────────── */
+.alert {
+  border-color: var(--border) !important;
+}
+
+/* ── Bootstrap .nav-tabs / .nav-pills ───────────────────────────── */
+.nav-tabs {
+  border-bottom-color: var(--border) !important;
+}
+.nav-tabs .nav-link {
+  color: var(--text-muted) !important;
+  border-color: transparent !important;
+}
+.nav-tabs .nav-link:hover {
+  color: var(--text-primary) !important;
+  border-color: var(--border) var(--border) transparent !important;
+  background: var(--bg-card-2) !important;
+}
+.nav-tabs .nav-link.active {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border) var(--border) var(--bg-card) !important;
+  color: var(--accent) !important;
+}
+
+/* ── Bootstrap .dropdown-menu ────────────────────────────────────── */
+.dropdown-menu {
+  background-color: var(--bg-card-2) !important;
+  border-color: var(--border) !important;
+}
+.dropdown-item {
+  color: var(--text-primary) !important;
+}
+.dropdown-item:hover, .dropdown-item:focus {
+  background-color: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+}
+.dropdown-divider { border-color: var(--border) !important; }
+
+/* ── Bootstrap .pagination ───────────────────────────────────────── */
+.page-link {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border) !important;
+  color: var(--accent) !important;
+}
+.page-link:hover { background-color: var(--bg-card-2) !important; }
+.page-item.active .page-link {
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #0d1117 !important;
+}
+.page-item.disabled .page-link { color: var(--text-muted) !important; }
+
+/* ── Bootstrap .accordion ────────────────────────────────────────── */
+.accordion-item {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border) !important;
+}
+.accordion-button {
+  background-color: var(--bg-card-2) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+}
+.accordion-button:not(.collapsed) {
+  background-color: var(--bg-card-2) !important;
+  color: var(--accent) !important;
+}
+.accordion-button::after {
+  filter: invert(0.6) brightness(1.5);
+}
+.accordion-body {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+}
+
+/* ── Bootstrap .progress ─────────────────────────────────────────── */
+.progress {
+  background-color: var(--bg-input) !important;
+}
+
+/* ── General link colour inside dark cards ───────────────────────── */
+.card a:not(.btn) { color: var(--accent); }
+.card a:not(.btn):hover { color: #79baff; }
+
+/* ── Force Bootstrap border utility to use dark border ──────────── */
+.border          { border-color: var(--border) !important; }
+.border-top      { border-top-color: var(--border) !important; }
+.border-bottom   { border-bottom-color: var(--border) !important; }
+.border-start    { border-left-color: var(--border) !important; }
+.border-end      { border-right-color: var(--border) !important; }
+
+/* ── Fix Bootstrap secondary/light background utilities ─────────── */
+.bg-secondary { background-color: var(--bg-card-2) !important; }
+.bg-light     { background-color: var(--bg-card-2) !important; }
+.bg-white     { background-color: var(--bg-card)   !important; }
+.text-dark    { color: var(--text-primary) !important; }
+

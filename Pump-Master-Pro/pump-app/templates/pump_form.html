@@ -405,26 +405,26 @@
         </div>
       </div>
 
-      <div id="standalonePanels" class="hidden space-y-3">
-        <div class="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden hidden" id="panelEffPower">
+      <div id="standalonePanels" class="space-y-3" style="display:none">
+        <div class="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden" id="panelEffPower" style="display:none">
           <div class="px-3 py-2 bg-[#1c2330] border-b border-[#30363d] font-semibold text-xs text-[#58a6ff]">
             <i class="bi bi-speedometer2 me-1"></i>Efficiency &amp; Power
           </div>
           <div id="chartEffPower" style="height:260px"></div>
         </div>
-        <div class="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden hidden" id="panelEff">
+        <div class="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden" id="panelEff" style="display:none">
           <div class="px-3 py-2 bg-[#1c2330] border-b border-[#30363d] font-semibold text-xs text-[#3fb950]">
             <i class="bi bi-speedometer2 me-1"></i>Efficiency — Flow
           </div>
           <div id="chartEff" style="height:260px"></div>
         </div>
-        <div class="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden hidden" id="panelPower">
+        <div class="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden" id="panelPower" style="display:none">
           <div class="px-3 py-2 bg-[#1c2330] border-b border-[#30363d] font-semibold text-xs text-[#f85149]">
             <i class="bi bi-lightning-fill me-1"></i>Power — Flow
           </div>
           <div id="chartPower" style="height:260px"></div>
         </div>
-        <div class="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden hidden" id="panelNpsh">
+        <div class="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden" id="panelNpsh" style="display:none">
           <div class="px-3 py-2 bg-[#1c2330] border-b border-[#30363d] font-semibold text-xs text-[#39d3c0]">
             <i class="bi bi-arrow-up-right me-1"></i>NPSHr — Flow
           </div>
@@ -790,7 +790,7 @@
           <button type="button" class="px-3 py-1.5 rounded border border-[#58a6ff]/40 bg-[#58a6ff]/10 text-[#58a6ff] text-xs font-semibold hover:bg-[#58a6ff]/20 transition-colors inline-flex items-center gap-1.5" id="btnAddExtraCurve">
             <i class="bi bi-plus-lg"></i>Add Empty Table
           </button>
-          <button type="button" class="px-3 py-1.5 rounded border border-[#30363d] bg-[#161b22] text-[#c9d1d9] text-xs font-semibold hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#affinityModal">
+          <button type="button" class="px-3 py-1.5 rounded border border-[#30363d] bg-[#161b22] text-[#c9d1d9] text-xs font-semibold hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5" onclick="openAffinityModal()">
             <i class="bi bi-calculator"></i>Affinity Laws Generator
           </button>
           <button type="button" class="px-3 py-1.5 rounded border border-[#30363d] bg-[#161b22] text-[#c9d1d9] text-xs font-semibold hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5" id="btnLoadExtraCurve">
@@ -837,16 +837,17 @@
 </form>
 
 <!-- Affinity Laws Modal -->
-<div class="modal fade" id="affinityModal" tabindex="-1" aria-labelledby="affinityModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content bg-[#161b22] text-[#c9d1d9] border border-[#30363d] rounded-lg shadow-2xl">
-      <div class="modal-header border-b border-[#30363d] px-4 py-3 flex items-center justify-between">
+<!-- Beginners Note: Vanilla modal — no Bootstrap JS needed. Opened/closed by openAffinityModal()/closeAffinityModal() -->
+<div class="pmp-modal-backdrop" id="affinityModal">
+  <div style="width:100%;max-width:420px;margin:1rem;">
+    <div class="w-full bg-[#161b22] text-[#c9d1d9] border border-[#30363d] rounded-lg shadow-2xl">
+      <div class="border-b border-[#30363d] px-4 py-3 flex items-center justify-between">
         <h5 class="modal-title font-bold text-white text-base flex items-center gap-2" id="affinityModalLabel">
           <i class="bi bi-calculator text-[#58a6ff]"></i>Affinity Laws Generator
         </h5>
-        <button type="button" class="text-[#8b949e] hover:text-white" data-bs-dismiss="modal" aria-label="Close"><i class="bi bi-x-lg"></i></button>
+        <button type="button" class="text-[#8b949e] hover:text-white" onclick="closeAffinityModal()" aria-label="Close"><i class="bi bi-x-lg"></i></button>
       </div>
-      <div class="modal-body p-4 space-y-3 text-xs">
+      <div class="p-4 space-y-3 text-xs">
         <p class="text-[#8b949e]">
           Scales the <strong>Base Curve</strong> (main data table) using affinity laws to create a new impeller trim or speed curve.
         </p>
@@ -868,8 +869,8 @@
           <input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]" id="affinityValue" step="any" required>
         </div>
       </div>
-      <div class="modal-footer border-t border-[#30363d] p-3 flex items-center justify-end gap-2">
-        <button type="button" class="px-3 py-1.5 rounded border border-[#30363d] text-[#8b949e] hover:text-white text-xs font-medium" data-bs-dismiss="modal">Cancel</button>
+      <div class="border-t border-[#30363d] p-3 flex items-center justify-end gap-2">
+        <button type="button" class="px-3 py-1.5 rounded border border-[#30363d] text-[#8b949e] hover:text-white text-xs font-medium" onclick="closeAffinityModal()">Cancel</button>
         <button type="button" class="px-3.5 py-1.5 rounded bg-[#58a6ff] text-white text-xs font-bold hover:bg-[#388bfd] shadow" id="btnGenerateAffinity">Generate</button>
       </div>
     </div>
@@ -879,6 +880,28 @@
 {% endblock %}
 
 {% block scripts %}
+
+<script>
+  /* Beginners Note: Vanilla modal helpers replace Bootstrap's data-bs-toggle/dismiss.
+     openAffinityModal() shows the backdrop; closeAffinityModal() hides it.
+     Clicking the backdrop itself also closes the modal (same as Bootstrap default). */
+  function openAffinityModal() {
+    document.getElementById('affinityModal').classList.add('open');
+  }
+  function closeAffinityModal() {
+    document.getElementById('affinityModal').classList.remove('open');
+  }
+  // Close on backdrop click (click outside the inner dialog box)
+  document.getElementById('affinityModal').addEventListener('click', function(e) {
+    if (e.target === this) closeAffinityModal();
+  });
+  // Close on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeAffinityModal();
+  });
+</script>
+
+
 <div id="pump-init-data"
      data-is-edit="{{ 'true' if pump else 'false' }}"
      data-pump-id="{{ pump.id if pump else '' }}"
@@ -906,8 +929,8 @@
      data-graph-options='{{ (pump.get_graph_options() | tojson) if pump else "{}" }}'
      {% endif %}>
 </div>
-<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=30"></script>
-<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=35"></script>
+<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=35"></script>
+<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=45"></script>
 <script>
 // Beginners Note: Generic card toggle helper for smooth card collapse & expand
 function toggleCard(bodyId, chevronId) {
@@ -997,7 +1020,7 @@ function toggleCard(bodyId, chevronId) {
         const mainControls = document.getElementById('main_curve_custom_controls');
         if (mainStyleStr.startsWith('custom;')) {
           if (mainModeSel) mainModeSel.value = 'custom';
-          if (mainControls) { mainControls.classList.remove('d-none'); mainControls.classList.add('d-inline-flex'); }
+          if (mainControls) { mainControls.classList.remove('hidden'); mainControls.classList.add('inline-flex'); }
           const parts = mainStyleStr.split(';');
           if (parts[1]) {
             const mc = document.getElementById('main_curve_color');
@@ -1012,7 +1035,7 @@ function toggleCard(bodyId, chevronId) {
           }
         } else {
           if (mainModeSel) mainModeSel.value = 'graph';
-          if (mainControls) { mainControls.classList.remove('d-inline-flex'); mainControls.classList.add('d-none'); }
+          if (mainControls) { mainControls.classList.remove('inline-flex'); mainControls.classList.add('hidden'); }
         }
       }
     // Show preview with existing fit on load

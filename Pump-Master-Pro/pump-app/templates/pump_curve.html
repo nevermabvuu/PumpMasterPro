@@ -2,37 +2,50 @@
 {% block title %}{{ pump.name }} — Curves{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+<!-- Page header: title left, action buttons right -->
+<div class="flex justify-between items-start flex-wrap gap-3 mb-4">
   <div class="page-header mb-0">
-    <h1 class="page-title"><i class="bi bi-activity text-accent me-2"></i>{{ pump.name }}</h1>
+    <h1 class="page-title"><i class="bi bi-activity text-accent mr-2"></i>{{ pump.name }}</h1>
     <p class="page-subtitle">
       {{ pump.manufacturer or '' }} &bull; {{ pump.pump_type }} &bull; {{ pump.speed_rpm|int }} rpm
       &bull; Ø{{ pump.impeller_dia_mm|int }} mm max impeller
     </p>
   </div>
-  <div class="d-flex gap-2 flex-wrap">
-    <a href="{{ url_for('pump_edit', pump_id=pump.id) }}" class="btn btn-outline-primary btn-sm">
-      <i class="bi bi-pencil me-1"></i>Edit
+  <div class="flex gap-2 flex-wrap">
+    <a href="{{ url_for('pump_edit', pump_id=pump.id) }}"
+       class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium transition-colors"
+       style="border:1px solid rgba(88,166,255,0.4);color:#58a6ff;"
+       onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
+      <i class="bi bi-pencil"></i>Edit
     </a>
-    <a href="{{ url_for('pump_comparison') }}?ids={{ pump.id }}" class="btn btn-outline-info btn-sm">
-      <i class="bi bi-bar-chart-line me-1"></i>Compare
+    <a href="{{ url_for('pump_comparison') }}?ids={{ pump.id }}"
+       class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium transition-colors"
+       style="border:1px solid rgba(57,211,192,0.4);color:#39d3c0;"
+       onmouseover="this.style.background='rgba(57,211,192,0.1)'" onmouseout="this.style.background='transparent'">
+      <i class="bi bi-bar-chart-line"></i>Compare
     </a>
-    <a href="{{ url_for('pump_data') }}" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-arrow-left me-1"></i>Catalogue
+    <a href="{{ url_for('pump_data') }}"
+       class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium transition-colors"
+       style="border:1px solid #30363d;color:#8b949e;"
+       onmouseover="this.style.background='#1c2330'" onmouseout="this.style.background='transparent'">
+      <i class="bi bi-arrow-left"></i>Catalogue
     </a>
   </div>
 </div>
 
-<!-- Graph View Disabled Placeholder -->
-<div class="card card-dark my-4">
-  <div class="card-body text-center py-5">
-    <i class="bi bi-graph-up-arrow text-accent display-4 mb-3 d-block"></i>
-    <h4 class="text-light fw-semibold">Curve View</h4>
-    <p class="text-muted mx-auto" style="max-width: 500px;">
+<!-- Curve viewer placeholder -->
+<div class="card-dark my-4">
+  <div class="p-8 text-center">
+    <i class="bi bi-graph-up-arrow text-accent block text-5xl mb-3" style="color:#58a6ff;"></i>
+    <h4 class="font-semibold mb-2" style="color:#e6edf3;">Curve View</h4>
+    <p class="text-muted mx-auto mb-4" style="max-width:500px;">
       The graph display on this page has been removed. Content for this page will be decided later.
     </p>
-    <a href="{{ url_for('pump_edit', pump_id=pump.id) }}" class="btn btn-outline-primary mt-2">
-      <i class="bi bi-pencil-square me-1"></i>Edit Pump Data &amp; Preview
+    <a href="{{ url_for('pump_edit', pump_id=pump.id) }}"
+       class="inline-flex items-center gap-1 px-4 py-2 rounded text-sm font-medium transition-colors"
+       style="border:1px solid rgba(88,166,255,0.4);color:#58a6ff;"
+       onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
+      <i class="bi bi-pencil-square"></i>Edit Pump Data &amp; Preview
     </a>
   </div>
 </div>

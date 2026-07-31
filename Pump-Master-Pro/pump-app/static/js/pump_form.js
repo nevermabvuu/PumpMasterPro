@@ -235,11 +235,11 @@ function initUnitSelectors() {
       const controls = document.getElementById('main_curve_custom_controls');
       if (controls) {
         if (e.target.value === 'custom') {
-          controls.classList.remove('d-none');
-          controls.classList.add('d-inline-flex');
+          controls.classList.remove('hidden');
+          controls.classList.add('inline-flex');
         } else {
-          controls.classList.remove('d-inline-flex');
-          controls.classList.add('d-none');
+          controls.classList.remove('inline-flex');
+          controls.classList.add('hidden');
         }
       }
       if (typeof serializeGraphOptions === 'function') serializeGraphOptions();
@@ -1217,34 +1217,47 @@ function renderPreviewChartsData(warmanData, curveData) {
     wc.layout.yaxis2.title = `NPSHr (${labelNpsh})`;
   }
 
+  // Helper to safely toggle element visibility (removing Tailwind 'hidden' class + setting inline style)
+  function setVis(el, show, dispStyle = 'block') {
+    if (!el) return;
+    if (show) {
+      el.classList.remove('hidden');
+      el.style.display = dispStyle;
+    } else {
+      el.classList.add('hidden');
+      el.style.display = 'none';
+    }
+  }
+
   // Toggle main Performance Map Preview card display
   const panelWarmanPreview = document.getElementById('panelWarmanPreview');
   if (panelWarmanPreview) {
-    panelWarmanPreview.style.display = showHQ ? '' : 'none';
+    setVis(panelWarmanPreview, showHQ);
   }
   Plotly.react('chartWarman', wc.traces, wc.layout, PLOTLY_CONFIG);
+  Plotly.Plots.resize('chartWarman');
   if (wc.layout.annotations && wc.layout.annotations.length > 0) {
     const _pumpId = parseInt(document.getElementById('pump-init-data')?.dataset?.pumpId) || 0;
     if (_pumpId) makeAnnotationsDraggable('chartWarman', wc.layout.annotations, _pumpId);
   }
 
-  const showOther = document.getElementById('chkShowOther').checked;
-  document.getElementById('standalonePanels').style.display = showOther ? '' : 'none';
-  document.getElementById('otherGraphsOptions').style.display = showOther ? '' : 'none';
+  const showOther = document.getElementById('chkShowOther')?.checked || false;
+  setVis(document.getElementById('standalonePanels'), showOther);
+  setVis(document.getElementById('otherGraphsOptions'), showOther);
 
   if (showOther && curveData) {
-    const showEff = document.getElementById('chkShowEff')?.checked;
-    const showPower = document.getElementById('chkShowPower')?.checked;
-    const showNpsh = document.getElementById('chkShowNpsh')?.checked;
-    const combineEffPower = document.getElementById('chkCombineEffPower')?.checked;
+    const showEff = document.getElementById('chkShowEff')?.checked || false;
+    const showPower = document.getElementById('chkShowPower')?.checked || false;
+    const showNpsh = document.getElementById('chkShowNpsh')?.checked || false;
+    const combineEffPower = document.getElementById('chkCombineEffPower')?.checked || false;
 
     const showClean = curveData.liquid !== 'water';
 
     // Toggle panels
-    document.getElementById('panelEffPower').style.display = (showEff && showPower && combineEffPower) ? '' : 'none';
-    document.getElementById('panelEff').style.display = (showEff && (!showPower || !combineEffPower)) ? '' : 'none';
-    document.getElementById('panelPower').style.display = (showPower && (!showEff || !combineEffPower)) ? '' : 'none';
-    document.getElementById('panelNpsh').style.display = showNpsh ? '' : 'none';
+    setVis(document.getElementById('panelEffPower'), showEff && showPower && combineEffPower);
+    setVis(document.getElementById('panelEff'), showEff && (!showPower || !combineEffPower));
+    setVis(document.getElementById('panelPower'), showPower && (!showEff || !combineEffPower));
+    setVis(document.getElementById('panelNpsh'), showNpsh);
 
     // Check pump ID so we know which pump's label positions to save in database
     const currentPumpId = parseInt(document.getElementById('pump-init-data')?.dataset?.pumpId) || 0;
@@ -1255,6 +1268,7 @@ function renderPreviewChartsData(warmanData, curveData) {
       effPow.layout.yaxis.title = 'Efficiency (%)';
       effPow.layout.yaxis2.title = `Shaft Power P (${labelPow})`;
       Plotly.react('chartEffPower', effPow.traces, effPow.layout, PLOTLY_CONFIG);
+      Plotly.Plots.resize('chartEffPower');
 
       // Beginner Note: Turn on drag-and-drop & keyboard control for labels on Combined Eff/Power graph
       if (effPow.layout.annotations && effPow.layout.annotations.length > 0 && currentPumpId) {
@@ -1266,6 +1280,7 @@ function renderPreviewChartsData(warmanData, curveData) {
         eff.layout.xaxis.title = `Flow Q (${labelQ})`;
         eff.layout.yaxis.title = 'Efficiency (%)';
         Plotly.react('chartEff', eff.traces, eff.layout, PLOTLY_CONFIG);
+        Plotly.Plots.resize('chartEff');
 
         // Beginner Note: Turn on drag-and-drop & keyboard control for labels on Efficiency graph
         if (eff.layout.annotations && eff.layout.annotations.length > 0 && currentPumpId) {
@@ -1277,6 +1292,7 @@ function renderPreviewChartsData(warmanData, curveData) {
         power.layout.xaxis.title = `Flow Q (${labelQ})`;
         power.layout.yaxis.title = `Shaft Power P (${labelPow})`;
         Plotly.react('chartPower', power.traces, power.layout, PLOTLY_CONFIG);
+        Plotly.Plots.resize('chartPower');
 
         // Beginner Note: Turn on drag-and-drop & keyboard control for labels on Power graph
         if (power.layout.annotations && power.layout.annotations.length > 0 && currentPumpId) {
@@ -1290,6 +1306,7 @@ function renderPreviewChartsData(warmanData, curveData) {
       npsh.layout.xaxis.title = `Flow Q (${labelQ})`;
       npsh.layout.yaxis.title = `NPSHr (${labelNpsh})`;
       Plotly.react('chartNpsh', npsh.traces, npsh.layout, PLOTLY_CONFIG);
+      Plotly.Plots.resize('chartNpsh');
 
       // Beginner Note: Turn on drag-and-drop & keyboard control for labels on NPSH graph
       if (npsh.layout.annotations && npsh.layout.annotations.length > 0 && currentPumpId) {
@@ -1855,30 +1872,27 @@ function addExtraCurveCard(existingData) {
   }
 
   div.innerHTML = `
-    <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-      <span class="curve-color-dot"
-            style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${color}"></span>
-      <input type="text" class="form-control form-control-sm form-control-dark extra-label-input"
-             value="${label}" placeholder="Curve label"
-             style="max-width:180px;font-weight:600" data-eid="${id}">
-      <span class="text-muted small ms-1">Diameter:</span>
-      <input type="number" class="form-control form-control-sm form-control-dark extra-dia-input" step="any"
-             value="${diameter}" placeholder="e.g. 280"
-             style="max-width:85px" data-eid="${id}">
-      <select class="header-unit-select unit-select-dia" data-eid="${id}" style="margin-top:0">
+    <div class="flex items-center gap-2 mb-2 flex-wrap text-xs">
+      <span class="curve-color-dot inline-block w-3 h-3 rounded-full" style="background:${color}"></span>
+      <input type="text" class="bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] font-semibold w-44 focus:outline-none focus:border-[#58a6ff] extra-label-input"
+             value="${label}" placeholder="Curve label" data-eid="${id}">
+      <span class="text-[#8b949e]">Diameter:</span>
+      <input type="number" class="bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] w-20 focus:outline-none focus:border-[#58a6ff] extra-dia-input" step="any"
+             value="${diameter}" placeholder="e.g. 280" data-eid="${id}">
+      <select class="header-unit-select unit-select-dia bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1.5 py-1 focus:outline-none" data-eid="${id}">
         <option value="mm" ${diaUnit === 'mm' ? 'selected' : ''}>mm</option>
         <option value="in" ${diaUnit === 'in' ? 'selected' : ''}>in</option>
         <option value="m" ${diaUnit === 'm' ? 'selected' : ''}>m</option>
       </select>
-      <div class="vr mx-1 opacity-50"></div>
-      <span class="text-muted small">Style:</span>
-      <select class="header-unit-select unit-select-style-mode" data-eid="${id}" style="margin-top:0;width:auto">
+      <span class="text-[#30363d] px-1">|</span>
+      <span class="text-[#8b949e]">Style:</span>
+      <select class="header-unit-select unit-select-style-mode bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1.5 py-1 focus:outline-none" data-eid="${id}">
         <option value="graph" ${styleMode === 'graph' ? 'selected' : ''}>Use Graph Settings</option>
         <option value="custom" ${styleMode === 'custom' ? 'selected' : ''}>Use Custom Style</option>
       </select>
-      <div id="extra-custom-controls-${id}" class="extra-custom-controls align-items-center gap-1 ms-1 ${styleMode === 'custom' ? 'd-inline-flex' : 'd-none'}">
-        <input type="color" class="form-control form-control-color extra-color-picker" value="${color}" data-eid="${id}" style="height:26px;width:32px;padding:2px;" title="Curve Color">
-        <select class="header-unit-select extra-weight-select" data-eid="${id}" style="margin-top:0;width:auto;" title="Line Weight">
+      <div id="extra-custom-controls-${id}" class="extra-custom-controls items-center gap-1.5 ${styleMode === 'custom' ? 'inline-flex' : 'hidden'}">
+        <input type="color" class="extra-color-picker bg-[#0d1117] border border-[#30363d] rounded h-6 w-8 p-0.5 cursor-pointer" value="${color}" data-eid="${id}" title="Curve Color">
+        <select class="header-unit-select extra-weight-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1.5 py-1 focus:outline-none" data-eid="${id}" title="Line Weight">
           <option value="1" ${String(weight) === '1' ? 'selected' : ''}>1 px</option>
           <option value="1.5" ${String(weight) === '1.5' ? 'selected' : ''}>1.5 px</option>
           <option value="2" ${String(weight) === '2' ? 'selected' : ''}>2 px</option>
@@ -1886,7 +1900,7 @@ function addExtraCurveCard(existingData) {
           <option value="3" ${String(weight) === '3' ? 'selected' : ''}>3 px</option>
           <option value="4" ${String(weight) === '4' ? 'selected' : ''}>4 px</option>
         </select>
-        <select class="header-unit-select extra-line-style-select" data-eid="${id}" style="margin-top:0;width:auto;" title="Line Style">
+        <select class="header-unit-select extra-line-style-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1.5 py-1 focus:outline-none" data-eid="${id}" title="Line Style">
           <option value="solid" ${style === 'solid' ? 'selected' : ''}>Solid (─)</option>
           <option value="dash" ${style === 'dash' ? 'selected' : ''}>Dashed (---)</option>
           <option value="dot" ${style === 'dot' ? 'selected' : ''}>Dotted (···)</option>
@@ -1894,8 +1908,7 @@ function addExtraCurveCard(existingData) {
           <option value="longdash" ${style === 'longdash' ? 'selected' : ''}>LongDash (——)</option>
         </select>
       </div>
-      <button type="button" class="btn btn-sm btn-outline-danger ms-auto py-0 px-2 btn-extra-remove"
-              data-eid="${id}">&#x2715; Remove</button>
+      <button type="button" class="btn-extra-remove extra-btn-remove inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border border-red-700/40 text-red-400 hover:bg-red-900/20 transition-colors ml-auto" data-eid="${id}">&#x2715; Remove</button>
     </div>
 
     <select class="unit-select-mode" data-eid="${id}" style="display:none">
@@ -1904,8 +1917,8 @@ function addExtraCurveCard(existingData) {
       <option value="both" ${curveMode === 'both' ? 'selected' : ''}>Both</option>
     </select>
 
-    <div class="table-responsive mb-2">
-      <table class="table table-sm table-dark mb-0 align-middle" id="extraTable-${id}" style="font-size:0.83rem">
+    <div class="overflow-x-auto mb-2">
+      <table class="table-dark w-full text-xs border-collapse" id="extraTable-${id}" style="font-size:0.83rem">
         <thead>
           <tr style="background:#21262d">
             <th style="width:115px">
@@ -1924,7 +1937,7 @@ function addExtraCurveCard(existingData) {
                 <option value="ft" ${hUnit === 'ft' ? 'selected' : ''}>ft</option>
               </select>
             </th>
-            <th style="width:85px">Effic. η<br><span class="fw-normal text-muted" style="font-size:0.7rem">(%)</span></th>
+            <th style="width:85px">Effic. η<br><span class="font-normal text-[#8b949e]" style="font-size:0.7rem">(%)</span></th>
             <th style="width:115px">
               NPSHr<br>
               <select class="header-unit-select unit-select-npsh" data-eid="${id}">
@@ -1946,101 +1959,101 @@ function addExtraCurveCard(existingData) {
       </table>
     </div>
 
-    <div class="d-flex gap-2 align-items-center mb-2 flex-wrap">
-      <button type="button" class="btn btn-sm btn-outline-secondary btn-extra-add-row" data-eid="${id}">
-        <i class="bi bi-plus-lg me-1"></i>Add Row
+    <div class="flex gap-2 items-center mb-2 flex-wrap">
+      <button type="button" class="extra-btn-add-row btn-extra-add-row inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-[#30363d] text-[#c9d1d9] hover:bg-slate-800 transition-colors" data-eid="${id}">
+        <i class="bi bi-plus-lg mr-1"></i>Add Row
       </button>
-      <button type="button" class="btn btn-sm btn-outline-info btn-extra-import-file" data-eid="${id}">
-        <i class="bi bi-file-earmark-arrow-up me-1"></i>Import File
+      <button type="button" class="extra-btn-import btn-extra-import-file inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-[#58a6ff]/40 text-[#58a6ff] hover:bg-[#58a6ff]/10 transition-colors" data-eid="${id}">
+        <i class="bi bi-file-earmark-arrow-up mr-1"></i>Import File
       </button>
       <input type="file" class="extra-file-input-${id}" style="display:none" accept=".csv,.txt,.dat">
       
       <!-- Inline Calculation Mode Radio Group -->
-      <div class="d-inline-flex align-items-center gap-2 ms-auto bg-dark p-1 px-2 rounded border border-secondary border-opacity-50" style="font-size:0.78rem">
-        <span class="text-accent fw-semibold">Method:</span>
-        <div class="form-check form-check-inline mb-0 me-1">
-          <input class="form-check-input extra-mode-radio" type="radio" name="extra_mode_${id}" id="extra_mode_fit_${id}" value="fit" ${curveMode === 'fit' ? 'checked' : ''} data-eid="${id}">
-          <label class="form-check-label text-light" style="cursor:pointer" for="extra_mode_fit_${id}">Fitted</label>
-        </div>
-        <div class="form-check form-check-inline mb-0 me-1">
-          <input class="form-check-input extra-mode-radio" type="radio" name="extra_mode_${id}" id="extra_mode_affinity_${id}" value="affinity" ${curveMode === 'affinity' ? 'checked' : ''} data-eid="${id}">
-          <label class="form-check-label text-light" style="cursor:pointer" for="extra_mode_affinity_${id}">Affinity</label>
-        </div>
-        <div class="form-check form-check-inline mb-0">
-          <input class="form-check-input extra-mode-radio" type="radio" name="extra_mode_${id}" id="extra_mode_both_${id}" value="both" ${curveMode === 'both' ? 'checked' : ''} data-eid="${id}">
-          <label class="form-check-label text-light" style="cursor:pointer" for="extra_mode_both_${id}">Both</label>
-        </div>
+      <div class="inline-flex items-center gap-2 ml-auto p-1 px-2 rounded border border-[#30363d]" style="font-size:0.78rem;background:#161b22">
+        <span class="text-[#58a6ff] font-semibold">Method:</span>
+        <label class="inline-flex items-center gap-1 text-xs cursor-pointer text-[#c9d1d9]" style="margin-bottom:0;">
+          <input class="extra-mode-radio" type="radio" name="extra_mode_${id}" id="extra_mode_fit_${id}" value="fit" ${curveMode === 'fit' ? 'checked' : ''} data-eid="${id}" style="accent-color:#58a6ff;">
+          <span>Fitted</span>
+        </label>
+        <label class="inline-flex items-center gap-1 text-xs cursor-pointer text-[#c9d1d9]" style="margin-bottom:0;">
+          <input class="extra-mode-radio" type="radio" name="extra_mode_${id}" id="extra_mode_affinity_${id}" value="affinity" ${curveMode === 'affinity' ? 'checked' : ''} data-eid="${id}" style="accent-color:#58a6ff;">
+          <span>Affinity</span>
+        </label>
+        <label class="inline-flex items-center gap-1 text-xs cursor-pointer text-[#c9d1d9]" style="margin-bottom:0;">
+          <input class="extra-mode-radio" type="radio" name="extra_mode_${id}" id="extra_mode_both_${id}" value="both" ${curveMode === 'both' ? 'checked' : ''} data-eid="${id}" style="accent-color:#58a6ff;">
+          <span>Both</span>
+        </label>
       </div>
 
-      <button type="button" class="btn btn-sm btn-primary btn-extra-fit" data-eid="${id}">
-        <i class="bi bi-calculator me-1"></i>Fit &amp; Preview
+      <button type="button" class="extra-btn-fit btn-extra-fit inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold transition-colors" style="background:#58a6ff;color:#0d1117;" data-eid="${id}">
+        <i class="bi bi-calculator mr-1"></i>Fit &amp; Preview
       </button>
     </div>
 
     <div class="extra-curve-status mb-2" id="extra-status-${id}"></div>
 
     <!-- Polynomial Coefficients Accordion -->
-    <div class="card card-dark border-secondary border-opacity-50 mt-2">
-      <div class="card-header card-header-dark py-1 px-2 d-flex justify-content-between align-items-center" style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#extraCoeffPanel_${id}">
-        <span class="small fw-semibold"><i class="bi bi-chevron-down me-1"></i>Polynomial Coefficients <span class="text-muted fw-normal">(auto-filled by Fit or entered manually)</span></span>
-        <span class="badge bg-secondary" style="font-size:0.7rem">Polynomials</span>
+    <div class="card-dark border border-[#30363d] mt-2 rounded">
+      <div class="flex justify-between items-center py-1 px-2 bg-[#1c2330] border-b border-[#30363d] cursor-pointer hover:bg-slate-800/60 transition-colors" style="cursor:pointer" onclick="this.nextElementSibling.classList.toggle('hidden')">
+        <span class="text-xs font-semibold"><i class="bi bi-chevron-down mr-1"></i>Polynomial Coefficients <span class="text-[#8b949e] font-normal">(auto-filled by Fit or entered manually)</span></span>
+        <span style="font-size:0.7rem;background:rgba(88,166,255,0.15);color:#58a6ff;padding:1px 6px;border-radius:4px;">Polynomials</span>
       </div>
-      <div class="collapse" id="extraCoeffPanel_${id}">
-        <div class="card-body p-2" style="font-size:0.8rem">
-          <div class="row g-2">
+      <div class="hidden" id="extraCoeffPanel_${id}">
+        <div class="p-2" style="font-size:0.8rem">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
             <!-- H-Q -->
-            <div class="col-md-6">
+            <div>
               <div class="p-1 px-2 rounded" style="background:#161b22;border:1px solid #30363d">
-                <div class="text-accent fw-semibold mb-1 extra-eq-title-hq" style="font-size:0.75rem"><i class="bi bi-graph-down-arrow me-1"></i>H-Q: H = a₀ + a₁Q + a₂Q² + a₃Q³</div>
-                <div class="row g-1">
-                  <div class="col-4" id="extra-wrap-hq_a0-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₀</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a0" data-eid="${id}" step="any" value="${existingData?.hq_a0 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-hq_a1-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₁</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a1" data-eid="${id}" step="any" value="${existingData?.hq_a1 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-hq_a2-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₂</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a2" data-eid="${id}" step="any" value="${existingData?.hq_a2 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-hq_a3-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₃</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a3" data-eid="${id}" step="any" value="${existingData?.hq_a3 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-hq_a4-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₄</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a4" data-eid="${id}" step="any" value="${existingData?.hq_a4 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-hq_a5-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">a₅</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-hq_a5" data-eid="${id}" step="any" value="${existingData?.hq_a5 ?? 0}"></div>
+                <div class="text-[#58a6ff] font-semibold mb-1 extra-eq-title-hq" style="font-size:0.75rem"><i class="bi bi-graph-down-arrow mr-1"></i>H-Q: H = a₀ + a₁Q + a₂Q² + a₃Q³</div>
+                <div class="grid grid-cols-3 gap-1">
+                  <div id="extra-wrap-hq_a0-${id}"><label class="block text-[10px] text-[#8b949e]">a₀</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-hq_a0" data-eid="${id}" step="any" value="${existingData?.hq_a0 ?? 0}"></div>
+                  <div id="extra-wrap-hq_a1-${id}"><label class="block text-[10px] text-[#8b949e]">a₁</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-hq_a1" data-eid="${id}" step="any" value="${existingData?.hq_a1 ?? 0}"></div>
+                  <div id="extra-wrap-hq_a2-${id}"><label class="block text-[10px] text-[#8b949e]">a₂</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-hq_a2" data-eid="${id}" step="any" value="${existingData?.hq_a2 ?? 0}"></div>
+                  <div id="extra-wrap-hq_a3-${id}"><label class="block text-[10px] text-[#8b949e]">a₃</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-hq_a3" data-eid="${id}" step="any" value="${existingData?.hq_a3 ?? 0}"></div>
+                  <div id="extra-wrap-hq_a4-${id}"><label class="block text-[10px] text-[#8b949e]">a₄</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-hq_a4" data-eid="${id}" step="any" value="${existingData?.hq_a4 ?? 0}"></div>
+                  <div id="extra-wrap-hq_a5-${id}"><label class="block text-[10px] text-[#8b949e]">a₅</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-hq_a5" data-eid="${id}" step="any" value="${existingData?.hq_a5 ?? 0}"></div>
                 </div>
               </div>
             </div>
             <!-- Efficiency -->
-            <div class="col-md-6">
+            <div>
               <div class="p-1 px-2 rounded" style="background:#161b22;border:1px solid #30363d">
-                <div class="text-success fw-semibold mb-1 extra-eq-title-eff" style="font-size:0.75rem"><i class="bi bi-speedometer2 me-1"></i>Efficiency: η = b₀ + b₁Q + b₂Q² + b₃Q³</div>
-                <div class="row g-1">
-                  <div class="col-4" id="extra-wrap-eff_b0-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₀</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b0" data-eid="${id}" step="any" value="${existingData?.eff_b0 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-eff_b1-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₁</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b1" data-eid="${id}" step="any" value="${existingData?.eff_b1 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-eff_b2-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₂</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b2" data-eid="${id}" step="any" value="${existingData?.eff_b2 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-eff_b3-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₃</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b3" data-eid="${id}" step="any" value="${existingData?.eff_b3 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-eff_b4-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₄</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b4" data-eid="${id}" step="any" value="${existingData?.eff_b4 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-eff_b5-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">b₅</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-eff_b5" data-eid="${id}" step="any" value="${existingData?.eff_b5 ?? 0}"></div>
+                <div class="text-[#3fb950] font-semibold mb-1 extra-eq-title-eff" style="font-size:0.75rem"><i class="bi bi-speedometer2 mr-1"></i>Efficiency: η = b₀ + b₁Q + b₂Q² + b₃Q³</div>
+                <div class="grid grid-cols-3 gap-1">
+                  <div id="extra-wrap-eff_b0-${id}"><label class="block text-[10px] text-[#8b949e]">b₀</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-eff_b0" data-eid="${id}" step="any" value="${existingData?.eff_b0 ?? 0}"></div>
+                  <div id="extra-wrap-eff_b1-${id}"><label class="block text-[10px] text-[#8b949e]">b₁</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-eff_b1" data-eid="${id}" step="any" value="${existingData?.eff_b1 ?? 0}"></div>
+                  <div id="extra-wrap-eff_b2-${id}"><label class="block text-[10px] text-[#8b949e]">b₂</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-eff_b2" data-eid="${id}" step="any" value="${existingData?.eff_b2 ?? 0}"></div>
+                  <div id="extra-wrap-eff_b3-${id}"><label class="block text-[10px] text-[#8b949e]">b₃</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-eff_b3" data-eid="${id}" step="any" value="${existingData?.eff_b3 ?? 0}"></div>
+                  <div id="extra-wrap-eff_b4-${id}"><label class="block text-[10px] text-[#8b949e]">b₄</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-eff_b4" data-eid="${id}" step="any" value="${existingData?.eff_b4 ?? 0}"></div>
+                  <div id="extra-wrap-eff_b5-${id}"><label class="block text-[10px] text-[#8b949e]">b₅</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-eff_b5" data-eid="${id}" step="any" value="${existingData?.eff_b5 ?? 0}"></div>
                 </div>
               </div>
             </div>
             <!-- NPSH -->
-            <div class="col-md-6">
+            <div>
               <div class="p-1 px-2 rounded" style="background:#161b22;border:1px solid #30363d">
-                <div class="text-warning fw-semibold mb-1 extra-eq-title-npsh" style="font-size:0.75rem"><i class="bi bi-arrow-up-right me-1"></i>NPSHr: c₀ + c₁Q + c₂Q²</div>
-                <div class="row g-1">
-                  <div class="col-4" id="extra-wrap-npsh_c0-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₀</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c0" data-eid="${id}" step="any" value="${existingData?.npsh_c0 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-npsh_c1-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₁</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c1" data-eid="${id}" step="any" value="${existingData?.npsh_c1 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-npsh_c2-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₂</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c2" data-eid="${id}" step="any" value="${existingData?.npsh_c2 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-npsh_c3-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₃</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c3" data-eid="${id}" step="any" value="${existingData?.npsh_c3 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-npsh_c4-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₄</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c4" data-eid="${id}" step="any" value="${existingData?.npsh_c4 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-npsh_c5-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">c₅</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-npsh_c5" data-eid="${id}" step="any" value="${existingData?.npsh_c5 ?? 0}"></div>
+                <div class="text-[#ff9900] font-semibold mb-1 extra-eq-title-npsh" style="font-size:0.75rem"><i class="bi bi-arrow-up-right mr-1"></i>NPSHr: c₀ + c₁Q + c₂Q²</div>
+                <div class="grid grid-cols-3 gap-1">
+                  <div id="extra-wrap-npsh_c0-${id}"><label class="block text-[10px] text-[#8b949e]">c₀</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-npsh_c0" data-eid="${id}" step="any" value="${existingData?.npsh_c0 ?? 0}"></div>
+                  <div id="extra-wrap-npsh_c1-${id}"><label class="block text-[10px] text-[#8b949e]">c₁</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-npsh_c1" data-eid="${id}" step="any" value="${existingData?.npsh_c1 ?? 0}"></div>
+                  <div id="extra-wrap-npsh_c2-${id}"><label class="block text-[10px] text-[#8b949e]">c₂</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-npsh_c2" data-eid="${id}" step="any" value="${existingData?.npsh_c2 ?? 0}"></div>
+                  <div id="extra-wrap-npsh_c3-${id}"><label class="block text-[10px] text-[#8b949e]">c₃</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-npsh_c3" data-eid="${id}" step="any" value="${existingData?.npsh_c3 ?? 0}"></div>
+                  <div id="extra-wrap-npsh_c4-${id}"><label class="block text-[10px] text-[#8b949e]">c₄</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-npsh_c4" data-eid="${id}" step="any" value="${existingData?.npsh_c4 ?? 0}"></div>
+                  <div id="extra-wrap-npsh_c5-${id}"><label class="block text-[10px] text-[#8b949e]">c₅</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-npsh_c5" data-eid="${id}" step="any" value="${existingData?.npsh_c5 ?? 0}"></div>
                 </div>
               </div>
             </div>
             <!-- Power -->
-            <div class="col-md-6">
+            <div>
               <div class="p-1 px-2 rounded" style="background:#161b22;border:1px solid #30363d">
-                <div class="text-info fw-semibold mb-1 extra-eq-title-pow" style="font-size:0.75rem"><i class="bi bi-lightning-charge me-1"></i>Shaft Power: P = p₀ + p₁Q + p₂Q² (kW)</div>
-                <div class="row g-1">
-                  <div class="col-4" id="extra-wrap-pow_p0-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₀</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p0" data-eid="${id}" step="any" value="${existingData?.pow_p0 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-pow_p1-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₁</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p1" data-eid="${id}" step="any" value="${existingData?.pow_p1 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-pow_p2-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₂</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p2" data-eid="${id}" step="any" value="${existingData?.pow_p2 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-pow_p3-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₃</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p3" data-eid="${id}" step="any" value="${existingData?.pow_p3 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-pow_p4-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₄</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p4" data-eid="${id}" step="any" value="${existingData?.pow_p4 ?? 0}"></div>
-                  <div class="col-4" id="extra-wrap-pow_p5-${id}"><label class="form-label form-label-sm m-0 text-muted" style="font-size:0.68rem">p₅</label><input type="number" class="form-control form-control-sm form-control-dark extra-cf-pow_p5" data-eid="${id}" step="any" value="${existingData?.pow_p5 ?? 0}"></div>
+                <div class="text-[#f85149] font-semibold mb-1 extra-eq-title-pow" style="font-size:0.75rem"><i class="bi bi-lightning-charge mr-1"></i>Shaft Power: P = p₀ + p₁Q + p₂Q² (kW)</div>
+                <div class="grid grid-cols-3 gap-1">
+                  <div id="extra-wrap-pow_p0-${id}"><label class="block text-[10px] text-[#8b949e]">p₀</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-pow_p0" data-eid="${id}" step="any" value="${existingData?.pow_p0 ?? 0}"></div>
+                  <div id="extra-wrap-pow_p1-${id}"><label class="block text-[10px] text-[#8b949e]">p₁</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-pow_p1" data-eid="${id}" step="any" value="${existingData?.pow_p1 ?? 0}"></div>
+                  <div id="extra-wrap-pow_p2-${id}"><label class="block text-[10px] text-[#8b949e]">p₂</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-pow_p2" data-eid="${id}" step="any" value="${existingData?.pow_p2 ?? 0}"></div>
+                  <div id="extra-wrap-pow_p3-${id}"><label class="block text-[10px] text-[#8b949e]">p₃</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-pow_p3" data-eid="${id}" step="any" value="${existingData?.pow_p3 ?? 0}"></div>
+                  <div id="extra-wrap-pow_p4-${id}"><label class="block text-[10px] text-[#8b949e]">p₄</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-pow_p4" data-eid="${id}" step="any" value="${existingData?.pow_p4 ?? 0}"></div>
+                  <div id="extra-wrap-pow_p5-${id}"><label class="block text-[10px] text-[#8b949e]">p₅</label><input type="number" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] extra-cf-pow_p5" data-eid="${id}" step="any" value="${existingData?.pow_p5 ?? 0}"></div>
                 </div>
               </div>
             </div>
@@ -2160,11 +2173,11 @@ function addExtraCurveCard(existingData) {
       const controlsDiv = div.querySelector(`#extra-custom-controls-${id}`);
       if (controlsDiv) {
         if (mode === 'custom') {
-          controlsDiv.classList.remove('d-none');
-          controlsDiv.classList.add('d-inline-flex');
+          controlsDiv.classList.remove('hidden');
+          controlsDiv.classList.add('inline-flex');
         } else {
-          controlsDiv.classList.remove('d-inline-flex');
-          controlsDiv.classList.add('d-none');
+          controlsDiv.classList.remove('inline-flex');
+          controlsDiv.classList.add('hidden');
         }
       }
       serializeExtraCurves();
@@ -2197,7 +2210,7 @@ function addExtraCurveCard(existingData) {
   });
 
   // Events: label
-  div.querySelector('.extra-label-input').addEventListener('input', e => {
+  div.querySelector('.extra-label-input')?.addEventListener('input', e => {
     const curve = extraCurves.find(c => c.id === parseInt(e.target.dataset.eid));
     if (curve) {
       curve.label = e.target.value || `Curve ${curve.id}`;
@@ -2207,7 +2220,7 @@ function addExtraCurveCard(existingData) {
   });
 
   // Events: diameter
-  div.querySelector('.extra-dia-input').addEventListener('input', e => {
+  div.querySelector('.extra-dia-input')?.addEventListener('input', e => {
     const curve = extraCurves.find(c => c.id === id);
     if (curve) {
       curve.diameter = e.target.value.trim() !== '' ? parseFloat(e.target.value) : '';
@@ -2216,7 +2229,7 @@ function addExtraCurveCard(existingData) {
   });
 
   // Events: add row
-  div.querySelector('.btn-extra-add-row').addEventListener('click', e => {
+  div.querySelector('.btn-extra-add-row')?.addEventListener('click', e => {
     const eid = parseInt(e.currentTarget.dataset.eid);
     const tbody = document.querySelector(`#extraTable-${eid} tbody`);
     const row = document.createElement('tr');
@@ -2227,18 +2240,18 @@ function addExtraCurveCard(existingData) {
     const currentPowUnit = div.querySelector('.unit-select-pow')?.value || 'kw';
 
     row.innerHTML = _extraRow(currentQUnit, currentHUnit, currentNpshUnit, currentPowUnit);
-    tbody.appendChild(row);
+    tbody?.appendChild(row);
     _wireExtraRow(row, eid);
   });
 
   // Events: fit
-  div.querySelector('.btn-extra-fit').addEventListener('click', e => {
+  div.querySelector('.btn-extra-fit')?.addEventListener('click', e => {
     fitExtraCurve(parseInt(e.currentTarget.dataset.eid));
     serializeDataUnits();
   });
 
   // Events: remove
-  div.querySelector('.btn-extra-remove').addEventListener('click', e => {
+  div.querySelector('.btn-extra-remove')?.addEventListener('click', e => {
     const eid = parseInt(e.currentTarget.dataset.eid);
     extraCurves = extraCurves.filter(c => c.id !== eid);
     document.getElementById(`extra-entry-${eid}`)?.remove();
@@ -2252,10 +2265,10 @@ function addExtraCurveCard(existingData) {
 
   // Events: import file
   const cardFileInp = div.querySelector(`.extra-file-input-${id}`);
-  div.querySelector('.btn-extra-import-file').addEventListener('click', () => {
-    cardFileInp.click();
+  div.querySelector('.btn-extra-import-file')?.addEventListener('click', () => {
+    cardFileInp?.click();
   });
-  cardFileInp.addEventListener('change', (e) => {
+  cardFileInp?.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -2296,11 +2309,14 @@ function addExtraCurveCard(existingData) {
 
   updateExtraBadge();
 
-  // Auto-open the collapse panel
+  // Auto-open the collapse panel (Tailwind)
   const body = document.getElementById('extraCurvesBody');
-  if (body && !body.classList.contains('show') && !body.classList.contains('collapsing')) {
-    new bootstrap.Collapse(body, { toggle: true });
+  const chevron = document.getElementById('extraCurvesChevron');
+  if (body) {
+    body.classList.remove('hidden');
+    if (chevron) chevron.style.transform = 'rotate(180deg)';
   }
+  updateExtraPolynomialUI(id);
 }
 
 /* ── Entry point: initialise extra curves (called from inline script) ─────── */
@@ -2556,9 +2572,11 @@ function generateAffinityCurve() {
   const newId = _extraCurveIdCounter;
   fitExtraCurve(newId);
 
-  const modalEl = document.getElementById('affinityModal');
-  const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-  modal.hide();
+  if (typeof closeAffinityModal === 'function') {
+    closeAffinityModal();
+  } else {
+    document.getElementById('affinityModal')?.classList.remove('open');
+  }
 }
 
 function initExtraCurveFileLoader() {

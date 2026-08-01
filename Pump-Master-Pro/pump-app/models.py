@@ -146,13 +146,41 @@ class Pump(db.Model):
     impeller_material  = db.Column(db.String(100), default='')
     casing_material    = db.Column(db.String(100), default='')
     number_of_vanes    = db.Column(db.Integer, default=5)
+
+    # Pipe Sizes & Mechanical Operating Limits with Selectable Units
     suction_size       = db.Column(db.String(50), default='')
     discharge_size     = db.Column(db.String(50), default='')
+    unit_suction       = db.Column(db.String(20), default='mm')
+    unit_discharge     = db.Column(db.String(20), default='mm')
+
     max_solid_size_mm  = db.Column(db.Float, default=0.0)
+    unit_solid         = db.Column(db.String(20), default='mm')
+
     max_pressure_bar   = db.Column(db.Float, default=0.0)
+    unit_pressure      = db.Column(db.String(20), default='bar')
+
     max_temp_c         = db.Column(db.Float, default=0.0)
+    unit_temp          = db.Column(db.String(20), default='degC')
+
     seal_type          = db.Column(db.String(100), default='')
     drive_type         = db.Column(db.String(100), default='')
+
+    # Special Hydraulic & Construction Design Considerations
+    is_multistage      = db.Column(db.Boolean, default=False)
+    num_stages         = db.Column(db.Integer, default=1)
+    is_double_suction  = db.Column(db.Boolean, default=False)
+    is_angle_trim      = db.Column(db.Boolean, default=False)
+    is_self_priming    = db.Column(db.Boolean, default=False)
+    is_non_clog        = db.Column(db.Boolean, default=False)
+    has_inducer        = db.Column(db.Boolean, default=False)
+
+    # Flow Control, Throttling & Minimum Flow Orifice Specifications
+    is_throttling_capable  = db.Column(db.Boolean, default=True)
+    min_flow_m3h           = db.Column(db.Float, default=0.0)
+    max_orifice_dia_mm     = db.Column(db.Float, default=0.0)
+    impeller_eye_area_cm2  = db.Column(db.Float, default=0.0)
+    vfd_min_hz             = db.Column(db.Float, default=30.0)
+    vfd_max_hz             = db.Column(db.Float, default=60.0)
 
     # Graph curve styles stored as 'color;weight,lineStyle' format
     head_curve_style  = db.Column(db.String(50), default='#58a6ff;2.0,solid')
@@ -679,11 +707,29 @@ class Pump(db.Model):
             'number_of_vanes': self.number_of_vanes or 5,
             'suction_size': self.suction_size or '',
             'discharge_size': self.discharge_size or '',
+            'unit_suction': self.unit_suction or 'mm',
+            'unit_discharge': self.unit_discharge or 'mm',
             'max_solid_size_mm': self.max_solid_size_mm or 0.0,
+            'unit_solid': self.unit_solid or 'mm',
             'max_pressure_bar': self.max_pressure_bar or 0.0,
+            'unit_pressure': self.unit_pressure or 'bar',
             'max_temp_c': self.max_temp_c or 0.0,
+            'unit_temp': self.unit_temp or 'degC',
             'seal_type': self.seal_type or '',
             'drive_type': self.drive_type or '',
+            'is_multistage': bool(self.is_multistage),
+            'num_stages': self.num_stages or 1,
+            'is_double_suction': bool(self.is_double_suction),
+            'is_angle_trim': bool(self.is_angle_trim),
+            'is_self_priming': bool(self.is_self_priming),
+            'is_non_clog': bool(self.is_non_clog),
+            'has_inducer': bool(self.has_inducer),
+            'is_throttling_capable': bool(self.is_throttling_capable if self.is_throttling_capable is not None else True),
+            'min_flow_m3h': self.min_flow_m3h or 0.0,
+            'max_orifice_dia_mm': self.max_orifice_dia_mm or 0.0,
+            'impeller_eye_area_cm2': self.impeller_eye_area_cm2 or 0.0,
+            'vfd_min_hz': self.vfd_min_hz or 30.0,
+            'vfd_max_hz': self.vfd_max_hz or 60.0,
             'extra_curves_json': self.extra_curves_json or '',
             'diameters': self.get_diameters(),
             'extra_curves': self.get_extra_curves(),

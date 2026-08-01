@@ -37,11 +37,27 @@ with app.app_context():
                 'axis_power_min', 'axis_power_max', 'axis_power_major', 'axis_power_minor',
                 'axis_npsh_min', 'axis_npsh_max', 'axis_npsh_major', 'axis_npsh_minor',
             ]
+            bool_design_cols = ['is_multistage', 'is_double_suction', 'is_angle_trim', 'is_self_priming', 'is_non_clog', 'has_inducer', 'is_throttling_capable']
+            for b_col in bool_design_cols:
+                if b_col not in cols:
+                    def_v = 1 if b_col == 'is_throttling_capable' else 0
+                    conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {b_col} INTEGER DEFAULT {def_v}"))
+
+            if 'num_stages' not in cols:
+                conn.execute(text("ALTER TABLE pumps ADD COLUMN num_stages INTEGER DEFAULT 1"))
+
+            real_cols = ['min_flow_m3h', 'max_orifice_dia_mm', 'impeller_eye_area_cm2', 'vfd_min_hz', 'vfd_max_hz']
+            for r_col in real_cols:
+                if r_col not in cols:
+                    def_r = 30.0 if r_col == 'vfd_min_hz' else (60.0 if r_col == 'vfd_max_hz' else 0.0)
+                    conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {r_col} REAL DEFAULT {def_r}"))
+
             for col_name in ['family_type', 'curve_labels', 'curve_diameters', 'curve_colors', 'curve_modes',
                              'curve_units', 'curve_raw_tables', 'curve_coeffs',
                              'unit_q', 'unit_h', 'unit_npsh', 'unit_pow', 'unit_op_q', 'graph_custom_label_pos', 'graph_speed_line_values',
                              'head_curve_style', 'eff_curve_style', 'power_curve_style', 'npsh_curve_style', 'main_curve_style',
                              'app_modules', 'impeller_material', 'casing_material', 'number_of_vanes', 'suction_size', 'discharge_size',
+                             'unit_suction', 'unit_discharge', 'unit_solid', 'unit_pressure', 'unit_temp',
                              'max_solid_size_mm', 'max_pressure_bar', 'max_temp_c', 'seal_type', 'drive_type'] + axis_cols:
                 if col_name not in cols:
                     if col_name in axis_cols:

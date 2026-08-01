@@ -179,13 +179,41 @@ def _pump_from_form(f, pump=None):
     pump.impeller_material = f.get('impeller_material', pump.impeller_material or '')
     pump.casing_material   = f.get('casing_material', pump.casing_material or '')
     pump.number_of_vanes   = _get_nullable_int(f, 'number_of_vanes') or pump.number_of_vanes or 5
+
+    # Pipe Sizes & Mechanical Operating Limits with Selectable Units
     pump.suction_size      = f.get('suction_size', pump.suction_size or '')
     pump.discharge_size    = f.get('discharge_size', pump.discharge_size or '')
+    pump.unit_suction      = f.get('unit_suction', pump.unit_suction or 'mm')
+    pump.unit_discharge    = f.get('unit_discharge', pump.unit_discharge or 'mm')
+
     pump.max_solid_size_mm = _get_float(f, 'max_solid_size_mm', pump.max_solid_size_mm or 0.0)
+    pump.unit_solid        = f.get('unit_solid', pump.unit_solid or 'mm')
+
     pump.max_pressure_bar  = _get_float(f, 'max_pressure_bar', pump.max_pressure_bar or 0.0)
+    pump.unit_pressure     = f.get('unit_pressure', pump.unit_pressure or 'bar')
+
     pump.max_temp_c        = _get_float(f, 'max_temp_c', pump.max_temp_c or 0.0)
+    pump.unit_temp         = f.get('unit_temp', pump.unit_temp or 'degC')
+
     pump.seal_type         = f.get('seal_type', pump.seal_type or '')
     pump.drive_type        = f.get('drive_type', pump.drive_type or '')
+
+    # Special Hydraulic & Construction Design Considerations (Checkbox Flags)
+    pump.is_multistage     = 'is_multistage' in f
+    pump.num_stages        = _get_nullable_int(f, 'num_stages') or 1
+    pump.is_double_suction = 'is_double_suction' in f
+    pump.is_angle_trim     = 'is_angle_trim' in f
+    pump.is_self_priming   = 'is_self_priming' in f
+    pump.is_non_clog       = 'is_non_clog' in f
+    pump.has_inducer       = 'has_inducer' in f
+
+    # Flow Control, Throttling & Minimum Flow Orifice Specifications
+    pump.is_throttling_capable = 'is_throttling_capable' in f or ('name' in f and 'is_throttling_capable' not in f and pump.is_throttling_capable)
+    pump.min_flow_m3h          = _get_float(f, 'min_flow_m3h', pump.min_flow_m3h or 0.0)
+    pump.max_orifice_dia_mm    = _get_float(f, 'max_orifice_dia_mm', pump.max_orifice_dia_mm or 0.0)
+    pump.impeller_eye_area_cm2 = _get_float(f, 'impeller_eye_area_cm2', pump.impeller_eye_area_cm2 or 0.0)
+    pump.vfd_min_hz            = _get_float(f, 'vfd_min_hz', pump.vfd_min_hz if pump.vfd_min_hz is not None else 30.0)
+    pump.vfd_max_hz            = _get_float(f, 'vfd_max_hz', pump.vfd_max_hz if pump.vfd_max_hz is not None else 60.0)
     if 'graph_options_json' in f:
         try:
             raw_g_opts = f.getlist('graph_options_json') if hasattr(f, 'getlist') else [f.get('graph_options_json')]

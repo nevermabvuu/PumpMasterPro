@@ -12,10 +12,34 @@
 var lastFitResults = null;
 var TABLE_INPUT_CLS = 'w-full bg-[#0d1117] border border-[#30363d] rounded-md px-2.5 py-1 text-xs text-[#e6edf3] font-mono tracking-tight shadow-inner focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]/40 transition-all focus:outline-none';
 
-function toggleExtendedSetup() {
-  const sec = document.getElementById('extendedSetupSection');
-  if (!sec) return;
-  sec.classList.toggle('hidden');
+/**
+ * Beginner Note: Smooth horizontal slide view transitions for Card 1.
+ * Standard Details slides totally out to the left (-50% translateX) as Extended Setup slides in from the right.
+ */
+function slideToExtendedSetup() {
+  const slider = document.getElementById('pumpDetailsSlider');
+  const btnExt = document.getElementById('btnSlideExtended');
+  const btnStd = document.getElementById('btnSlideStandard');
+  const title = document.getElementById('pumpDetailsHeaderTitle');
+  if (!slider) return;
+
+  slider.style.transform = 'translateX(-50%)';
+  if (btnExt) btnExt.classList.add('hidden');
+  if (btnStd) btnStd.classList.remove('hidden');
+  if (title) title.textContent = 'Extended Setup & Selection Specs';
+}
+
+function slideToStandardDetails() {
+  const slider = document.getElementById('pumpDetailsSlider');
+  const btnExt = document.getElementById('btnSlideExtended');
+  const btnStd = document.getElementById('btnSlideStandard');
+  const title = document.getElementById('pumpDetailsHeaderTitle');
+  if (!slider) return;
+
+  slider.style.transform = 'translateX(0%)';
+  if (btnStd) btnStd.classList.add('hidden');
+  if (btnExt) btnExt.classList.remove('hidden');
+  if (title) title.textContent = 'Pump Details';
 }
 
 var CONVERSIONS = {

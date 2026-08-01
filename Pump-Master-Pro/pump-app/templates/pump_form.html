@@ -38,249 +38,407 @@
     <!-- ── COLUMN 1: Details, Display Options, Operating Range, Impeller Family (lg:col-span-5) ── -->
     <div class="lg:col-span-5 space-y-4">
 
-      <!-- Card 1: Pump Details (Collapsable) -->
+      <!-- Card 1: Pump Details (Collapsible & Horizontal Slide View Transition) -->
       <div class="bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden" id="pumpDetailsCard">
+        <!-- Beginner Note: Card Header with Slide Navigation Toggle Links -->
         <div onclick="toggleCard('pumpDetailsBody', 'pumpDetailsChevron')"
           class="flex items-center justify-between px-4 py-2.5 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/60 transition-colors">
           <div class="flex items-center gap-2 font-semibold text-[#e6edf3] text-sm">
             <i class="bi bi-info-circle text-[#58a6ff]"></i>
-            <span>Pump Details</span>
+            <span id="pumpDetailsHeaderTitle">Pump Details</span>
           </div>
           <div class="flex items-center gap-3">
-            <button type="button" onclick="event.stopPropagation(); toggleExtendedSetup();"
+            <button type="button" onclick="event.stopPropagation(); slideToExtendedSetup();"
+              id="btnSlideExtended"
               class="text-[12px] text-[#58a6ff] hover:text-[#79c0ff] hover:underline flex items-center gap-1 font-medium transition-colors"
-              title="Configure Extended Setup & Application Modules">
-              <i class="bi bi-sliders"></i> Extended Setup
+              title="Slide to Extended Setup & Selection Specs">
+              <span>Extended Setup</span> <i class="bi bi-arrow-right text-xs"></i>
+            </button>
+            <button type="button" onclick="event.stopPropagation(); slideToStandardDetails();"
+              id="btnSlideStandard"
+              class="hidden text-[12px] text-[#58a6ff] hover:text-[#79c0ff] hover:underline flex items-center gap-1 font-medium transition-colors"
+              title="Slide back to Standard Pump Details">
+              <i class="bi bi-arrow-left text-xs"></i> <span>Standard Details</span>
             </button>
             <i class="bi bi-chevron-down text-[#8b949e] transition-transform duration-200" id="pumpDetailsChevron"
               style="transform: rotate(180deg)"></i>
           </div>
         </div>
-        <div class="p-4 space-y-3" id="pumpDetailsBody">
-          <div>
-            <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Pump Name <span
-                class="text-[#f85149]">*</span></label>
-            <input type="text" name="name"
-              class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
-              value="{{ pump.name if pump else '' }}" required placeholder="e.g. Warman 6/4 D-AH">
-          </div>
 
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Manufacturer</label>
-              <input type="text" name="manufacturer"
-                class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
-                value="{{ pump.manufacturer if pump else '' }}" placeholder="e.g. Weir Minerals">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Model Number</label>
-              <input type="text" name="model_number"
-                class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
-                value="{{ pump.model_number if pump else '' }}" placeholder="e.g. 6/4 D-AH">
-            </div>
-          </div>
+        <div class="p-4 overflow-hidden relative w-full" id="pumpDetailsBody">
+          <!-- Beginner Note: Viewport container isolates overflow so off-screen views hide 100% with zero bleed -->
+          <div class="w-full overflow-hidden">
+            <!-- Slider Container — 200% width, translates X from 0% to -50% for 100% horizontal slide transition -->
+            <div id="pumpDetailsSlider" class="flex w-[200%] transition-transform duration-300 ease-in-out">
 
-          <div class="grid grid-cols-3 gap-3">
-            <div>
-              <div class="h-6 flex items-center mb-1">
-                <label class="block text-xs font-semibold text-[#c9d1d9]" id="lblSpeedRpm">Speed (rpm)</label>
-              </div>
-              <input type="number" name="speed_rpm"
-                class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
-                value="{{ pump.speed_rpm if pump else 1450 }}" step="1" required>
-            </div>
-            <div>
-              <div class="h-6 flex items-center justify-between mb-1">
-                <label class="block text-xs font-semibold text-[#c9d1d9]" id="lblMaxImp">Max Imp.</label>
-                <select name="unit_max_imp"
-                  class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1 py-0.5 focus:outline-none">
-                  <option value="mm" {% if not pump or pump.data_units_dict.max_imp !='in' %}selected{% endif %}>mm
-                  </option>
-                  <option value="in" {% if pump and pump.data_units_dict.max_imp=='in' %}selected{% endif %}>in</option>
-                </select>
-              </div>
-              <input type="number" name="impeller_dia_val"
-                class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
-                value="{{ (pump.impeller_dia_mm / 25.4)|round(2) if pump and pump.data_units_dict.max_imp == 'in' else (pump.impeller_dia_mm if pump else 300) }}"
-                step="any">
-            </div>
-            <div>
-              <div class="h-6 flex items-center mb-1">
-                <label class="block text-xs font-semibold text-[#c9d1d9]">Pump Type</label>
-              </div>
-              <select name="pump_type"
-                class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors">
-                {% for t in ['centrifugal', 'centrifugal slurry', 'axial flow', 'mixed flow', 'submersible'] %}
-                <option value="{{ t }}" {{ 'selected' if pump and pump.pump_type==t }}>{{ t|capitalize }}</option>
-                {% endfor %}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-[#58a6ff] mb-1"><i
-                class="bi bi-gear-wide-connected me-1"></i>Test Basis / Family Type</label>
-            <select name="family_type" id="selFamilyType"
-              class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors">
-              <option value="trimmed_impeller" {{ 'selected' if not pump or pump.family_type=='trimmed_impeller' or not
-                pump.family_type }}>Trimmed Impeller (Constant Speed, Varying Impeller Diameter)</option>
-              <option value="variable_speed" {{ 'selected' if pump and pump.family_type=='variable_speed' }}>Variable
-                Speed (Constant Impeller Diameter, Varying Speed RPM)</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Application</label>
-            <input type="text" name="application"
-              class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
-              value="{{ pump.application if pump else '' }}" placeholder="e.g. Slurry / mineral processing">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Notes</label>
-            <textarea name="notes"
-              class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
-              rows="2" placeholder="Any additional notes...">{{ pump.notes if pump else '' }}</textarea>
-          </div>
-
-          <!-- Collapsible Extended Setup & Application Selection Specification -->
-          <div id="extendedSetupSection" class="hidden mt-3 pt-3 border-t border-[#30363d] space-y-3 bg-[#0d1117]/70 p-3 rounded-lg border border-[#30363d]/80">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-[#58a6ff] uppercase tracking-wider flex items-center gap-1.5">
-                <i class="bi bi-sliders2"></i> Extended Setup &amp; Selection Modules
-              </span>
-              <button type="button" onclick="toggleExtendedSetup()" class="text-xs text-[#8b949e] hover:text-[#e6edf3] p-1">
-                <i class="bi bi-x-lg"></i>
-              </button>
-            </div>
-
-            <!-- Application Selection Modules Checkboxes -->
-            <div>
-              <label class="block text-[11px] font-semibold text-[#8b949e] uppercase mb-1.5">
-                Target Selection Modules (Check all that apply)
-              </label>
-              {% set cur_mods = (pump.app_modules.split(',') if pump and pump.app_modules else []) %}
-              <div class="grid grid-cols-2 gap-1.5 text-xs text-[#c9d1d9]">
-                {% set module_list = [
-                  ('slurry', 'Slurry & Mining', 'bi-hammer'),
-                  ('fire', 'Fire Protection / Fighting', 'bi-fire'),
-                  ('borehole', 'Borehole & Deep Well', 'bi-arrow-down-square'),
-                  ('dredge', 'Dredging & Sand', 'bi-water'),
-                  ('chemical', 'Chemical & Corrosive', 'bi-eyedropper'),
-                  ('water', 'Water Supply & Municipal', 'bi-droplet-half'),
-                  ('sewage', 'Sewage & Wastewater', 'bi-trash'),
-                  ('hvac', 'HVAC & Cooling Systems', 'bi-snow')
-                ] %}
-                {% for m_key, m_label, m_icon in module_list %}
-                <label class="flex items-center gap-2 p-1.5 rounded bg-[#161b22] border border-[#30363d] hover:border-[#58a6ff]/50 cursor-pointer transition-colors">
-                  <input type="checkbox" name="app_modules" value="{{ m_key }}" class="accent-[#58a6ff] rounded"
-                    {% if m_key in cur_mods %}checked{% endif %}>
-                  <i class="bi {{ m_icon }} text-[#58a6ff]"></i>
-                  <span class="truncate">{{ m_label }}</span>
-                </label>
-                {% endfor %}
-              </div>
-            </div>
-
-            <!-- Construction & Mechanical Specifications -->
-            <div class="space-y-2 pt-1">
-              <span class="block text-[11px] font-semibold text-[#8b949e] uppercase">
-                Construction &amp; Physical Metadata
-              </span>
-              <div class="grid grid-cols-2 gap-2">
+              <!-- ── VIEW 1: Standard Core Pump Details (Left View) ── -->
+              <div id="standardDetailsPane" class="w-1/2 box-border pe-2 space-y-3 shrink-0">
                 <div>
-                  <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5">Impeller Material</label>
-                  <input type="text" name="impeller_material" list="impellerMaterials"
-                    class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                    value="{{ pump.impeller_material if pump else '' }}" placeholder="e.g. High-Chrome (A05)">
-                  <datalist id="impellerMaterials">
-                    <option value="High-Chrome (A05)">
-                    <option value="Duplex Stainless (CD4MCu)">
-                    <option value="Natural Rubber (R55)">
-                    <option value="Cast Iron (GG25)">
-                    <option value="Bronze">
-                    <option value="316 Stainless Steel">
-                    <option value="Polyurethane">
-                  </datalist>
+                  <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Pump Name <span
+                      class="text-[#f85149]">*</span></label>
+                  <input type="text" name="name"
+                    class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
+                    value="{{ pump.name if pump else '' }}" required placeholder="e.g. Warman 6/4 D-AH">
                 </div>
-                <div>
-                  <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5">Casing / Liner Material</label>
-                  <input type="text" name="casing_material" list="casingMaterials"
-                    class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                    value="{{ pump.casing_material if pump else '' }}" placeholder="e.g. High-Chrome / Rubber">
-                  <datalist id="casingMaterials">
-                    <option value="High-Chrome (A05)">
-                    <option value="Natural Rubber Lined">
-                    <option value="Ductile Iron">
-                    <option value="Cast Iron">
-                    <option value="316 Stainless Steel">
-                  </datalist>
-                </div>
-              </div>
 
-              <div class="grid grid-cols-3 gap-2">
-                <div>
-                  <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5">No. of Vanes</label>
-                  <input type="number" name="number_of_vanes"
-                    class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                    value="{{ pump.number_of_vanes if pump else 5 }}" min="1" max="20">
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Manufacturer</label>
+                    <input type="text" name="manufacturer"
+                      class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
+                      value="{{ pump.manufacturer if pump else '' }}" placeholder="e.g. Weir Minerals">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Model Number</label>
+                    <input type="text" name="model_number"
+                      class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
+                      value="{{ pump.model_number if pump else '' }}" placeholder="e.g. 6/4 D-AH">
+                  </div>
                 </div>
-                <div>
-                  <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5">Suction Size</label>
-                  <input type="text" name="suction_size"
-                    class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                    value="{{ pump.suction_size if pump else '' }}" placeholder="e.g. 150 mm / 6&quot;">
-                </div>
-                <div>
-                  <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5">Discharge Size</label>
-                  <input type="text" name="discharge_size"
-                    class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                    value="{{ pump.discharge_size if pump else '' }}" placeholder="e.g. 100 mm / 4&quot;">
-                </div>
-              </div>
 
-              <div class="grid grid-cols-3 gap-2">
-                <div>
-                  <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5">Max Solid (mm)</label>
-                  <input type="number" name="max_solid_size_mm" step="any"
-                    class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                    value="{{ pump.max_solid_size_mm if pump else 0 }}" placeholder="e.g. 38">
+                <div class="grid grid-cols-3 gap-3">
+                  <div>
+                    <div class="h-6 flex items-center mb-1">
+                      <label class="block text-xs font-semibold text-[#c9d1d9]" id="lblSpeedRpm">Speed (rpm)</label>
+                    </div>
+                    <input type="number" name="speed_rpm"
+                      class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
+                      value="{{ pump.speed_rpm if pump else 1450 }}" step="1" required>
+                  </div>
+                  <div>
+                    <div class="h-6 flex items-center justify-between mb-1">
+                      <label class="block text-xs font-semibold text-[#c9d1d9]" id="lblMaxImp">Max Imp.</label>
+                      <select name="unit_max_imp"
+                        class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[11px] rounded px-1 py-0.5 focus:outline-none">
+                        <option value="mm" {% if not pump or pump.data_units_dict.max_imp !='in' %}selected{% endif %}>mm
+                        </option>
+                        <option value="in" {% if pump and pump.data_units_dict.max_imp=='in' %}selected{% endif %}>in</option>
+                      </select>
+                    </div>
+                    <input type="number" name="impeller_dia_val"
+                      class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
+                      value="{{ (pump.impeller_dia_mm / 25.4)|round(2) if pump and pump.data_units_dict.max_imp == 'in' else (pump.impeller_dia_mm if pump else 300) }}"
+                      step="any">
+                  </div>
+                  <div>
+                    <div class="h-6 flex items-center mb-1">
+                      <label class="block text-xs font-semibold text-[#c9d1d9]">Pump Type</label>
+                    </div>
+                    <select name="pump_type"
+                      class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors">
+                      {% for t in ['centrifugal', 'centrifugal slurry', 'axial flow', 'mixed flow', 'submersible'] %}
+                      <option value="{{ t }}" {{ 'selected' if pump and pump.pump_type==t }}>{{ t|capitalize }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5">Max Press. (bar)</label>
-                  <input type="number" name="max_pressure_bar" step="any"
-                    class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                    value="{{ pump.max_pressure_bar if pump else 0 }}" placeholder="e.g. 16">
-                </div>
-                <div>
-                  <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5">Max Temp (°C)</label>
-                  <input type="number" name="max_temp_c" step="any"
-                    class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                    value="{{ pump.max_temp_c if pump else 0 }}" placeholder="e.g. 110">
-                </div>
-              </div>
 
-              <div class="grid grid-cols-2 gap-2">
                 <div>
-                  <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5">Shaft Seal Type</label>
-                  <select name="seal_type"
-                    class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]">
-                    <option value="">-- Select Seal --</option>
-                    {% for s in ['Gland Packing', 'Mechanical Seal', 'Expeller Seal (Dynamic)', 'Lip Seal'] %}
-                    <option value="{{ s }}" {{ 'selected' if pump and pump.seal_type==s }}>{{ s }}</option>
-                    {% endfor %}
+                  <label class="block text-xs font-semibold text-[#58a6ff] mb-1"><i
+                      class="bi bi-gear-wide-connected me-1"></i>Test Basis / Family Type</label>
+                  <select name="family_type" id="selFamilyType"
+                    class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors">
+                    <option value="trimmed_impeller" {{ 'selected' if not pump or pump.family_type=='trimmed_impeller' or not
+                      pump.family_type }}>Trimmed Impeller (Constant Speed, Varying Impeller Diameter)</option>
+                    <option value="variable_speed" {{ 'selected' if pump and pump.family_type=='variable_speed' }}>Variable
+                      Speed (Constant Impeller Diameter, Varying Speed RPM)</option>
                   </select>
                 </div>
+
                 <div>
-                  <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5">Drive Arrangement</label>
-                  <select name="drive_type"
-                    class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]">
-                    <option value="">-- Select Drive --</option>
-                    {% for d in ['Direct Coupled (DC)', 'Belt Driven (CV/ZV/Overhead)', 'Close-Coupled', 'Vertical Cantilever'] %}
-                    <option value="{{ d }}" {{ 'selected' if pump and pump.drive_type==d }}>{{ d }}</option>
-                    {% endfor %}
-                  </select>
+                  <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Application</label>
+                  <input type="text" name="application"
+                    class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
+                    value="{{ pump.application if pump else '' }}" placeholder="e.g. Slurry / mineral processing">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Notes</label>
+                  <textarea name="notes"
+                    class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
+                    rows="2" placeholder="Any additional notes...">{{ pump.notes if pump else '' }}</textarea>
                 </div>
               </div>
+
+              <!-- ── VIEW 2: Extended Setup, Modules, Unit Preferences & Hydraulic Considerations (Right View) ── -->
+              <div id="extendedSetupPane" class="w-1/2 box-border ps-2 space-y-3 shrink-0">
+                <div class="flex items-center justify-between pb-1 border-b border-[#30363d]">
+                  <span class="text-xs font-bold text-[#58a6ff] uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="bi bi-sliders2"></i> Extended Setup &amp; Selection Specs
+                  </span>
+                  <button type="button" onclick="slideToStandardDetails()" class="text-xs text-[#58a6ff] hover:text-[#79c0ff] flex items-center gap-1 font-semibold">
+                    <i class="bi bi-arrow-left"></i> Back
+                  </button>
+                </div>
+
+                <!-- 1. Target Application Selection Modules Checkboxes -->
+                <div>
+                  <label class="block text-[11px] font-semibold text-[#8b949e] uppercase mb-1.5">
+                    Selection Modules (Check all that apply)
+                  </label>
+                  {% set cur_mods = (pump.app_modules.split(',') if pump and pump.app_modules else []) %}
+                  <div class="grid grid-cols-2 gap-1.5 text-xs text-[#c9d1d9]">
+                    {% set module_list = [
+                      ('slurry', 'Slurry & Mining', 'bi-hammer'),
+                      ('fire', 'Fire Fighting', 'bi-fire'),
+                      ('borehole', 'Borehole & Well', 'bi-arrow-down-square'),
+                      ('dredge', 'Dredging & Sand', 'bi-water'),
+                      ('chemical', 'Chemical Process', 'bi-eyedropper'),
+                      ('water', 'Water Supply', 'bi-droplet-half'),
+                      ('sewage', 'Sewage & Wastewater', 'bi-trash'),
+                      ('hvac', 'HVAC & Cooling', 'bi-snow')
+                    ] %}
+                    {% for m_key, m_label, m_icon in module_list %}
+                    <label class="flex items-center gap-2 p-1.5 rounded bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 cursor-pointer transition-colors">
+                      <input type="checkbox" name="app_modules" value="{{ m_key }}" class="accent-[#58a6ff] rounded"
+                        {% if m_key in cur_mods %}checked{% endif %}>
+                      <i class="bi {{ m_icon }} text-[#58a6ff]"></i>
+                      <span class="truncate">{{ m_label }}</span>
+                    </label>
+                    {% endfor %}
+                  </div>
+                </div>
+
+                <!-- 2. Special Design & Hydraulic Considerations -->
+                <div class="space-y-1.5 pt-1">
+                  <span class="block text-[11px] font-semibold text-[#8b949e] uppercase">
+                    Design &amp; Hydraulic Considerations
+                  </span>
+                  <div class="grid grid-cols-2 gap-1.5 text-xs text-[#c9d1d9]">
+                    <label class="flex items-center gap-2 p-1.5 rounded bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 cursor-pointer">
+                      <input type="checkbox" name="is_multistage" id="chkMultistage" class="accent-[#58a6ff] rounded"
+                        {% if pump and pump.is_multistage %}checked{% endif %} onchange="document.getElementById('divNumStages').style.display=this.checked?'block':'none'">
+                      <span>Multi-Stage Pump</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-1.5 rounded bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 cursor-pointer">
+                      <input type="checkbox" name="is_double_suction" class="accent-[#58a6ff] rounded"
+                        {% if pump and pump.is_double_suction %}checked{% endif %}>
+                      <span>Double Suction</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-1.5 rounded bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 cursor-pointer">
+                      <input type="checkbox" name="is_angle_trim" class="accent-[#58a6ff] rounded"
+                        {% if pump and pump.is_angle_trim %}checked{% endif %}>
+                      <span>Angle-Trim Impeller</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-1.5 rounded bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 cursor-pointer">
+                      <input type="checkbox" name="is_self_priming" class="accent-[#58a6ff] rounded"
+                        {% if pump and pump.is_self_priming %}checked{% endif %}>
+                      <span>Self-Priming</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-1.5 rounded bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 cursor-pointer">
+                      <input type="checkbox" name="is_non_clog" class="accent-[#58a6ff] rounded"
+                        {% if pump and pump.is_non_clog %}checked{% endif %}>
+                      <span>Non-Clog / Vortex</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-1.5 rounded bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 cursor-pointer">
+                      <input type="checkbox" name="has_inducer" class="accent-[#58a6ff] rounded"
+                        {% if pump and pump.has_inducer %}checked{% endif %}>
+                      <span>Inducer Fitted</span>
+                    </label>
+                  </div>
+
+                  <div id="divNumStages" class="pt-1" style="display: {{ 'block' if pump and pump.is_multistage else 'none' }};">
+                    <label class="block text-[11px] font-medium text-[#58a6ff] mb-0.5">Number of Stages</label>
+                    <input type="number" name="num_stages" min="1" max="50"
+                      class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
+                      value="{{ pump.num_stages if pump else 1 }}">
+                  </div>
+                </div>
+
+                <!-- 3. Flow Control, Throttling & Minimum Flow Orifice Specifications -->
+                <div class="space-y-1.5 pt-1 border-t border-[#30363d]/60">
+                  <span class="block text-[11px] font-semibold text-[#8b949e] uppercase flex items-center justify-between">
+                    <span>Flow Control &amp; Orifice Specs</span>
+                    <label class="normal-case font-normal text-xs text-[#58a6ff] flex items-center gap-1 cursor-pointer">
+                      <input type="checkbox" name="is_throttling_capable" class="accent-[#58a6ff] rounded"
+                        {% if not pump or pump.is_throttling_capable %}checked{% endif %}>
+                      <span>Throttling Capable</span>
+                    </label>
+                  </span>
+                  
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5" title="Minimum continuous thermal / recirculation flow to prevent overheating">
+                        Min Flow (m³/h)
+                      </label>
+                      <input type="number" name="min_flow_m3h" step="any"
+                        class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
+                        value="{{ pump.min_flow_m3h if pump else 0.0 }}" placeholder="e.g. 15.5">
+                    </div>
+                    <div>
+                      <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5" title="Maximum recirculation orifice size for bypass line">
+                        Max Orifice Dia (mm)
+                      </label>
+                      <input type="number" name="max_orifice_dia_mm" step="any"
+                        class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
+                        value="{{ pump.max_orifice_dia_mm if pump else 0.0 }}" placeholder="e.g. 12.0">
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5" title="Impeller eye inlet area for velocity and NPSH analysis">
+                        Impeller Eye Area (cm²)
+                      </label>
+                      <input type="number" name="impeller_eye_area_cm2" step="any"
+                        class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
+                        value="{{ pump.impeller_eye_area_cm2 if pump else 0.0 }}" placeholder="e.g. 85.0">
+                    </div>
+                    <div>
+                      <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5">VFD Speed Range (Hz)</label>
+                      <div class="flex items-center gap-1">
+                        <input type="number" name="vfd_min_hz" step="any" placeholder="30"
+                          class="w-1/2 bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
+                          value="{{ pump.vfd_min_hz if pump else 30.0 }}">
+                        <span class="text-xs text-[#8b949e]">-</span>
+                        <input type="number" name="vfd_max_hz" step="any" placeholder="60"
+                          class="w-1/2 bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
+                          value="{{ pump.vfd_max_hz if pump else 60.0 }}">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 4. Physical & Mechanical Metadata with Selectable Units -->
+                <div class="space-y-2 pt-1 border-t border-[#30363d]/60">
+                  <span class="block text-[11px] font-semibold text-[#8b949e] uppercase">
+                    Physical Metadata &amp; Selectable Units
+                  </span>
+                  
+                  <!-- Materials & Vanes -->
+                  <div class="grid grid-cols-3 gap-2">
+                    <div>
+                      <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5">Impeller Mat.</label>
+                      <input type="text" name="impeller_material" list="impellerMaterials"
+                        class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
+                        value="{{ pump.impeller_material if pump else '' }}" placeholder="High-Chrome A05">
+                      <datalist id="impellerMaterials">
+                        <option value="High-Chrome (A05)">
+                        <option value="Duplex SS (CD4MCu)">
+                        <option value="Natural Rubber (R55)">
+                        <option value="Cast Iron (GG25)">
+                        <option value="Bronze">
+                        <option value="316 Stainless Steel">
+                      </datalist>
+                    </div>
+                    <div>
+                      <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5">Casing Mat.</label>
+                      <input type="text" name="casing_material" list="casingMaterials"
+                        class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
+                        value="{{ pump.casing_material if pump else '' }}" placeholder="Ductile Iron">
+                      <datalist id="casingMaterials">
+                        <option value="High-Chrome (A05)">
+                        <option value="Natural Rubber Lined">
+                        <option value="Ductile Iron">
+                        <option value="Cast Iron">
+                        <option value="316 SS">
+                      </datalist>
+                    </div>
+                    <div>
+                      <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5">No. Vanes</label>
+                      <input type="number" name="number_of_vanes" min="1" max="20"
+                        class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
+                        value="{{ pump.number_of_vanes if pump else 5 }}">
+                    </div>
+                  </div>
+
+                  <!-- Suction & Discharge with Selectable Units -->
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <div class="flex items-center justify-between mb-0.5">
+                        <label class="block text-[11px] font-medium text-[#c9d1d9]">Suction Size</label>
+                        <select name="unit_suction" class="bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[10px] rounded px-1 py-0 focus:outline-none">
+                          <option value="mm" {{ 'selected' if not pump or pump.unit_suction=='mm' }}>mm</option>
+                          <option value="in" {{ 'selected' if pump and pump.unit_suction=='in' }}>in</option>
+                          <option value="DN" {{ 'selected' if pump and pump.unit_suction=='DN' }}>DN</option>
+                        </select>
+                      </div>
+                      <input type="text" name="suction_size"
+                        class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
+                        value="{{ pump.suction_size if pump else '' }}" placeholder="150">
+                    </div>
+                    <div>
+                      <div class="flex items-center justify-between mb-0.5">
+                        <label class="block text-[11px] font-medium text-[#c9d1d9]">Discharge Size</label>
+                        <select name="unit_discharge" class="bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[10px] rounded px-1 py-0 focus:outline-none">
+                          <option value="mm" {{ 'selected' if not pump or pump.unit_discharge=='mm' }}>mm</option>
+                          <option value="in" {{ 'selected' if pump and pump.unit_discharge=='in' }}>in</option>
+                          <option value="DN" {{ 'selected' if pump and pump.unit_discharge=='DN' }}>DN</option>
+                        </select>
+                      </div>
+                      <input type="text" name="discharge_size"
+                        class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
+                        value="{{ pump.discharge_size if pump else '' }}" placeholder="100">
+                    </div>
+                  </div>
+
+                  <!-- Max Solid, Max Pressure, Max Temp with Selectable Units -->
+                  <div class="grid grid-cols-3 gap-2">
+                    <div>
+                      <div class="flex items-center justify-between mb-0.5">
+                        <label class="block text-[10px] font-medium text-[#c9d1d9]">Max Solid</label>
+                        <select name="unit_solid" class="bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[9px] rounded px-0.5 py-0 focus:outline-none">
+                          <option value="mm" {{ 'selected' if not pump or pump.unit_solid=='mm' }}>mm</option>
+                          <option value="in" {{ 'selected' if pump and pump.unit_solid=='in' }}>in</option>
+                        </select>
+                      </div>
+                      <input type="number" name="max_solid_size_mm" step="any"
+                        class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
+                        value="{{ pump.max_solid_size_mm if pump else 0 }}" placeholder="38">
+                    </div>
+                    <div>
+                      <div class="flex items-center justify-between mb-0.5">
+                        <label class="block text-[10px] font-medium text-[#c9d1d9]">Max Press.</label>
+                        <select name="unit_pressure" class="bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[9px] rounded px-0.5 py-0 focus:outline-none">
+                          <option value="bar" {{ 'selected' if not pump or pump.unit_pressure=='bar' }}>bar</option>
+                          <option value="kpa" {{ 'selected' if pump and pump.unit_pressure=='kpa' }}>kPa</option>
+                          <option value="psi" {{ 'selected' if pump and pump.unit_pressure=='psi' }}>psi</option>
+                          <option value="m" {{ 'selected' if pump and pump.unit_pressure=='m' }}>m</option>
+                        </select>
+                      </div>
+                      <input type="number" name="max_pressure_bar" step="any"
+                        class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
+                        value="{{ pump.max_pressure_bar if pump else 0 }}" placeholder="16">
+                    </div>
+                    <div>
+                      <div class="flex items-center justify-between mb-0.5">
+                        <label class="block text-[10px] font-medium text-[#c9d1d9]">Max Temp</label>
+                        <select name="unit_temp" class="bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] text-[9px] rounded px-0.5 py-0 focus:outline-none">
+                          <option value="degC" {{ 'selected' if not pump or pump.unit_temp=='degC' }}>°C</option>
+                          <option value="degF" {{ 'selected' if pump and pump.unit_temp=='degF' }}>°F</option>
+                        </select>
+                      </div>
+                      <input type="number" name="max_temp_c" step="any"
+                        class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
+                        value="{{ pump.max_temp_c if pump else 0 }}" placeholder="110">
+                    </div>
+                  </div>
+
+                  <!-- Seal Type & Drive Arrangement -->
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5">Shaft Seal Type</label>
+                      <select name="seal_type"
+                        class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]">
+                        <option value="">-- Select Seal --</option>
+                        {% for s in ['Gland Packing', 'Mechanical Seal', 'Expeller Seal (Dynamic)', 'Lip Seal'] %}
+                        <option value="{{ s }}" {{ 'selected' if pump and pump.seal_type==s }}>{{ s }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-[11px] font-medium text-[#c9d1d9] mb-0.5">Drive Arrangement</label>
+                      <select name="drive_type"
+                        class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]">
+                        <option value="">-- Select Drive --</option>
+                        {% for d in ['Direct Coupled (DC)', 'Belt Driven (CV/ZV/Overhead)', 'Close-Coupled', 'Vertical Cantilever'] %}
+                        <option value="{{ d }}" {{ 'selected' if pump and pump.drive_type==d }}>{{ d }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
@@ -1495,8 +1653,8 @@
   data-unit-op-q="{{ pump.unit_op_q if pump else 'm3h' }}"
   data-graph-options='{{ (pump.get_graph_options() | tojson) if pump else "{}" }}' {% endif %}>
 </div>
-<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=150"></script>
-<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=175"></script>
+<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=165"></script>
+<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=190"></script>
 <script>
   // Beginners Note: Generic card toggle helper for smooth card collapse & expand
   function toggleCard(bodyId, chevronId) {

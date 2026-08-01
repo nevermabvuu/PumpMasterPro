@@ -943,9 +943,13 @@ function convertUnitWarmanData(data, qUnit, hUnit, npshUnit, powUnit) {
     converted.speed_lines.forEach(sl => {
       sl.q = sl.q.map(v => v * qFactor);
       sl.h = sl.h.map(v => v * hFactor);
+      if (sl.power) sl.power = sl.power.map(v => v * powFactor);
+      if (sl.npsh) sl.npsh = sl.npsh.map(v => v * npshFactor);
       if (sl.bep) {
         sl.bep.q = sl.bep.q * qFactor;
         sl.bep.h = sl.bep.h * hFactor;
+        if (sl.bep.power) sl.bep.power = sl.bep.power * powFactor;
+        if (sl.bep.npsh) sl.bep.npsh = sl.bep.npsh * npshFactor;
       }
     });
   }
@@ -1270,7 +1274,7 @@ function renderPreviewChartsData(warmanData, curveData) {
   Plotly.Plots.resize('chartWarman');
   if (wc.layout.annotations && wc.layout.annotations.length > 0) {
     const _pumpId = parseInt(document.getElementById('pump-init-data')?.dataset?.pumpId) || 0;
-    if (_pumpId) makeAnnotationsDraggable('chartWarman', wc.layout.annotations, _pumpId);
+    makeAnnotationsDraggable('chartWarman', wc.layout.annotations, _pumpId);
   }
 
   const showOther = document.getElementById('chkShowOther')?.checked || false;
@@ -1302,8 +1306,7 @@ function renderPreviewChartsData(warmanData, curveData) {
       Plotly.react('chartEffPower', effPow.traces, effPow.layout, PLOTLY_CONFIG);
       Plotly.Plots.resize('chartEffPower');
 
-      // Beginner Note: Turn on drag-and-drop & keyboard control for labels on Combined Eff/Power graph
-      if (effPow.layout.annotations && effPow.layout.annotations.length > 0 && currentPumpId) {
+      if (effPow.layout.annotations && effPow.layout.annotations.length > 0) {
         makeAnnotationsDraggable('chartEffPower', effPow.layout.annotations, currentPumpId);
       }
     } else {
@@ -1314,8 +1317,7 @@ function renderPreviewChartsData(warmanData, curveData) {
         Plotly.react('chartEff', eff.traces, eff.layout, PLOTLY_CONFIG);
         Plotly.Plots.resize('chartEff');
 
-        // Beginner Note: Turn on drag-and-drop & keyboard control for labels on Efficiency graph
-        if (eff.layout.annotations && eff.layout.annotations.length > 0 && currentPumpId) {
+        if (eff.layout.annotations && eff.layout.annotations.length > 0) {
           makeAnnotationsDraggable('chartEff', eff.layout.annotations, currentPumpId);
         }
       }
@@ -1326,8 +1328,7 @@ function renderPreviewChartsData(warmanData, curveData) {
         Plotly.react('chartPower', power.traces, power.layout, PLOTLY_CONFIG);
         Plotly.Plots.resize('chartPower');
 
-        // Beginner Note: Turn on drag-and-drop & keyboard control for labels on Power graph
-        if (power.layout.annotations && power.layout.annotations.length > 0 && currentPumpId) {
+        if (power.layout.annotations && power.layout.annotations.length > 0) {
           makeAnnotationsDraggable('chartPower', power.layout.annotations, currentPumpId);
         }
       }
@@ -1340,8 +1341,7 @@ function renderPreviewChartsData(warmanData, curveData) {
       Plotly.react('chartNpsh', npsh.traces, npsh.layout, PLOTLY_CONFIG);
       Plotly.Plots.resize('chartNpsh');
 
-      // Beginner Note: Turn on drag-and-drop & keyboard control for labels on NPSH graph
-      if (npsh.layout.annotations && npsh.layout.annotations.length > 0 && currentPumpId) {
+      if (npsh.layout.annotations && npsh.layout.annotations.length > 0) {
         makeAnnotationsDraggable('chartNpsh', npsh.layout.annotations, currentPumpId);
       }
     }

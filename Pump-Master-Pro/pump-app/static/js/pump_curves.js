@@ -227,12 +227,90 @@ function getGraphDisplayUnits() {
 /* ── Annotation Move, Drag & Keyboard Helper ──────────────────────────────── */
 // Beginner Note: This function makes all graph label badges (like Ø228 mm or 78%) interactive!
 // It allows users to:
-// 1. Click and hold the mouse button to drag any label badge around the graph.
-// 2. Click a label badge to select it, then press Arrow Keys (← ↑ → ↓) on the keyboard to move it step-by-step.
-// 3. Automatically saves the new X and Y label positions into the database so they stay saved!
+if (!window._globalLabelSelectionManager) {
+  window._globalLabelSelectionManager = {
+    activeState: null,
+    select(state) {
+      if (this.activeState && this.activeState !== state) {
+        this.deselect();
+      }
+      this.activeState = state;
+    },
+    deselect() {
+      if (!this.activeState) return;
+      const st = this.activeState;
+      this.activeState = null;
+      try {
+        st.showToast('');
+        st.container.style.cursor = '';
+        Plotly.relayout(st.container, { annotations: st.annotations }).then(() => {
+          if (typeof st.setupSvgEvents === 'function') {
+            st.setupSvgEvents();
+          }
+        });
+      } catch (e) {}
+    }
+  };
+
+  document.addEventListener('keydown', (e) => {
+    const st = window._globalLabelSelectionManager.activeState;
+    if (!st || !st.annObj) return;
+
+    if (e.key === 'Escape') {
+      window._globalLabelSelectionManager.deselect();
+      return;
+    }
+
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+
+      const container = st.container;
+      const selectedAnn = st.annObj;
+      const fullLayout = container._fullLayout;
+      const xDomain = (fullLayout?.xaxis?.range) ? Math.abs(fullLayout.xaxis.range[1] - fullLayout.xaxis.range[0]) : 100;
+      const yDomain = (fullLayout?.yaxis?.range) ? Math.abs(fullLayout.yaxis.range[1] - fullLayout.yaxis.range[0]) : 50;
+
+      const stepMult = e.shiftKey ? 5 : 1;
+      const stepX = (xDomain / 200) * stepMult;
+      const stepY = (yDomain / 200) * stepMult;
+
+      let newX = selectedAnn.x;
+      let newY = selectedAnn.y;
+
+      if (e.key === 'ArrowLeft')  newX = Math.max(0, newX - stepX);
+      if (e.key === 'ArrowRight') newX = newX + stepX;
+      if (e.key === 'ArrowDown')  newY = Math.max(0, newY - stepY);
+      if (e.key === 'ArrowUp')    newY = newY + stepY;
+
+      newX = Math.round(newX * 100) / 100;
+      newY = Math.round(newY * 100) / 100;
+
+      selectedAnn.x = newX;
+      selectedAnn.y = newY;
+      selectedAnn.xanchor = 'center';
+      selectedAnn.yanchor = 'middle';
+      selectedAnn.xshift = 0;
+      selectedAnn.yshift = 0;
+
+      st.savePosition(selectedAnn.name, newX, newY);
+      Plotly.relayout(container, { annotations: st.annotations }).then(() => {
+        st.setupSvgEvents();
+      });
+    }
+  });
+
+  document.addEventListener('mousedown', (e) => {
+    const isAnn = e.target.closest('.annotation-text, [class*="annotation"]');
+    if (!isAnn && window._globalLabelSelectionManager.activeState) {
+      window._globalLabelSelectionManager.deselect();
+    }
+  });
+}
+
+// Beginner Note: Enables dragging and keyboard arrow tuning for labels on any graph.
 function makeAnnotationsDraggable(chartId, annotations, pumpId) {
   const container = document.getElementById(chartId);
-  if (!container || !pumpId) return;
+  if (!container) return;
 
   // Cleanup old listeners if re-initializing
   if (container._annCleanups) {
@@ -240,8 +318,6 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
   }
   container._annCleanups = [];
 
-  // Beginner Note: Converts screen pixel position (where mouse is on screen)
-  // to graph data position (X = Flow Q, Y = Head H or Efficiency %).
   function screenToDataCoords(e) {
     const fullLayout = container._fullLayout;
     if (!fullLayout || !fullLayout.xaxis || !fullLayout.yaxis) return null;
@@ -249,21 +325,17 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
     const yaxis = fullLayout.yaxis;
     const containerRect = container.getBoundingClientRect();
 
-    // Calculate mouse position inside the graph box (in pixels)
     const relX = e.clientX - containerRect.left - xaxis._offset;
     const relY = e.clientY - containerRect.top - yaxis._offset;
 
-    // Keep mouse coordinates inside the graph grid borders so labels don't fly off screen
     const clampedRelX = Math.max(0, Math.min(xaxis._length || 9999, relX));
     const clampedRelY = Math.max(0, Math.min(yaxis._length || 9999, relY));
 
-    // Convert pixel offset to graph data values using Plotly's p2c (pixel-to-coordinate) converter
     const dataX = Math.max(0, Math.round(xaxis.p2c(clampedRelX) * 100) / 100);
     const dataY = Math.max(0, Math.round(yaxis.p2c(clampedRelY) * 100) / 100);
     return { x: dataX, y: dataY };
   }
 
-  // Toast notification banner inside chart (shows quick instructions when label is selected)
   let toast = container.querySelector('._ann-toast');
   if (!toast) {
     toast = document.createElement('div');
@@ -281,17 +353,15 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
 
   const showToast = (msg) => { toast.innerHTML = msg; toast.style.display = msg ? 'block' : 'none'; };
 
-  // Beginner Note: Sends the updated label position (X, Y) to the server via HTTP POST request
-  // so the database saves the label location in graph_custom_label_pos.
   let saveTimer = null;
   function savePosition(annName, xVal, yVal) {
     if (!customLabelPositions[annName]) customLabelPositions[annName] = {};
     customLabelPositions[annName].x = xVal;
     customLabelPositions[annName].y = yVal;
 
-    // Debounce timer: waits 150ms after user stops moving before sending to server (prevents spamming backend)
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
+      if (!pumpId) return;
       fetch(`/papi/pump/${pumpId}/label-pos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -300,11 +370,11 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
     }, 150);
   }
 
-  let selectedAnn = null;
-
   function selectAnnotation(ann) {
     if (!ann) return;
-    selectedAnn = ann;
+    const currentState = { chartId, container, annotations, annObj: ann, savePosition, showToast, setupSvgEvents };
+    window._globalLabelSelectionManager.select(currentState);
+
     showToast(`<strong>"${ann.name}"</strong> selected &mdash; Drag mouse or use Arrow keys (&larr; &uarr; &rarr; &darr;) to adjust`);
 
     const idx = annotations.indexOf(ann);
@@ -318,20 +388,13 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
   }
 
   function deselectAnnotation() {
-    if (!selectedAnn) return;
-    showToast('');
-    container.style.cursor = '';
-    const ann = selectedAnn;
-    selectedAnn = null;
-    Plotly.relayout(container, { annotations });
+    window._globalLabelSelectionManager.deselect();
   }
 
-  // Helper to clean string for flexible label matching
   function cleanStr(s) {
     return (s || '').replace(/<[^>]*>/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
   }
 
-  // Bind mouse drag and click on SVG annotation groups
   const setupSvgEvents = () => {
     const annElements = container.querySelectorAll('.annotation-text, [class*="annotation"]');
     annElements.forEach(el => {
@@ -346,22 +409,14 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
 
       const candidates = annotations.filter(a => {
         if (!a || !a.name) return false;
-
-        // 1. Direct exact match
         if (a.name === rawText) return true;
-
         const cleanName = cleanStr(a.name);
         const cleanText = cleanStr(a.text);
-
-        // 2. Clean string match
         if (cleanName === cleanRaw || cleanText === cleanRaw) return true;
-
-        // 3. Match isolines ONLY if name starts with eta_, pow_, or npsh_
         if (a.name.startsWith('eta_') || a.name.startsWith('pow_') || a.name.startsWith('npsh_')) {
           const numName = a.name.replace(/[^0-9.]/g, '');
           if (numRaw && numName && numRaw === numName) return true;
         }
-
         return false;
       });
 
@@ -390,7 +445,7 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
       let startX = 0, startY = 0;
 
       const onMouseDown = (e) => {
-        if (e.button !== 0) return; // Left click only
+        if (e.button !== 0) return;
         e.preventDefault();
         e.stopPropagation();
 
@@ -401,7 +456,6 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
         g.style.cursor = 'grabbing';
         document.body.style.userSelect = 'none';
 
-        // Highlight selection immediately
         selectAnnotation(annObj);
 
         const onMouseMove = (me) => {
@@ -421,7 +475,6 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
           document.body.style.userSelect = '';
 
           if (isDragging) {
-            // Drag completed -> snap to drop position
             const coords = screenToDataCoords(ue);
             if (coords) {
               annObj.x = coords.x;
@@ -433,7 +486,7 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
 
               savePosition(annObj.name, coords.x, coords.y);
               Plotly.relayout(container, { annotations }).then(() => {
-                selectAnnotation(annObj);
+                deselectAnnotation();
                 setupSvgEvents();
               });
             }
@@ -448,59 +501,15 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
     });
   };
 
-  // Keyboard Arrow navigation for fine-tuning selected label
-  const keyHandler = (e) => {
-    if (!selectedAnn) return;
-
-    if (e.key === 'Escape') {
-      deselectAnnotation();
-      return;
-    }
-
-    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-      e.preventDefault();
-
-      const fullLayout = container._fullLayout;
-      const xDomain = (fullLayout?.xaxis?.range) ? Math.abs(fullLayout.xaxis.range[1] - fullLayout.xaxis.range[0]) : 100;
-      const yDomain = (fullLayout?.yaxis?.range) ? Math.abs(fullLayout.yaxis.range[1] - fullLayout.yaxis.range[0]) : 50;
-
-      const stepMult = e.shiftKey ? 5 : 1;
-      const stepX = (xDomain / 200) * stepMult;
-      const stepY = (yDomain / 200) * stepMult;
-
-      let newX = selectedAnn.x;
-      let newY = selectedAnn.y;
-
-      if (e.key === 'ArrowLeft')  newX = Math.max(0, newX - stepX);
-      if (e.key === 'ArrowRight') newX = newX + stepX;
-      if (e.key === 'ArrowDown')  newY = Math.max(0, newY - stepY);
-      if (e.key === 'ArrowUp')    newY = newY + stepY;
-
-      newX = Math.round(newX * 100) / 100;
-      newY = Math.round(newY * 100) / 100;
-
-      selectedAnn.x = newX;
-      selectedAnn.y = newY;
-      selectedAnn.xanchor = 'center';
-      selectedAnn.yanchor = 'middle';
-      selectedAnn.xshift = 0;
-      selectedAnn.yshift = 0;
-
-      savePosition(selectedAnn.name, newX, newY);
-      Plotly.relayout(container, { annotations }).then(() => {
-        selectAnnotation(selectedAnn);
-        setupSvgEvents();
-      });
-    }
-  };
-
-  document.addEventListener('keydown', keyHandler);
+  if (container.on) {
+    try {
+      container.removeListener?.('plotly_afterplot', setupSvgEvents);
+      container.on('plotly_afterplot', setupSvgEvents);
+    } catch (e) {}
+  }
 
   setTimeout(() => {
     setupSvgEvents();
-    container._annCleanups.push(() => {
-      document.removeEventListener('keydown', keyHandler);
-    });
   }, 250);
 }
 
@@ -850,6 +859,21 @@ function buildWarmanChart(data, opts = {}) {
           hovertemplate: `BEP ${lineLabel}<br>Q=${sl.bep.q} ${lblQ}<br>H=${sl.bep.h} ${lblH}<extra></extra>`,
         });
       }
+
+      /* Direct label badge on each overlay curve */
+      if (sl.q && sl.q.length > 0 && sl.h && sl.h.length > 0) {
+        const lastIdx = Math.floor(sl.q.length * 0.90);
+        annotations.push({
+          x: sl.q[lastIdx], y: sl.h[lastIdx],
+          text: `<b>${lineLabel}</b>`,
+          showarrow: false, captureevents: true,
+          font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
+          bgcolor: 'rgba(15, 23, 42, 0.90)',
+          bordercolor: col, borderwidth: 1, borderpad: 2,
+          xanchor: 'center', yanchor: 'middle',
+          name: `spd_lbl_${i}`
+        });
+      }
     });
   }
 
@@ -1048,6 +1072,30 @@ function buildEffChart(familyData, singleData, showClean) {
     }
   });
 
+  /* ── Overlay Speed / Impeller Trims on Efficiency Chart ── */
+  const spdLinesE = familyData?.speed_lines || [];
+  if (spdLinesE.length > 0) {
+    spdLinesE.forEach((sl, i) => {
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const baseRpm = familyData?.pump?.speed_rpm || 1450;
+      const baseDia = familyData?.pump?.impeller_dia_mm || 300;
+      const lineLabel = sl.label || (isVarSpeed 
+        ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
+        : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
+
+      if (sl.eta) {
+        traces.push({
+          type: 'scatter', mode: 'lines',
+          name: `η ${lineLabel}`,
+          x: sl.q, y: sl.eta,
+          line: { color: col, width: 1.5, dash: 'dot' },
+          showlegend: false,
+          hovertemplate: `${lineLabel} η<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
+        });
+      }
+    });
+  }
+
   if (showClean && singleData && singleData.eta_clean) {
     traces.push({
       type: 'scatter', mode: 'lines', name: 'η (water ref)',
@@ -1063,34 +1111,66 @@ function buildEffChart(familyData, singleData, showClean) {
     layout.showlegend = false;
   }
 
-  // Add direct curve label badges if Mode 3 (curve_labels) is active
-  if (units.legendMode === 'curve_labels' && family.length > 0) {
-    layout.annotations = layout.annotations || [];
-    family.forEach((fam, idx) => {
-      if (!fam.q || fam.q.length === 0 || !fam.eta) return;
-      const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
-      const curveKey = `eff_Ø${fam.dia} mm`;
-      const altKey = `Ø${fam.dia} mm`;
+  layout.annotations = layout.annotations || [];
 
+  family.forEach((fam, idx) => {
+    if (!fam.q || fam.q.length === 0 || !fam.eta) return;
+    const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+    const lblText = formatFamLbl(fam.dia);
+    const curveKey = `eff_${lblText}`;
+    const altKey = lblText;
+
+    let targetQ = 0, targetEta = 0, xanchor = 'left', yanchor = 'bottom', xshift = 4, yshift = 4;
+    if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
+      const pos = customLabelPositions[curveKey] || customLabelPositions[altKey];
+      targetQ = pos.x;
+      targetEta = pos.y;
+      xanchor = 'center'; yanchor = 'middle'; xshift = 0; yshift = 0;
+    } else {
+      const lastIdx = Math.floor(fam.q.length * 0.95);
+      targetQ = fam.q[lastIdx];
+      targetEta = fam.eta[lastIdx];
+    }
+
+    layout.annotations.push({
+      x: targetQ, y: targetEta,
+      text: `<b>η ${lblText}</b>`,
+      showarrow: false, captureevents: true,
+      font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
+      bgcolor: 'rgba(15, 23, 42, 0.92)',
+      bordercolor: col, borderwidth: 1.5, borderpad: 3,
+      xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
+      name: curveKey
+    });
+  });
+
+  if (spdLinesE.length > 0) {
+    spdLinesE.forEach((sl, i) => {
+      if (!sl.q || sl.q.length === 0 || !sl.eta) return;
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const baseRpm = familyData?.pump?.speed_rpm || 1450;
+      const baseDia = familyData?.pump?.impeller_dia_mm || 300;
+      const lineLabel = sl.label || (isVarSpeed 
+        ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
+        : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
+
+      const curveKey = `eff_spd_${i}`;
       let targetQ = 0, targetEta = 0, xanchor = 'center', yanchor = 'middle', xshift = 0, yshift = 0;
-      if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
-        const pos = customLabelPositions[curveKey] || customLabelPositions[altKey];
-        targetQ = pos.x;
-        targetEta = pos.y;
+      if (customLabelPositions && customLabelPositions[curveKey]) {
+        const pos = customLabelPositions[curveKey];
+        targetQ = pos.x; targetEta = pos.y;
       } else {
-        const lastIdx = fam.q.length - 1;
-        targetQ = fam.q[lastIdx];
-        targetEta = fam.eta[lastIdx];
-        xanchor = 'left'; yanchor = 'bottom'; xshift = 4; yshift = 4;
+        const lastIdx = Math.floor(sl.q.length * 0.90);
+        targetQ = sl.q[lastIdx]; targetEta = sl.eta[lastIdx];
       }
 
       layout.annotations.push({
         x: targetQ, y: targetEta,
-        text: `<b>Ø${fam.dia} mm</b>`,
+        text: `<b>η ${lineLabel}</b>`,
         showarrow: false, captureevents: true,
-        font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
-        bgcolor: 'rgba(22, 27, 34, 0.92)',
-        bordercolor: col, borderwidth: 1.5, borderpad: 3,
+        font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
+        bgcolor: 'rgba(15, 23, 42, 0.90)',
+        bordercolor: col, borderwidth: 1, borderpad: 2,
         xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
         name: curveKey
       });
@@ -1175,6 +1255,40 @@ function buildEffPowerChart(familyData, singleData, showClean) {
     }
   });
 
+  /* ── Overlay Speed / Impeller Trims on Efficiency & Power Chart ── */
+  const spdLinesEP = familyData?.speed_lines || [];
+  if (spdLinesEP.length > 0) {
+    spdLinesEP.forEach((sl, i) => {
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const baseRpm = familyData?.pump?.speed_rpm || 1450;
+      const baseDia = familyData?.pump?.impeller_dia_mm || 300;
+      const lineLabel = sl.label || (isVarSpeed 
+        ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
+        : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
+
+      if (sl.eta) {
+        traces.push({
+          type: 'scatter', mode: 'lines',
+          name: `η ${lineLabel}`,
+          x: sl.q, y: sl.eta,
+          line: { color: col, width: 1.5, dash: 'dot' },
+          yaxis: 'y1', showlegend: false,
+          hovertemplate: `${lineLabel} η<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
+        });
+      }
+      if (sl.power) {
+        traces.push({
+          type: 'scatter', mode: 'lines',
+          name: `P ${lineLabel}`,
+          x: sl.q, y: sl.power,
+          line: { color: col, width: 1.5, dash: 'dashdot' },
+          yaxis: 'y2', showlegend: false,
+          hovertemplate: `${lineLabel} P<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
+        });
+      }
+    });
+  }
+
   if (showClean && singleData) {
     if (singleData.eta_clean) {
       traces.push({
@@ -1212,34 +1326,66 @@ function buildEffPowerChart(familyData, singleData, showClean) {
     layout.showlegend = false;
   }
 
-  // Add direct curve label badges if Mode 3 (curve_labels) is active
-  if (unitsEP.legendMode === 'curve_labels' && family.length > 0) {
-    layout.annotations = layout.annotations || [];
-    family.forEach((fam, idx) => {
-      if (!fam.q || fam.q.length === 0 || !fam.eta) return;
-      const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
-      const curveKey = `eff_Ø${fam.dia} mm`;
-      const altKey = `Ø${fam.dia} mm`;
+  layout.annotations = layout.annotations || [];
 
+  family.forEach((fam, idx) => {
+    if (!fam.q || fam.q.length === 0 || !fam.eta) return;
+    const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+    const lblText = formatFamLbl(fam.dia);
+    const curveKey = `eff_${lblText}`;
+    const altKey = lblText;
+
+    let targetQ = 0, targetEta = 0, xanchor = 'left', yanchor = 'bottom', xshift = 4, yshift = 4;
+    if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
+      const pos = customLabelPositions[curveKey] || customLabelPositions[altKey];
+      targetQ = pos.x;
+      targetEta = pos.y;
+      xanchor = 'center'; yanchor = 'middle'; xshift = 0; yshift = 0;
+    } else {
+      const lastIdx = Math.floor(fam.q.length * 0.95);
+      targetQ = fam.q[lastIdx];
+      targetEta = fam.eta[lastIdx];
+    }
+
+    layout.annotations.push({
+      x: targetQ, y: targetEta,
+      text: `<b>η ${lblText}</b>`,
+      showarrow: false, captureevents: true,
+      font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
+      bgcolor: 'rgba(15, 23, 42, 0.92)',
+      bordercolor: col, borderwidth: 1.5, borderpad: 3,
+      xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
+      name: curveKey
+    });
+  });
+
+  if (spdLinesEP.length > 0) {
+    spdLinesEP.forEach((sl, i) => {
+      if (!sl.q || sl.q.length === 0 || !sl.eta) return;
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const baseRpm = familyData?.pump?.speed_rpm || 1450;
+      const baseDia = familyData?.pump?.impeller_dia_mm || 300;
+      const lineLabel = sl.label || (isVarSpeed 
+        ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
+        : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
+
+      const curveKey = `eff_spd_${i}`;
       let targetQ = 0, targetEta = 0, xanchor = 'center', yanchor = 'middle', xshift = 0, yshift = 0;
-      if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
-        const pos = customLabelPositions[curveKey] || customLabelPositions[altKey];
-        targetQ = pos.x;
-        targetEta = pos.y;
+      if (customLabelPositions && customLabelPositions[curveKey]) {
+        const pos = customLabelPositions[curveKey];
+        targetQ = pos.x; targetEta = pos.y;
       } else {
-        const lastIdx = fam.q.length - 1;
-        targetQ = fam.q[lastIdx];
-        targetEta = fam.eta[lastIdx];
-        xanchor = 'left'; yanchor = 'bottom'; xshift = 4; yshift = 4;
+        const lastIdx = Math.floor(sl.q.length * 0.90);
+        targetQ = sl.q[lastIdx]; targetEta = sl.eta[lastIdx];
       }
 
       layout.annotations.push({
         x: targetQ, y: targetEta,
-        text: `<b>Ø${fam.dia} mm</b>`,
+        text: `<b>η ${lineLabel}</b>`,
         showarrow: false, captureevents: true,
-        font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
-        bgcolor: 'rgba(22, 27, 34, 0.92)',
-        bordercolor: col, borderwidth: 1.5, borderpad: 3,
+        font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
+        bgcolor: 'rgba(15, 23, 42, 0.90)',
+        bordercolor: col, borderwidth: 1, borderpad: 2,
         xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
         name: curveKey
       });
@@ -1296,6 +1442,30 @@ function buildPowerChart(familyData, singleData, showClean) {
     }
   });
 
+  /* ── Overlay Speed / Impeller Trims on Power Chart ── */
+  const spdLinesP = familyData?.speed_lines || [];
+  if (spdLinesP.length > 0) {
+    spdLinesP.forEach((sl, i) => {
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const baseRpm = familyData?.pump?.speed_rpm || 1450;
+      const baseDia = familyData?.pump?.impeller_dia_mm || 300;
+      const lineLabel = sl.label || (isVarSpeed 
+        ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
+        : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
+
+      if (sl.power) {
+        traces.push({
+          type: 'scatter', mode: 'lines',
+          name: `P ${lineLabel}`,
+          x: sl.q, y: sl.power,
+          line: { color: col, width: 1.5, dash: 'dashdot' },
+          showlegend: false,
+          hovertemplate: `${lineLabel} P<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
+        });
+      }
+    });
+  }
+
   if (showClean && singleData && singleData.power_clean) {
     traces.push({
       type: 'scatter', mode: 'lines', name: 'Power (water ref)',
@@ -1311,35 +1481,66 @@ function buildPowerChart(familyData, singleData, showClean) {
     layout.showlegend = false;
   }
 
-  // Add direct curve label badges if Mode 3 (curve_labels) is active
-  if (unitsP.legendMode === 'curve_labels' && family.length > 0) {
-    layout.annotations = layout.annotations || [];
-    family.forEach((fam, idx) => {
-      if (!fam.q || fam.q.length === 0 || !fam.power) return;
-      const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
-      const lblText = formatFamLbl(fam.dia);
-      const curveKey = `pow_${lblText}`;
-      const altKey = lblText;
+  layout.annotations = layout.annotations || [];
 
+  family.forEach((fam, idx) => {
+    if (!fam.q || fam.q.length === 0 || !fam.power) return;
+    const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+    const lblText = formatFamLbl(fam.dia);
+    const curveKey = `pow_${lblText}`;
+    const altKey = lblText;
+
+    let targetQ = 0, targetPow = 0, xanchor = 'left', yanchor = 'bottom', xshift = 4, yshift = 4;
+    if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
+      const pos = customLabelPositions[curveKey] || customLabelPositions[altKey];
+      targetQ = pos.x;
+      targetPow = pos.y;
+      xanchor = 'center'; yanchor = 'middle'; xshift = 0; yshift = 0;
+    } else {
+      const lastIdx = Math.floor(fam.q.length * 0.95);
+      targetQ = fam.q[lastIdx];
+      targetPow = fam.power[lastIdx];
+    }
+
+    layout.annotations.push({
+      x: targetQ, y: targetPow,
+      text: `<b>P ${lblText}</b>`,
+      showarrow: false, captureevents: true,
+      font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
+      bgcolor: 'rgba(15, 23, 42, 0.92)',
+      bordercolor: col, borderwidth: 1.5, borderpad: 3,
+      xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
+      name: curveKey
+    });
+  });
+
+  if (spdLinesP.length > 0) {
+    spdLinesP.forEach((sl, i) => {
+      if (!sl.q || sl.q.length === 0 || !sl.power) return;
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const baseRpm = familyData?.pump?.speed_rpm || 1450;
+      const baseDia = familyData?.pump?.impeller_dia_mm || 300;
+      const lineLabel = sl.label || (isVarSpeed 
+        ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
+        : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
+
+      const curveKey = `pow_spd_${i}`;
       let targetQ = 0, targetPow = 0, xanchor = 'center', yanchor = 'middle', xshift = 0, yshift = 0;
-      if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
-        const pos = customLabelPositions[curveKey] || customLabelPositions[altKey];
-        targetQ = pos.x;
-        targetPow = pos.y;
+      if (customLabelPositions && customLabelPositions[curveKey]) {
+        const pos = customLabelPositions[curveKey];
+        targetQ = pos.x; targetPow = pos.y;
       } else {
-        const lastIdx = fam.q.length - 1;
-        targetQ = fam.q[lastIdx];
-        targetPow = fam.power[lastIdx];
-        xanchor = 'left'; yanchor = 'bottom'; xshift = 4; yshift = 4;
+        const lastIdx = Math.floor(sl.q.length * 0.90);
+        targetQ = sl.q[lastIdx]; targetPow = sl.power[lastIdx];
       }
 
       layout.annotations.push({
         x: targetQ, y: targetPow,
-        text: `<b>${lblText}</b>`,
+        text: `<b>P ${lineLabel}</b>`,
         showarrow: false, captureevents: true,
-        font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
-        bgcolor: 'rgba(22, 27, 34, 0.92)',
-        bordercolor: col, borderwidth: 1.5, borderpad: 3,
+        font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
+        bgcolor: 'rgba(15, 23, 42, 0.90)',
+        bordercolor: col, borderwidth: 1, borderpad: 2,
         xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
         name: curveKey
       });
@@ -1393,6 +1594,30 @@ function buildNpshChart(familyData, singleData) {
       hovertemplate: `${lblText}<br>Q=%{x:.1f} m³/h<br>NPSHr=%{y:.2f} m<extra></extra>`
     });
   });
+
+  /* ── Overlay Speed / Impeller Trims on NPSHr Chart ── */
+  const spdLinesN = familyData?.speed_lines || [];
+  if (spdLinesN.length > 0) {
+    spdLinesN.forEach((sl, i) => {
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const baseRpm = familyData?.pump?.speed_rpm || 1450;
+      const baseDia = familyData?.pump?.impeller_dia_mm || 300;
+      const lineLabel = sl.label || (isVarSpeed 
+        ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
+        : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
+
+      if (sl.npsh) {
+        traces.push({
+          type: 'scatter', mode: 'lines',
+          name: `NPSHr ${lineLabel}`,
+          x: sl.q, y: sl.npsh,
+          line: { color: col, width: 1.5, dash: 'dashdot' },
+          showlegend: false,
+          hovertemplate: `${lineLabel} NPSHr<br>Q=%{x:.1f} m³/h<br>NPSHr=%{y:.2f} m<extra></extra>`
+        });
+      }
+    });
+  }
 
   const layout = makeLayout('Flow Q (m³/h)', 'NPSHr (m)');
   layout.yaxis.rangemode = 'tozero';
@@ -2182,20 +2407,24 @@ if (typeof PUMP_ID !== 'undefined') {
       if (showEff && showPower && combineEffPower) {
         const effPow = buildEffPowerChart(currentData, singleData, showClean);
         Plotly.react('chartEffPower', [...effPow.traces, ...customEta, ...customPow], effPow.layout, PLOTLY_CONFIG);
+        if (effPow.layout.annotations) makeAnnotationsDraggable('chartEffPower', effPow.layout.annotations, PUMP_ID);
       } else {
         if (showEff) {
           const eff = buildEffChart(currentData, singleData, showClean);
           Plotly.react('chartEff', [...eff.traces, ...customEta], eff.layout, PLOTLY_CONFIG);
+          if (eff.layout.annotations) makeAnnotationsDraggable('chartEff', eff.layout.annotations, PUMP_ID);
         }
         if (showPower) {
           const power = buildPowerChart(currentData, singleData, showClean);
           Plotly.react('chartPower', [...power.traces, ...customPow], power.layout, PLOTLY_CONFIG);
+          if (power.layout.annotations) makeAnnotationsDraggable('chartPower', power.layout.annotations, PUMP_ID);
         }
       }
 
       if (showNpsh) {
         const npsh = buildNpshChart(currentData, singleData);
         Plotly.react('chartNpsh', npsh.traces, npsh.layout, PLOTLY_CONFIG);
+        if (npsh.layout.annotations) makeAnnotationsDraggable('chartNpsh', npsh.layout.annotations, PUMP_ID);
       }
     }
   }

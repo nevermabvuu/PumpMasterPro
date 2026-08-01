@@ -1342,8 +1342,8 @@
   data-unit-op-q="{{ pump.unit_op_q if pump else 'm3h' }}"
   data-graph-options='{{ (pump.get_graph_options() | tojson) if pump else "{}" }}' {% endif %}>
 </div>
-<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=110"></script>
-<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=135"></script>
+<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=145"></script>
+<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=170"></script>
 <script>
   // Beginners Note: Generic card toggle helper for smooth card collapse & expand
   function toggleCard(bodyId, chevronId) {

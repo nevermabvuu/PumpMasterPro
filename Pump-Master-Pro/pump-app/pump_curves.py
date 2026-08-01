@@ -698,23 +698,37 @@ def speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00), values_str=None, n_points
     q_base = np.linspace(0, pump.q_max, n_points)
     H_base = hq_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
     eta_base = efficiency_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
+    pwr_base = power_curve(pump, q_base, liquid, 1000.0, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
+    npsh_base = npsh_curve(pump, q_base)
 
     result = []
     for k, val, label in items_to_process:
         Q_k = q_base * k
         H_k = np.clip(H_base * (k ** 2.15 if is_var_speed else k ** 2), 0, None)
-        bep_idx = int(np.argmax(eta_base[:int(n_points * 0.95)]))
+        P_k = np.clip(pwr_base * (k ** 3.0 if is_var_speed else k ** 3), 0, None)
+        NPSH_k = np.clip(npsh_base * (k ** 2.0 if is_var_speed else k ** 2), 0, None)
+        eta_k = np.clip(eta_base - (5.0 * (1.0 - k) if not is_var_speed else 0.0), 0, 100)
+
+        bep_idx = int(np.argmax(eta_k[:int(n_points * 0.95)]))
 
         result.append({
+            'dia': val if is_var_speed else (pump.impeller_dia_mm or 300.0),
+            'ratio': round(float(k), 4),
             'speed_ratio': round(float(k), 4),
             'val': val,
             'speed_rpm': int(round(rpm_max * k)) if is_var_speed else int(round(val)),
             'label': label,
             'q': [round(float(v), 2) for v in Q_k],
             'h': [round(float(v), 3) for v in H_k],
+            'eta': [round(float(v), 2) for v in eta_k],
+            'power': [round(float(v), 3) for v in P_k],
+            'npsh': [round(float(v), 3) for v in NPSH_k],
             'bep': {
                 'q': round(float(Q_k[bep_idx]), 2),
                 'h': round(float(H_k[bep_idx]), 2),
+                'eta': round(float(eta_k[bep_idx]), 2),
+                'power': round(float(P_k[bep_idx]), 2),
+                'npsh': round(float(NPSH_k[bep_idx]), 2),
             },
         })
     return result

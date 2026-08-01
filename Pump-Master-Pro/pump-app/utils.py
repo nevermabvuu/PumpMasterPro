@@ -168,6 +168,24 @@ def _pump_from_form(f, pump=None):
     pump.family_type      = f.get('family_type', pump.family_type or 'trimmed_impeller')
     pump.application      = f.get('application', pump.application or '')
     pump.notes            = f.get('notes', pump.notes or '')
+
+    # Extended Setup & Application Modules
+    app_mods = f.getlist('app_modules') if hasattr(f, 'getlist') else f.get('app_modules', [])
+    if isinstance(app_mods, list):
+        pump.app_modules = ','.join([x.strip() for x in app_mods if x.strip()])
+    else:
+        pump.app_modules = str(app_mods or '')
+
+    pump.impeller_material = f.get('impeller_material', pump.impeller_material or '')
+    pump.casing_material   = f.get('casing_material', pump.casing_material or '')
+    pump.number_of_vanes   = _get_nullable_int(f, 'number_of_vanes') or pump.number_of_vanes or 5
+    pump.suction_size      = f.get('suction_size', pump.suction_size or '')
+    pump.discharge_size    = f.get('discharge_size', pump.discharge_size or '')
+    pump.max_solid_size_mm = _get_float(f, 'max_solid_size_mm', pump.max_solid_size_mm or 0.0)
+    pump.max_pressure_bar  = _get_float(f, 'max_pressure_bar', pump.max_pressure_bar or 0.0)
+    pump.max_temp_c        = _get_float(f, 'max_temp_c', pump.max_temp_c or 0.0)
+    pump.seal_type         = f.get('seal_type', pump.seal_type or '')
+    pump.drive_type        = f.get('drive_type', pump.drive_type or '')
     if 'graph_options_json' in f:
         try:
             raw_g_opts = f.getlist('graph_options_json') if hasattr(f, 'getlist') else [f.get('graph_options_json')]

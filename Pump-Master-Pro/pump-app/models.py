@@ -141,6 +141,19 @@ class Pump(db.Model):
     unit_pow  = db.Column(db.String(20), default='kw')
     unit_op_q = db.Column(db.String(20), default='m3h')
 
+    # Extended Setup & Application Selection Specification Fields
+    app_modules        = db.Column(db.Text, default='')  # Comma-separated app keys e.g. 'slurry,fire,borehole'
+    impeller_material  = db.Column(db.String(100), default='')
+    casing_material    = db.Column(db.String(100), default='')
+    number_of_vanes    = db.Column(db.Integer, default=5)
+    suction_size       = db.Column(db.String(50), default='')
+    discharge_size     = db.Column(db.String(50), default='')
+    max_solid_size_mm  = db.Column(db.Float, default=0.0)
+    max_pressure_bar   = db.Column(db.Float, default=0.0)
+    max_temp_c         = db.Column(db.Float, default=0.0)
+    seal_type          = db.Column(db.String(100), default='')
+    drive_type         = db.Column(db.String(100), default='')
+
     # Graph curve styles stored as 'color;weight,lineStyle' format
     head_curve_style  = db.Column(db.String(50), default='#58a6ff;2.0,solid')
     eff_curve_style   = db.Column(db.String(50), default='#3fb950;1.5,dot')
@@ -660,6 +673,17 @@ class Pump(db.Model):
             'family_type': self.family_type or 'trimmed_impeller',
             'application': self.application,
             'notes': self.notes,
+            'app_modules': self.app_modules or '',
+            'impeller_material': self.impeller_material or '',
+            'casing_material': self.casing_material or '',
+            'number_of_vanes': self.number_of_vanes or 5,
+            'suction_size': self.suction_size or '',
+            'discharge_size': self.discharge_size or '',
+            'max_solid_size_mm': self.max_solid_size_mm or 0.0,
+            'max_pressure_bar': self.max_pressure_bar or 0.0,
+            'max_temp_c': self.max_temp_c or 0.0,
+            'seal_type': self.seal_type or '',
+            'drive_type': self.drive_type or '',
             'extra_curves_json': self.extra_curves_json or '',
             'diameters': self.get_diameters(),
             'extra_curves': self.get_extra_curves(),

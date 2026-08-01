@@ -40,7 +40,9 @@ with app.app_context():
             for col_name in ['family_type', 'curve_labels', 'curve_diameters', 'curve_colors', 'curve_modes',
                              'curve_units', 'curve_raw_tables', 'curve_coeffs',
                              'unit_q', 'unit_h', 'unit_npsh', 'unit_pow', 'unit_op_q', 'graph_custom_label_pos', 'graph_speed_line_values',
-                             'head_curve_style', 'eff_curve_style', 'power_curve_style', 'npsh_curve_style', 'main_curve_style'] + axis_cols:
+                             'head_curve_style', 'eff_curve_style', 'power_curve_style', 'npsh_curve_style', 'main_curve_style',
+                             'app_modules', 'impeller_material', 'casing_material', 'number_of_vanes', 'suction_size', 'discharge_size',
+                             'max_solid_size_mm', 'max_pressure_bar', 'max_temp_c', 'seal_type', 'drive_type'] + axis_cols:
                 if col_name not in cols:
                     if col_name in axis_cols:
                         col_type = "INTEGER" if col_name.endswith('_minor') else "REAL"

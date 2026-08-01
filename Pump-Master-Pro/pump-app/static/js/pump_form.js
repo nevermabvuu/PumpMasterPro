@@ -12,6 +12,12 @@
 var lastFitResults = null;
 var TABLE_INPUT_CLS = 'w-full bg-[#0d1117] border border-[#30363d] rounded-md px-2.5 py-1 text-xs text-[#e6edf3] font-mono tracking-tight shadow-inner focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]/40 transition-all focus:outline-none';
 
+function toggleExtendedSetup() {
+  const sec = document.getElementById('extendedSetupSection');
+  if (!sec) return;
+  sec.classList.toggle('hidden');
+}
+
 var CONVERSIONS = {
   q: {
     m3h: 1.0,

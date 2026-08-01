@@ -14,6 +14,7 @@ If no polynomial is stored, the curve falls back to P = ρgQH/η evaluated
 only in the valid operating range (η > 5 %).
 """
 import numpy as np
+import re
 
 G = 9.81   # m/s²
 
@@ -651,32 +652,66 @@ def npsh_isolines(pump, liquid='water', viscosity_cSt=1.0,
 
 # ── Full Warman performance map data ──────────────────────────────────────────
 
-def speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00), n_points=100,
+def speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00), values_str=None, n_points=100,
                 liquid='water', viscosity_cSt=1.0,
                 slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650):
     """
-    H-Q curves at different speed ratios using affinity laws:
-      Q_k = Q_base · k       (k = n / n_rated)
-      H_k = H_base · k²
-      η   ≈ constant (does not change with speed at same duty point)
-
-    Returns a list of dicts (one per speed ratio), each containing:
-      speed_ratio, speed_rpm, q[], h[], bep{q,h}
+    H-Q overlay lines using affinity laws:
+    - Variable Speed Mode: generates impeller trim curves (from user values or % of max diameter)
+    - Trimmed Impeller Mode: generates speed lines (from user values or % of rated speed)
     """
+    fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+    is_var_speed = (fam_type == 'variable_speed')
+
+    parsed_items = []
+    if values_str and isinstance(values_str, str) and values_str.strip():
+        cleaned_str = re.sub(r'[,;\s]+', ',', values_str.strip())
+        parts = [p.strip() for p in cleaned_str.split(',') if p.strip()]
+        for p in parts:
+            try:
+                parsed_items.append(float(p))
+            except ValueError:
+                pass
+
+    d_max = pump.impeller_dia_mm if (pump.impeller_dia_mm and pump.impeller_dia_mm > 0) else (max(parsed_items) if (is_var_speed and parsed_items) else 300.0)
+    rpm_max = pump.speed_rpm if (pump.speed_rpm and pump.speed_rpm > 0) else (max(parsed_items) if (not is_var_speed and parsed_items) else 1450.0)
+
+    items_to_process = []
+    if parsed_items:
+        if is_var_speed:
+            for d in parsed_items:
+                k = d / d_max if d_max > 0 else 1.0
+                items_to_process.append((k, d, f"Ø{d:g} mm ({int(round(k * 100))}%)"))
+        else:
+            for rpm in parsed_items:
+                k = rpm / rpm_max if rpm_max > 0 else 1.0
+                items_to_process.append((k, rpm, f"{int(round(rpm))} rpm ({int(round(k * 100))}%)"))
+    else:
+        for k in ratios:
+            if is_var_speed:
+                d_val = round(d_max * k, 1)
+                items_to_process.append((k, d_val, f"Ø{d_val:g} mm ({int(round(k * 100))}%)"))
+            else:
+                rpm_val = int(round(rpm_max * k))
+                items_to_process.append((k, rpm_val, f"{rpm_val} rpm ({int(round(k * 100))}%)"))
+
     q_base = np.linspace(0, pump.q_max, n_points)
     H_base = hq_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
     eta_base = efficiency_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
 
     result = []
-    for k in ratios:
+    for k, val, label in items_to_process:
         Q_k = q_base * k
-        H_k = np.clip(H_base * k ** 2, 0, None)
+        H_k = np.clip(H_base * (k ** 2.15 if is_var_speed else k ** 2), 0, None)
         bep_idx = int(np.argmax(eta_base[:int(n_points * 0.95)]))
+
         result.append({
-            'speed_ratio': round(float(k), 2),
-            'speed_rpm':   int(round(pump.speed_rpm * k)),
-            'q':   [round(float(v), 2) for v in Q_k],
-            'h':   [round(float(v), 3) for v in H_k],
+            'speed_ratio': round(float(k), 4),
+            'val': val,
+            'speed_rpm': int(round(rpm_max * k)) if is_var_speed else int(round(val)),
+            'label': label,
+            'q': [round(float(v), 2) for v in Q_k],
+            'h': [round(float(v), 3) for v in H_k],
             'bep': {
                 'q': round(float(Q_k[bep_idx]), 2),
                 'h': round(float(H_k[bep_idx]), 2),
@@ -704,7 +739,8 @@ def warman_chart_data(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
                              slurry_cv=slurry_cv, slurry_d50=slurry_d50,
                              rho_solid=rho_solid, iso_levels=npsh_levels)
     bep_max  = bep_point(pump, liquid, rho, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
-    spd_lines = speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00),
+    spd_vals = getattr(pump, 'graph_speed_line_values', '') or ''
+    spd_lines = speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00), values_str=spd_vals,
                             liquid=liquid, viscosity_cSt=viscosity_cSt,
                             slurry_cv=slurry_cv, slurry_d50=slurry_d50, rho_solid=rho_solid)
 

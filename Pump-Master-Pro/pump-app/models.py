@@ -105,6 +105,7 @@ class Pump(db.Model):
     graph_show_npsh_curve   = db.Column(db.Boolean, default=False)
     graph_npsh_yaxis        = db.Column(db.String(20), default='y2')
     graph_show_speed_lines  = db.Column(db.Boolean, default=False)
+    graph_speed_line_values = db.Column(db.String(100), default='')
     graph_show_hq           = db.Column(db.Boolean, default=True)
     graph_show_other        = db.Column(db.Boolean, default=True)
     graph_show_eff          = db.Column(db.Boolean, default=True)
@@ -509,6 +510,7 @@ class Pump(db.Model):
             'show_npsh_curve': bool(self.graph_show_npsh_curve),
             'npsh_yaxis': self.graph_npsh_yaxis or 'y2',
             'show_speed_lines': bool(self.graph_show_speed_lines),
+            'speed_line_values': self.graph_speed_line_values or extra_opts.get('speed_line_values', ''),
             'show_hq': self.graph_show_hq if self.graph_show_hq is not None else True,
             'show_other': self.graph_show_other if self.graph_show_other is not None else True,
             'show_eff': self.graph_show_eff if self.graph_show_eff is not None else True,
@@ -565,6 +567,7 @@ class Pump(db.Model):
         if 'show_npsh_curve' in opts: self.graph_show_npsh_curve = bool(opts['show_npsh_curve'])
         if 'npsh_yaxis' in opts: self.graph_npsh_yaxis = str(opts['npsh_yaxis'])
         if 'show_speed_lines' in opts: self.graph_show_speed_lines = bool(opts['show_speed_lines'])
+        if 'speed_line_values' in opts: self.graph_speed_line_values = str(opts['speed_line_values'])
         if 'show_hq' in opts: self.graph_show_hq = bool(opts['show_hq'])
         if 'show_other' in opts: self.graph_show_other = bool(opts['show_other'])
         if 'show_eff' in opts: self.graph_show_eff = bool(opts['show_eff'])

@@ -150,6 +150,11 @@ def api_preview_warman_chart():
     if 'family_type' in data:
         pump.family_type = str(data['family_type'])
 
+    if 'graph_speed_line_values' in data and data['graph_speed_line_values'] is not None:
+        pump.graph_speed_line_values = str(data['graph_speed_line_values'])
+    elif 'speed_line_values' in data and data['speed_line_values'] is not None:
+        pump.graph_speed_line_values = str(data['speed_line_values'])
+
     # Set 20 custom axis scale settings on temporary Pump object
     for axis_name in ['flow', 'head', 'eff', 'power', 'npsh']:
         for prop in ['min', 'max', 'major']:

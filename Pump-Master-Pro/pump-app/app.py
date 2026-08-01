@@ -39,7 +39,7 @@ with app.app_context():
             ]
             for col_name in ['family_type', 'curve_labels', 'curve_diameters', 'curve_colors', 'curve_modes',
                              'curve_units', 'curve_raw_tables', 'curve_coeffs',
-                             'unit_q', 'unit_h', 'unit_npsh', 'unit_pow', 'unit_op_q', 'graph_custom_label_pos',
+                             'unit_q', 'unit_h', 'unit_npsh', 'unit_pow', 'unit_op_q', 'graph_custom_label_pos', 'graph_speed_line_values',
                              'head_curve_style', 'eff_curve_style', 'power_curve_style', 'npsh_curve_style', 'main_curve_style'] + axis_cols:
                 if col_name not in cols:
                     if col_name in axis_cols:

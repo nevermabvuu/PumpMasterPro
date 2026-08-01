@@ -227,10 +227,19 @@
                 </label>
               </div>
 
-              <label class="flex items-center gap-2 cursor-pointer text-[#ff9900]">
-                <input type="checkbox" id="chkSpeedLines" class="rounded border-[#30363d] bg-[#0d1117] text-[#58a6ff]">
-                <span>Show Speed Lines (70% - 100%)</span>
-              </label>
+              <div class="space-y-1.5 pt-1 border-t border-[#30363d]">
+                <label class="flex items-center gap-2 cursor-pointer text-[#ff9900]">
+                  <input type="checkbox" id="chkSpeedLines" class="rounded border-[#30363d] bg-[#0d1117] text-[#58a6ff]">
+                  <span id="lblSpeedLines" class="font-semibold text-xs">Show Speed Lines</span>
+                </label>
+                <div class="pl-5 space-y-1" id="wrapSpeedLineValues">
+                  <label class="block text-[11px] text-[#8b949e]" id="lblSpeedLineValues">Speed Lines (RPM):</label>
+                  <input type="text" id="txtSpeedLineValues" name="graph_speed_line_values"
+                    class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
+                    value="{{ pump.graph_speed_line_values if pump else '' }}"
+                    placeholder="e.g. 1000, 900, 800, 700">
+                </div>
+              </div>
             </div>
           </div>
 
@@ -531,33 +540,76 @@
         </div>
 
         <div id="standalonePanels" class="space-y-3" style="display:none">
-          <div class="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden" id="panelEffPower"
+          <div class="bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden" id="panelEffPower"
             style="display:none">
-            <div class="px-3 py-2 bg-[#1c2330] border-b border-[#30363d] font-semibold text-xs text-[#58a6ff]">
-              <i class="bi bi-speedometer2 me-1"></i>Efficiency &amp; Power
+            <div onclick="toggleCard('bodyEffPower', 'chevronEffPower')"
+              class="px-4 py-2.5 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/60 transition-colors flex items-center justify-between">
+              <div class="flex items-center gap-2 font-semibold text-xs text-[#58a6ff]">
+                <i class="bi bi-speedometer2 me-1"></i>
+                <span>Efficiency &amp; Power — Flow</span>
+              </div>
+              <i class="bi bi-chevron-down text-[#8b949e] hover:text-white transition-transform duration-200 cursor-pointer p-1"
+                id="chevronEffPower"
+                onclick="toggleCard('bodyEffPower', 'chevronEffPower'); event.stopPropagation();"
+                style="transform: rotate(180deg)"></i>
             </div>
-            <div id="chartEffPower" style="height:260px"></div>
+            <div class="p-1" id="bodyEffPower">
+              <div id="chartEffPower" style="height:260px"></div>
+            </div>
           </div>
-          <div class="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden" id="panelEff"
+
+          <div class="bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden" id="panelEff"
             style="display:none">
-            <div class="px-3 py-2 bg-[#1c2330] border-b border-[#30363d] font-semibold text-xs text-[#3fb950]">
-              <i class="bi bi-speedometer2 me-1"></i>Efficiency — Flow
+            <div onclick="toggleCard('bodyEff', 'chevronEff')"
+              class="px-4 py-2.5 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/60 transition-colors flex items-center justify-between">
+              <div class="flex items-center gap-2 font-semibold text-xs text-[#3fb950]">
+                <i class="bi bi-speedometer2 me-1"></i>
+                <span>Efficiency — Flow</span>
+              </div>
+              <i class="bi bi-chevron-down text-[#8b949e] hover:text-white transition-transform duration-200 cursor-pointer p-1"
+                id="chevronEff"
+                onclick="toggleCard('bodyEff', 'chevronEff'); event.stopPropagation();"
+                style="transform: rotate(180deg)"></i>
             </div>
-            <div id="chartEff" style="height:260px"></div>
+            <div class="p-1" id="bodyEff">
+              <div id="chartEff" style="height:260px"></div>
+            </div>
           </div>
-          <div class="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden" id="panelPower"
+
+          <div class="bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden" id="panelPower"
             style="display:none">
-            <div class="px-3 py-2 bg-[#1c2330] border-b border-[#30363d] font-semibold text-xs text-[#f85149]">
-              <i class="bi bi-lightning-fill me-1"></i>Power — Flow
+            <div onclick="toggleCard('bodyPower', 'chevronPower')"
+              class="px-4 py-2.5 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/60 transition-colors flex items-center justify-between">
+              <div class="flex items-center gap-2 font-semibold text-xs text-[#f85149]">
+                <i class="bi bi-lightning-fill me-1"></i>
+                <span>Power — Flow</span>
+              </div>
+              <i class="bi bi-chevron-down text-[#8b949e] hover:text-white transition-transform duration-200 cursor-pointer p-1"
+                id="chevronPower"
+                onclick="toggleCard('bodyPower', 'chevronPower'); event.stopPropagation();"
+                style="transform: rotate(180deg)"></i>
             </div>
-            <div id="chartPower" style="height:260px"></div>
+            <div class="p-1" id="bodyPower">
+              <div id="chartPower" style="height:260px"></div>
+            </div>
           </div>
-          <div class="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden" id="panelNpsh"
+
+          <div class="bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden" id="panelNpsh"
             style="display:none">
-            <div class="px-3 py-2 bg-[#1c2330] border-b border-[#30363d] font-semibold text-xs text-[#39d3c0]">
-              <i class="bi bi-arrow-up-right me-1"></i>NPSHr — Flow
+            <div onclick="toggleCard('bodyNpsh', 'chevronNpsh')"
+              class="px-4 py-2.5 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/60 transition-colors flex items-center justify-between">
+              <div class="flex items-center gap-2 font-semibold text-xs text-[#39d3c0]">
+                <i class="bi bi-arrow-up-right me-1"></i>
+                <span>NPSHr — Flow</span>
+              </div>
+              <i class="bi bi-chevron-down text-[#8b949e] hover:text-white transition-transform duration-200 cursor-pointer p-1"
+                id="chevronNpsh"
+                onclick="toggleCard('bodyNpsh', 'chevronNpsh'); event.stopPropagation();"
+                style="transform: rotate(180deg)"></i>
             </div>
-            <div id="chartNpsh" style="height:260px"></div>
+            <div class="p-1" id="bodyNpsh">
+              <div id="chartNpsh" style="height:260px"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1290,8 +1342,8 @@
   data-unit-op-q="{{ pump.unit_op_q if pump else 'm3h' }}"
   data-graph-options='{{ (pump.get_graph_options() | tojson) if pump else "{}" }}' {% endif %}>
 </div>
-<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=70"></script>
-<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=95"></script>
+<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=110"></script>
+<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=135"></script>
 <script>
   // Beginners Note: Generic card toggle helper for smooth card collapse & expand
   function toggleCard(bodyId, chevronId) {

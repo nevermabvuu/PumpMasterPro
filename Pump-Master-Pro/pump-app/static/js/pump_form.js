@@ -637,6 +637,7 @@ function collectGraphOptions() {
     show_npsh_curve: document.getElementById('chkShowNpshCurve')?.checked || false,
     npsh_yaxis: document.querySelector('input[name="npshYAxisChoice"]:checked')?.value || 'y2',
     show_speed_lines: document.getElementById('chkSpeedLines')?.checked || false,
+    speed_line_values: document.getElementById('txtSpeedLineValues')?.value || '',
     show_hq: document.getElementById('chkShowHQ')?.checked !== false,
     show_other: document.getElementById('chkShowOther')?.checked !== false,
     show_eff: document.getElementById('chkShowEff')?.checked !== false,
@@ -701,6 +702,7 @@ function applyGraphOptions(opts) {
     document.querySelector(`input[name="npshYAxisChoice"][value="${opts.npsh_yaxis}"]`).checked = true;
   }
   if (opts.show_speed_lines !== undefined && document.getElementById('chkSpeedLines')) document.getElementById('chkSpeedLines').checked = opts.show_speed_lines;
+  if (opts.speed_line_values !== undefined && document.getElementById('txtSpeedLineValues')) document.getElementById('txtSpeedLineValues').value = opts.speed_line_values;
   if (opts.show_hq !== undefined && document.getElementById('chkShowHQ')) document.getElementById('chkShowHQ').checked = opts.show_hq;
   if (opts.show_other !== undefined && document.getElementById('chkShowOther')) document.getElementById('chkShowOther').checked = opts.show_other;
   if (opts.show_eff !== undefined && document.getElementById('chkShowEff')) document.getElementById('chkShowEff').checked = opts.show_eff;
@@ -963,7 +965,7 @@ function bindPreviewEvents() {
   if (isPreviewEventsBound) return;
   isPreviewEventsBound = true;
 
-  const ids = ['chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'chkShowOther', 'selLegendMode', 'txtCurveLabelFlowPct', 'selCurveLabelVPos', 'selCurveLabelPos'];
+  const ids = ['chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'txtSpeedLineValues', 'chkShowOther', 'selLegendMode', 'txtCurveLabelFlowPct', 'selCurveLabelVPos', 'selCurveLabelPos'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) {
@@ -974,7 +976,7 @@ function bindPreviewEvents() {
         }
         refreshPreviewCharts();
       });
-      if (id === 'txtCurveLabelFlowPct') {
+      if (id === 'txtCurveLabelFlowPct' || id === 'txtSpeedLineValues') {
         el.addEventListener('input', () => refreshPreviewCharts());
         el.addEventListener('keyup', () => refreshPreviewCharts());
       }
@@ -1176,6 +1178,7 @@ async function refreshPreviewCharts() {
     eff_levels: showEffIso ? document.getElementById('txtEffLevels')?.value : null,
     power_levels: showPowerIso ? document.getElementById('txtPowerLevels')?.value : null,
     npsh_levels: showNpshIso ? document.getElementById('txtNpshLevels')?.value : null,
+    graph_speed_line_values: document.getElementById('txtSpeedLineValues')?.value || '',
   };
 
   try {
@@ -2604,6 +2607,21 @@ function updateFamilyTypeUI() {
     lblMaxImp.textContent = isVarSpeed ? 'Impeller Dia' : 'Max Imp.';
   }
 
+  // Update Speed Lines / Impeller Curves Checkbox Label & Inputs
+  const lblSpeedLines = document.getElementById('lblSpeedLines');
+  const lblSpeedLineValues = document.getElementById('lblSpeedLineValues');
+  const txtSpeedLineValues = document.getElementById('txtSpeedLineValues');
+
+  if (lblSpeedLines) {
+    lblSpeedLines.textContent = isVarSpeed ? 'Show Impeller Trim Curves' : 'Show Speed Lines';
+  }
+  if (lblSpeedLineValues) {
+    lblSpeedLineValues.textContent = isVarSpeed ? 'Impeller Sizes to Generate (mm):' : 'Speed Lines to Generate (RPM):';
+  }
+  if (txtSpeedLineValues) {
+    txtSpeedLineValues.placeholder = isVarSpeed ? 'e.g. 480, 440, 400, 360' : 'e.g. 1000, 900, 800, 700';
+  }
+
   // Update additional curve card labels & units
   document.querySelectorAll('.extra-dia-label').forEach(lbl => {
     lbl.textContent = isVarSpeed ? 'Speed:' : 'Dia:';
@@ -2806,7 +2824,7 @@ function parseCSVOrTXT(text) {
 }
 
 function bindPreviewOptions() {
-  ['chkShowHQ', 'chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'chkShowOther',
+  ['chkShowHQ', 'chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'txtSpeedLineValues', 'chkShowOther',
     'chkShowEff', 'chkShowPower', 'chkShowNpsh', 'chkCombineEffPower', 'selLegendMode',
     'clrHeadColor', 'selHeadWeight', 'selHeadStyle',
     'clrEffColor', 'selEffWeight', 'selEffStyle',

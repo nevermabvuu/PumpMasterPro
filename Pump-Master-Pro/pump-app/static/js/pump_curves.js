@@ -817,31 +817,37 @@ function buildWarmanChart(data, opts = {}) {
     }
   }
 
-  /* ── Speed lines ──── */
+  /* ── Speed / Impeller Overlay Lines ──── */
   if (showSpeedLines && spd_lines.length > 0) {
     spd_lines.forEach((sl, i) => {
       const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
       const lw = sl.speed_ratio === 1.0 ? 2.2 : 1.5;
+      const baseRpm = data.pump?.speed_rpm || 1450;
+      const baseDia = data.pump?.impeller_dia_mm || 300;
+      const lineLabel = sl.label || (isVarSpeed 
+        ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
+        : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
+
       traces.push({
         type: 'scatter', mode: 'lines',
-        name: `${sl.speed_rpm} rpm (${Math.round(sl.speed_ratio * 100)}%)`,
+        name: lineLabel,
         x: sl.q, y: sl.h,
         line: { color: col, width: lw, dash: sl.speed_ratio === 1.0 ? 'solid' : 'dot' },
         showlegend: legendMode !== 'curve_labels',
-        hovertemplate: `${sl.speed_rpm} rpm<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
+        hovertemplate: `${lineLabel}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
       });
-      /* BEP tick on speed line */
+      /* BEP tick on overlay line */
       if (sl.bep) {
         traces.push({
           type: 'scatter', mode: 'markers',
-          name: `BEP ${sl.speed_rpm}rpm`,
+          name: `BEP ${lineLabel}`,
           x: [sl.bep.q], y: [sl.bep.h],
           marker: {
             size: 6, color: col, symbol: 'diamond',
             line: { color: '#fff', width: 0.8 }
           },
           showlegend: false,
-          hovertemplate: `BEP ${sl.speed_rpm}rpm<br>Q=${sl.bep.q} ${lblQ}<br>H=${sl.bep.h} ${lblH}<extra></extra>`,
+          hovertemplate: `BEP ${lineLabel}<br>Q=${sl.bep.q} ${lblQ}<br>H=${sl.bep.h} ${lblH}<extra></extra>`,
         });
       }
     });

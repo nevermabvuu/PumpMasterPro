@@ -683,7 +683,7 @@ function buildWarmanChart(data, opts = {}) {
 
         annotations.push({
           x: targetQ, y: targetH,
-          text: `<b>${iso.eta}%</b>`,
+          text: `<b>${iso.label_text || `${iso.eta}%`}</b>`,
           showarrow: false,
           captureevents: true,
           font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },

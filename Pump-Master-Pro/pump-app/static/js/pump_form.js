@@ -70,18 +70,21 @@ function getUnitLabel(type, unitValue) {
   return unitValue;
 }
 
-function updatePlaceholders(type, unit) {
-  const inputs = document.querySelectorAll(`#perfTable tbody tr .col-${type}`);
+function updatePlaceholders(type, unit, table) {
+  const targetTable = table || document.getElementById('perfTable');
+  if (!targetTable) return;
+  const inputs = targetTable.querySelectorAll(`tbody tr .col-${type}`);
   const label = getUnitLabel(type, unit);
   inputs.forEach(input => {
     if (type === 'q') {
       input.placeholder = `Q (${label})`;
     } else if (type === 'h') {
       const td = input.parentElement;
-      const index = Array.from(td.parentElement.parentElement.children).indexOf(td.parentElement);
-      if (index === 0) input.placeholder = `Shutoff (${label})`;
-      else if (index === 2) input.placeholder = `BEP (${label})`;
-      else if (index === 5) input.placeholder = `Runout (${label})`;
+      const tr = td ? td.parentElement : null;
+      const rowIndex = (tr && tr.parentElement) ? Array.from(tr.parentElement.children).indexOf(tr) : -1;
+      if (rowIndex === 0) input.placeholder = `Shutoff (${label})`;
+      else if (rowIndex === 2) input.placeholder = `BEP Head (${label})`;
+      else if (rowIndex === 5) input.placeholder = `Runout (${label})`;
       else input.placeholder = `H (${label})`;
     } else if (type === 'npsh') {
       input.placeholder = `NPSHr (${label})`;
@@ -195,11 +198,20 @@ function initOpRegionUnits() {
 }
 
 function initUnitSelectors() {
-  document.querySelectorAll('.unit-select').forEach(select => {
+  const selectors = document.querySelectorAll('.unit-select, #unit-q, #unit-h, #unit-npsh, #unit-pow');
+  selectors.forEach(select => {
     select.setAttribute('data-prev', select.value);
+
+    // Initial placeholder setting on page load
+    const type = select.id ? select.id.replace('unit-', '') : '';
+    if (type) {
+      updatePlaceholders(type, select.value, document.getElementById('perfTable'));
+    }
+
     select.addEventListener('change', (e) => {
-      const type = e.target.id.replace('unit-', '');
-      const fromUnit = e.target.getAttribute('data-prev');
+      const type = e.target.id ? e.target.id.replace('unit-', '') : '';
+      if (!type) return;
+      const fromUnit = e.target.getAttribute('data-prev') || e.target.value;
       const toUnit = e.target.value;
       if (fromUnit === toUnit) return;
 
@@ -211,15 +223,13 @@ function initUnitSelectors() {
         }
       });
 
-      updatePlaceholders(type, toUnit);
+      updatePlaceholders(type, toUnit, document.getElementById('perfTable'));
       e.target.setAttribute('data-prev', toUnit);
 
       // After unit change, recalculate power with new units
       if (type === 'q' || type === 'h' || type === 'pow') {
         recalcAllPowerRows();
       }
-
-      // Table header unit changes convert numbers in the table without re-drawing graph preview
 
       // Persist unit change immediately
       serializeDataUnits();
@@ -1828,7 +1838,13 @@ function _updateExtraPlaceholders(div, type, unit) {
     if (type === 'q') {
       input.placeholder = `Q (${label})`;
     } else if (type === 'h') {
-      input.placeholder = `H (${label})`;
+      const td = input.parentElement;
+      const tr = td ? td.parentElement : null;
+      const rowIndex = (tr && tr.parentElement) ? Array.from(tr.parentElement.children).indexOf(tr) : -1;
+      if (rowIndex === 0) input.placeholder = `Shutoff (${label})`;
+      else if (rowIndex === 2) input.placeholder = `BEP Head (${label})`;
+      else if (rowIndex === 5) input.placeholder = `Runout (${label})`;
+      else input.placeholder = `H (${label})`;
     } else if (type === 'npsh') {
       input.placeholder = `NPSHr (${label})`;
     } else if (type === 'pow') {
@@ -2227,6 +2243,11 @@ function addExtraCurveCard(existingData) {
         e.target.setAttribute('data-prev', toUnit);
         serializeExtraCurves();
       });
+
+      // Initial placeholder initialization on card creation
+      if (type !== 'dia' && type !== 'mode') {
+        _updateExtraPlaceholders(div, type, select.value);
+      }
     });
   };
   initExtraUnitSelectors();

@@ -418,119 +418,133 @@ def _bep_for_ratio(pump, ratio, h_base, eta_base, pwr_base, q_base):
 
 def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
                         slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650,
-                        iso_levels=None, n_ratio_steps=40, n_base=2000):
+                        iso_levels=None, n_ratio_steps=50, n_base=2000):
     """
-    Generate closed efficiency isolines for the Warman performance map.
+    Generate clean, accurate efficiency isolines for performance maps.
+    Handles both variable_speed (constant diameter, carrying RPM) and
+    trimmed_impeller (constant speed, carrying diameter) pump families.
+    """
+    fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+    is_var_speed = (fam_type == 'variable_speed')
 
-    Each isoline is a closed polygon on the (Q, H) plane bounding the region
-    where η ≥ η_target across the full impeller-diameter family.
-    """
     diameters = pump.get_diameters()
-    d_max = max(diameters)
-    d_min = min(diameters)
-    r_min = d_min / d_max
+    if is_var_speed:
+        v_max = max(diameters) if diameters else (pump.speed_rpm or 1450.0)
+        v_min = min(diameters) if diameters else (v_max * 0.5)
+        r_min = max(0.3, v_min / v_max) if v_max > 0 else 0.5
+        penalty_factor = 0.0  # Affinity law: efficiency is constant along speed scaling lines
+    else:
+        v_max = max(diameters) if diameters else (pump.impeller_dia_mm or 300.0)
+        v_min = min(diameters) if diameters else (v_max * 0.7)
+        r_min = max(0.4, v_min / v_max) if v_max > 0 else 0.7
+        penalty_factor = 5.0  # Standard small empirical penalty for diameter trimming (~5% at min trim)
 
     q_base = np.linspace(pump.q_min or 0.01, pump.q_max, n_base)
     h_base = hq_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
     eta_base = efficiency_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
 
-    valid = h_base > 0
+    valid = (h_base > 0) & (eta_base > 0)
+    if not np.any(valid):
+        return []
+
     q_v, h_v, eta_v = q_base[valid], h_base[valid], eta_base[valid]
+    eta_max = float(np.max(eta_v))
+    bep_idx = int(np.argmax(eta_v))
+    bep_q, bep_h = float(q_v[bep_idx]), float(h_v[bep_idx])
 
     if not iso_levels:
-        eta_max = float(np.max(eta_v))
-        lo = max(25, int((eta_max * 0.55) // 5) * 5)
-        hi = int((eta_max * 0.97) // 5) * 5
-        iso_levels = list(range(lo, hi + 1, 5))
+        lo = max(20, int((eta_max * 0.40) // 5) * 5)
+        hi = int(eta_max // 5) * 5
+        iso_levels = list(range(lo, hi, 5))
+        if eta_max - hi >= 1.5:
+            iso_levels.append(round(eta_max, 1))
 
-    ratios = np.linspace(r_min, 1.0, n_ratio_steps)
-
+    ratios = np.linspace(1.0, r_min, n_ratio_steps)
     isolines = []
+
     for eta_t in iso_levels:
-        left_pts = []
-        right_pts = []
+        is_bep = abs(eta_t - eta_max) < 0.8 or eta_t > eta_max
 
-        # Check at r=1.0 if the runout efficiency is below target eta_t
-        # If runout efficiency is higher than eta_t, then there is no right-side crossing
-        # (efficiency never drops below target in the flow range).
-        diff_1 = eta_v - eta_t
-        has_right_branch = (diff_1[-1] < 0)
-
-        for r in ratios[::-1]:
-            q_r = q_v * r
-            h_r = h_v * r ** 2
-            penalty = 40.0 * (1.0 - r)
-            eta_r = np.clip(eta_v - penalty, 0, 100)
-
-            diff = eta_r - eta_t
-            crossings = []
-            for i in range(len(diff) - 1):
-                if diff[i] * diff[i + 1] <= 0 and not (diff[i] == 0 and diff[i + 1] == 0):
-                    t = diff[i] / (diff[i] - diff[i + 1]) if (diff[i] - diff[i + 1]) != 0 else 0
-                    q_c = float(q_r[i] + t * (q_r[i + 1] - q_r[i]))
-                    h_c = float(h_r[i] + t * (h_r[i + 1] - h_r[i]))
-                    crossings.append((q_c, h_c))
-
-            if has_right_branch:
-                if len(crossings) == 1 and diff[-1] >= 0:
-                    # If right crossing is cut off by flow range, cap at runout point
-                    crossings.append((float(q_r[-1]), float(h_r[-1])))
-
-                if len(crossings) >= 2:
-                    crossings.sort(key=lambda x: x[0])
-                    left_pts.append(crossings[0])
-                    right_pts.append(crossings[-1])
-                else:
-                    break
-            else:
-                if len(crossings) >= 1:
-                    crossings.sort(key=lambda x: x[0])
-                    left_pts.append(crossings[0])
-                else:
-                    break
-
-        if len(left_pts) == 0:
-            continue
-
-        left_q = [p[0] for p in left_pts]
-        left_h = [p[1] for p in left_pts]
-        right_q = [p[0] for p in right_pts]
-        right_h = [p[1] for p in right_pts]
-
-        if not has_right_branch or len(right_q) == 0:
-            # Single-crossing line running all the way down
-            # Extrapolate/generate across all ratios
-            q_c, h_c = left_pts[0]
-            iso_q = (q_c * ratios[::-1]).tolist()
-            iso_h = (h_c * ratios[::-1] ** 2).tolist()
+        if is_bep:
+            iso_q = (bep_q * ratios).tolist()
+            iso_h = (bep_h * ratios ** 2).tolist()
             isolines.append({
-                'eta': eta_t,
+                'eta': round(eta_max, 1),
+                'branch': 'bep',
                 'q': iso_q,
                 'h': iso_h,
-                'label_q': round(q_c, 2),
-                'label_h': round(h_c, 2),
+                'label_q': round(bep_q, 2),
+                'label_h': round(bep_h, 2),
+                'label_text': f"BEP {int(round(eta_max))}%"
             })
             continue
 
-        # Always return left branch and right branch as two separate lines (contour style)
-        # This prevents drawing flat horizontal lines along the lowest ratio's boundary
-        # which causes isolines to cross or run along head curves.
-        if len(left_q) > 0:
-            isolines.append({
-                'eta': eta_t,
-                'q': left_q,
-                'h': left_h,
-                'label_q': round(left_q[0], 2),
-                'label_h': round(left_h[0], 2),
-            })
-        if len(right_q) > 0:
-            isolines.append({
-                'eta': eta_t,
-                'q': right_q,
-                'h': right_h,
-                'label_q': round(right_q[0], 2),
-                'label_h': round(right_h[0], 2),
-            })
+        left_v = (q_v <= bep_q)
+        right_v = (q_v >= bep_q)
+
+        diff_left = eta_v[left_v] - eta_t
+        cross_left = []
+        for i in range(len(diff_left) - 1):
+            if diff_left[i] * diff_left[i + 1] <= 0:
+                denom = (diff_left[i] - diff_left[i + 1])
+                t = diff_left[i] / denom if denom != 0 else 0
+                q_sub = q_v[left_v]
+                h_sub = h_v[left_v]
+                qc = float(q_sub[i] + t * (q_sub[i + 1] - q_sub[i]))
+                hc = float(h_sub[i] + t * (h_sub[i + 1] - h_sub[i]))
+                cross_left.append((qc, hc))
+
+        diff_right = eta_v[right_v] - eta_t
+        cross_right = []
+        for i in range(len(diff_right) - 1):
+            if diff_right[i] * diff_right[i + 1] <= 0:
+                denom = (diff_right[i] - diff_right[i + 1])
+                t = diff_right[i] / denom if denom != 0 else 0
+                q_sub = q_v[right_v]
+                h_sub = h_v[right_v]
+                qc = float(q_sub[i] + t * (q_sub[i + 1] - q_sub[i]))
+                hc = float(h_sub[i] + t * (h_sub[i + 1] - h_sub[i]))
+                cross_right.append((qc, hc))
+
+        if len(cross_left) > 0:
+            qc_top, hc_top = cross_left[0]
+            left_pts_q, left_pts_h = [], []
+            for r in ratios:
+                penalty = penalty_factor * (1.0 - r)
+                if (eta_t - penalty) <= 0: break
+                left_pts_q.append(float(qc_top * r))
+                left_pts_h.append(float(hc_top * r ** 2))
+
+            if len(left_pts_q) > 1:
+                isolines.append({
+                    'eta': eta_t,
+                    'branch': 'left',
+                    'q': left_pts_q,
+                    'h': left_pts_h,
+                    'label_q': round(left_pts_q[0], 2),
+                    'label_h': round(left_pts_h[0], 2),
+                    'label_text': f"{int(round(eta_t))}%"
+                })
+
+        if len(cross_right) > 0:
+            qc_top, hc_top = cross_right[-1]
+            right_pts_q, right_pts_h = [], []
+            for r in ratios:
+                penalty = penalty_factor * (1.0 - r)
+                if (eta_t - penalty) <= 0: break
+                right_pts_q.append(float(qc_top * r))
+                right_pts_h.append(float(hc_top * r ** 2))
+
+            if len(right_pts_q) > 1:
+                isolines.append({
+                    'eta': eta_t,
+                    'branch': 'right',
+                    'q': right_pts_q,
+                    'h': right_pts_h,
+                    'label_q': round(right_pts_q[0], 2),
+                    'label_h': round(right_pts_h[0], 2),
+                    'label_text': f"{int(round(eta_t))}%"
+                })
 
     return isolines
 

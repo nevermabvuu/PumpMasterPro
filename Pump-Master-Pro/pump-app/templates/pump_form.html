@@ -870,7 +870,7 @@
                     <div class="flex items-center justify-between gap-1">
                       <span>Flow Q</span>
                       <select
-                        class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#58a6ff] text-[11px] font-semibold rounded px-1.5 py-0.5 focus:outline-none focus:border-[#58a6ff]"
+                        class="header-unit-select unit-select bg-[#0d1117] border border-[#30363d] text-[#58a6ff] text-[11px] font-semibold rounded px-1.5 py-0.5 focus:outline-none focus:border-[#58a6ff]"
                         id="unit-q">
                         <option value="m3h" {% if pump and pump.data_units_dict and pump.data_units_dict.q=='m3h'
                           %}selected{% elif not pump %}selected{% endif %}>m³/h</option>
@@ -887,7 +887,7 @@
                     <div class="flex items-center justify-between gap-1">
                       <span>Head H</span>
                       <select
-                        class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#58a6ff] text-[11px] font-semibold rounded px-1.5 py-0.5 focus:outline-none focus:border-[#58a6ff]"
+                        class="header-unit-select unit-select bg-[#0d1117] border border-[#30363d] text-[#58a6ff] text-[11px] font-semibold rounded px-1.5 py-0.5 focus:outline-none focus:border-[#58a6ff]"
                         id="unit-h">
                         <option value="m" {% if pump and pump.data_units_dict and pump.data_units_dict.h=='m'
                           %}selected{% elif not pump %}selected{% endif %}>m</option>
@@ -903,7 +903,7 @@
                     <div class="flex items-center justify-between gap-1">
                       <span>NPSHr</span>
                       <select
-                        class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#58a6ff] text-[11px] font-semibold rounded px-1.5 py-0.5 focus:outline-none focus:border-[#58a6ff]"
+                        class="header-unit-select unit-select bg-[#0d1117] border border-[#30363d] text-[#58a6ff] text-[11px] font-semibold rounded px-1.5 py-0.5 focus:outline-none focus:border-[#58a6ff]"
                         id="unit-npsh">
                         <option value="m" {% if pump and pump.data_units_dict and pump.data_units_dict.npsh=='m'
                           %}selected{% elif not pump %}selected{% endif %}>m</option>
@@ -916,7 +916,7 @@
                     <div class="flex items-center justify-between gap-1">
                       <span>Power</span>
                       <select
-                        class="header-unit-select bg-[#0d1117] border border-[#30363d] text-[#58a6ff] text-[11px] font-semibold rounded px-1.5 py-0.5 focus:outline-none focus:border-[#58a6ff]"
+                        class="header-unit-select unit-select bg-[#0d1117] border border-[#30363d] text-[#58a6ff] text-[11px] font-semibold rounded px-1.5 py-0.5 focus:outline-none focus:border-[#58a6ff]"
                         id="unit-pow">
                         <option value="kw" {% if pump and pump.data_units_dict and pump.data_units_dict.pow=='kw'
                           %}selected{% elif not pump %}selected{% endif %}>kW</option>
@@ -1290,8 +1290,8 @@
   data-unit-op-q="{{ pump.unit_op_q if pump else 'm3h' }}"
   data-graph-options='{{ (pump.get_graph_options() | tojson) if pump else "{}" }}' {% endif %}>
 </div>
-<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=60"></script>
-<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=85"></script>
+<script src="{{ url_for('static', filename='js/pump_curves.js') }}?v=70"></script>
+<script src="{{ url_for('static', filename='js/pump_form.js') }}?v=95"></script>
 <script>
   // Beginners Note: Generic card toggle helper for smooth card collapse & expand
   function toggleCard(bodyId, chevronId) {

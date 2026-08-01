@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ report.title if report else 'Pump Technical Datasheet' }} — {{ pump.name }}</title>
+
+  <!-- ──────────────────────────────────────────────────────────────────────────
+       SELF-CONTAINED INLINE STYLES (0 EXTERNAL NETWORK DEPENDENCIES)
+       Beginners Note: Using self-contained CSS ensures Headless Chromium renders
+       the PDF in 1 second with 100% pixel-perfect matching with browser preview!
+       ────────────────────────────────────────────────────────────────────────── -->
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 10mm 12mm 12mm 12mm;
+    }
+
+    @media print {
+      body { background-color: #ffffff !important; padding: 0 !important; }
+      .report-card { border: 1px solid #cbd5e1 !important; box-shadow: none !important; }
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+      color: #1e293b;
+      background-color: #ffffff;
+      margin: 0;
+      padding: 12px;
+      font-size: 9.5pt;
+    }
+
+    .report-card {
+      background-color: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .header-box {
+      border-bottom: 2px solid {{ report.primary_color if report and report.primary_color else '#1e3a8a' }};
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .header-title {
+      font-size: 8.5pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: {{ report.primary_color if report and report.primary_color else '#1e3a8a' }};
+    }
+
+    .pump-name {
+      font-size: 20pt;
+      font-weight: 900;
+      color: #0f172a;
+      margin-top: 2px;
+    }
+
+    .supplier-info {
+      text-align: right;
+      font-size: 8pt;
+      color: #475569;
+      border-left: 2px solid #e2e8f0;
+      padding-left: 14px;
+    }
+
+    .section-header {
+      font-size: 8.5pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #64748b;
+      margin-top: 14px;
+      margin-bottom: 8px;
+    }
+
+    .grid-4 {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .metric-card {
+      flex: 1;
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .metric-card-blue {
+      flex: 1;
+      background-color: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .metric-lbl {
+      font-size: 7.5pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      color: #64748b;
+      display: block;
+    }
+
+    .metric-val {
+      font-size: 13pt;
+      font-weight: bold;
+      color: #0f172a;
+      margin-top: 3px;
+    }
+
+    .grid-2 {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .graph-card {
+      flex: 1;
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .graph-title-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 8.5pt;
+      font-weight: bold;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8.5pt;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .data-table th {
+      background-color: #f8fafc;
+      color: #475569;
+      text-align: left;
+      padding: 6px 10px;
+      font-weight: bold;
+      width: 25%;
+      border-bottom: 1px solid #e2e8f0;
+      border-right: 1px solid #e2e8f0;
+    }
+
+    .data-table td {
+      padding: 6px 10px;
+      color: #0f172a;
+      border-bottom: 1px solid #e2e8f0;
+      border-right: 1px solid #e2e8f0;
+    }
+
+    .footer-bar {
+      border-top: 1px solid #cbd5e1;
+      margin-top: 16px;
+      padding-top: 8px;
+      font-size: 8pt;
+      color: #94a3b8;
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── MAIN REPORT DOCUMENT CONTAINER ── -->
+  <div class="report-card">
+
+    <!-- 1. EXECUTIVE HEADER & SUPPLIER BRANDING -->
+    <div class="header-box">
+      <div>
+        <div class="header-title">
+          {{ report.header_text if report and report.header_text else 'PUMP MASTER PRO - TECHNICAL DATASHEET' }}
+        </div>
+        <div class="pump-name">{{ pump.name }}</div>
+        <div style="font-size: 8.5pt; color: #64748b; margin-top: 3px;">
+          Model: {{ pump.model_number or 'N/A' }} | Size: {{ pump.size or 'Standard' }} | Type: {{ pump.pump_type|capitalize }}
+        </div>
+      </div>
+
+      <!-- Supplier Profile Card -->
+      <div class="supplier-info">
+        <div style="font-size: 11pt; font-weight: bold; color: #0f172a;">
+          🏢 {{ supplier.name if supplier else 'Pump Master Pro' }}
+        </div>
+        {% if supplier %}
+        {% if supplier.contact_email %}<div style="margin-top:2px;">Email: {{ supplier.contact_email }}</div>{% endif %}
+        {% if supplier.phone %}<div>Phone: {{ supplier.phone }}</div>{% endif %}
+        {% if supplier.website %}<div style="color:#1d4ed8; font-weight:600;">Web: {{ supplier.website }}</div>{% endif %}
+        {% endif %}
+        <div style="font-size: 8pt; color: #94a3b8; margin-top: 4px;">Date: {{ current_date }}</div>
+      </div>
+    </div>
+
+    <!-- 2. CORE PUMP SPECIFICATIONS & OPERATING DUTY POINT -->
+    <div>
+      <div class="section-header">⏱ Technical Summary &amp; Duty Point</div>
+      <div class="grid-4">
+        <div class="metric-card">
+          <span class="metric-lbl">Speed (rpm)</span>
+          <span class="metric-val">{{ pump.speed_rpm|round|int }} rpm</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-lbl">Impeller Diameter</span>
+          <span class="metric-val">{{ pump.impeller_dia_mm|round(1) }} mm</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-lbl">Test Basis</span>
+          <span class="metric-val" style="font-size: 10.5pt; color: #1e3a8a; text-transform: capitalize;">
+            {{ pump.family_type.replace('_', ' ') if pump.family_type else 'Trimmed Impeller' }}
+          </span>
+        </div>
+        <div class="metric-card-blue">
+          <span class="metric-lbl" style="color: #1e40af;">BEP Flow / Duty</span>
+          <span class="metric-val" style="color: #1e3a8a;">
+            {{ curves.bep_info.q if curves and curves.bep_info else 0.0 }} {{ pump.unit_op_q or 'm³/h' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. EXACT ACCURATE PUMP PERFORMANCE CURVES (SVG VECTOR GRAPHICS) -->
+    <div style="margin-top: 4px;">
+      <div class="section-header">📈 Exact Performance Curves (Evaluated for {{ pump.name }})</div>
+
+      <div class="grid-2">
+        <!-- Graph 1: Head vs Flow (HQ) -->
+        {% if report.show_head_flow_graph %}
+        <div class="graph-card">
+          <div class="graph-title-bar">
+            <span>Head vs Flow (H-Q)</span>
+            <span style="font-family: monospace; color: {{ report.primary_color if report and report.primary_color else '#1e3a8a' }};">{{ pump.unit_h or 'm' }}</span>
+          </div>
+          {{ curves.svg_hq | safe }}
+        </div>
+        {% endif %}
+
+        <!-- Graph 2: Efficiency vs Flow (Eta-Q) -->
+        {% if report.show_efficiency_graph %}
+        <div class="graph-card">
+          <div class="graph-title-bar">
+            <span>Efficiency vs Flow (η-Q)</span>
+            <span style="font-family: monospace; color: #059669;">%</span>
+          </div>
+          {{ curves.svg_eta | safe }}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="grid-2">
+        <!-- Graph 3: Power vs Flow (P-Q) -->
+        {% if report.show_power_graph %}
+        <div class="graph-card">
+          <div class="graph-title-bar">
+            <span>Power vs Flow (P-Q)</span>
+            <span style="font-family: monospace; color: #dc2626;">{{ pump.unit_pow or 'kW' }}</span>
+          </div>
+          {{ curves.svg_pow | safe }}
+        </div>
+        {% endif %}
+
+        <!-- Graph 4: NPSHr vs Flow -->
+        {% if report.show_npsh_graph %}
+        <div class="graph-card">
+          <div class="graph-title-bar">
+            <span>NPSHr vs Flow</span>
+            <span style="font-family: monospace; color: #0d9488;">{{ pump.unit_npsh or 'm' }}</span>
+          </div>
+          {{ curves.svg_npsh | safe }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- 4. CONSTRUCTION & MATERIALS TABLE -->
+    {% if report.show_materials_table %}
+    <div style="margin-top: 4px;">
+      <div class="section-header">🛠 Construction &amp; Physical Specifications</div>
+      <table class="data-table">
+        <tbody>
+          <tr>
+            <th>Impeller Material</th>
+            <td style="font-weight: 600;">{{ pump.impeller_material or 'High-Chrome (A05) / Duplex' }}</td>
+            <th>Casing Material</th>
+            <td style="font-weight: 600;">{{ pump.casing_material or 'Ductile / Cast Iron' }}</td>
+          </tr>
+          <tr>
+            <th>Suction Size</th>
+            <td>{{ pump.suction_size or '150' }} {{ pump.unit_suction or 'mm' }}</td>
+            <th>Discharge Size</th>
+            <td>{{ pump.discharge_size or '100' }} {{ pump.unit_discharge or 'mm' }}</td>
+          </tr>
+          <tr>
+            <th>Shaft Seal Type</th>
+            <td>{{ pump.seal_type or 'Dynamic / Gland Packing' }}</td>
+            <th>Drive Arrangement</th>
+            <td>{{ pump.drive_type or 'Direct Coupled (DC)' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    <!-- 5. HYDRAULIC DESIGN & EXTENDED SETUP SPECS -->
+    {% if report.show_extended_specs %}
+    <div style="margin-top: 4px;">
+      <div class="section-header">🎛 Hydraulic Design &amp; Flow Control Limits</div>
+      <div class="grid-4">
+        <div class="metric-card">
+          <span class="metric-lbl">Throttling Capable</span>
+          <span class="metric-val" style="font-size: 10.5pt;">{{ 'Yes (Capable)' if pump.is_throttling_capable else 'No' }}</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-lbl">Min Flow Recirculation</span>
+          <span class="metric-val" style="font-size: 10.5pt;">{{ pump.min_flow_m3h or 0.0 }} m³/h</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-lbl">Max Orifice Dia</span>
+          <span class="metric-val" style="font-size: 10.5pt;">{{ pump.max_orifice_dia_mm or 0.0 }} mm</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-lbl">VFD Operating Range</span>
+          <span class="metric-val" style="font-size: 10.5pt;">{{ pump.vfd_min_hz or 30 }} - {{ pump.vfd_max_hz or 60 }} Hz</span>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- 6. DOCUMENT FOOTER -->
+    <div class="footer-bar">
+      <span>{{ report.footer_text if report and report.footer_text else 'Generated by Pump Master Pro Engineering Suite' }}</span>
+      <span>Page 1 of 1</span>
+    </div>
+
+  </div>
+
+</body>
+</html>

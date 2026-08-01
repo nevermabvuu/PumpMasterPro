@@ -237,6 +237,13 @@
            onmouseout="if(!this.classList.contains('tw-active')){this.style.color='#8b949e';this.style.background='transparent';}">
           <i class="bi bi-bar-chart-line"></i>Comparison
         </a>
+        <a class="nav-link-anim {% if 'reports' in request.endpoint %}tw-active{% endif %}"
+           href="{{ url_for('reports.settings') }}"
+           style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 0.75rem;border-radius:6px;font-size:0.9rem;text-decoration:none;color:{% if 'reports' in request.endpoint %}#58a6ff{% else %}#8b949e{% endif %};"
+           onmouseover="if(!this.classList.contains('tw-active')){this.style.color='#e6edf3';this.style.background='#1c2330';}"
+           onmouseout="if(!this.classList.contains('tw-active')){this.style.color='#8b949e';this.style.background='transparent';}">
+          <i class="bi bi-file-earmark-pdf"></i>PDF Reports
+        </a>
       </div>
 
       <!-- Beginners Note: Hamburger button — only visible on mobile (<md). Toggles #mobileNav -->

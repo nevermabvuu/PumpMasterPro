@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ report.title if report else 'Pump Technical Datasheet' }} — {{ pump.name }}</title>
+
+  <!-- Tailwind CSS & Bootstrap Icons for Browser Preview Action Bar -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background-color: #ffffff !important; padding: 0 !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen py-6 px-4 md:px-8">
+
+  <!-- ──────────────────────────────────────────────────────────────────────────
+       AUTOMATICALLY INJECTED BROWSER PREVIEW ACTION BAR
+       Beginners Note: This action bar is automatically injected by routes.view_report()
+       so individual report HTML templates stay 100% clean and do not duplicate action bar code!
+       ────────────────────────────────────────────────────────────────────────── -->
+  <div class="no-print max-w-5xl mx-auto mb-6 p-4 bg-[#161b22] text-[#e6edf3] border border-[#30363d] rounded-xl shadow-lg flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <a href="{{ url_for('reports.settings') }}" class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#c9d1d9] rounded-lg border border-[#30363d] flex items-center gap-1.5 transition-colors">
+        <i class="bi bi-arrow-left"></i> Report Settings
+      </a>
+      <div>
+        <h1 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="bi bi-file-earmark-pdf text-[#58a6ff]"></i> {{ report.title }}
+        </h1>
+        <p class="text-[11px] text-[#8b949e]">Linked Supplier: <strong class="text-[#58a6ff]">{{ supplier.name if supplier else 'Default Supplier' }}</strong></p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button onclick="window.print()" class="px-3.5 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg flex items-center gap-2 shadow-sm transition-colors">
+        <i class="bi bi-printer"></i> Print / Save PDF
+      </button>
+      <a href="{{ url_for('reports.download_pdf', report_id=report.id, pump_id=pump.id) }}" class="px-3.5 py-1.5 bg-[#1f6feb] hover:bg-[#388bfd] text-xs font-bold text-white rounded-lg flex items-center gap-2 shadow-sm transition-colors">
+        <i class="bi bi-download"></i> Download PDF
+      </a>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────────────────────
+       REPORT DOCUMENT BODY INJECTION CONTAINER
+       ────────────────────────────────────────────────────────────────────────── -->
+  <div class="max-w-5xl mx-auto">
+    {{ report_content | safe }}
+  </div>
+
+</body>
+</html>

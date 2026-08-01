@@ -1,0 +1,347 @@
+{% extends 'base.html' %}
+
+{% block title %}Report Settings &amp; Suppliers — Pump Master Pro{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- PAGE HEADER -->
+  <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[#30363d]">
+    <div>
+      <h1 class="text-xl font-bold text-[#e6edf3] flex items-center gap-2">
+        <i class="bi bi-file-earmark-pdf text-[#58a6ff]"></i> PDF Reports &amp; Supplier Settings
+      </h1>
+      <p class="text-xs text-[#8b949e] mt-1">
+        Configure report templates, graph show/hide options, header/footer branding, and supplier profiles.
+      </p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button onclick="openSupplierModal()" class="px-3.5 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#e6edf3] rounded-lg border border-[#30363d] flex items-center gap-1.5 transition-colors">
+        <i class="bi bi-building-add text-[#58a6ff]"></i> Add Supplier
+      </button>
+      <button onclick="openReportModal()" class="px-3.5 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-semibold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
+        <i class="bi bi-plus-lg"></i> Create Report Setting
+      </button>
+    </div>
+  </div>
+
+  <!-- SECTION 1: SUPPLIERS MANAGEMENT CARD -->
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
+    <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
+        <i class="bi bi-building text-[#58a6ff]"></i> Linked Pump Suppliers &amp; Manufacturers ({{ suppliers|length }})
+      </h2>
+    </div>
+    
+    <div class="p-4">
+      {% if suppliers %}
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {% for s in suppliers %}
+        <div class="p-3.5 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2 relative group hover:border-[#58a6ff]/50 transition-colors">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-[#e6edf3] flex items-center gap-1.5">
+              <i class="bi bi-building text-[#58a6ff]"></i> {{ s.name }}
+            </h3>
+            <button onclick='editSupplier({{ s.to_dict()|tojson }})' class="text-xs text-[#8b949e] hover:text-[#58a6ff] p-1" title="Edit Supplier">
+              <i class="bi bi-pencil"></i>
+            </button>
+          </div>
+          {% if s.contact_email %}<p class="text-xs text-[#8b949e]"><i class="bi bi-envelope me-1"></i>{{ s.contact_email }}</p>{% endif %}
+          {% if s.phone %}<p class="text-xs text-[#8b949e]"><i class="bi bi-telephone me-1"></i>{{ s.phone }}</p>{% endif %}
+          {% if s.website %}<p class="text-xs text-[#58a6ff]"><i class="bi bi-globe me-1"></i>{{ s.website }}</p>{% endif %}
+          <div class="pt-1 text-[11px] text-[#8b949e] border-t border-[#30363d]/60 flex items-center justify-between">
+            <span>Linked Reports: {{ s.reports|length }}</span>
+            <span class="font-mono text-[10px]">ID: #{{ s.id }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-xs text-[#8b949e] py-4 text-center">No suppliers configured yet. Click "Add Supplier" to create your first manufacturer profile.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- SECTION 2: CONFIGURED PDF REPORT SETTINGS TABLE -->
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
+    <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
+        <i class="bi bi-sliders2 text-[#58a6ff]"></i> Configured PDF Report Settings ({{ reports|length }})
+      </h2>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs text-[#c9d1d9]">
+        <thead class="bg-[#0d1117] border-b border-[#30363d] text-[#8b949e] uppercase font-mono tracking-wider">
+          <tr>
+            <th class="py-2.5 px-4">Report Title</th>
+            <th class="py-2.5 px-4">Linked Supplier</th>
+            <th class="py-2.5 px-4">HTML Template</th>
+            <th class="py-2.5 px-4">Active Graphs</th>
+            <th class="py-2.5 px-4">Branding Theme</th>
+            <th class="py-2.5 px-4 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#30363d]">
+          {% if reports %}
+          {% for r in reports %}
+          <tr class="hover:bg-[#1c2330]/50 transition-colors">
+            <td class="py-3 px-4 font-semibold text-[#e6edf3]">
+              <div>{{ r.title }}</div>
+              <div class="text-[11px] text-[#8b949e] font-normal truncate max-w-xs">{{ r.description or 'Standard Datasheet' }}</div>
+            </td>
+            <td class="py-3 px-4">
+              <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#0d1117] border border-[#30363d] text-[#58a6ff]">
+                <i class="bi bi-building"></i> {{ r.supplier.name if r.supplier else 'Default Supplier' }}
+              </span>
+            </td>
+            <td class="py-3 px-4 font-mono text-xs text-[#8b949e]">
+              <i class="bi bi-filetype-html text-[#e34c26] me-1"></i>{{ r.template_name }}
+            </td>
+            <td class="py-3 px-4">
+              <div class="flex items-center gap-1.5">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono {{ 'bg-emerald-950 text-emerald-400 border border-emerald-800' if r.show_head_flow_graph else 'bg-gray-800 text-gray-500' }}">HQ</span>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono {{ 'bg-emerald-950 text-emerald-400 border border-emerald-800' if r.show_efficiency_graph else 'bg-gray-800 text-gray-500' }}">ETA</span>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono {{ 'bg-emerald-950 text-emerald-400 border border-emerald-800' if r.show_power_graph else 'bg-gray-800 text-gray-500' }}">POW</span>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono {{ 'bg-emerald-950 text-emerald-400 border border-emerald-800' if r.show_npsh_graph else 'bg-gray-800 text-gray-500' }}">NPSH</span>
+              </div>
+            </td>
+            <td class="py-3 px-4">
+              <div class="flex items-center gap-1.5">
+                <span class="w-3.5 h-3.5 rounded-full border border-white/20 inline-block" style="background-color: {{ r.primary_color }};"></span>
+                <span class="font-mono text-[11px]">{{ r.primary_color }}</span>
+              </div>
+            </td>
+            <td class="py-3 px-4 text-right space-x-2">
+              <a href="{{ url_for('reports.view_report', report_id=r.id, pump_id=1) }}" target="_blank" class="px-2.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] rounded border border-[#30363d] font-medium text-xs inline-flex items-center gap-1" title="View Report in Browser">
+                <i class="bi bi-eye"></i> View
+              </a>
+              <button onclick='editReport({{ r.to_dict()|tojson }})' class="px-2.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#e6edf3] rounded border border-[#30363d] font-medium text-xs inline-flex items-center gap-1">
+                <i class="bi bi-gear"></i> Configure
+              </button>
+              <form action="{{ url_for('reports.delete_report', id=r.id) }}" method="POST" class="inline" onsubmit="return confirm('Delete report configuration?');">
+                <button type="submit" class="px-2 py-1 bg-rose-950/60 hover:bg-rose-900 text-rose-300 rounded border border-rose-800 font-medium text-xs">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+          {% else %}
+          <tr>
+            <td colspan="6" class="py-8 text-center text-slate-500">No report configurations found.</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── MODAL 1: ADD / EDIT SUPPLIER ── -->
+<div id="supplierModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl max-w-md w-full overflow-hidden shadow-2xl">
+    <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
+      <h3 class="text-sm font-bold text-white flex items-center gap-2" id="supplierModalTitle">
+        <i class="bi bi-building text-[#58a6ff]"></i> Add Pump Supplier
+      </h3>
+      <button onclick="closeSupplierModal()" class="text-[#8b949e] hover:text-white"><i class="bi bi-x-lg"></i></button>
+    </div>
+    
+    <form action="{{ url_for('reports.save_supplier') }}" method="POST" class="p-4 space-y-3">
+      <input type="hidden" name="supplier_id" id="sup_id">
+      <div>
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Supplier Name *</label>
+        <input type="text" name="name" id="sup_name" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="e.g. KSB Pumps / Grundfos">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Contact Email</label>
+        <input type="email" name="contact_email" id="sup_email" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="engineering@ksb.com">
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Phone</label>
+          <input type="text" name="phone" id="sup_phone" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="+1-800-PUMPS">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Website</label>
+          <input type="text" name="website" id="sup_website" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="www.ksb.com">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Address</label>
+        <textarea name="address" id="sup_address" rows="2" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="Supplier factory or division address..."></textarea>
+      </div>
+
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" onclick="closeSupplierModal()" class="px-3 py-1.5 bg-[#21262d] text-xs text-[#c9d1d9] rounded border border-[#30363d]">Cancel</button>
+        <button type="submit" class="px-4 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded">Save Supplier</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── MODAL 2: ADD / EDIT REPORT CONFIGURATION ── -->
+<div id="reportModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl max-w-xl w-full overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+    <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
+      <h3 class="text-sm font-bold text-white flex items-center gap-2" id="reportModalTitle">
+        <i class="bi bi-sliders2 text-[#58a6ff]"></i> Configure PDF Report Setting
+      </h3>
+      <button onclick="closeReportModal()" class="text-[#8b949e] hover:text-white"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <form action="{{ url_for('reports.save_report') }}" method="POST" class="p-4 space-y-4 overflow-y-auto">
+      <input type="hidden" name="report_id" id="rep_id">
+
+      <!-- Supplier Link & Title -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Linked Supplier *</label>
+          <select name="supplier_id" id="rep_supplier_id" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]">
+            <option value="">-- Select Supplier --</option>
+            {% for s in suppliers %}
+            <option value="{{ s.id }}">{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">HTML Template Name *</label>
+          <select name="template_name" id="rep_template_name" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]">
+            {% for t in available_templates %}
+            <option value="{{ t }}">{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Report Title *</label>
+        <input type="text" name="title" id="rep_title" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="e.g. Standard Pump Technical Datasheet">
+      </div>
+
+      <!-- Graph Show / Hide Preferences -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
+        <span class="block text-xs font-bold text-[#58a6ff] uppercase tracking-wider">
+          <i class="bi bi-graph-up me-1"></i> Graph Visibility Settings
+        </span>
+        <div class="grid grid-cols-2 gap-2 text-xs text-[#c9d1d9]">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="show_head_flow_graph" id="rep_show_hq" class="accent-[#58a6ff] rounded" checked>
+            <span>Show Head-Flow (H-Q) Graph</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="show_efficiency_graph" id="rep_show_eta" class="accent-[#58a6ff] rounded" checked>
+            <span>Show Efficiency (η-Q) Graph</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="show_power_graph" id="rep_show_pow" class="accent-[#58a6ff] rounded" checked>
+            <span>Show Power (P-Q) Graph</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="show_npsh_graph" id="rep_show_npsh" class="accent-[#58a6ff] rounded" checked>
+            <span>Show NPSHr Graph</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Header, Footer & Branding Customization -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Header Banner Text</label>
+          <input type="text" name="header_text" id="rep_header_text" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="PUMP MASTER PRO - TECHNICAL DATASHEET">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Primary Theme Color</label>
+          <input type="color" name="primary_color" id="rep_primary_color" value="#1e3a8a" class="w-full bg-[#0d1117] border border-[#30363d] rounded h-8 px-1 cursor-pointer">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Footer Text</label>
+        <input type="text" name="footer_text" id="rep_footer_text" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="Generated by Pump Master Pro Engineering Suite">
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 text-xs text-[#c9d1d9] pt-1">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="show_materials_table" id="rep_show_materials" class="accent-[#58a6ff] rounded" checked>
+          <span>Show Materials Table</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="show_extended_specs" id="rep_show_extended" class="accent-[#58a6ff] rounded" checked>
+          <span>Show Hydraulic Limits</span>
+        </label>
+      </div>
+
+      <div class="pt-2 flex justify-end gap-2 border-t border-[#30363d]">
+        <button type="button" onclick="closeReportModal()" class="px-3 py-1.5 bg-[#21262d] text-xs text-[#c9d1d9] rounded border border-[#30363d]">Cancel</button>
+        <button type="submit" class="px-4 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded">Save Configuration</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openSupplierModal() {
+    document.getElementById('sup_id').value = '';
+    document.getElementById('sup_name').value = '';
+    document.getElementById('sup_email').value = '';
+    document.getElementById('sup_phone').value = '';
+    document.getElementById('sup_website').value = '';
+    document.getElementById('sup_address').value = '';
+    document.getElementById('supplierModalTitle').innerHTML = '<i class="bi bi-building text-[#58a6ff]"></i> Add Pump Supplier';
+    document.getElementById('supplierModal').classList.remove('hidden');
+  }
+
+  function editSupplier(s) {
+    document.getElementById('sup_id').value = s.id;
+    document.getElementById('sup_name').value = s.name || '';
+    document.getElementById('sup_email').value = s.contact_email || '';
+    document.getElementById('sup_phone').value = s.phone || '';
+    document.getElementById('sup_website').value = s.website || '';
+    document.getElementById('sup_address').value = s.address || '';
+    document.getElementById('supplierModalTitle').innerHTML = '<i class="bi bi-pencil text-[#58a6ff]"></i> Edit Supplier';
+    document.getElementById('supplierModal').classList.remove('hidden');
+  }
+
+  function closeSupplierModal() {
+    document.getElementById('supplierModal').classList.add('hidden');
+  }
+
+  function openReportModal() {
+    document.getElementById('rep_id').value = '';
+    document.getElementById('rep_title').value = 'Standard Pump Technical Datasheet';
+    document.getElementById('rep_header_text').value = 'PUMP MASTER PRO - TECHNICAL DATASHEET';
+    document.getElementById('rep_footer_text').value = 'Generated by Pump Master Pro Engineering Suite';
+    document.getElementById('rep_primary_color').value = '#1e3a8a';
+    document.getElementById('rep_show_hq').checked = true;
+    document.getElementById('rep_show_eta').checked = true;
+    document.getElementById('rep_show_pow').checked = true;
+    document.getElementById('rep_show_npsh').checked = true;
+    document.getElementById('reportModalTitle').innerHTML = '<i class="bi bi-sliders2 text-[#58a6ff]"></i> Add PDF Report Setting';
+    document.getElementById('reportModal').classList.remove('hidden');
+  }
+
+  function editReport(r) {
+    document.getElementById('rep_id').value = r.id;
+    document.getElementById('rep_title').value = r.title || '';
+    document.getElementById('rep_supplier_id').value = r.supplier_id || '';
+    document.getElementById('rep_template_name').value = r.template_name || 'standard_datasheet.html';
+    document.getElementById('rep_header_text').value = r.header_text || '';
+    document.getElementById('rep_footer_text').value = r.footer_text || '';
+    document.getElementById('rep_primary_color').value = r.primary_color || '#1e3a8a';
+    document.getElementById('rep_show_hq').checked = r.show_head_flow_graph;
+    document.getElementById('rep_show_eta').checked = r.show_efficiency_graph;
+    document.getElementById('rep_show_pow').checked = r.show_power_graph;
+    document.getElementById('rep_show_npsh').checked = r.show_npsh_graph;
+    document.getElementById('reportModalTitle').innerHTML = '<i class="bi bi-gear text-[#58a6ff]"></i> Configure PDF Report Setting';
+    document.getElementById('reportModal').classList.remove('hidden');
+  }
+
+  function closeReportModal() {
+    document.getElementById('reportModal').classList.add('hidden');
+  }
+</script>
+{% endblock %}

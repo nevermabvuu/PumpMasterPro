@@ -140,29 +140,54 @@ def _calculate_axis_ticks(min_v, max_v, major_step=None):
     return ticks
 
 
-def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", custom_range=None, width=480, height=220):
+def _parse_diameters_string(raw_str):
+    """
+    Beginners Note: Parses diameters from string input, supporting semicolon (;), pipe (|), comma (,), space, or units.
+    Example: "228;213;197;182" or "228.0;mm|182;mm" -> [228.0, 213.0, 197.0, 182.0]
+    """
+    if not raw_str:
+        return []
+    clean = re.sub(r'mm|in', '', str(raw_str), flags=re.IGNORECASE)
+    clean_str = re.sub(r'[;\s|:]+', ',', clean)
+    parts = [p.strip() for p in clean_str.split(',') if p.strip()]
+    results = []
+    for p in parts:
+        try:
+            v = float(p)
+            if v > 0 and v not in results:
+                results.append(v)
+        except (TypeError, ValueError):
+            pass
+    return results
+
+
+def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", custom_range=None, width=480, height=240, isolines_list=None, show_legend=True, legend_position='top_right'):
     """
     Beginners Note: Generates pure inline SVG XML vector markup for single or multi-curve pump charts.
     Accepts exact axis range settings (min, max, major, minor) set for the pump in pump-data,
-    and supports displaying multiple impeller diameter/speed curves (all, max_only, min_max).
+    supports displaying multiple impeller diameter/speed curves (all, max_only, min_max),
+    renders constant efficiency/power isolines and speed lines, and supports configurable legend placement!
     """
-    if not curves_list:
+    if not curves_list and not isolines_list:
         return ""
 
-    padding_left = 48
-    padding_right = 20
-    padding_top = 22
-    padding_bottom = 35
+    padding_left = 40
+    padding_right = 16
+    padding_top = 10
+    padding_bottom = 24
 
     plot_w = width - padding_left - padding_right
     plot_h = height - padding_top - padding_bottom
 
-    # Extract X & Y values across curves
+    # Extract X & Y values across curves & isolines
     all_x = []
     all_y = []
-    for c in curves_list:
+    for c in (curves_list or []):
         all_x.extend(c.get('x', []))
         all_y.extend(c.get('y', []))
+    for iso in (isolines_list or []):
+        all_x.extend(iso.get('x', []))
+        all_y.extend(iso.get('y', []))
 
     if not all_x or not all_y:
         return ""
@@ -219,7 +244,7 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             px = padding_left + ((val - x_min) / (x_max - x_min)) * plot_w
             grid_lines.append(f'<line x1="{px:.1f}" y1="{padding_top}" x2="{px:.1f}" y2="{padding_top + plot_h}" stroke="#94a3b8" stroke-dasharray="3,3" stroke-width="1.2" />')
             val_str = f"{val:.0f}" if abs(val - round(val)) < 1e-5 else f"{val:.1f}"
-            labels.append(f'<text x="{px:.1f}" y="{height - 10}" font-size="9" font-family="Helvetica, Arial, sans-serif" fill="#475569" text-anchor="middle">{val_str}</text>')
+            labels.append(f'<text x="{px:.1f}" y="{padding_top + plot_h + 11}" font-size="8.5" font-family="Helvetica, Arial, sans-serif" fill="#475569" text-anchor="middle">{val_str}</text>')
 
     # Y Major Grid Lines & Labels
     for val in y_ticks:
@@ -227,13 +252,41 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             py = padding_top + plot_h - ((val - y_min) / (y_max - y_min)) * plot_h
             grid_lines.append(f'<line x1="{padding_left}" y1="{py:.1f}" x2="{width - padding_right}" y2="{py:.1f}" stroke="#94a3b8" stroke-dasharray="3,3" stroke-width="1.2" />')
             val_str = f"{val:.0f}" if abs(val - round(val)) < 1e-5 else f"{val:.1f}"
-            labels.append(f'<text x="{padding_left - 6}" y="{py + 3:.1f}" font-size="9" font-family="Helvetica, Arial, sans-serif" fill="#475569" text-anchor="end">{val_str}</text>')
+            labels.append(f'<text x="{padding_left - 5}" y="{py + 3:.1f}" font-size="8.5" font-family="Helvetica, Arial, sans-serif" fill="#475569" text-anchor="end">{val_str}</text>')
 
-    # Render Curve Paths
     paths_svg = []
     legend_items = []
 
-    for c_idx, c in enumerate(curves_list):
+    # Render Isolines Overlay (Efficiency Isolines, Power Isolines)
+    if isolines_list:
+        for iso in isolines_list:
+            iso_x = iso.get('x', [])
+            iso_y = iso.get('y', [])
+            iso_color = iso.get('color', '#059669')
+            iso_label = iso.get('label', '')
+            iso_dash = iso.get('dash', 'stroke-dasharray="2,2"')
+
+            if len(iso_x) == len(iso_y) and len(iso_x) > 1:
+                pts = []
+                for x, y in zip(iso_x, iso_y):
+                    if x_min <= x <= x_max and y_min <= y <= y_max:
+                        px = padding_left + ((x - x_min) / (x_max - x_min)) * plot_w
+                        py = padding_top + plot_h - ((y - y_min) / (y_max - y_min)) * plot_h
+                        pts.append((px, py))
+
+                if len(pts) > 1:
+                    path_d = f"M {pts[0][0]:.1f},{pts[0][1]:.1f}"
+                    for px, py in pts[1:]:
+                        path_d += f" L {px:.1f},{py:.1f}"
+                    paths_svg.append(f'<path d="{path_d}" fill="none" stroke="{iso_color}" stroke-width="1.2" {iso_dash} stroke-linecap="round" />')
+
+                    if iso_label:
+                        m_idx = len(pts) // 2
+                        m_px, m_py = pts[m_idx]
+                        labels.append(f'<text x="{m_px:.1f}" y="{m_py - 2:.1f}" font-size="7.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="{iso_color}" text-anchor="middle">{iso_label}</text>')
+
+    # Render Primary & Trim Pump Curve Paths
+    for c_idx, c in enumerate(curves_list or []):
         x_pts = c.get('x', [])
         y_pts = c.get('y', [])
         color = c.get('color', '#1e3a8a')
@@ -257,26 +310,40 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
         paths_svg.append(f'<path d="{path_d}" fill="none" stroke="{color}" stroke-width="{stroke_w}" {dash_style} stroke-linecap="round" />')
         legend_items.append({'label': label, 'color': color})
 
-    # Render Multi-Curve Legend Box if multiple curves exist
+    # Render Multi-Curve Legend Box with customizable positioning
     legend_svg = ""
-    if len(legend_items) > 1:
+    if show_legend and len(legend_items) > 1:
         leg_box = []
-        box_x = width - padding_right - 110
-        box_y = padding_top + 4
-        leg_box.append(f'<rect x="{box_x}" y="{box_y}" width="105" height="{14 + len(legend_items)*12}" fill="#ffffff" fill-opacity="0.9" stroke="#cbd5e1" rx="4" />')
+        b_w = 110
+        b_h = 14 + len(legend_items) * 12
+
+        if legend_position == 'top_left':
+            box_x = padding_left + 8
+            box_y = padding_top + 4
+        elif legend_position == 'bottom_right':
+            box_x = width - padding_right - b_w - 4
+            box_y = height - padding_bottom - b_h - 4
+        elif legend_position == 'bottom_left':
+            box_x = padding_left + 8
+            box_y = height - padding_bottom - b_h - 4
+        else:  # 'top_right'
+            box_x = width - padding_right - b_w - 4
+            box_y = padding_top + 4
+
+        leg_box.append(f'<rect x="{box_x}" y="{box_y}" width="{b_w}" height="{b_h}" fill="#ffffff" fill-opacity="0.9" stroke="#cbd5e1" rx="4" />')
         for l_idx, leg in enumerate(legend_items):
             ly = box_y + 12 + l_idx * 12
             leg_box.append(f'<line x1="{box_x + 8}" y1="{ly - 3}" x2="{box_x + 22}" y2="{ly - 3}" stroke="{leg["color"]}" stroke-width="2" />')
             leg_box.append(f'<text x="{box_x + 26}" y="{ly}" font-size="8" font-family="Helvetica, Arial, sans-serif" fill="#334155">{leg["label"]}</text>')
         legend_svg = "".join(leg_box)
 
-    svg_code = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="100%" height="{height}px" style="background:#ffffff; border-radius:6px;">
+    svg_code = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="100%" height="auto" style="background:#ffffff; border-radius:4px; display:block;">
   {''.join(grid_lines)}
   <line x1="{padding_left}" y1="{padding_top + plot_h}" x2="{width - padding_right}" y2="{padding_top + plot_h}" stroke="#475569" stroke-width="1.5" />
   <line x1="{padding_left}" y1="{padding_top}" x2="{padding_left}" y2="{padding_top + plot_h}" stroke="#475569" stroke-width="1.5" />
   {''.join(labels)}
-  <text x="{width / 2}" y="{height - 1}" font-size="9.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#334155" text-anchor="middle">{x_label}</text>
-  <text x="12" y="{height / 2}" font-size="9.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#334155" text-anchor="middle" transform="rotate(-90 12 {height / 2})">{y_label}</text>
+  <text x="{(padding_left + width - padding_right) / 2}" y="{height - 2}" font-size="9" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#334155" text-anchor="middle">{x_label}</text>
+  <text x="10" y="{(padding_top + padding_top + plot_h) / 2}" font-size="9" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#334155" text-anchor="middle" transform="rotate(-90 10 {(padding_top + padding_top + plot_h) / 2})">{y_label}</text>
   {''.join(paths_svg)}
   {legend_svg}
 </svg>'''
@@ -309,33 +376,70 @@ def _build_report_curve_context(pump, report):
     # Check NPSH Availability (e.g. ISF pumps without NPSH data have max NPSH = 0)
     has_npsh = max(npsh_pts) > 0.05 and any(abs(getattr(pump, f'npsh_c{i}', 0.0) or 0.0) > 1e-6 for i in range(6))
 
-    # Build Curve Sets based on Display Mode (all, max_only, min_max)
-    dia_str = f"{round(pump.impeller_dia_mm, 1)}" if hasattr(pump, 'impeller_dia_mm') and pump.impeller_dia_mm else "Max"
-    hq_curves_list = [{'label': f"{dia_str} mm (Max)", 'x': q_pts, 'y': h_pts, 'color': primary_color, 'is_secondary': False}]
-    eta_curves_list = [{'label': f"{dia_str} mm (Max)", 'x': q_pts, 'y': eta_pts, 'color': '#059669', 'is_secondary': False}]
-    pow_curves_list = [{'label': f"{dia_str} mm (Max)", 'x': q_pts, 'y': pow_pts, 'color': '#dc2626', 'is_secondary': False}]
-    npsh_curves_list = [{'label': f"{dia_str} mm (Max)", 'x': q_pts, 'y': npsh_pts, 'color': '#0d9488', 'is_secondary': False}]
+    # 1. Parse custom curve diameters from pump.curve_diameters (supporting ;, |, ,, spaces)
+    custom_d_list = _parse_diameters_string(getattr(pump, 'curve_diameters', None))
 
-    # Scaled trim curves if available
-    extra_curves = []
-    try:
-        extra_curves = pump.get_all_curves()
-    except Exception:
-        pass
+    # 2. Check if extra_curves_json has additional diameters
+    if hasattr(pump, 'extra_curves_json') and pump.extra_curves_json:
+        try:
+            extra_data = json.loads(pump.extra_curves_json)
+            if isinstance(extra_data, list):
+                for item in extra_data:
+                    if isinstance(item, dict) and 'diameter' in item:
+                        d_val = _safe_float(item.get('diameter'))
+                        if d_val and d_val not in custom_d_list:
+                            custom_d_list.append(d_val)
+        except Exception:
+            pass
 
-    if len(extra_curves) > 1 and mode != 'max_only':
-        secondary_list = extra_curves[1:] if mode == 'all' else [extra_curves[-1]]
-        for s_idx, sc in enumerate(secondary_list):
-            lbl = sc.get('label', f'Trim {s_idx+1}')
-            d_val = sc.get('diameter', '')
-            if d_val: lbl = f"{d_val} mm"
-            
-            d_ratio = (float(d_val) / float(pump.impeller_dia_mm)) if (d_val and str(d_val).replace('.','',1).isdigit() and pump.impeller_dia_mm > 0) else 0.85
-            s_h = [round(v * (d_ratio**2), 2) for v in h_pts]
-            s_pow = [round(v * (d_ratio**3), 2) for v in pow_pts]
+    # Sort custom diameters in descending order (Max first)
+    if custom_d_list:
+        custom_d_list.sort(reverse=True)
+        max_d = custom_d_list[0]
+    else:
+        max_d = pump.impeller_dia_mm if (hasattr(pump, 'impeller_dia_mm') and pump.impeller_dia_mm and pump.impeller_dia_mm > 0) else 300.0
 
-            hq_curves_list.append({'label': lbl, 'x': q_pts, 'y': s_h, 'color': '#64748b', 'is_secondary': True})
-            pow_curves_list.append({'label': lbl, 'x': q_pts, 'y': s_pow, 'color': '#f97316', 'is_secondary': True})
+    if mode == 'max_only':
+        d_curves = [max_d]
+    elif mode == 'min_max':
+        if len(custom_d_list) >= 2:
+            d_curves = [max_d, custom_d_list[-1]]
+        else:
+            d_curves = [max_d, round(max_d * 0.8, 1)]
+    else:  # mode == 'all'
+        if len(custom_d_list) >= 3:
+            d_curves = custom_d_list
+        elif len(custom_d_list) == 2:
+            # Interpolate 4 evenly spaced clean integer trim diameters (e.g. 228, 213, 197, 182)
+            steps = np.linspace(custom_d_list[0], custom_d_list[-1], 4)
+            d_curves = [float(int(round(float(x)))) for x in steps]
+        else:
+            d_curves = [max_d, float(int(round(max_d * 0.93))), float(int(round(max_d * 0.86))), float(int(round(max_d * 0.8)))]
+
+    hq_curves_list = []
+    eta_curves_list = []
+    pow_curves_list = []
+    npsh_curves_list = []
+
+    palette = ['#1e3a8a', '#0284c7', '#475569', '#d97706']
+
+    for c_idx, d_val in enumerate(d_curves):
+        is_primary = (c_idx == 0)
+        d_fmt = f"{int(round(d_val))}" if abs(d_val - round(d_val)) < 1e-4 else f"{round(d_val, 1)}"
+        lbl = f"{d_fmt} mm" + (" (Max)" if is_primary else "")
+        d_ratio = (d_val / max_d) if max_d > 0 else 1.0
+
+        c_h = [round(v * (d_ratio**2), 2) for v in h_pts]
+        c_eta = [round(max(0.0, float(v) * (1.0 - 0.05 * (1.0 - d_ratio))), 2) for v in eta_pts]
+        c_pow = [round(v * (d_ratio**3), 2) for v in pow_pts]
+        c_npsh = [round(v * ((1.0 / d_ratio)**0.5), 2) for v in npsh_pts]
+
+        cur_color = primary_color if is_primary else palette[min(c_idx, len(palette)-1)]
+
+        hq_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_h, 'color': cur_color, 'is_secondary': not is_primary})
+        eta_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_eta, 'color': '#059669' if is_primary else '#10b981', 'is_secondary': not is_primary})
+        pow_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_pow, 'color': '#dc2626' if is_primary else '#f97316', 'is_secondary': not is_primary})
+        npsh_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_npsh, 'color': '#0d9488' if is_primary else '#14b8a6', 'is_secondary': not is_primary})
 
     # Read Exact Axis Scales configured for the pump in pump-data (min, max, major, minor)
     x_common = {
@@ -384,10 +488,85 @@ def _build_report_curve_context(pump, report):
         'y_minor': getattr(pump, 'axis_npsh_minor', None),
     })
 
-    svg_hq = generate_chart_svg(hq_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", f"Head ({pump.unit_h or 'm'})", custom_range=h_custom_range)
-    svg_eta = generate_chart_svg(eta_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", "Efficiency (%)", custom_range=eta_custom_range)
-    svg_pow = generate_chart_svg(pow_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", f"Power ({pump.unit_pow or 'kW'})", custom_range=pow_custom_range)
-    svg_npsh = generate_chart_svg(npsh_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", f"NPSHr ({pump.unit_npsh or 'm'})", custom_range=npsh_custom_range) if has_npsh else ""
+    # Build Isolines (Efficiency, Power, Speed lines) for the H-Q map
+    hq_isolines_list = []
+
+    # 1. Efficiency Isolines (e.g. 30;40;50;60;75;78 for ISF)
+    if getattr(report, 'show_eff_isolines', True):
+        eff_iso_str = getattr(pump, 'eff_isolines', None) or getattr(pump, 'iso_eff_list', None)
+        levels = _parse_diameters_string(eff_iso_str) if eff_iso_str else [30, 40, 50, 60, 75, 78]
+        try:
+            from pump_curves import efficiency_isolines
+            iso_objs = efficiency_isolines(pump, iso_levels=levels)
+            for iso in iso_objs:
+                eta_val = iso.get('eta', 0.0)
+                lbl_val = f"{int(round(eta_val)) if abs(eta_val - round(eta_val)) < 1e-4 else round(eta_val,1)}%"
+                hq_isolines_list.append({
+                    'x': iso.get('q', []),
+                    'y': iso.get('h', []),
+                    'label': lbl_val,
+                    'color': '#059669',
+                    'dash': 'stroke-dasharray="2,2"'
+                })
+        except Exception as e:
+            print("Efficiency isolines calculation notice:", e)
+
+    # 2. Power Isolines
+    if getattr(report, 'show_power_isolines', False):
+        try:
+            from pump_curves import power_isolines
+            pwr_objs = power_isolines(pump)
+            for p_iso in pwr_objs:
+                p_val = p_iso.get('power', 0.0)
+                p_lbl = f"{int(round(p_val)) if abs(p_val - round(p_val)) < 1e-4 else round(p_val,1)} {pump.unit_pow or 'kW'}"
+                hq_isolines_list.append({
+                    'x': p_iso.get('q', []),
+                    'y': p_iso.get('h', []),
+                    'label': p_lbl,
+                    'color': '#d97706',
+                    'dash': 'stroke-dasharray="3,3"'
+                })
+        except Exception as e:
+            print("Power isolines calculation notice:", e)
+
+    # 3. Speed Lines (Variable Speed RPM Lines)
+    if getattr(report, 'show_speed_lines', True) and getattr(pump, 'family_type', '') == 'variable_speed':
+        try:
+            speed_str = getattr(pump, 'graph_speed_line_values', None)
+            speeds = _parse_diameters_string(speed_str) if speed_str else [1450, 1200, 1000, 800]
+            base_rpm = pump.speed_rpm or 1450.0
+            for sp in speeds:
+                s_ratio = float(sp) / float(base_rpm) if base_rpm > 0 else 1.0
+                sp_h = [round(v * (s_ratio**2), 2) for v in h_pts]
+                sp_lbl = f"{int(round(sp))} rpm"
+                hq_curves_list.append({'label': sp_lbl, 'x': q_pts, 'y': sp_h, 'color': '#9333ea', 'is_secondary': True})
+        except Exception as e:
+            print("Speed lines calculation notice:", e)
+
+    # Read Report Legend Visibility & Position Preferences
+    show_leg = getattr(report, 'show_legend', True)
+    leg_pos = getattr(report, 'legend_position', 'top_right')
+
+    svg_hq = generate_chart_svg(
+        hq_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", f"Head ({pump.unit_h or 'm'})",
+        custom_range=h_custom_range, height=240, isolines_list=hq_isolines_list,
+        show_legend=show_leg, legend_position=leg_pos
+    )
+
+    svg_eta = generate_chart_svg(
+        eta_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", "Efficiency (%)",
+        custom_range=eta_custom_range, height=240, show_legend=show_leg, legend_position=leg_pos
+    )
+
+    svg_pow = generate_chart_svg(
+        pow_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", f"Power ({pump.unit_pow or 'kW'})",
+        custom_range=pow_custom_range, height=240, show_legend=show_leg, legend_position=leg_pos
+    )
+
+    svg_npsh = generate_chart_svg(
+        npsh_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", f"NPSHr ({pump.unit_npsh or 'm'})",
+        custom_range=npsh_custom_range, height=240, show_legend=show_leg, legend_position=leg_pos
+    ) if (has_npsh and getattr(report, 'show_npsh_curves', True)) else ""
 
     bep_info = None
     try:
@@ -472,6 +651,14 @@ def save_report():
     report.show_efficiency_graph = 'show_efficiency_graph' in request.form
     report.show_power_graph = 'show_power_graph' in request.form
     report.show_npsh_graph = 'show_npsh_graph' in request.form
+
+    report.show_eff_isolines = 'show_eff_isolines' in request.form
+    report.show_power_isolines = 'show_power_isolines' in request.form
+    report.show_npsh_curves = 'show_npsh_curves' in request.form
+    report.show_speed_lines = 'show_speed_lines' in request.form
+    report.show_additional_graphs = 'show_additional_graphs' in request.form
+    report.show_legend = 'show_legend' in request.form
+    report.legend_position = request.form.get('legend_position', 'top_right').strip()
 
     report.header_text = request.form.get('header_text', 'PUMP MASTER PRO - TECHNICAL DATASHEET').strip()
     report.footer_text = request.form.get('footer_text', 'Generated by Pump Master Pro Engineering Suite').strip()

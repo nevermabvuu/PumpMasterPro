@@ -70,6 +70,25 @@ with app.app_context():
                 db.session.add(def_rep)
                 db.session.commit()
 
+            rep_res = conn.execute(text("PRAGMA table_info(reports)"))
+            rep_cols = [row[1] for row in rep_res.fetchall()]
+            if 'curve_display_mode' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN curve_display_mode VARCHAR(20) DEFAULT 'all'"))
+            if 'show_eff_isolines' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN show_eff_isolines INTEGER DEFAULT 1"))
+            if 'show_power_isolines' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN show_power_isolines INTEGER DEFAULT 0"))
+            if 'show_npsh_curves' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN show_npsh_curves INTEGER DEFAULT 1"))
+            if 'show_speed_lines' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN show_speed_lines INTEGER DEFAULT 1"))
+            if 'show_additional_graphs' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN show_additional_graphs INTEGER DEFAULT 1"))
+            if 'show_legend' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN show_legend INTEGER DEFAULT 1"))
+            if 'legend_position' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN legend_position VARCHAR(30) DEFAULT 'top_right'"))
+
             result = conn.execute(text("PRAGMA table_info(pumps)"))
             cols = [row[1] for row in result.fetchall()]
             axis_cols = [

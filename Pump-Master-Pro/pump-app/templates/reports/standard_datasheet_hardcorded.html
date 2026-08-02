@@ -269,7 +269,7 @@
       <div class="grid-2">
         <!-- Graph 1: Head vs Flow (HQ) -->
         {% if report.show_head_flow_graph %}
-        <div class="graph-card" style="{% if not report.show_additional_graphs %}grid-column: span 2;{% endif %}">
+        <div class="graph-card">
           <div class="graph-title-bar">
             <span>Head vs Flow (H-Q)</span>
             <span style="font-family: monospace; color: {{ report.primary_color if report and report.primary_color else '#1e3a8a' }};">{{ pump.unit_h or 'm' }}</span>
@@ -279,7 +279,7 @@
         {% endif %}
 
         <!-- Graph 2: Efficiency vs Flow (Eta-Q) -->
-        {% if report.show_additional_graphs and report.show_efficiency_graph %}
+        {% if report.show_efficiency_graph %}
         <div class="graph-card">
           <div class="graph-title-bar">
             <span>Efficiency vs Flow (η-Q)</span>
@@ -290,7 +290,6 @@
         {% endif %}
       </div>
 
-      {% if report.show_additional_graphs %}
       <div class="grid-2">
         <!-- Graph 3: Power vs Flow (P-Q) -->
         {% if report.show_power_graph %}
@@ -314,7 +313,6 @@
         </div>
         {% endif %}
       </div>
-      {% endif %}
     </div>
 
     <!-- 4. CONSTRUCTION & MATERIALS TABLE -->

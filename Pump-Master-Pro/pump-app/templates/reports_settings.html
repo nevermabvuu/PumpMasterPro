@@ -225,25 +225,69 @@
       <!-- Graph Show / Hide Preferences -->
       <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
         <span class="block text-xs font-bold text-[#58a6ff] uppercase tracking-wider">
-          <i class="bi bi-graph-up me-1"></i> Graph Visibility Settings
+          <i class="bi bi-graph-up me-1"></i> Graph Visibility & Sub-Charts
         </span>
         <div class="grid grid-cols-2 gap-2 text-xs text-[#c9d1d9]">
           <label class="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" name="show_head_flow_graph" id="rep_show_hq" class="accent-[#58a6ff] rounded" checked>
-            <span>Show Head-Flow (H-Q) Graph</span>
+            <span>Show Head-Flow (H-Q) Main Graph</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="show_additional_graphs" id="rep_show_additional_graphs" class="accent-[#58a6ff] rounded" checked>
+            <span>Show Additional Sub-Graphs</span>
           </label>
           <label class="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" name="show_efficiency_graph" id="rep_show_eta" class="accent-[#58a6ff] rounded" checked>
-            <span>Show Efficiency (η-Q) Graph</span>
+            <span>Show Efficiency (η-Q) Sub-Graph</span>
           </label>
           <label class="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" name="show_power_graph" id="rep_show_pow" class="accent-[#58a6ff] rounded" checked>
-            <span>Show Power (P-Q) Graph</span>
+            <span>Show Power (P-Q) Sub-Graph</span>
           </label>
           <label class="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" name="show_npsh_graph" id="rep_show_npsh" class="accent-[#58a6ff] rounded" checked>
-            <span>Show NPSHr Graph</span>
+            <span>Show NPSHr Sub-Graph</span>
           </label>
+        </div>
+      </div>
+
+      <!-- Pump-Data Advanced Plotting & Overlay Settings -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
+        <span class="block text-xs font-bold text-[#38bdf8] uppercase tracking-wider">
+          <i class="bi bi-sliders me-1"></i> Pump-Data Plotting &amp; Overlay Settings
+        </span>
+        <div class="grid grid-cols-2 gap-2 text-xs text-[#c9d1d9]">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="show_eff_isolines" id="rep_show_eff_isolines" class="accent-[#38bdf8] rounded" checked>
+            <span>Show Efficiency Isolines (e.g. 30;40;50;60;75;78)</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="show_power_isolines" id="rep_show_power_isolines" class="accent-[#38bdf8] rounded">
+            <span>Show Power Isolines</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="show_npsh_curves" id="rep_show_npsh_curves" class="accent-[#38bdf8] rounded" checked>
+            <span>Show NPSH Standard Curves / Isolines</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="show_speed_lines" id="rep_show_speed_lines" class="accent-[#38bdf8] rounded" checked>
+            <span>Show Speed Lines (VFD RPM)</span>
+          </label>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-[#21262d]">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="show_legend" id="rep_show_legend" class="accent-[#38bdf8] rounded" checked>
+            <span>Show Graph Legend</span>
+          </label>
+          <div>
+            <select name="legend_position" id="rep_legend_position" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-[#38bdf8]">
+              <option value="top_right">Legend: Top Right</option>
+              <option value="top_left">Legend: Top Left</option>
+              <option value="bottom_right">Legend: Bottom Right</option>
+              <option value="bottom_left">Legend: Bottom Left</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -326,9 +370,16 @@
     document.getElementById('rep_primary_color').value = '#1e3a8a';
     document.getElementById('rep_curve_display_mode').value = 'all';
     document.getElementById('rep_show_hq').checked = true;
+    document.getElementById('rep_show_additional_graphs').checked = true;
     document.getElementById('rep_show_eta').checked = true;
     document.getElementById('rep_show_pow').checked = true;
     document.getElementById('rep_show_npsh').checked = true;
+    document.getElementById('rep_show_eff_isolines').checked = true;
+    document.getElementById('rep_show_power_isolines').checked = false;
+    document.getElementById('rep_show_npsh_curves').checked = true;
+    document.getElementById('rep_show_speed_lines').checked = true;
+    document.getElementById('rep_show_legend').checked = true;
+    document.getElementById('rep_legend_position').value = 'top_right';
     document.getElementById('reportModalTitle').innerHTML = '<i class="bi bi-sliders2 text-[#58a6ff]"></i> Add PDF Report Setting';
     document.getElementById('reportModal').classList.remove('hidden');
   }
@@ -343,9 +394,16 @@
     document.getElementById('rep_primary_color').value = r.primary_color || '#1e3a8a';
     document.getElementById('rep_curve_display_mode').value = r.curve_display_mode || 'all';
     document.getElementById('rep_show_hq').checked = r.show_head_flow_graph;
+    document.getElementById('rep_show_additional_graphs').checked = r.show_additional_graphs !== undefined ? r.show_additional_graphs : true;
     document.getElementById('rep_show_eta').checked = r.show_efficiency_graph;
     document.getElementById('rep_show_pow').checked = r.show_power_graph;
     document.getElementById('rep_show_npsh').checked = r.show_npsh_graph;
+    document.getElementById('rep_show_eff_isolines').checked = r.show_eff_isolines !== undefined ? r.show_eff_isolines : true;
+    document.getElementById('rep_show_power_isolines').checked = r.show_power_isolines !== undefined ? r.show_power_isolines : false;
+    document.getElementById('rep_show_npsh_curves').checked = r.show_npsh_curves !== undefined ? r.show_npsh_curves : true;
+    document.getElementById('rep_show_speed_lines').checked = r.show_speed_lines !== undefined ? r.show_speed_lines : true;
+    document.getElementById('rep_show_legend').checked = r.show_legend !== undefined ? r.show_legend : true;
+    document.getElementById('rep_legend_position').value = r.legend_position || 'top_right';
     document.getElementById('reportModalTitle').innerHTML = '<i class="bi bi-gear text-[#58a6ff]"></i> Configure PDF Report Setting';
     document.getElementById('reportModal').classList.remove('hidden');
   }

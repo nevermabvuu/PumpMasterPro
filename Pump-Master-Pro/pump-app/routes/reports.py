@@ -493,7 +493,10 @@ def _build_report_curve_context(pump, report):
     hq_isolines_list = []
 
     # 1. Efficiency Isolines
-    if getattr(report, 'show_eff_isolines', True):
+    show_eff = getattr(report, 'show_eff_isolines', True)
+    if show_eff is None:
+        show_eff = getattr(pump, 'graph_show_eff_iso', True)
+    if show_eff:
         eff_iso_str = (
             getattr(report, 'eff_isolines', None) or
             getattr(pump, 'graph_eff_levels', None) or
@@ -517,10 +520,18 @@ def _build_report_curve_context(pump, report):
             print("Efficiency isolines calculation notice:", e)
 
     # 2. Power Isolines
-    if getattr(report, 'show_power_isolines', False):
+    show_pwr = getattr(report, 'show_power_isolines', None)
+    if show_pwr is None:
+        show_pwr = getattr(pump, 'graph_show_power_iso', False)
+    if show_pwr:
+        pwr_iso_str = (
+            getattr(report, 'power_isolines', None) or
+            getattr(pump, 'graph_power_levels', None)
+        )
+        p_levels = _parse_diameters_string(pwr_iso_str) if (pwr_iso_str and str(pwr_iso_str).strip()) else None
         try:
             from pump_curves import power_isolines
-            pwr_objs = power_isolines(pump)
+            pwr_objs = power_isolines(pump, power_levels=p_levels)
             for p_iso in pwr_objs:
                 p_val = p_iso.get('power', 0.0)
                 p_lbl = f"{int(round(p_val)) if abs(p_val - round(p_val)) < 1e-4 else round(p_val,1)} {pump.unit_pow or 'kW'}"
@@ -533,6 +544,32 @@ def _build_report_curve_context(pump, report):
                 })
         except Exception as e:
             print("Power isolines calculation notice:", e)
+
+    # 3. NPSH Isolines
+    show_npsh_iso = getattr(report, 'show_npsh_isolines', None)
+    if show_npsh_iso is None:
+        show_npsh_iso = getattr(pump, 'graph_show_npsh_iso', False)
+    if show_npsh_iso:
+        npsh_iso_str = (
+            getattr(report, 'npsh_isolines', None) or
+            getattr(pump, 'graph_npsh_levels', None)
+        )
+        n_levels = _parse_diameters_string(npsh_iso_str) if (npsh_iso_str and str(npsh_iso_str).strip()) else None
+        try:
+            from pump_curves import npsh_isolines
+            npsh_objs = npsh_isolines(pump, iso_levels=n_levels)
+            for n_iso in npsh_objs:
+                n_val = n_iso.get('npsh', 0.0)
+                n_lbl = f"{int(round(n_val)) if abs(n_val - round(n_val)) < 1e-4 else round(n_val,1)} m"
+                hq_isolines_list.append({
+                    'x': n_iso.get('q', []),
+                    'y': n_iso.get('h', []),
+                    'label': n_lbl,
+                    'color': '#2563eb',
+                    'dash': 'stroke-dasharray="4,2"'
+                })
+        except Exception as e:
+            print("NPSH isolines calculation notice:", e)
 
     # 3. Speed Lines (Variable Speed RPM Lines)
     if getattr(report, 'show_speed_lines', True) and getattr(pump, 'family_type', '') == 'variable_speed':

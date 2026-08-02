@@ -1209,13 +1209,13 @@ async function refreshPreviewCharts() {
 
   // Toggle inputs visibility safely
   const gEff = document.getElementById('groupEffLevels');
-  if (gEff) gEff.style.display = showEffIso ? '' : 'none';
+  if (gEff) { gEff.style.display = showEffIso ? '' : 'none'; gEff.classList.toggle('hidden', !showEffIso); }
   const gPow = document.getElementById('groupPowerLevels');
-  if (gPow) gPow.style.display = showPowerIso ? '' : 'none';
+  if (gPow) { gPow.style.display = showPowerIso ? '' : 'none'; gPow.classList.toggle('hidden', !showPowerIso); }
   const gNpsh = document.getElementById('groupNpshLevels');
-  if (gNpsh) gNpsh.style.display = showNpshIso ? '' : 'none';
+  if (gNpsh) { gNpsh.style.display = showNpshIso ? '' : 'none'; gNpsh.classList.toggle('hidden', !showNpshIso); }
   const gNpshY = document.getElementById('groupNpshYAxis');
-  if (gNpshY) gNpshY.style.display = showNpshCurve ? '' : 'none';
+  if (gNpshY) { gNpshY.style.display = showNpshCurve ? '' : 'none'; gNpshY.classList.toggle('hidden', !showNpshCurve); }
   const sPanels = document.getElementById('standalonePanels');
   if (sPanels) sPanels.style.display = showOther ? '' : 'none';
   const oOpts = document.getElementById('otherGraphsOptions');
@@ -2876,15 +2876,32 @@ function parseCSVOrTXT(text) {
 function bindPreviewOptions() {
   ['chkShowHQ', 'chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'txtSpeedLineValues', 'chkShowOther',
     'chkShowEff', 'chkShowPower', 'chkShowNpsh', 'chkCombineEffPower', 'selLegendMode',
+    'txtEffLevels', 'txtPowerLevels', 'txtNpshLevels', 'numTrimPenalty',
     'clrHeadColor', 'selHeadWeight', 'selHeadStyle',
     'clrEffColor', 'selEffWeight', 'selEffStyle',
     'clrPowColor', 'selPowWeight', 'selPowStyle',
     'clrNpshColor', 'selNpshWeight', 'selNpshStyle'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
-        const evtTypes = el.type === 'color' ? ['input', 'change'] : ['change'];
+        const evtTypes = el.type === 'color' || el.tagName === 'INPUT' && el.type !== 'checkbox' ? ['input', 'change'] : ['change'];
         evtTypes.forEach(evtType => {
           el.addEventListener(evtType, () => {
+            if (id === 'chkShowEffIso') {
+              const g = document.getElementById('groupEffLevels');
+              if (g) { g.style.display = el.checked ? '' : 'none'; g.classList.toggle('hidden', !el.checked); }
+            }
+            if (id === 'chkShowPowerIso') {
+              const g = document.getElementById('groupPowerLevels');
+              if (g) { g.style.display = el.checked ? '' : 'none'; g.classList.toggle('hidden', !el.checked); }
+            }
+            if (id === 'chkShowNpshIso') {
+              const g = document.getElementById('groupNpshLevels');
+              if (g) { g.style.display = el.checked ? '' : 'none'; g.classList.toggle('hidden', !el.checked); }
+            }
+            if (id === 'chkShowNpshCurve') {
+              const g = document.getElementById('groupNpshYAxis');
+              if (g) { g.style.display = el.checked ? '' : 'none'; g.classList.toggle('hidden', !el.checked); }
+            }
             if (id === 'selLegendMode') {
               const g = document.getElementById('groupCurveLabelPos');
               if (g) g.style.display = el.value === 'curve_labels' ? '' : 'none';

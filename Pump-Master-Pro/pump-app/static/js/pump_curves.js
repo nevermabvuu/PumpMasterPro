@@ -2484,6 +2484,22 @@ if (typeof PUMP_ID !== 'undefined') {
       const el = document.getElementById(id);
       if (el) {
         el.addEventListener('change', () => {
+          if (id === 'chkShowEffIso') {
+            const g = document.getElementById('groupEffLevels');
+            if (g) { g.style.display = el.checked ? '' : 'none'; g.classList.toggle('hidden', !el.checked); }
+          }
+          if (id === 'chkShowPowerIso') {
+            const g = document.getElementById('groupPowerLevels');
+            if (g) { g.style.display = el.checked ? '' : 'none'; g.classList.toggle('hidden', !el.checked); }
+          }
+          if (id === 'chkShowNpshIso') {
+            const g = document.getElementById('groupNpshLevels');
+            if (g) { g.style.display = el.checked ? '' : 'none'; g.classList.toggle('hidden', !el.checked); }
+          }
+          if (id === 'chkShowNpshCurve') {
+            const g = document.getElementById('groupNpshYAxis');
+            if (g) { g.style.display = el.checked ? '' : 'none'; g.classList.toggle('hidden', !el.checked); }
+          }
           if (id === 'selLegendMode') {
             const g = document.getElementById('groupCurveLabelPos');
             if (g) g.style.display = el.value === 'curve_labels' ? '' : 'none';
@@ -2507,7 +2523,7 @@ if (typeof PUMP_ID !== 'undefined') {
     });
 
     // Bind change/keypress event to custom levels to automatically fetch
-    ['txtEffLevels', 'txtPowerLevels', 'txtNpshLevels'].forEach(id => {
+    ['txtEffLevels', 'txtPowerLevels', 'txtNpshLevels', 'numTrimPenalty'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.addEventListener('change', onOptionFetchChange);

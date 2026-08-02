@@ -269,21 +269,22 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             if len(iso_x) == len(iso_y) and len(iso_x) > 1:
                 pts = []
                 for x, y in zip(iso_x, iso_y):
-                    if x_min <= x <= x_max and y_min <= y <= y_max:
-                        px = padding_left + ((x - x_min) / (x_max - x_min)) * plot_w
-                        py = padding_top + plot_h - ((y - y_min) / (y_max - y_min)) * plot_h
-                        pts.append((px, py))
+                    raw_px = padding_left + ((x - x_min) / (x_max - x_min)) * plot_w
+                    raw_py = padding_top + plot_h - ((y - y_min) / (y_max - y_min)) * plot_h
+                    px = min(max(float(padding_left), float(raw_px)), float(width - padding_right))
+                    py = min(max(float(padding_top), float(raw_py)), float(padding_top + plot_h))
+                    pts.append((px, py))
 
                 if len(pts) > 1:
                     path_d = f"M {pts[0][0]:.1f},{pts[0][1]:.1f}"
                     for px, py in pts[1:]:
                         path_d += f" L {px:.1f},{py:.1f}"
-                    paths_svg.append(f'<path d="{path_d}" fill="none" stroke="{iso_color}" stroke-width="1.2" {iso_dash} stroke-linecap="round" />')
+                    paths_svg.append(f'<path d="{path_d}" fill="none" stroke="{iso_color}" stroke-width="1.2" {iso_dash} stroke-linecap="round" stroke-linejoin="round" />')
 
                     if iso_label:
-                        m_idx = len(pts) // 2
+                        m_idx = 0  # Label near top max intersection point
                         m_px, m_py = pts[m_idx]
-                        labels.append(f'<text x="{m_px:.1f}" y="{m_py - 2:.1f}" font-size="7.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="{iso_color}" text-anchor="middle">{iso_label}</text>')
+                        labels.append(f'<text x="{m_px:.1f}" y="{m_py - 3:.1f}" font-size="7.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="{iso_color}" text-anchor="middle">{iso_label}</text>')
 
     # Render Primary & Trim Pump Curve Paths
     for c_idx, c in enumerate(curves_list or []):

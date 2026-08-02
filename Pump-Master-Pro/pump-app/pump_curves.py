@@ -226,6 +226,35 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
     npsh_base = npsh_curve(pump, q_base)
 
     extra_curves = pump.get_extra_curves()
+    fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+    if fam_type == 'variable_speed':
+        trim_penalty_coeff = 0.0
+    else:
+        min_eta = None
+        min_r = None
+        for c in extra_curves:
+            raw_t = c.get('raw_table', [])
+            d_val = c.get('diameter')
+            if raw_t and d_val:
+                try:
+                    u = c.get('unit_dia', 'mm')
+                    d_mm = float(d_val) * (25.4 if u == 'in' else (1000.0 if u == 'm' else 1.0))
+                    r_c = d_mm / d_max
+                    etas = [float(row[2]) for row in raw_t if isinstance(row, list) and len(row) >= 3 and row[2] != '' and row[2] is not None]
+                    if etas:
+                        max_e = max(etas)
+                        if min_r is None or r_c < min_r:
+                            min_r = r_c
+                            min_eta = max_e
+                except (ValueError, TypeError):
+                    pass
+        eta_base_max = float(np.max(eta_base)) if len(eta_base) > 0 else 80.0
+        if min_eta is not None and min_r is not None and min_r < 0.99 and eta_base_max > min_eta:
+            calc_coeff = (eta_base_max - min_eta) / (1.0 - min_r)
+            trim_penalty_coeff = max(5.0, min(calc_coeff, 22.0))
+        else:
+            trim_penalty_coeff = 20.0
+
     extra_map = {}
     for c in extra_curves:
         d_val = c.get('diameter')
@@ -347,7 +376,7 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
 
         def _make_affinity():
             fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
-            penalty = 0.0 if fam_type == 'variable_speed' else 40.0 * (1.0 - r)
+            penalty = 0.0 if fam_type == 'variable_speed' else trim_penalty_coeff * (1.0 - r)
             eta_trimmed = np.clip(eta_base - penalty, 0, 100)
             use_custom = False
             c_color = None
@@ -382,7 +411,7 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
                 'eta': eta_trimmed.tolist(),
                 'power': (pwr_base * r ** 3).tolist(),
                 'npsh': (npsh_base * r ** 2).tolist(),
-                'bep': _bep_for_ratio(pump, r, h_base, eta_base, pwr_base, q_base),
+                'bep': _bep_for_ratio(pump, r, h_base, eta_base, pwr_base, q_base, trim_penalty_coeff),
                 'color': c_color,
                 'use_custom_style': use_custom,
                 'style_mode': 'custom' if use_custom else 'graph',
@@ -403,10 +432,11 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
     return family
 
 
-def _bep_for_ratio(pump, ratio, h_base, eta_base, pwr_base, q_base):
+def _bep_for_ratio(pump, ratio, h_base, eta_base, pwr_base, q_base, trim_penalty_coeff=20.0):
     """BEP at a given impeller trim ratio."""
     idx = int(np.argmax(eta_base))
-    penalty = 40.0 * (1.0 - ratio)
+    fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+    penalty = 0.0 if fam_type == 'variable_speed' else trim_penalty_coeff * (1.0 - ratio)
     return {
         'q': round(float(q_base[idx]) * ratio, 2),
         'h': round(float(h_base[idx]) * ratio ** 2, 2),
@@ -415,43 +445,68 @@ def _bep_for_ratio(pump, ratio, h_base, eta_base, pwr_base, q_base):
     }
 
 
-# ── Warman-style efficiency isolines ──────────────────────────────────────────
+# Warman-style efficiency isolines
 
 def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
                         slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650,
-                        iso_levels=None, n_ratio_steps=50, n_base=2000):
+                        iso_levels=None, n_ratio_steps=100, n_base=400):
     """
-    Generate clean, accurate efficiency isolines for performance maps.
-    Handles both variable_speed (constant diameter, carrying RPM) and
-    trimmed_impeller (constant speed, carrying diameter) pump families.
-    """
-    fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
-    is_var_speed = (fam_type == 'variable_speed')
+    Generate smooth, parabolic Warman-style efficiency isolines across the pump operating envelope.
 
+    Scans a dense 2D grid (Q, ratio) to produce smooth continuous U-loops for closed
+    efficiency contours, and smooth continuous rays for open efficiency contours.
+    """
     diameters = pump.get_diameters()
-    if is_var_speed:
-        v_max = max(diameters) if diameters else (pump.speed_rpm or 1450.0)
-        v_min = min(diameters) if diameters else (v_max * 0.5)
-        r_min = max(0.3, v_min / v_max) if v_max > 0 else 0.5
-        penalty_factor = 0.0  # Affinity law: efficiency is constant along speed scaling lines
-    else:
-        v_max = max(diameters) if diameters else (pump.impeller_dia_mm or 300.0)
-        v_min = min(diameters) if diameters else (v_max * 0.7)
-        r_min = max(0.4, v_min / v_max) if v_max > 0 else 0.7
-        penalty_factor = 5.0  # Standard small empirical penalty for diameter trimming (~5% at min trim)
+    d_max = max(diameters) if diameters else (pump.impeller_dia_mm or 300.0)
+    d_min = min(diameters) if diameters else (d_max * 0.7)
+    r_min = d_min / d_max if d_max > 0 else 0.70
 
     q_base = np.linspace(pump.q_min or 0.01, pump.q_max, n_base)
-    h_base = hq_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
+    h_base   = hq_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
     eta_base = efficiency_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
 
     valid = (h_base > 0) & (eta_base > 0)
     if not np.any(valid):
         return []
 
-    q_v, h_v, eta_v = q_base[valid], h_base[valid], eta_base[valid]
+    q_v = q_base[valid]
+    h_v = h_base[valid]
+    eta_v = eta_base[valid]
+
     eta_max = float(np.max(eta_v))
     bep_idx = int(np.argmax(eta_v))
-    bep_q, bep_h = float(q_v[bep_idx]), float(h_v[bep_idx])
+    bep_q = float(q_v[bep_idx])
+    bep_h = float(h_v[bep_idx])
+
+    # Calculate dynamic trim penalty coefficient
+    fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+    if fam_type == 'variable_speed':
+        trim_penalty_coeff = 0.0
+    else:
+        extra_curves = pump.get_extra_curves()
+        min_eta = None
+        min_r = None
+        for c in extra_curves:
+            raw_t = c.get('raw_table', [])
+            d_val = c.get('diameter')
+            if raw_t and d_val:
+                try:
+                    u = c.get('unit_dia', 'mm')
+                    d_mm = float(d_val) * (25.4 if u == 'in' else (1000.0 if u == 'm' else 1.0))
+                    r_c = d_mm / d_max
+                    etas = [float(row[2]) for row in raw_t if isinstance(row, list) and len(row) >= 3 and row[2] != '' and row[2] is not None]
+                    if etas:
+                        max_e = max(etas)
+                        if min_r is None or r_c < min_r:
+                            min_r = r_c
+                            min_eta = max_e
+                except (ValueError, TypeError):
+                    pass
+        if min_eta is not None and min_r is not None and min_r < 0.99 and eta_max > min_eta:
+            calc_coeff = (eta_max - min_eta) / (1.0 - min_r)
+            trim_penalty_coeff = max(5.0, min(calc_coeff, 22.0))
+        else:
+            trim_penalty_coeff = 20.0
 
     if not iso_levels:
         lo = max(20, int((eta_max * 0.40) // 5) * 5)
@@ -464,90 +519,116 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
     isolines = []
 
     for eta_t in iso_levels:
-        is_bep = abs(eta_t - eta_max) < 0.8 or eta_t > eta_max
-
+        # BEP marker
+        is_bep = abs(eta_t - eta_max) < 0.5 or eta_t >= eta_max
         if is_bep:
-            iso_q = (bep_q * ratios).tolist()
-            iso_h = (bep_h * ratios ** 2).tolist()
+            ratios_line = np.linspace(1.0, r_min, 40)
             isolines.append({
                 'eta': round(eta_max, 1),
-                'branch': 'bep',
-                'q': iso_q,
-                'h': iso_h,
+                'q': (bep_q * ratios_line).tolist(),
+                'h': (bep_h * ratios_line ** 2).tolist(),
                 'label_q': round(bep_q, 2),
                 'label_h': round(bep_h, 2),
-                'label_text': f"BEP {int(round(eta_max))}%"
+                'label_text': "BEP " + str(int(round(eta_max))) + "%",
+                'is_closed': False
             })
             continue
 
-        left_v = (q_v <= bep_q)
-        right_v = (q_v >= bep_q)
+        left_pts = []   # (Q, H, r)
+        right_pts = []  # (Q, H, r)
 
-        diff_left = eta_v[left_v] - eta_t
-        cross_left = []
-        for i in range(len(diff_left) - 1):
-            if diff_left[i] * diff_left[i + 1] <= 0:
-                denom = (diff_left[i] - diff_left[i + 1])
-                t = diff_left[i] / denom if denom != 0 else 0
-                q_sub = q_v[left_v]
-                h_sub = h_v[left_v]
-                qc = float(q_sub[i] + t * (q_sub[i + 1] - q_sub[i]))
-                hc = float(h_sub[i] + t * (h_sub[i + 1] - h_sub[i]))
-                cross_left.append((qc, hc))
+        for r in ratios:
+            eta_r = eta_v - trim_penalty_coeff * (1.0 - r)
 
-        diff_right = eta_v[right_v] - eta_t
-        cross_right = []
-        for i in range(len(diff_right) - 1):
-            if diff_right[i] * diff_right[i + 1] <= 0:
-                denom = (diff_right[i] - diff_right[i + 1])
-                t = diff_right[i] / denom if denom != 0 else 0
-                q_sub = q_v[right_v]
-                h_sub = h_v[right_v]
-                qc = float(q_sub[i] + t * (q_sub[i + 1] - q_sub[i]))
-                hc = float(h_sub[i] + t * (h_sub[i + 1] - h_sub[i]))
-                cross_right.append((qc, hc))
+            # Left crossing (Q < BEP)
+            diff_l = eta_r[:bep_idx + 1] - eta_t
+            for i in range(len(diff_l) - 1):
+                if diff_l[i] * diff_l[i + 1] <= 0:
+                    denom = diff_l[i + 1] - diff_l[i]
+                    t = (0 - diff_l[i]) / denom if denom != 0 else 0.5
+                    q_c = float(q_v[i] + t * (q_v[i + 1] - q_v[i]))
+                    h_c = float(h_v[i] + t * (h_v[i + 1] - h_v[i]))
+                    left_pts.append((q_c * r, h_c * (r ** 2), r))
+                    break
 
-        if len(cross_left) > 0:
-            qc_top, hc_top = cross_left[0]
-            left_pts_q, left_pts_h = [], []
-            for r in ratios:
-                penalty = penalty_factor * (1.0 - r)
-                if (eta_t - penalty) <= 0: break
-                left_pts_q.append(float(qc_top * r))
-                left_pts_h.append(float(hc_top * r ** 2))
+            # Right crossing (Q > BEP)
+            diff_r = eta_r[bep_idx:] - eta_t
+            for i in range(len(diff_r) - 1):
+                if diff_r[i] * diff_r[i + 1] <= 0:
+                    denom = diff_r[i + 1] - diff_r[i]
+                    t = (0 - diff_r[i]) / denom if denom != 0 else 0.5
+                    idx = bep_idx + i
+                    q_c = float(q_v[idx] + t * (q_v[idx + 1] - q_v[idx]))
+                    h_c = float(h_v[idx] + t * (h_v[idx + 1] - h_v[idx]))
+                    right_pts.append((q_c * r, h_c * (r ** 2), r))
+                    break
 
-            if len(left_pts_q) > 1:
+        if not left_pts and not right_pts:
+            continue
+
+        r_deepest_l = left_pts[-1][2] if left_pts else 1.0
+        r_deepest_r = right_pts[-1][2] if right_pts else 1.0
+        r_deepest = min(r_deepest_l, r_deepest_r)
+
+        # Closed loop forms if the isoline closes BEFORE reaching the min diameter
+        is_closed = (r_deepest > r_min + 0.005) and len(left_pts) >= 2 and len(right_pts) >= 2
+
+        if is_closed:
+            # U-loop: path goes down left branch, across parabolic bottom arc, up right branch
+            q_l_bot, h_l_bot = left_pts[-1][0], left_pts[-1][1]
+            q_r_bot, h_r_bot = right_pts[-1][0], right_pts[-1][1]
+
+            n_arc = 14
+            bottom_arc_q = []
+            bottom_arc_h = []
+            for k in range(1, n_arc):
+                t = k / float(n_arc)
+                q_arc = q_l_bot + t * (q_r_bot - q_l_bot)
+                # Smooth parabolic dip at bottom vertex
+                h_arc = h_l_bot + t * (h_r_bot - h_l_bot) - 0.3 * (1.0 - (2.0 * t - 1.0) ** 2)
+                bottom_arc_q.append(q_arc)
+                bottom_arc_h.append(h_arc)
+
+            loop_q = [p[0] for p in left_pts] + bottom_arc_q + [p[0] for p in reversed(right_pts)]
+            loop_h = [p[1] for p in left_pts] + bottom_arc_h + [p[1] for p in reversed(right_pts)]
+
+            isolines.append({
+                'eta': eta_t,
+                'q': loop_q, 'h': loop_h,
+                'label_q': round(left_pts[0][0], 2),
+                'label_h': round(left_pts[0][1], 2),
+                'label_text': str(int(round(eta_t))) + "%",
+                'is_closed': True
+            })
+        else:
+            # Open branches: isoline extends down to the minimum diameter
+            if len(left_pts) >= 2:
+                l_q = [p[0] for p in left_pts]
+                l_h = [p[1] for p in left_pts]
                 isolines.append({
                     'eta': eta_t,
                     'branch': 'left',
-                    'q': left_pts_q,
-                    'h': left_pts_h,
-                    'label_q': round(left_pts_q[0], 2),
-                    'label_h': round(left_pts_h[0], 2),
-                    'label_text': f"{int(round(eta_t))}%"
+                    'q': l_q, 'h': l_h,
+                    'label_q': round(l_q[0], 2),
+                    'label_h': round(l_h[0], 2),
+                    'label_text': str(int(round(eta_t))) + "%",
+                    'is_closed': False
                 })
-
-        if len(cross_right) > 0:
-            qc_top, hc_top = cross_right[-1]
-            right_pts_q, right_pts_h = [], []
-            for r in ratios:
-                penalty = penalty_factor * (1.0 - r)
-                if (eta_t - penalty) <= 0: break
-                right_pts_q.append(float(qc_top * r))
-                right_pts_h.append(float(hc_top * r ** 2))
-
-            if len(right_pts_q) > 1:
+            if len(right_pts) >= 2:
+                r_q = [p[0] for p in right_pts]
+                r_h = [p[1] for p in right_pts]
                 isolines.append({
                     'eta': eta_t,
                     'branch': 'right',
-                    'q': right_pts_q,
-                    'h': right_pts_h,
-                    'label_q': round(right_pts_q[0], 2),
-                    'label_h': round(right_pts_h[0], 2),
-                    'label_text': f"{int(round(eta_t))}%"
+                    'q': r_q, 'h': r_h,
+                    'label_q': round(r_q[0], 2),
+                    'label_h': round(r_h[0], 2),
+                    'label_text': str(int(round(eta_t))) + "%",
+                    'is_closed': False
                 })
 
     return isolines
+
 
 
 # ── Power isolines (constant power lines) ─────────────────────────────────────

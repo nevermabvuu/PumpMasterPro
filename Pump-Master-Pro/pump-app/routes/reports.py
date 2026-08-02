@@ -492,10 +492,14 @@ def _build_report_curve_context(pump, report):
     # Build Isolines (Efficiency, Power, Speed lines) for the H-Q map
     hq_isolines_list = []
 
-    # 1. Efficiency Isolines (e.g. 30;40;50;60;75;78 for ISF)
+    # 1. Efficiency Isolines
     if getattr(report, 'show_eff_isolines', True):
-        eff_iso_str = getattr(pump, 'eff_isolines', None) or getattr(pump, 'iso_eff_list', None)
-        levels = _parse_diameters_string(eff_iso_str) if eff_iso_str else [30, 40, 50, 60, 75, 78]
+        eff_iso_str = (
+            getattr(report, 'eff_isolines', None) or
+            getattr(pump, 'graph_eff_levels', None) or
+            getattr(pump, 'eff_isolines', None)
+        )
+        levels = _parse_diameters_string(eff_iso_str) if (eff_iso_str and str(eff_iso_str).strip()) else None
         try:
             from pump_curves import efficiency_isolines
             iso_objs = efficiency_isolines(pump, iso_levels=levels)

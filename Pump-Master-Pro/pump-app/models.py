@@ -113,6 +113,7 @@ class Pump(db.Model):
     graph_show_npsh         = db.Column(db.Boolean, default=True)
     graph_combine_eff_power = db.Column(db.Boolean, default=True)
     graph_trim_model        = db.Column(db.String(20), default='fit')
+    graph_trim_penalty      = db.Column(db.Float, nullable=True)
 
     # Optional graph JSON options
     graph_options_json      = db.Column(db.Text, default='')
@@ -559,6 +560,7 @@ class Pump(db.Model):
             'show_npsh': self.graph_show_npsh if self.graph_show_npsh is not None else True,
             'combine_eff_power': self.graph_combine_eff_power if self.graph_combine_eff_power is not None else True,
             'trim_model': self.graph_trim_model or 'fit',
+            'trim_penalty': self.graph_trim_penalty if getattr(self, 'graph_trim_penalty', None) is not None else extra_opts.get('trim_penalty'),
             'unit_max_imp': extra_opts.get('unit_max_imp', 'mm'),
             'graph_unit_q': extra_opts.get('graph_unit_q', ''),
             'graph_unit_h': extra_opts.get('graph_unit_h', ''),
@@ -616,6 +618,13 @@ class Pump(db.Model):
         if 'show_npsh' in opts: self.graph_show_npsh = bool(opts['show_npsh'])
         if 'combine_eff_power' in opts: self.graph_combine_eff_power = bool(opts['combine_eff_power'])
         if 'trim_model' in opts: self.graph_trim_model = str(opts['trim_model'])
+        if 'trim_penalty' in opts:
+            tp_val = opts['trim_penalty']
+            if tp_val is None or str(tp_val).strip() == '':
+                self.graph_trim_penalty = None
+            else:
+                try: self.graph_trim_penalty = float(tp_val)
+                except Exception: self.graph_trim_penalty = None
         if 'reset_label_pos' in opts and opts['reset_label_pos']:
             self.graph_custom_label_pos = '{}'
         elif 'custom_label_pos' in opts:

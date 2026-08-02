@@ -671,6 +671,7 @@ function collectGraphOptions() {
   return {
     show_eff_iso: document.getElementById('chkShowEffIso')?.checked !== false,
     eff_levels: document.getElementById('txtEffLevels')?.value || '',
+    trim_penalty: document.getElementById('numTrimPenalty')?.value !== '' && document.getElementById('numTrimPenalty')?.value !== undefined ? parseFloat(document.getElementById('numTrimPenalty')?.value) : null,
     show_power_iso: document.getElementById('chkShowPowerIso')?.checked || false,
     power_levels: document.getElementById('txtPowerLevels')?.value || '',
     show_npsh_iso: document.getElementById('chkShowNpshIso')?.checked || false,
@@ -719,6 +720,7 @@ function applyGraphOptions(opts) {
   if (!opts || typeof opts !== 'object') return;
   if (opts.show_eff_iso !== undefined && document.getElementById('chkShowEffIso')) document.getElementById('chkShowEffIso').checked = opts.show_eff_iso;
   if (opts.eff_levels !== undefined && document.getElementById('txtEffLevels')) document.getElementById('txtEffLevels').value = opts.eff_levels;
+  if (opts.trim_penalty !== undefined && opts.trim_penalty !== null && document.getElementById('numTrimPenalty')) document.getElementById('numTrimPenalty').value = opts.trim_penalty;
 
   if (opts.show_power_iso !== undefined && document.getElementById('chkShowPowerIso')) {
     document.getElementById('chkShowPowerIso').checked = opts.show_power_iso;
@@ -870,6 +872,7 @@ function getPumpFormData() {
 
   const gOpts = collectGraphOptions();
   data['eff_levels'] = gOpts.eff_levels;
+  data['trim_penalty'] = gOpts.trim_penalty;
   data['power_levels'] = gOpts.power_levels;
   data['npsh_levels'] = gOpts.npsh_levels;
   data['force_affinity'] = gOpts.trim_model;
@@ -1221,6 +1224,7 @@ async function refreshPreviewCharts() {
   const body = {
     ...formData,
     eff_levels: showEffIso ? document.getElementById('txtEffLevels')?.value : null,
+    trim_penalty: document.getElementById('numTrimPenalty')?.value !== '' && document.getElementById('numTrimPenalty')?.value !== undefined ? parseFloat(document.getElementById('numTrimPenalty')?.value) : null,
     power_levels: showPowerIso ? document.getElementById('txtPowerLevels')?.value : null,
     npsh_levels: showNpshIso ? document.getElementById('txtNpshLevels')?.value : null,
     graph_speed_line_values: document.getElementById('txtSpeedLineValues')?.value || '',
@@ -1244,6 +1248,11 @@ async function refreshPreviewCharts() {
     const unitH = document.getElementById('preview-unit-h')?.value || 'm';
     const unitNpsh = document.getElementById('preview-unit-npsh')?.value || 'm';
     const unitPow = document.getElementById('preview-unit-pow')?.value || 'kw';
+
+    if (warmanRes && warmanRes.default_trim_penalty !== undefined) {
+      const numTP = document.getElementById('numTrimPenalty');
+      if (numTP) numTP.placeholder = `Auto (${warmanRes.default_trim_penalty}%)`;
+    }
 
     const convertedWarman = convertUnitWarmanData(warmanRes, unitQ, unitH, unitNpsh, unitPow);
     const convertedCurves = convertUnitCurveData(curveRes, unitQ, unitH, unitNpsh, unitPow);

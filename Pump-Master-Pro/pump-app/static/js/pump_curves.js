@@ -2202,9 +2202,11 @@ if (typeof PUMP_ID !== 'undefined') {
     }
 
     const effL = document.getElementById('txtEffLevels')?.value || '';
+    const tpVal = document.getElementById('numTrimPenalty')?.value;
     const powL = document.getElementById('txtPowerLevels')?.value || '';
     const npshL = document.getElementById('txtNpshLevels')?.value || '';
     if (effL) p.set('eff_levels', effL);
+    if (tpVal !== undefined && tpVal !== '') p.set('trim_penalty', tpVal);
     if (powL) p.set('power_levels', powL);
     if (npshL) p.set('npsh_levels', npshL);
 
@@ -2218,6 +2220,7 @@ if (typeof PUMP_ID !== 'undefined') {
     return {
       show_eff_iso: document.getElementById('chkShowEffIso')?.checked !== false,
       eff_levels: document.getElementById('txtEffLevels')?.value || '',
+      trim_penalty: document.getElementById('numTrimPenalty')?.value !== '' && document.getElementById('numTrimPenalty')?.value !== undefined ? parseFloat(document.getElementById('numTrimPenalty')?.value) : null,
       show_power_iso: document.getElementById('chkShowPowerIso')?.checked || false,
       power_levels: document.getElementById('txtPowerLevels')?.value || '',
       show_npsh_iso: document.getElementById('chkShowNpshIso')?.checked || false,
@@ -2250,6 +2253,7 @@ if (typeof PUMP_ID !== 'undefined') {
     }
     if (opts.show_eff_iso !== undefined && document.getElementById('chkShowEffIso')) document.getElementById('chkShowEffIso').checked = opts.show_eff_iso;
     if (opts.eff_levels !== undefined && document.getElementById('txtEffLevels')) document.getElementById('txtEffLevels').value = opts.eff_levels;
+    if (opts.trim_penalty !== undefined && opts.trim_penalty !== null && document.getElementById('numTrimPenalty')) document.getElementById('numTrimPenalty').value = opts.trim_penalty;
 
     if (opts.show_power_iso !== undefined && document.getElementById('chkShowPowerIso')) {
       document.getElementById('chkShowPowerIso').checked = opts.show_power_iso;
@@ -2448,6 +2452,10 @@ if (typeof PUMP_ID !== 'undefined') {
       ]);
       currentData = await warmanRes.json();
       singleData = await singleRes.json();
+      if (currentData && currentData.default_trim_penalty !== undefined) {
+        const numTP = document.getElementById('numTrimPenalty');
+        if (numTP) numTP.placeholder = `Auto (${currentData.default_trim_penalty}%)`;
+      }
       if (currentData && currentData.graph_options) {
         applyGraphOptions(currentData.graph_options);
       }

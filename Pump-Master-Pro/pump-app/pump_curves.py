@@ -208,7 +208,7 @@ def full_curve_data(pump, n_points=80, liquid='water', rho=1000.0, viscosity_cSt
 
 def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
                            viscosity_cSt=1.0, slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650,
-                           force_affinity=False):
+                           force_affinity=False, trim_penalty=None):
     """
     Return a list of curve dicts — one per impeller diameter.
     Evaluates fitted polynomial curves for extra curves when mode is 'fit' (unless force_affinity is True),
@@ -229,6 +229,12 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
     if fam_type == 'variable_speed':
         trim_penalty_coeff = 0.0
+    elif trim_penalty is not None:
+        try: trim_penalty_coeff = float(trim_penalty)
+        except (ValueError, TypeError): trim_penalty_coeff = 20.0
+    elif getattr(pump, 'graph_trim_penalty', None) is not None:
+        try: trim_penalty_coeff = float(pump.graph_trim_penalty)
+        except (ValueError, TypeError): trim_penalty_coeff = 20.0
     else:
         min_eta = None
         min_r = None
@@ -449,7 +455,8 @@ def _bep_for_ratio(pump, ratio, h_base, eta_base, pwr_base, q_base, trim_penalty
 
 def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
                         slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650,
-                        iso_levels=None, n_ratio_steps=100, n_base=400):
+                        iso_levels=None, n_ratio_steps=100, n_base=400,
+                        trim_penalty=None):
     """
     Generate smooth, parabolic Warman-style efficiency isolines across the pump operating envelope.
 
@@ -482,6 +489,12 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
     if fam_type == 'variable_speed':
         trim_penalty_coeff = 0.0
+    elif trim_penalty is not None:
+        try: trim_penalty_coeff = float(trim_penalty)
+        except (ValueError, TypeError): trim_penalty_coeff = 20.0
+    elif getattr(pump, 'graph_trim_penalty', None) is not None:
+        try: trim_penalty_coeff = float(pump.graph_trim_penalty)
+        except (ValueError, TypeError): trim_penalty_coeff = 20.0
     else:
         extra_curves = pump.get_extra_curves()
         min_eta = None
@@ -818,15 +831,16 @@ def speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00), values_str=None, n_points
 def warman_chart_data(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
                       slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650,
                       eff_levels=None, power_levels=None, npsh_levels=None,
-                      force_affinity=False):
+                      force_affinity=False, trim_penalty=None):
     """Return everything needed to render a Warman performance map."""
     family   = family_curves_diameter(pump, n_points=100, liquid=liquid, rho=rho,
                                       viscosity_cSt=viscosity_cSt, slurry_cv=slurry_cv,
                                       slurry_d50=slurry_d50, rho_solid=rho_solid,
-                                      force_affinity=force_affinity)
+                                      force_affinity=force_affinity, trim_penalty=trim_penalty)
     isolines = efficiency_isolines(pump, liquid=liquid, viscosity_cSt=viscosity_cSt,
                                    slurry_cv=slurry_cv, slurry_d50=slurry_d50,
-                                   rho_solid=rho_solid, iso_levels=eff_levels)
+                                   rho_solid=rho_solid, iso_levels=eff_levels,
+                                   trim_penalty=trim_penalty)
     pwr_iso  = power_isolines(pump, liquid=liquid, rho=rho, viscosity_cSt=viscosity_cSt,
                               slurry_cv=slurry_cv, slurry_d50=slurry_d50, rho_solid=rho_solid,
                               power_levels=power_levels)
@@ -839,6 +853,41 @@ def warman_chart_data(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
                             liquid=liquid, viscosity_cSt=viscosity_cSt,
                             slurry_cv=slurry_cv, slurry_d50=slurry_d50, rho_solid=rho_solid)
 
+    # Compute default calculated trim penalty coeff for UI placeholder display
+    dias = pump.get_diameters()
+    d_max = max(dias) if dias else (pump.impeller_dia_mm or 300.0)
+    fam_t = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+    if fam_t == 'variable_speed':
+        default_trim_penalty = 0.0
+    else:
+        extra_c = pump.get_extra_curves()
+        min_eta = None
+        min_r = None
+        for c in extra_c:
+            raw_t = c.get('raw_table', [])
+            d_val = c.get('diameter')
+            if raw_t and d_val:
+                try:
+                    u = c.get('unit_dia', 'mm')
+                    d_mm = float(d_val) * (25.4 if u == 'in' else (1000.0 if u == 'm' else 1.0))
+                    r_c = d_mm / d_max
+                    etas = [float(row[2]) for row in raw_t if isinstance(row, list) and len(row) >= 3 and row[2] != '' and row[2] is not None]
+                    if etas:
+                        max_e = max(etas)
+                        if min_r is None or r_c < min_r:
+                            min_r = r_c
+                            min_eta = max_e
+                except (ValueError, TypeError):
+                    pass
+        q_b = np.linspace(pump.q_min or 0.01, pump.q_max, 100)
+        eta_b = efficiency_curve(pump, q_b, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
+        eta_m = float(np.max(eta_b)) if len(eta_b) > 0 else 80.0
+        if min_eta is not None and min_r is not None and min_r < 0.99 and eta_m > min_eta:
+            calc_coeff = (eta_m - min_eta) / (1.0 - min_r)
+            default_trim_penalty = round(max(5.0, min(calc_coeff, 22.0)), 1)
+        else:
+            default_trim_penalty = 20.0
+
     return {
         'pump': pump.to_dict(),
         'family': family,
@@ -848,6 +897,7 @@ def warman_chart_data(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
         'speed_lines': spd_lines,
         'bep': bep_max,
         'liquid': liquid,
+        'default_trim_penalty': default_trim_penalty,
     }
 
 

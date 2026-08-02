@@ -97,6 +97,7 @@ def api_warman_chart(pump_id):
     eff_levels   = parse_levels(args.get('eff_levels'))
     power_levels = parse_levels(args.get('power_levels'))
     npsh_levels  = parse_levels(args.get('npsh_levels'))
+    trim_penalty = _get_nullable_float(args, 'trim_penalty')
     raw_fa       = args.get('force_affinity', '')
     if raw_fa in ['true', '1', 'affinity']:
         force_affinity = 'affinity'
@@ -110,7 +111,8 @@ def api_warman_chart(pump_id):
     data = warman_chart_data(pump, liquid=liquid, rho=rho, viscosity_cSt=vis,
                              slurry_cv=cv, slurry_d50=d50, rho_solid=rho_s,
                              eff_levels=eff_levels, power_levels=power_levels,
-                             npsh_levels=npsh_levels, force_affinity=force_affinity)
+                             npsh_levels=npsh_levels, force_affinity=force_affinity,
+                             trim_penalty=trim_penalty)
 
     sh = _get_float(args, 'static_head', 0.0)
     pk = _get_float(args, 'pipe_k', 0.0)
@@ -201,6 +203,9 @@ def api_preview_warman_chart():
     eff_levels = parse_levels(data.get('eff_levels'))
     power_levels = parse_levels(data.get('power_levels'))
     npsh_levels = parse_levels(data.get('npsh_levels'))
+    trim_penalty = _get_nullable_float(data, 'trim_penalty')
+    if trim_penalty is None and 'graph_trim_penalty' in data:
+        trim_penalty = _get_nullable_float(data, 'graph_trim_penalty')
     raw_fa = data.get('force_affinity', False)
     if str(raw_fa) in ['true', '1', 'affinity']:
         force_affinity = 'affinity'
@@ -214,7 +219,8 @@ def api_preview_warman_chart():
     chart_data = warman_chart_data(pump, liquid=liquid, rho=rho, viscosity_cSt=vis,
                                    slurry_cv=cv, slurry_d50=d50, rho_solid=rho_s,
                                    eff_levels=eff_levels, power_levels=power_levels,
-                                   npsh_levels=npsh_levels, force_affinity=force_affinity)
+                                   npsh_levels=npsh_levels, force_affinity=force_affinity,
+                                   trim_penalty=trim_penalty)
 
     sh = float(data.get('static_head', 0.0))
     pk = float(data.get('pipe_k', 0.0))

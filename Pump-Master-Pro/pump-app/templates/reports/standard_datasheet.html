@@ -276,8 +276,8 @@
         </div>
         {% endif %}
 
-        <!-- Graph 4: NPSHr vs Flow -->
-        {% if report.show_npsh_graph %}
+        <!-- Graph 4: NPSHr vs Flow (Auto-hidden if pump has no NPSHr data) -->
+        {% if report.show_npsh_graph and curves.has_npsh %}
         <div class="graph-card">
           <div class="graph-title-bar">
             <span>NPSHr vs Flow</span>

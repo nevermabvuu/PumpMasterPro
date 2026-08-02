@@ -21,12 +21,16 @@ function slideToExtendedSetup() {
   const btnExt = document.getElementById('btnSlideExtended');
   const btnStd = document.getElementById('btnSlideStandard');
   const title = document.getElementById('pumpDetailsHeaderTitle');
+  const extPane = document.getElementById('extendedSetupPane');
   if (!slider) return;
 
-  slider.style.transform = 'translateX(-50%)';
-  if (btnExt) btnExt.classList.add('hidden');
-  if (btnStd) btnStd.classList.remove('hidden');
-  if (title) title.textContent = 'Extended Setup & Selection Specs';
+  if (extPane) extPane.style.display = 'block';
+  setTimeout(() => {
+    slider.style.transform = 'translateX(-50%)';
+    if (btnExt) btnExt.classList.add('hidden');
+    if (btnStd) btnStd.classList.remove('hidden');
+    if (title) title.textContent = 'Extended Setup & Selection Specs';
+  }, 10);
 }
 
 function slideToStandardDetails() {
@@ -34,12 +38,19 @@ function slideToStandardDetails() {
   const btnExt = document.getElementById('btnSlideExtended');
   const btnStd = document.getElementById('btnSlideStandard');
   const title = document.getElementById('pumpDetailsHeaderTitle');
+  const extPane = document.getElementById('extendedSetupPane');
   if (!slider) return;
 
   slider.style.transform = 'translateX(0%)';
   if (btnStd) btnStd.classList.add('hidden');
   if (btnExt) btnExt.classList.remove('hidden');
   if (title) title.textContent = 'Pump Details';
+
+  setTimeout(() => {
+    if (extPane && (slider.style.transform === 'translateX(0%)' || !slider.style.transform)) {
+      extPane.style.display = 'none';
+    }
+  }, 300);
 }
 
 var CONVERSIONS = {

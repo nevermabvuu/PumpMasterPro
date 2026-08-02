@@ -28,6 +28,13 @@ with app.app_context():
     try:
         from sqlalchemy import text
         with db.engine.connect() as conn:
+            # Reports table auto-migration
+            res_rep = conn.execute(text("PRAGMA table_info(reports)"))
+            rep_cols = [row[1] for row in res_rep.fetchall()]
+            if 'curve_display_mode' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN curve_display_mode TEXT DEFAULT 'all'"))
+                conn.commit()
+
             # Seed default supplier if table is empty
             if Supplier.query.count() == 0:
                 def_sup = Supplier(

@@ -48,6 +48,8 @@ with app.app_context():
                 conn.execute(text("ALTER TABLE reports ADD COLUMN show_legend INTEGER DEFAULT 1"))
             if 'legend_position' not in rep_cols:
                 conn.execute(text("ALTER TABLE reports ADD COLUMN legend_position VARCHAR(30) DEFAULT 'top_right'"))
+            if 'legend_mode' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN legend_mode VARCHAR(30) DEFAULT 'pump_default'"))
             for rep_overlay in ['show_rpm_overlay', 'show_dia_overlay']:
                 if rep_overlay not in rep_cols:
                     conn.execute(text(f"ALTER TABLE reports ADD COLUMN {rep_overlay} INTEGER DEFAULT 0"))
@@ -149,6 +151,25 @@ with app.app_context():
                             conn.execute(text("UPDATE pumps SET graph_dia_overlay_values = :d_val, graph_show_dia_overlay = 1, graph_speed_line_values = '' WHERE id = :pid"), {"d_val": spd_val, "pid": pid})
                 conn.execute(text("UPDATE pumps SET graph_show_speed_lines = 0 WHERE graph_show_rpm_overlay = 0 AND (graph_rpm_values IS NULL OR graph_rpm_values = '')"))
                 conn.execute(text("UPDATE pumps SET npsh_c0 = 0.0 WHERE npsh_c0 = 1.0 AND npsh_c1 = 0.0 AND npsh_c2 = 0.0 AND npsh_c3 = 0.0 AND npsh_c4 = 0.0 AND npsh_c5 = 0.0"))
+
+                # Migrate legacy impeller_diameters into graph_rpm_values / graph_dia_overlay_values and clear impeller_diameters column
+                imp_rows = conn.execute(text("SELECT id, family_type, impeller_diameters, graph_rpm_values, graph_dia_overlay_values FROM pumps WHERE impeller_diameters IS NOT NULL AND impeller_diameters != ''")).fetchall()
+                for r_row in imp_rows:
+                    pid, fam_t, imp_str, rpm_v, dia_v = r_row[0], r_row[1], r_row[2], r_row[3], r_row[4]
+                    clean_s = imp_str
+                    if clean_s.startswith('['):
+                        try:
+                            clean_s = ';'.join(str(x) for x in json.loads(clean_s))
+                        except Exception:
+                            pass
+                    clean_s = re.sub(r'[,;\s]+', ';', clean_s.strip())
+                    if fam_t == 'variable_speed':
+                        if not rpm_v and clean_s:
+                            conn.execute(text("UPDATE pumps SET graph_rpm_values = :val, graph_show_rpm_overlay = 1 WHERE id = :pid"), {"val": clean_s, "pid": pid})
+                    else:
+                        if not dia_v and clean_s:
+                            conn.execute(text("UPDATE pumps SET graph_dia_overlay_values = :val, graph_show_dia_overlay = 1 WHERE id = :pid"), {"val": clean_s, "pid": pid})
+                conn.execute(text("UPDATE pumps SET impeller_diameters = ''"))
             except Exception as e:
                 print("Pump data cleanup notice:", e)
 

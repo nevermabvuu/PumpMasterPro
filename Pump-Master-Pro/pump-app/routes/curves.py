@@ -182,10 +182,14 @@ def api_preview_warman_chart():
             except (ValueError, TypeError): pass
 
     imp_dia = data.get('impeller_diameters')
-    if isinstance(imp_dia, list):
-        pump.impeller_diameters = json.dumps(imp_dia)
-    elif isinstance(imp_dia, str):
-        pump.impeller_diameters = imp_dia
+    if imp_dia:
+        dia_str = json.dumps(imp_dia) if isinstance(imp_dia, list) else str(imp_dia)
+        if getattr(pump, 'family_type', 'trimmed_impeller') == 'variable_speed':
+            if not getattr(pump, 'graph_rpm_values', None):
+                pump.graph_rpm_values = dia_str
+        else:
+            if not getattr(pump, 'graph_dia_overlay_values', None):
+                pump.graph_dia_overlay_values = dia_str
 
     extra_curves = data.get('extra_curves') or data.get('extra_curves_json')
     if isinstance(extra_curves, str) and extra_curves.strip():

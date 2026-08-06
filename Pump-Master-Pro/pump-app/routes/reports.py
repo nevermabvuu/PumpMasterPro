@@ -159,14 +159,12 @@ def _parse_diameters_string(raw_str):
         except (TypeError, ValueError):
             pass
     return results
-
-
-def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", custom_range=None, width=480, height=240, isolines_list=None, show_legend=True, legend_position='top_right'):
+def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", custom_range=None, width=480, height=240, isolines_list=None, show_legend=True, legend_position='top_right', legend_mode='each'):
     """
     Beginners Note: Generates pure inline SVG XML vector markup for single or multi-curve pump charts.
     Accepts exact axis range settings (min, max, major, minor) set for the pump in pump-data,
     supports displaying multiple impeller diameter/speed curves (all, max_only, min_max),
-    renders constant efficiency/power isolines and speed lines, and supports configurable legend placement!
+    renders constant efficiency/power isolines and speed lines, and supports configurable legend placement & direct curve labels!
     """
     if not curves_list and not isolines_list:
         return ""
@@ -311,9 +309,18 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
         paths_svg.append(f'<path d="{path_d}" fill="none" stroke="{color}" stroke-width="{stroke_w}" {dash_style} stroke-linecap="round" />')
         legend_items.append({'label': label, 'color': color})
 
+        # Option 4: Direct labels on each impeller curve
+        if legend_mode == 'curve_labels' and len(pts) > 1:
+            idx = int(len(pts) * 0.85)
+            lx, ly = pts[idx]
+            clean_lbl = label.replace(' (Max)', '')
+            tw = len(clean_lbl) * 5 + 8
+            labels.append(f'<rect x="{lx - tw/2:.1f}" y="{ly - 10:.1f}" width="{tw}" height="12" fill="#ffffff" fill-opacity="0.9" stroke="{color}" stroke-width="0.8" rx="3" />')
+            labels.append(f'<text x="{lx:.1f}" y="{ly - 1.5:.1f}" font-size="7.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="{color}" text-anchor="middle">{clean_lbl}</text>')
+
     # Render Multi-Curve Legend Box with customizable positioning
     legend_svg = ""
-    if show_legend and len(legend_items) > 1:
+    if show_legend and legend_mode != 'curve_labels' and len(legend_items) > 1:
         leg_box = []
         b_w = 110
         b_h = 14 + len(legend_items) * 12
@@ -410,11 +417,10 @@ def _build_report_curve_context(pump, report):
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
     is_var_speed = (fam_type == 'variable_speed')
 
-    # For variable_speed pumps, use impeller_diameters as RPM values
+    # For variable_speed pumps, generate curves from graph_rpm_values / graph_speed_line_values
     if is_var_speed:
-        rpm_list = _parse_diameters_string(getattr(pump, 'impeller_diameters', None))
-        if not rpm_list:
-            rpm_list = _parse_diameters_string(getattr(pump, 'curve_diameters', None))
+        rpm_str = (getattr(pump, 'graph_rpm_values', None) or getattr(pump, 'graph_speed_line_values', None) or '').strip()
+        rpm_list = _parse_diameters_string(rpm_str)
         if not rpm_list:
             base_rpm = pump.speed_rpm or 1000.0
             rpm_list = [base_rpm, base_rpm * 0.9, base_rpm * 0.8, base_rpm * 0.7]
@@ -654,28 +660,40 @@ def _build_report_curve_context(pump, report):
             print("Diameter overlay lines calculation notice:", e)
 
     # Read Report Legend Visibility & Position Preferences
+    rep_leg_mode = getattr(report, 'legend_mode', 'pump_default') or 'pump_default'
+    pump_opts = pump.get_graph_options() if hasattr(pump, 'get_graph_options') else {}
+    pump_leg_mode = pump_opts.get('legend_mode', 'each')
+
+    if rep_leg_mode == 'pump_default':
+        effective_legend_mode = pump_leg_mode
+    else:
+        effective_legend_mode = rep_leg_mode
+
     show_leg = getattr(report, 'show_legend', True)
     leg_pos = getattr(report, 'legend_position', 'top_right')
+
+    show_leg_hq = show_leg and (effective_legend_mode in ['each', 'hq_only'])
+    show_leg_sub = show_leg and (effective_legend_mode == 'each')
 
     svg_hq = generate_chart_svg(
         hq_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", f"Head ({pump.unit_h or 'm'})",
         custom_range=h_custom_range, height=240, isolines_list=hq_isolines_list,
-        show_legend=show_leg, legend_position=leg_pos
+        show_legend=show_leg_hq, legend_position=leg_pos, legend_mode=effective_legend_mode
     )
 
     svg_eta = generate_chart_svg(
         eta_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", "Efficiency (%)",
-        custom_range=eta_custom_range, height=240, show_legend=show_leg, legend_position=leg_pos
+        custom_range=eta_custom_range, height=240, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode
     )
 
     svg_pow = generate_chart_svg(
         pow_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", f"Power ({pump.unit_pow or 'kW'})",
-        custom_range=pow_custom_range, height=240, show_legend=show_leg, legend_position=leg_pos
+        custom_range=pow_custom_range, height=240, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode
     )
 
     svg_npsh = generate_chart_svg(
         npsh_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", f"NPSHr ({pump.unit_npsh or 'm'})",
-        custom_range=npsh_custom_range, height=240, show_legend=show_leg, legend_position=leg_pos
+        custom_range=npsh_custom_range, height=240, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode
     ) if (has_npsh and getattr(report, 'show_npsh_curves', True)) else ""
 
     bep_info = None
@@ -771,6 +789,7 @@ def save_report():
     report.show_additional_graphs = 'show_additional_graphs' in request.form
     report.show_legend = 'show_legend' in request.form
     report.legend_position = request.form.get('legend_position', 'top_right').strip()
+    report.legend_mode = request.form.get('legend_mode', 'pump_default').strip()
 
     report.header_text = request.form.get('header_text', 'PUMP MASTER PRO - TECHNICAL DATASHEET').strip()
     report.footer_text = request.form.get('footer_text', 'Generated by Pump Master Pro Engineering Suite').strip()

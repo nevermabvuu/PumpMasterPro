@@ -2626,24 +2626,26 @@ function initExtraCurves(curvesArray) {
   data.forEach(c => addExtraCurveCard(c));
 }
 
-function updateFamilyTypeUI() {
+function updateFamilyTypeUI(isUserChange = false) {
   const famType = document.getElementById('selFamilyType')?.value || 'trimmed_impeller';
   const isVarSpeed = (famType === 'variable_speed');
 
-  const titleEl = document.getElementById('impellerFamilyTitle');
-  const descEl = document.getElementById('impellerFamilyDesc');
-  const inputEl = document.querySelector('input[name="impeller_diameters"]');
+  // Requirement 3: Overlay defaults based on Test Basis
+  const chkRpm = document.getElementById('chkRpmOverlay');
+  const chkDia = document.getElementById('chkDiaOverlay');
+  const wrapRpm = document.getElementById('wrapRpmOverlay');
+  const wrapDia = document.getElementById('wrapDiaOverlay');
 
-  if (titleEl) {
-    titleEl.textContent = isVarSpeed ? 'Speed Family (Variable Speed)' : 'Impeller Diameter Family';
-  }
-  if (descEl) {
-    descEl.textContent = isVarSpeed
-      ? 'Comma-separated speeds (RPM), highest speed first. Speeds with data tables in Additional Curves plot from fitted loaded data; remaining speeds are generated via affinity laws.'
-      : 'Comma-separated diameters (mm), largest first. Diameters with data tables in Additional Curves plot from fitted loaded data; remaining diameters are generated via affinity laws.';
-  }
-  if (inputEl) {
-    inputEl.placeholder = isVarSpeed ? 'e.g. 1450, 1200, 960, 720' : 'e.g. 480, 450, 420, 390, 360';
+  if (isVarSpeed) {
+    if (chkRpm) chkRpm.checked = true;
+    if (chkDia) chkDia.checked = false;
+    if (wrapRpm) wrapRpm.style.display = '';
+    if (wrapDia) wrapDia.style.display = 'none';
+  } else {
+    if (chkDia) chkDia.checked = true;
+    if (chkRpm) chkRpm.checked = false;
+    if (wrapDia) wrapDia.style.display = '';
+    if (wrapRpm) wrapRpm.style.display = 'none';
   }
 
   // Update Main Curve Property Label & Unit Selector in Card 3 Header
@@ -2711,12 +2713,12 @@ function updateFamilyTypeUI() {
   }
 }
 
-// Add listener to the Generate button in the Affinity Laws Modal
+// Add listener to selFamilyType dropdown
 document.addEventListener('DOMContentLoaded', () => {
   const selFam = document.getElementById('selFamilyType');
   if (selFam) {
-    selFam.addEventListener('change', updateFamilyTypeUI);
-    updateFamilyTypeUI();
+    selFam.addEventListener('change', () => updateFamilyTypeUI(true));
+    updateFamilyTypeUI(false);
   }
 
   const btnGenerateAffinity = document.getElementById('btnGenerateAffinity');

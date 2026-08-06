@@ -464,9 +464,15 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
     efficiency contours, and smooth continuous rays for open efficiency contours.
     """
     diameters = pump.get_diameters()
-    d_max = max(diameters) if diameters else (pump.impeller_dia_mm or 300.0)
-    d_min = min(diameters) if diameters else (d_max * 0.7)
-    r_min = d_min / d_max if d_max > 0 else 0.70
+    fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+    if diameters and len(diameters) >= 2 and max(diameters) > min(diameters):
+        d_max = max(diameters)
+        d_min = min(diameters)
+        r_min = d_min / d_max if d_max > 0 else 0.70
+    else:
+        d_max = max(diameters) if diameters else (pump.speed_rpm if fam_type == 'variable_speed' else (pump.impeller_dia_mm or 300.0))
+        d_min = d_max * 0.70
+        r_min = 0.70
 
     q_base = np.linspace(pump.q_min or 0.01, pump.q_max, n_base)
     h_base   = hq_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
@@ -652,9 +658,15 @@ def power_isolines(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
                    power_levels=None):
     """Constant shaft-power lines across the H-Q family."""
     diameters = pump.get_diameters()
-    d_max = max(diameters)
-    d_min = min(diameters)
-    r_min = d_min / d_max
+    fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+    if diameters and len(diameters) >= 2 and max(diameters) > min(diameters):
+        d_max = max(diameters)
+        d_min = min(diameters)
+        r_min = d_min / d_max if d_max > 0 else 0.70
+    else:
+        d_max = max(diameters) if diameters else (pump.speed_rpm if fam_type == 'variable_speed' else (pump.impeller_dia_mm or 300.0))
+        d_min = d_max * 0.70
+        r_min = 0.70
 
     ratios = np.linspace(r_min, 1.0, n_ratio_steps)
 
@@ -701,9 +713,15 @@ def npsh_isolines(pump, liquid='water', viscosity_cSt=1.0,
                   iso_levels=None, n_ratio_steps=40, n_base=1000):
     """Constant NPSHr lines across the H-Q family."""
     diameters = pump.get_diameters()
-    d_max = max(diameters)
-    d_min = min(diameters)
-    r_min = d_min / d_max
+    fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+    if diameters and len(diameters) >= 2 and max(diameters) > min(diameters):
+        d_max = max(diameters)
+        d_min = min(diameters)
+        r_min = d_min / d_max if d_max > 0 else 0.70
+    else:
+        d_max = max(diameters) if diameters else (pump.speed_rpm if fam_type == 'variable_speed' else (pump.impeller_dia_mm or 300.0))
+        d_min = d_max * 0.70
+        r_min = 0.70
 
     ratios = np.linspace(r_min, 1.0, n_ratio_steps)
 

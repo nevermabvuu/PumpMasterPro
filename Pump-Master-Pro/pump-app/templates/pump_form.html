@@ -1009,28 +1009,6 @@
         </div>
       </div>
 
-      <!-- Impeller Family Card (Collapsable) -->
-      <div class="bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden" id="impellerFamilyCard">
-        <div onclick="toggleCard('impellerFamilyBody', 'impellerFamilyChevron')"
-          class="flex items-center justify-between px-4 py-2.5 bg-[#1c2330] border-b border-[#30363d] cursor-pointer select-none hover:bg-slate-800/60 transition-colors">
-          <div class="flex items-center gap-2 font-semibold text-[#e6edf3] text-sm">
-            <i class="bi bi-record-circle text-[#58a6ff]"></i>
-            <span id="impellerFamilyTitle">Impeller Diameter Family</span>
-          </div>
-          <i class="bi bi-chevron-down text-[#8b949e] transition-transform duration-200" id="impellerFamilyChevron"
-            style="transform: rotate(180deg)"></i>
-        </div>
-        <div class="p-4" id="impellerFamilyBody">
-          <p class="text-xs text-[#8b949e] mb-2" id="impellerFamilyDesc">
-            Comma-separated diameters (mm), largest first. Diameters with data tables in Additional Curves plot from
-            fitted loaded data; remaining diameters are generated via affinity laws.
-          </p>
-          <input type="text" name="impeller_diameters"
-            class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] transition-colors"
-            value="{{ pump.impeller_diameters if pump else '' }}" placeholder="e.g. 480, 450, 420, 390, 360">
-        </div>
-      </div>
-
       <!-- Slurry Derating Card (Collapsable) -->
       <div class="bg-[#161b22] border border-[#30363d] rounded-lg shadow-sm overflow-hidden" id="slurryCard">
         <div onclick="toggleCard('slurryBody', 'slurryChevron')"

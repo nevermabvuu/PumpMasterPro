@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone
 import json
+import re
 
 db = SQLAlchemy()
 
@@ -408,26 +409,42 @@ class Pump(db.Model):
             self.extra_curves_json = json.dumps(extra_list)
 
     def get_diameters(self):
-        """Return sorted list of impeller diameters (descending)."""
-        raw = (self.impeller_diameters or '').strip()
-        if not raw:
-            dias = [self.impeller_dia_mm] if self.impeller_dia_mm else []
+        """Return sorted list of impeller diameters or RPM speeds (descending)."""
+        fam_t = getattr(self, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+        if fam_t == 'variable_speed':
+            raw = (getattr(self, 'graph_rpm_values', None) or getattr(self, 'graph_speed_line_values', None) or '').strip()
         else:
+            raw = (getattr(self, 'graph_dia_overlay_values', None) or getattr(self, 'curve_diameters', None) or '').strip()
+
+        dias = []
+        if raw:
             try:
-                dias = [float(x.strip()) for x in raw.replace(';', ',').replace('[', '').replace(']', '').split(',') if x.strip()]
+                cleaned = re.sub(r'[\[\]"\'\s]+', '', raw)
+                parts = [p.strip() for p in re.split(r'[,;\s]+', cleaned) if p.strip()]
+                for p in parts:
+                    val = float(p)
+                    if fam_t != 'variable_speed' and val > 2500:
+                        continue
+                    dias.append(val)
             except Exception:
-                dias = [self.impeller_dia_mm] if self.impeller_dia_mm else []
+                pass
+
+        if not dias:
+            base_v = self.speed_rpm if fam_t == 'variable_speed' else self.impeller_dia_mm
+            if base_v and base_v > 0:
+                dias = [base_v]
 
         loaded = self.get_curve_diameters_list()
         for item in loaded:
-            d_mm = item['dia_mm']
-            if d_mm is not None:
+            d_mm = item.get('dia_mm')
+            if d_mm is not None and d_mm <= 2500:
                 if round(d_mm, 2) not in [round(x, 2) for x in dias]:
                     dias.append(round(d_mm, 2))
 
         if not dias:
-            dias = [300.0]
-        return sorted(dias, reverse=True)
+            dias = [1000.0 if fam_t == 'variable_speed' else 300.0]
+
+        return sorted(list(set(dias)), reverse=True)
 
     def get_raw_table(self):
         """Return raw performance table for main curve as list of rows."""
@@ -716,7 +733,7 @@ class Pump(db.Model):
             'size': self.size,
             'speed_rpm': self.speed_rpm,
             'impeller_dia_mm': self.impeller_dia_mm,
-            'impeller_diameters': self.impeller_diameters or '',
+            'impeller_diameters': '',
             'hq_a0': getattr(self, 'hq_a0', 0.0), 'hq_a1': getattr(self, 'hq_a1', 0.0),
             'hq_a2': getattr(self, 'hq_a2', 0.0), 'hq_a3': getattr(self, 'hq_a3', 0.0),
             'hq_a4': getattr(self, 'hq_a4', 0.0), 'hq_a5': getattr(self, 'hq_a5', 0.0),
@@ -881,6 +898,7 @@ class ReportConfig(db.Model):
     show_additional_graphs = db.Column(db.Boolean, default=True)
     show_legend = db.Column(db.Boolean, default=True)
     legend_position = db.Column(db.String(30), default='top_right')  # 'top_right', 'top_left', 'bottom_right', 'bottom_left'
+    legend_mode = db.Column(db.String(30), default='pump_default')  # 'pump_default', 'each', 'hq_only', 'curve_labels'
 
     # Visual Branding & Section Toggles
     header_text = db.Column(db.String(200), default='PUMP MASTER PRO - TECHNICAL DATASHEET')
@@ -917,6 +935,7 @@ class ReportConfig(db.Model):
             'show_additional_graphs': bool(self.show_additional_graphs),
             'show_legend': bool(self.show_legend),
             'legend_position': self.legend_position or 'top_right',
+            'legend_mode': getattr(self, 'legend_mode', 'pump_default') or 'pump_default',
             'header_text': self.header_text or '',
             'footer_text': self.footer_text or '',
             'primary_color': self.primary_color or '#1e3a8a',

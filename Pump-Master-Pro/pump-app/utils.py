@@ -130,7 +130,7 @@ def _pump_from_form(f, pump=None):
     else:
         pump.impeller_dia_mm = val_max_imp
 
-    pump.impeller_diameters = f.get('impeller_diameters', pump.impeller_diameters or '')
+    pump.impeller_diameters = ''
     pump.hq_a0 = _get_float(f, 'hq_a0', getattr(pump, 'hq_a0', 0.0))
     pump.hq_a1 = _get_float(f, 'hq_a1', getattr(pump, 'hq_a1', 0.0))
     pump.hq_a2 = _get_float(f, 'hq_a2', getattr(pump, 'hq_a2', 0.0))

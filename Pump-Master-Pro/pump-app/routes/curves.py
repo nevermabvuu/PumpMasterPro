@@ -157,6 +157,16 @@ def api_preview_warman_chart():
     elif 'speed_line_values' in data and data['speed_line_values'] is not None:
         pump.graph_speed_line_values = str(data['speed_line_values'])
 
+    if 'graph_rpm_values' in data and data['graph_rpm_values'] is not None:
+        pump.graph_rpm_values = str(data['graph_rpm_values'])
+    if 'graph_dia_overlay_values' in data and data['graph_dia_overlay_values'] is not None:
+        pump.graph_dia_overlay_values = str(data['graph_dia_overlay_values'])
+
+    if 'graph_show_rpm_overlay' in data:
+        pump.graph_show_rpm_overlay = bool(data['graph_show_rpm_overlay'])
+    if 'graph_show_dia_overlay' in data:
+        pump.graph_show_dia_overlay = bool(data['graph_show_dia_overlay'])
+
     # Set 20 custom axis scale settings on temporary Pump object
     for axis_name in ['flow', 'head', 'eff', 'power', 'npsh']:
         for prop in ['min', 'max', 'major']:

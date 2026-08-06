@@ -224,6 +224,10 @@ def _pump_from_form(f, pump=None):
                     pump.set_graph_options(g_opts)
         except Exception:
             pass
+    if 'graph_rpm_values' in f:
+        pump.graph_rpm_values = str(f.get('graph_rpm_values') or '')
+    if 'graph_dia_overlay_values' in f:
+        pump.graph_dia_overlay_values = str(f.get('graph_dia_overlay_values') or '')
     pump.curve_labels    = f.get('curve_labels', pump.curve_labels or '')
     pump.curve_diameters = f.get('curve_diameters', pump.curve_diameters or '')
     pump.curve_colors    = f.get('curve_colors', pump.curve_colors or '')

@@ -553,16 +553,34 @@
               </div>
 
               <div class="space-y-1.5 pt-1 border-t border-[#30363d]">
+                <!-- Hidden backward compat for old speed lines -->
+                <input type="hidden" id="chkSpeedLines" name="graph_show_speed_lines">
+                <input type="hidden" id="txtSpeedLineValues" name="graph_speed_line_values">
+
+                <!-- RPM Overlay -->
                 <label class="flex items-center gap-2 cursor-pointer text-[#ff9900]">
-                  <input type="checkbox" id="chkSpeedLines" class="rounded border-[#30363d] bg-[#0d1117] text-[#58a6ff]">
-                  <span id="lblSpeedLines" class="font-semibold text-xs">Show Speed Lines</span>
+                  <input type="checkbox" id="chkRpmOverlay" class="rounded border-[#30363d] bg-[#0d1117] text-[#58a6ff]">
+                  <span class="font-semibold text-xs">Show RPM Overlay Curves</span>
                 </label>
-                <div class="pl-5 space-y-1" id="wrapSpeedLineValues">
-                  <label class="block text-[11px] text-[#8b949e]" id="lblSpeedLineValues">Speed Lines (RPM):</label>
-                  <input type="text" id="txtSpeedLineValues" name="graph_speed_line_values"
+                <div class="pl-5 space-y-1" id="wrapRpmOverlay" style="display:none">
+                  <label class="block text-[11px] text-[#8b949e]">RPMs (comma or semicolon separated):</label>
+                  <input type="text" id="txtRpmValues" name="graph_rpm_values"
                     class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
-                    value="{{ pump.graph_speed_line_values if pump else '' }}"
-                    placeholder="e.g. 1000, 900, 800, 700">
+                    value="{{ pump.graph_rpm_values if pump and pump.graph_rpm_values else '' }}"
+                    placeholder="e.g. 1450, 1200, 1000, 800">
+                </div>
+
+                <!-- Diameter Overlay -->
+                <label class="flex items-center gap-2 cursor-pointer text-[#d97706]">
+                  <input type="checkbox" id="chkDiaOverlay" class="rounded border-[#30363d] bg-[#0d1117] text-[#58a6ff]">
+                  <span class="font-semibold text-xs">Show Diameter Overlay Curves</span>
+                </label>
+                <div class="pl-5 space-y-1" id="wrapDiaOverlay" style="display:none">
+                  <label class="block text-[11px] text-[#8b949e]">Diameters in mm (comma or semicolon separated):</label>
+                  <input type="text" id="txtDiaOverlayValues" name="graph_dia_overlay_values"
+                    class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"
+                    value="{{ pump.graph_dia_overlay_values if pump and pump.graph_dia_overlay_values else '' }}"
+                    placeholder="e.g. 480, 320, 240, 180">
                 </div>
               </div>
             </div>

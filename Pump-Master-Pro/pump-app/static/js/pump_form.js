@@ -680,6 +680,10 @@ function collectGraphOptions() {
     npsh_yaxis: document.querySelector('input[name="npshYAxisChoice"]:checked')?.value || 'y2',
     show_speed_lines: document.getElementById('chkSpeedLines')?.checked || false,
     speed_line_values: document.getElementById('txtSpeedLineValues')?.value || '',
+    show_rpm_overlay: document.getElementById('chkRpmOverlay')?.checked || false,
+    rpm_values: document.getElementById('txtRpmValues')?.value || '',
+    show_dia_overlay: document.getElementById('chkDiaOverlay')?.checked || false,
+    dia_overlay_values: document.getElementById('txtDiaOverlayValues')?.value || '',
     show_hq: document.getElementById('chkShowHQ')?.checked !== false,
     show_other: document.getElementById('chkShowOther')?.checked !== false,
     show_eff: document.getElementById('chkShowEff')?.checked !== false,
@@ -746,6 +750,18 @@ function applyGraphOptions(opts) {
   }
   if (opts.show_speed_lines !== undefined && document.getElementById('chkSpeedLines')) document.getElementById('chkSpeedLines').checked = opts.show_speed_lines;
   if (opts.speed_line_values !== undefined && document.getElementById('txtSpeedLineValues')) document.getElementById('txtSpeedLineValues').value = opts.speed_line_values;
+  if (opts.show_rpm_overlay !== undefined && document.getElementById('chkRpmOverlay')) {
+    document.getElementById('chkRpmOverlay').checked = opts.show_rpm_overlay;
+    const w = document.getElementById('wrapRpmOverlay');
+    if (w) w.style.display = opts.show_rpm_overlay ? '' : 'none';
+  }
+  if (opts.rpm_values !== undefined && document.getElementById('txtRpmValues')) document.getElementById('txtRpmValues').value = opts.rpm_values;
+  if (opts.show_dia_overlay !== undefined && document.getElementById('chkDiaOverlay')) {
+    document.getElementById('chkDiaOverlay').checked = opts.show_dia_overlay;
+    const w = document.getElementById('wrapDiaOverlay');
+    if (w) w.style.display = opts.show_dia_overlay ? '' : 'none';
+  }
+  if (opts.dia_overlay_values !== undefined && document.getElementById('txtDiaOverlayValues')) document.getElementById('txtDiaOverlayValues').value = opts.dia_overlay_values;
   if (opts.show_hq !== undefined && document.getElementById('chkShowHQ')) document.getElementById('chkShowHQ').checked = opts.show_hq;
   if (opts.show_other !== undefined && document.getElementById('chkShowOther')) document.getElementById('chkShowOther').checked = opts.show_other;
   if (opts.show_eff !== undefined && document.getElementById('chkShowEff')) document.getElementById('chkShowEff').checked = opts.show_eff;
@@ -1228,6 +1244,8 @@ async function refreshPreviewCharts() {
     power_levels: showPowerIso ? document.getElementById('txtPowerLevels')?.value : null,
     npsh_levels: showNpshIso ? document.getElementById('txtNpshLevels')?.value : null,
     graph_speed_line_values: document.getElementById('txtSpeedLineValues')?.value || '',
+    graph_rpm_values: document.getElementById('txtRpmValues')?.value || '',
+    graph_dia_overlay_values: document.getElementById('txtDiaOverlayValues')?.value || '',
   };
 
   try {
@@ -1269,7 +1287,8 @@ function renderPreviewChartsData(warmanData, curveData) {
   const showPowerIso = document.getElementById('chkShowPowerIso')?.checked || false;
   const showNpshIso = document.getElementById('chkShowNpshIso')?.checked || false;
   const showNpshCurve = document.getElementById('chkShowNpshCurve')?.checked || false;
-  const showSpeedLines = document.getElementById('chkSpeedLines')?.checked || false;
+  const showSpeedLines = (document.getElementById('chkRpmOverlay')?.checked || document.getElementById('chkSpeedLines')?.checked) || false;
+  const showDiaOverlay = document.getElementById('chkDiaOverlay')?.checked || false;
   const npshYAxis = document.querySelector('input[name="npshYAxisChoice"]:checked')?.value || 'y2';
 
   const PLOTLY_CONFIG = {
@@ -1283,6 +1302,7 @@ function renderPreviewChartsData(warmanData, curveData) {
     showPowerIso: showPowerIso,
     showNpshIso: showNpshIso,
     showSpeedLines: showSpeedLines,
+    showDiaOverlay: showDiaOverlay,
     showNpshCurve: showNpshCurve,
     npshYAxis: npshYAxis
   });
@@ -2874,7 +2894,8 @@ function parseCSVOrTXT(text) {
 }
 
 function bindPreviewOptions() {
-  ['chkShowHQ', 'chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'txtSpeedLineValues', 'chkShowOther',
+  ['chkShowHQ', 'chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'txtSpeedLineValues',
+    'chkRpmOverlay', 'txtRpmValues', 'chkDiaOverlay', 'txtDiaOverlayValues', 'chkShowOther',
     'chkShowEff', 'chkShowPower', 'chkShowNpsh', 'chkCombineEffPower', 'selLegendMode',
     'txtEffLevels', 'txtPowerLevels', 'txtNpshLevels', 'numTrimPenalty',
     'clrHeadColor', 'selHeadWeight', 'selHeadStyle',
@@ -2905,6 +2926,14 @@ function bindPreviewOptions() {
             if (id === 'selLegendMode') {
               const g = document.getElementById('groupCurveLabelPos');
               if (g) g.style.display = el.value === 'curve_labels' ? '' : 'none';
+            }
+            if (id === 'chkRpmOverlay') {
+              const w = document.getElementById('wrapRpmOverlay');
+              if (w) w.style.display = el.checked ? '' : 'none';
+            }
+            if (id === 'chkDiaOverlay') {
+              const w = document.getElementById('wrapDiaOverlay');
+              if (w) w.style.display = el.checked ? '' : 'none';
             }
             if (typeof serializeGraphOptions === 'function') serializeGraphOptions();
             refreshMainPreview();

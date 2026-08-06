@@ -751,8 +751,8 @@ def speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00), values_str=None, n_points
                 slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650):
     """
     H-Q overlay lines using affinity laws:
-    - Variable Speed Mode: generates impeller trim curves (from user values or % of max diameter)
-    - Trimmed Impeller Mode: generates speed lines (from user values or % of rated speed)
+    - Variable Speed Mode: generates speed RPM curves (from user values or % of rated speed)
+    - Trimmed Impeller Mode: generates trimmed impeller curves (from user values or % of max diameter)
     """
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
     is_var_speed = (fam_type == 'variable_speed')
@@ -767,29 +767,23 @@ def speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00), values_str=None, n_points
             except ValueError:
                 pass
 
-    d_max = pump.impeller_dia_mm if (pump.impeller_dia_mm and pump.impeller_dia_mm > 0) else (max(parsed_items) if (is_var_speed and parsed_items) else 300.0)
-    rpm_max = pump.speed_rpm if (pump.speed_rpm and pump.speed_rpm > 0) else (max(parsed_items) if (not is_var_speed and parsed_items) else 1450.0)
+    d_max = pump.impeller_dia_mm if (pump.impeller_dia_mm and pump.impeller_dia_mm > 0) else 300.0
+    rpm_max = pump.speed_rpm if (pump.speed_rpm and pump.speed_rpm > 0) else 1450.0
+    if parsed_items and max(parsed_items) > rpm_max:
+        rpm_max = max(parsed_items)
 
     items_to_process = []
     if parsed_items:
-        if is_var_speed:
-            for d in parsed_items:
-                k = d / d_max if d_max > 0 else 1.0
-                items_to_process.append((k, d, f"Ø{d:g} mm ({int(round(k * 100))}%)"))
-        else:
-            for rpm in parsed_items:
-                k = rpm / rpm_max if rpm_max > 0 else 1.0
-                items_to_process.append((k, rpm, f"{int(round(rpm))} rpm ({int(round(k * 100))}%)"))
+        for rpm in parsed_items:
+            k = rpm / rpm_max if rpm_max > 0 else 1.0
+            rpm_fmt = f"{int(round(rpm))}" if abs(rpm - round(rpm)) < 1e-4 else f"{rpm:g}"
+            items_to_process.append((k, rpm, f"{rpm_fmt} RPM ({int(round(k * 100))}%)"))
     else:
         for k in ratios:
-            if is_var_speed:
-                d_val = round(d_max * k, 1)
-                items_to_process.append((k, d_val, f"Ø{d_val:g} mm ({int(round(k * 100))}%)"))
-            else:
-                rpm_val = int(round(rpm_max * k))
-                items_to_process.append((k, rpm_val, f"{rpm_val} rpm ({int(round(k * 100))}%)"))
+            rpm_val = int(round(rpm_max * k))
+            items_to_process.append((k, rpm_val, f"{rpm_val} RPM ({int(round(k * 100))}%)"))
 
-    q_base = np.linspace(0, pump.q_max, n_points)
+    q_base = np.linspace(0, pump.q_max or 100.0, n_points)
     H_base = hq_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
     eta_base = efficiency_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
     pwr_base = power_curve(pump, q_base, liquid, 1000.0, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
@@ -798,32 +792,26 @@ def speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00), values_str=None, n_points
     result = []
     for k, val, label in items_to_process:
         Q_k = q_base * k
-        H_k = np.clip(H_base * (k ** 2.15 if is_var_speed else k ** 2), 0, None)
-        P_k = np.clip(pwr_base * (k ** 3.0 if is_var_speed else k ** 3), 0, None)
-        NPSH_k = np.clip(npsh_base * (k ** 2.0 if is_var_speed else k ** 2), 0, None)
-        eta_k = np.clip(eta_base - (5.0 * (1.0 - k) if not is_var_speed else 0.0), 0, 100)
+        H_k = np.clip(H_base * (k ** 2), 0, None)
+        P_k = np.clip(pwr_base * (k ** 3), 0, None)
+        NPSH_k = np.clip(npsh_base * (k ** 2), 0, None)
+        eta_k = np.clip(eta_base, 0, 100)
 
-        bep_idx = int(np.argmax(eta_k[:int(n_points * 0.95)]))
+        bep_idx = int(np.argmax(eta_k[:int(n_points * 0.95)])) if len(eta_k) > 0 else 0
 
         result.append({
-            'dia': val if is_var_speed else (pump.impeller_dia_mm or 300.0),
+            'dia': (pump.impeller_dia_mm or 300.0) if is_var_speed else val,
+            'rpm': val if is_var_speed else (pump.speed_rpm or 1450.0),
             'ratio': round(float(k), 4),
-            'speed_ratio': round(float(k), 4),
-            'val': val,
-            'speed_rpm': int(round(rpm_max * k)) if is_var_speed else int(round(val)),
             'label': label,
-            'q': [round(float(v), 2) for v in Q_k],
-            'h': [round(float(v), 3) for v in H_k],
-            'eta': [round(float(v), 2) for v in eta_k],
-            'power': [round(float(v), 3) for v in P_k],
-            'npsh': [round(float(v), 3) for v in NPSH_k],
-            'bep': {
-                'q': round(float(Q_k[bep_idx]), 2),
-                'h': round(float(H_k[bep_idx]), 2),
-                'eta': round(float(eta_k[bep_idx]), 2),
-                'power': round(float(P_k[bep_idx]), 2),
-                'npsh': round(float(NPSH_k[bep_idx]), 2),
-            },
+            'q': [round(v, 3) for v in Q_k.tolist()],
+            'h': [round(v, 3) for v in H_k.tolist()],
+            'eta': [round(v, 2) for v in eta_k.tolist()],
+            'pow': [round(v, 3) for v in P_k.tolist()],
+            'npsh': [round(v, 3) for v in NPSH_k.tolist()],
+            'bep_q': round(float(Q_k[bep_idx]), 2) if len(Q_k) > bep_idx else 0.0,
+            'bep_h': round(float(H_k[bep_idx]), 2) if len(H_k) > bep_idx else 0.0,
+            'bep_eta': round(float(eta_k[bep_idx]), 2) if len(eta_k) > bep_idx else 0.0,
         })
     return result
 
@@ -848,10 +836,21 @@ def warman_chart_data(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
                              slurry_cv=slurry_cv, slurry_d50=slurry_d50,
                              rho_solid=rho_solid, iso_levels=npsh_levels)
     bep_max  = bep_point(pump, liquid, rho, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
-    spd_vals = getattr(pump, 'graph_speed_line_values', '') or ''
-    spd_lines = speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00), values_str=spd_vals,
-                            liquid=liquid, viscosity_cSt=viscosity_cSt,
-                            slurry_cv=slurry_cv, slurry_d50=slurry_d50, rho_solid=rho_solid)
+
+    # RPM overlay lines (uses graph_rpm_values — always RPM values)
+    rpm_vals_str = getattr(pump, 'graph_rpm_values', '') or ''
+    # Backward compat: if no new rpm_values, fall back to old graph_speed_line_values
+    if not rpm_vals_str.strip():
+        rpm_vals_str = getattr(pump, 'graph_speed_line_values', '') or ''
+    rpm_overlay = speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00), values_str=rpm_vals_str,
+                              liquid=liquid, viscosity_cSt=viscosity_cSt,
+                              slurry_cv=slurry_cv, slurry_d50=slurry_d50, rho_solid=rho_solid)
+
+    # Diameter overlay lines (uses graph_dia_overlay_values — always diameter mm values)
+    dia_vals_str = getattr(pump, 'graph_dia_overlay_values', '') or ''
+    dia_overlay = _dia_overlay_lines(pump, dia_vals_str, n_points=100,
+                                      liquid=liquid, viscosity_cSt=viscosity_cSt,
+                                      slurry_cv=slurry_cv, slurry_d50=slurry_d50, rho_solid=rho_solid)
 
     # Compute default calculated trim penalty coeff for UI placeholder display
     dias = pump.get_diameters()
@@ -894,11 +893,65 @@ def warman_chart_data(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
         'isolines': isolines,
         'power_isolines': pwr_iso,
         'npsh_isolines': npsh_iso,
-        'speed_lines': spd_lines,
+        'speed_lines': rpm_overlay,      # backward compat key
+        'rpm_overlay': rpm_overlay,
+        'dia_overlay': dia_overlay,
         'bep': bep_max,
         'liquid': liquid,
         'default_trim_penalty': default_trim_penalty,
     }
+
+
+def _dia_overlay_lines(pump, values_str, n_points=100,
+                       liquid='water', viscosity_cSt=1.0,
+                       slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650):
+    """Generate diameter-based overlay curves (Ø mm labels) using affinity laws."""
+    parsed = []
+    if values_str and isinstance(values_str, str) and values_str.strip():
+        cleaned = re.sub(r'[,;\s]+', ',', values_str.strip())
+        for p in cleaned.split(','):
+            p = p.strip()
+            if p:
+                try:
+                    parsed.append(float(p))
+                except ValueError:
+                    pass
+    if not parsed:
+        return []
+
+    d_max = max(parsed) if parsed else (pump.impeller_dia_mm or 300.0)
+    if pump.impeller_dia_mm and pump.impeller_dia_mm > d_max:
+        d_max = pump.impeller_dia_mm
+
+    q_base = np.linspace(0, pump.q_max or 100.0, n_points)
+    H_base = hq_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
+    eta_base = efficiency_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
+    pwr_base = power_curve(pump, q_base, liquid, 1000.0, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
+    npsh_base = npsh_curve(pump, q_base)
+
+    result = []
+    for d in parsed:
+        k = d / d_max if d_max > 0 else 1.0
+        Q_k = q_base * k
+        H_k = np.clip(H_base * (k ** 2), 0, None)
+        P_k = np.clip(pwr_base * (k ** 3), 0, None)
+        NPSH_k = np.clip(npsh_base * (k ** 2), 0, None)
+        eta_k = np.clip(eta_base, 0, 100)
+
+        d_fmt = f"{int(round(d))}" if abs(d - round(d)) < 1e-4 else f"{d:g}"
+        label = f"Ø{d_fmt} mm ({int(round(k * 100))}%)"
+
+        result.append({
+            'dia': d,
+            'ratio': round(float(k), 4),
+            'label': label,
+            'q': [round(v, 3) for v in Q_k.tolist()],
+            'h': [round(v, 3) for v in H_k.tolist()],
+            'eta': [round(v, 2) for v in eta_k.tolist()],
+            'pow': [round(v, 3) for v in P_k.tolist()],
+            'npsh': [round(v, 3) for v in NPSH_k.tolist()],
+        })
+    return result
 
 
 # ── Polynomial curve fitting from data points ──────────────────────────────────

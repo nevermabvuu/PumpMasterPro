@@ -270,8 +270,12 @@
             <span>Show NPSH Standard Curves / Isolines</span>
           </label>
           <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" name="show_speed_lines" id="rep_show_speed_lines" class="accent-[#38bdf8] rounded" checked>
-            <span>Show Speed Lines (VFD RPM)</span>
+            <input type="checkbox" name="show_rpm_overlay" id="rep_show_rpm_overlay" class="accent-[#38bdf8] rounded" checked>
+            <span>Show Speed / RPM Overlay Lines</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="show_dia_overlay" id="rep_show_dia_overlay" class="accent-[#38bdf8] rounded">
+            <span>Show Impeller Diameter Overlay Curves</span>
           </label>
         </div>
 
@@ -377,7 +381,8 @@
     document.getElementById('rep_show_eff_isolines').checked = true;
     document.getElementById('rep_show_power_isolines').checked = false;
     document.getElementById('rep_show_npsh_curves').checked = true;
-    document.getElementById('rep_show_speed_lines').checked = true;
+    if (document.getElementById('rep_show_rpm_overlay')) document.getElementById('rep_show_rpm_overlay').checked = true;
+    if (document.getElementById('rep_show_dia_overlay')) document.getElementById('rep_show_dia_overlay').checked = false;
     document.getElementById('rep_show_legend').checked = true;
     document.getElementById('rep_legend_position').value = 'top_right';
     document.getElementById('reportModalTitle').innerHTML = '<i class="bi bi-sliders2 text-[#58a6ff]"></i> Add PDF Report Setting';
@@ -401,7 +406,8 @@
     document.getElementById('rep_show_eff_isolines').checked = r.show_eff_isolines !== undefined ? r.show_eff_isolines : true;
     document.getElementById('rep_show_power_isolines').checked = r.show_power_isolines !== undefined ? r.show_power_isolines : false;
     document.getElementById('rep_show_npsh_curves').checked = r.show_npsh_curves !== undefined ? r.show_npsh_curves : true;
-    document.getElementById('rep_show_speed_lines').checked = r.show_speed_lines !== undefined ? r.show_speed_lines : true;
+    if (document.getElementById('rep_show_rpm_overlay')) document.getElementById('rep_show_rpm_overlay').checked = r.show_rpm_overlay !== undefined ? r.show_rpm_overlay : (r.show_speed_lines !== undefined ? r.show_speed_lines : true);
+    if (document.getElementById('rep_show_dia_overlay')) document.getElementById('rep_show_dia_overlay').checked = r.show_dia_overlay !== undefined ? r.show_dia_overlay : false;
     document.getElementById('rep_show_legend').checked = r.show_legend !== undefined ? r.show_legend : true;
     document.getElementById('rep_legend_position').value = r.legend_position || 'top_right';
     document.getElementById('reportModalTitle').innerHTML = '<i class="bi bi-gear text-[#58a6ff]"></i> Configure PDF Report Setting';

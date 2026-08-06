@@ -400,23 +400,6 @@ def _build_report_curve_context(pump, report):
     else:
         max_d = pump.impeller_dia_mm if (hasattr(pump, 'impeller_dia_mm') and pump.impeller_dia_mm and pump.impeller_dia_mm > 0) else 300.0
 
-    if mode == 'max_only':
-        d_curves = [max_d]
-    elif mode == 'min_max':
-        if len(custom_d_list) >= 2:
-            d_curves = [max_d, custom_d_list[-1]]
-        else:
-            d_curves = [max_d, round(max_d * 0.8, 1)]
-    else:  # mode == 'all'
-        if len(custom_d_list) >= 3:
-            d_curves = custom_d_list
-        elif len(custom_d_list) == 2:
-            # Interpolate 4 evenly spaced clean integer trim diameters (e.g. 228, 213, 197, 182)
-            steps = np.linspace(custom_d_list[0], custom_d_list[-1], 4)
-            d_curves = [float(int(round(float(x)))) for x in steps]
-        else:
-            d_curves = [max_d, float(int(round(max_d * 0.93))), float(int(round(max_d * 0.86))), float(int(round(max_d * 0.8)))]
-
     hq_curves_list = []
     eta_curves_list = []
     pow_curves_list = []
@@ -424,23 +407,81 @@ def _build_report_curve_context(pump, report):
 
     palette = ['#1e3a8a', '#0284c7', '#475569', '#d97706']
 
-    for c_idx, d_val in enumerate(d_curves):
-        is_primary = (c_idx == 0)
-        d_fmt = f"{int(round(d_val))}" if abs(d_val - round(d_val)) < 1e-4 else f"{round(d_val, 1)}"
-        lbl = f"{d_fmt} mm" + (" (Max)" if is_primary else "")
-        d_ratio = (d_val / max_d) if max_d > 0 else 1.0
+    fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+    is_var_speed = (fam_type == 'variable_speed')
 
-        c_h = [round(v * (d_ratio**2), 2) for v in h_pts]
-        c_eta = [round(max(0.0, float(v) * (1.0 - 0.05 * (1.0 - d_ratio))), 2) for v in eta_pts]
-        c_pow = [round(v * (d_ratio**3), 2) for v in pow_pts]
-        c_npsh = [round(v * ((1.0 / d_ratio)**0.5), 2) for v in npsh_pts]
+    # For variable_speed pumps, use impeller_diameters as RPM values
+    if is_var_speed:
+        rpm_list = _parse_diameters_string(getattr(pump, 'impeller_diameters', None))
+        if not rpm_list:
+            rpm_list = _parse_diameters_string(getattr(pump, 'curve_diameters', None))
+        if not rpm_list:
+            base_rpm = pump.speed_rpm or 1000.0
+            rpm_list = [base_rpm, base_rpm * 0.9, base_rpm * 0.8, base_rpm * 0.7]
+        rpm_list.sort(reverse=True)
+        base_rpm = rpm_list[0] if rpm_list else (pump.speed_rpm or 1000.0)
 
-        cur_color = primary_color if is_primary else palette[min(c_idx, len(palette)-1)]
+        if mode == 'max_only':
+            rpm_to_plot = [rpm_list[0]]
+        elif mode == 'min_max':
+            rpm_to_plot = [rpm_list[0], rpm_list[-1]] if len(rpm_list) >= 2 else rpm_list
+        else:
+            rpm_to_plot = rpm_list
 
-        hq_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_h, 'color': cur_color, 'is_secondary': not is_primary})
-        eta_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_eta, 'color': '#059669' if is_primary else '#10b981', 'is_secondary': not is_primary})
-        pow_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_pow, 'color': '#dc2626' if is_primary else '#f97316', 'is_secondary': not is_primary})
-        npsh_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_npsh, 'color': '#0d9488' if is_primary else '#14b8a6', 'is_secondary': not is_primary})
+        for c_idx, rpm_val in enumerate(rpm_to_plot):
+            is_primary = (c_idx == 0)
+            k = rpm_val / base_rpm if base_rpm > 0 else 1.0
+            rpm_fmt = f"{int(round(rpm_val))}" if abs(rpm_val - round(rpm_val)) < 1e-4 else f"{round(rpm_val, 1)}"
+            lbl = f"{rpm_fmt} RPM" + (" (Max)" if is_primary else "")
+
+            c_q = [round(v * k, 2) for v in q_pts]
+            c_h = [round(v * (k**2), 2) for v in h_pts]
+            c_eta = [round(max(0.0, float(v)), 2) for v in eta_pts]  # No penalty for variable speed
+            c_pow = [round(v * (k**3), 2) for v in pow_pts]
+            c_npsh = [round(v * (k**2), 2) for v in npsh_pts]
+
+            cur_color = primary_color if is_primary else palette[min(c_idx, len(palette)-1)]
+
+            hq_curves_list.append({'label': lbl, 'x': c_q, 'y': c_h, 'color': cur_color, 'is_secondary': not is_primary})
+            eta_curves_list.append({'label': lbl, 'x': c_q, 'y': c_eta, 'color': '#059669' if is_primary else '#10b981', 'is_secondary': not is_primary})
+            pow_curves_list.append({'label': lbl, 'x': c_q, 'y': c_pow, 'color': '#dc2626' if is_primary else '#f97316', 'is_secondary': not is_primary})
+            npsh_curves_list.append({'label': lbl, 'x': c_q, 'y': c_npsh, 'color': '#0d9488' if is_primary else '#14b8a6', 'is_secondary': not is_primary})
+    else:
+        # Trimmed impeller: original diameter-based logic
+        if mode == 'max_only':
+            d_curves = [max_d]
+        elif mode == 'min_max':
+            if len(custom_d_list) >= 2:
+                d_curves = [max_d, custom_d_list[-1]]
+            else:
+                d_curves = [max_d, round(max_d * 0.8, 1)]
+        else:  # mode == 'all'
+            if len(custom_d_list) >= 3:
+                d_curves = custom_d_list
+            elif len(custom_d_list) == 2:
+                # Interpolate 4 evenly spaced clean integer trim diameters (e.g. 228, 213, 197, 182)
+                steps = np.linspace(custom_d_list[0], custom_d_list[-1], 4)
+                d_curves = [float(int(round(float(x)))) for x in steps]
+            else:
+                d_curves = [max_d, float(int(round(max_d * 0.93))), float(int(round(max_d * 0.86))), float(int(round(max_d * 0.8)))]
+
+        for c_idx, d_val in enumerate(d_curves):
+            is_primary = (c_idx == 0)
+            d_fmt = f"{int(round(d_val))}" if abs(d_val - round(d_val)) < 1e-4 else f"{round(d_val, 1)}"
+            lbl = f"{d_fmt} mm" + (" (Max)" if is_primary else "")
+            d_ratio = (d_val / max_d) if max_d > 0 else 1.0
+
+            c_h = [round(v * (d_ratio**2), 2) for v in h_pts]
+            c_eta = [round(max(0.0, float(v) * (1.0 - 0.05 * (1.0 - d_ratio))), 2) for v in eta_pts]
+            c_pow = [round(v * (d_ratio**3), 2) for v in pow_pts]
+            c_npsh = [round(v * ((1.0 / d_ratio)**0.5), 2) for v in npsh_pts]
+
+            cur_color = primary_color if is_primary else palette[min(c_idx, len(palette)-1)]
+
+            hq_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_h, 'color': cur_color, 'is_secondary': not is_primary})
+            eta_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_eta, 'color': '#059669' if is_primary else '#10b981', 'is_secondary': not is_primary})
+            pow_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_pow, 'color': '#dc2626' if is_primary else '#f97316', 'is_secondary': not is_primary})
+            npsh_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_npsh, 'color': '#0d9488' if is_primary else '#14b8a6', 'is_secondary': not is_primary})
 
     # Read Exact Axis Scales configured for the pump in pump-data (min, max, major, minor)
     x_common = {
@@ -571,19 +612,46 @@ def _build_report_curve_context(pump, report):
         except Exception as e:
             print("NPSH isolines calculation notice:", e)
 
-    # 3. Speed Lines (Variable Speed RPM Lines)
-    if getattr(report, 'show_speed_lines', True) and getattr(pump, 'family_type', '') == 'variable_speed':
+    # 4. RPM Overlay Lines
+    report_show_rpm = getattr(report, 'show_rpm_overlay', None)
+    if report_show_rpm is None:
+        report_show_rpm = getattr(report, 'show_speed_lines', True)
+
+    rpm_str = (getattr(pump, 'graph_rpm_values', None) or getattr(pump, 'graph_speed_line_values', None) or '').strip()
+
+    if bool(report_show_rpm) and rpm_str:
         try:
-            speed_str = getattr(pump, 'graph_speed_line_values', None)
-            speeds = _parse_diameters_string(speed_str) if speed_str else [1450, 1200, 1000, 800]
-            base_rpm = pump.speed_rpm or 1450.0
-            for sp in speeds:
-                s_ratio = float(sp) / float(base_rpm) if base_rpm > 0 else 1.0
-                sp_h = [round(v * (s_ratio**2), 2) for v in h_pts]
-                sp_lbl = f"{int(round(sp))} rpm"
-                hq_curves_list.append({'label': sp_lbl, 'x': q_pts, 'y': sp_h, 'color': '#9333ea', 'is_secondary': True})
+            from pump_curves import speed_lines as calc_speed_lines
+            spd_objs = calc_speed_lines(pump, values_str=rpm_str)
+            for sl in spd_objs:
+                hq_curves_list.append({
+                    'label': sl['label'],
+                    'x': sl['q'],
+                    'y': sl['h'],
+                    'color': '#9333ea',
+                    'is_secondary': True
+                })
         except Exception as e:
-            print("Speed lines calculation notice:", e)
+            print("RPM overlay lines calculation notice:", e)
+
+    # 4b. Diameter Overlay Lines
+    report_show_dia = bool(getattr(report, 'show_dia_overlay', True))
+    dia_str = (getattr(pump, 'graph_dia_overlay_values', None) or '').strip()
+
+    if report_show_dia and dia_str:
+        try:
+            from pump_curves import _dia_overlay_lines
+            dia_objs = _dia_overlay_lines(pump, values_str=dia_str)
+            for dl in dia_objs:
+                hq_curves_list.append({
+                    'label': dl['label'],
+                    'x': dl['q'],
+                    'y': dl['h'],
+                    'color': '#d97706',
+                    'is_secondary': True
+                })
+        except Exception as e:
+            print("Diameter overlay lines calculation notice:", e)
 
     # Read Report Legend Visibility & Position Preferences
     show_leg = getattr(report, 'show_legend', True)
@@ -697,7 +765,9 @@ def save_report():
     report.show_eff_isolines = 'show_eff_isolines' in request.form
     report.show_power_isolines = 'show_power_isolines' in request.form
     report.show_npsh_curves = 'show_npsh_curves' in request.form
-    report.show_speed_lines = 'show_speed_lines' in request.form
+    report.show_speed_lines = 'show_speed_lines' in request.form or 'show_rpm_overlay' in request.form
+    report.show_rpm_overlay = 'show_rpm_overlay' in request.form or 'show_speed_lines' in request.form
+    report.show_dia_overlay = 'show_dia_overlay' in request.form
     report.show_additional_graphs = 'show_additional_graphs' in request.form
     report.show_legend = 'show_legend' in request.form
     report.legend_position = request.form.get('legend_position', 'top_right').strip()

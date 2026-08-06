@@ -523,7 +523,7 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
 const SPD_COLORS = ['#664400', '#995500', '#cc7700', '#ff9900'];  // 70%→80%→90%→100%
 
 function buildWarmanChart(data, opts = {}) {
-  const { showIsolines = true, showPowerIso = false, showNpshIso = false, showSpeedLines = false, showNpshCurve = false, npshYAxis = 'y2', dutyQ, dutyH } = opts;
+  const { showIsolines = true, showPowerIso = false, showNpshIso = false, showSpeedLines = false, showDiaOverlay = false, showNpshCurve = false, npshYAxis = 'y2', dutyQ, dutyH } = opts;
   const units = getGraphDisplayUnits();
   const lblQ = typeof getUnitLabel === 'function' ? getUnitLabel('q', units.q) : units.q;
   const lblH = typeof getUnitLabel === 'function' ? getUnitLabel('h', units.h) : units.h;
@@ -539,7 +539,8 @@ function buildWarmanChart(data, opts = {}) {
   const isolines = data.isolines || [];
   const pwr_iso = data.power_isolines || [];
   const npsh_iso = data.npsh_isolines || [];
-  const spd_lines = data.speed_lines || [];
+  const spd_lines = data.speed_lines || data.rpm_overlay || [];
+  const dia_overlay = data.dia_overlay || [];
 
   const legendMode = units.legendMode || 'each';
   const labelPos = units.labelPos || 'middle-top';
@@ -872,6 +873,39 @@ function buildWarmanChart(data, opts = {}) {
           bordercolor: col, borderwidth: 1, borderpad: 2,
           xanchor: 'center', yanchor: 'middle',
           name: `spd_lbl_${i}`
+        });
+      }
+    });
+  }
+
+  /* ── Diameter Overlay Lines ──── */
+  if (showDiaOverlay && dia_overlay.length > 0) {
+    dia_overlay.forEach((dl, i) => {
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const lw = 1.5;
+      const lineLabel = dl.label || `Ø${dl.dia} mm`;
+
+      traces.push({
+        type: 'scatter', mode: 'lines',
+        name: lineLabel,
+        x: dl.q, y: dl.h,
+        line: { color: col, width: lw, dash: 'dash' },
+        showlegend: legendMode !== 'curve_labels',
+        hovertemplate: `${lineLabel}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
+      });
+
+      /* Direct label badge on each overlay curve */
+      if (dl.q && dl.q.length > 0 && dl.h && dl.h.length > 0) {
+        const lastIdx = Math.floor(dl.q.length * 0.90);
+        annotations.push({
+          x: dl.q[lastIdx], y: dl.h[lastIdx],
+          text: `<b>${lineLabel}</b>`,
+          showarrow: false, captureevents: true,
+          font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
+          bgcolor: 'rgba(15, 23, 42, 0.90)',
+          bordercolor: col, borderwidth: 1, borderpad: 2,
+          xanchor: 'center', yanchor: 'middle',
+          name: `dia_lbl_${i}`
         });
       }
     });
@@ -2351,7 +2385,8 @@ if (typeof PUMP_ID !== 'undefined') {
     const showPowerIso = document.getElementById('chkShowPowerIso').checked;
     const showNpshIso = document.getElementById('chkShowNpshIso').checked;
     const showNpshCurve = document.getElementById('chkShowNpshCurve').checked;
-    const showSpeedLines = document.getElementById('chkSpeedLines').checked;
+    const showSpeedLines = (document.getElementById('chkRpmOverlay')?.checked || document.getElementById('chkSpeedLines')?.checked) || false;
+    const showDiaOverlay = document.getElementById('chkDiaOverlay')?.checked || false;
 
     // Toggle main Performance Map panel
     if (document.getElementById('warmanPanel')) {
@@ -2377,6 +2412,7 @@ if (typeof PUMP_ID !== 'undefined') {
         showPowerIso: showPowerIso,
         showNpshIso: showNpshIso,
         showSpeedLines: showSpeedLines,
+        showDiaOverlay: showDiaOverlay,
         showNpshCurve: showNpshCurve,
         npshYAxis: npshYAxis,
         dutyQ: duty.q, dutyH: duty.h

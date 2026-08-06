@@ -106,6 +106,11 @@ class Pump(db.Model):
     graph_npsh_yaxis        = db.Column(db.String(20), default='y2')
     graph_show_speed_lines  = db.Column(db.Boolean, default=False)
     graph_speed_line_values = db.Column(db.String(100), default='')
+    # New: explicit RPM and Diameter overlay fields
+    graph_show_rpm_overlay  = db.Column(db.Boolean, default=False)
+    graph_rpm_values        = db.Column(db.String(100), default='')
+    graph_show_dia_overlay  = db.Column(db.Boolean, default=False)
+    graph_dia_overlay_values = db.Column(db.String(100), default='')
     graph_show_hq           = db.Column(db.Boolean, default=True)
     graph_show_other        = db.Column(db.Boolean, default=True)
     graph_show_eff          = db.Column(db.Boolean, default=True)
@@ -553,6 +558,10 @@ class Pump(db.Model):
             'npsh_yaxis': self.graph_npsh_yaxis or 'y2',
             'show_speed_lines': bool(self.graph_show_speed_lines),
             'speed_line_values': self.graph_speed_line_values or extra_opts.get('speed_line_values', ''),
+            'show_rpm_overlay': bool(getattr(self, 'graph_show_rpm_overlay', False)),
+            'rpm_values': getattr(self, 'graph_rpm_values', '') or '',
+            'show_dia_overlay': bool(getattr(self, 'graph_show_dia_overlay', False)),
+            'dia_overlay_values': getattr(self, 'graph_dia_overlay_values', '') or '',
             'show_hq': self.graph_show_hq if self.graph_show_hq is not None else True,
             'show_other': self.graph_show_other if self.graph_show_other is not None else True,
             'show_eff': self.graph_show_eff if self.graph_show_eff is not None else True,
@@ -611,6 +620,18 @@ class Pump(db.Model):
         if 'npsh_yaxis' in opts: self.graph_npsh_yaxis = str(opts['npsh_yaxis'])
         if 'show_speed_lines' in opts: self.graph_show_speed_lines = bool(opts['show_speed_lines'])
         if 'speed_line_values' in opts: self.graph_speed_line_values = str(opts['speed_line_values'])
+
+        if 'show_rpm_overlay' in opts: self.graph_show_rpm_overlay = bool(opts['show_rpm_overlay'])
+        elif 'graph_show_rpm_overlay' in opts: self.graph_show_rpm_overlay = bool(opts['graph_show_rpm_overlay'])
+
+        if 'rpm_values' in opts: self.graph_rpm_values = str(opts['rpm_values'])
+        elif 'graph_rpm_values' in opts: self.graph_rpm_values = str(opts['graph_rpm_values'])
+
+        if 'show_dia_overlay' in opts: self.graph_show_dia_overlay = bool(opts['show_dia_overlay'])
+        elif 'graph_show_dia_overlay' in opts: self.graph_show_dia_overlay = bool(opts['graph_show_dia_overlay'])
+
+        if 'dia_overlay_values' in opts: self.graph_dia_overlay_values = str(opts['dia_overlay_values'])
+        elif 'graph_dia_overlay_values' in opts: self.graph_dia_overlay_values = str(opts['graph_dia_overlay_values'])
         if 'show_hq' in opts: self.graph_show_hq = bool(opts['show_hq'])
         if 'show_other' in opts: self.graph_show_other = bool(opts['show_other'])
         if 'show_eff' in opts: self.graph_show_eff = bool(opts['show_eff'])
@@ -851,6 +872,8 @@ class ReportConfig(db.Model):
     show_power_isolines = db.Column(db.Boolean, default=False)
     show_npsh_curves = db.Column(db.Boolean, default=True)
     show_speed_lines = db.Column(db.Boolean, default=True)
+    show_rpm_overlay = db.Column(db.Boolean, default=False)
+    show_dia_overlay = db.Column(db.Boolean, default=False)
     show_additional_graphs = db.Column(db.Boolean, default=True)
     show_legend = db.Column(db.Boolean, default=True)
     legend_position = db.Column(db.String(30), default='top_right')  # 'top_right', 'top_left', 'bottom_right', 'bottom_left'
@@ -885,6 +908,8 @@ class ReportConfig(db.Model):
             'show_power_isolines': bool(self.show_power_isolines),
             'show_npsh_curves': bool(self.show_npsh_curves),
             'show_speed_lines': bool(self.show_speed_lines),
+            'show_rpm_overlay': bool(getattr(self, 'show_rpm_overlay', False)),
+            'show_dia_overlay': bool(getattr(self, 'show_dia_overlay', False)),
             'show_additional_graphs': bool(self.show_additional_graphs),
             'show_legend': bool(self.show_legend),
             'legend_position': self.legend_position or 'top_right',

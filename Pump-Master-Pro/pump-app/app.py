@@ -133,12 +133,10 @@ with app.app_context():
             for p_col, p_def in [('poly_order', 3), ('poly_order_hq', 3), ('poly_order_eff', 3), ('poly_order_npsh', 2), ('poly_order_pow', 2)]:
                 if p_col not in cols:
                     conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {p_col} INTEGER DEFAULT {p_def}"))
-            for old_col in ['main_curve_label', 'main_curve_dia_mm', 'data_units']:
-                if old_col in cols:
-                    try:
-                        conn.execute(text(f"ALTER TABLE pumps DROP COLUMN {old_col}"))
-                    except Exception:
-                        pass
+            # Auto-migrate reports table columns
+            rep_cols = [c[1] for c in conn.execute(text("PRAGMA table_info(reports)")).fetchall()]
+            if 'label_format' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN label_format VARCHAR(20) DEFAULT 'auto'"))
 
             # Data cleanup for VS pumps where diameter values were saved in graph_speed_line_values
             try:

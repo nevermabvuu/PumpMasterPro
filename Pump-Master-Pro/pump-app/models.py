@@ -899,6 +899,7 @@ class ReportConfig(db.Model):
     show_legend = db.Column(db.Boolean, default=True)
     legend_position = db.Column(db.String(30), default='top_right')  # 'top_right', 'top_left', 'bottom_right', 'bottom_left'
     legend_mode = db.Column(db.String(30), default='pump_default')  # 'pump_default', 'each', 'hq_only', 'curve_labels'
+    label_format = db.Column(db.String(20), default='auto')  # 'auto', 'percent', 'simple'
 
     # Visual Branding & Section Toggles
     header_text = db.Column(db.String(200), default='PUMP MASTER PRO - TECHNICAL DATASHEET')

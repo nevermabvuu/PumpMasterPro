@@ -159,7 +159,7 @@ def _parse_diameters_string(raw_str):
         except (TypeError, ValueError):
             pass
     return results
-def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", custom_range=None, width=480, height=240, isolines_list=None, show_legend=True, legend_position='top_right', legend_mode='each'):
+def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", custom_range=None, width=480, height=240, isolines_list=None, show_legend=True, legend_position='top_right', legend_mode='each', custom_label_pos=None, label_format='auto'):
     """
     Beginners Note: Generates pure inline SVG XML vector markup for single or multi-curve pump charts.
     Accepts exact axis range settings (min, max, major, minor) set for the pump in pump-data,
@@ -254,6 +254,7 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
 
     paths_svg = []
     legend_items = []
+    drawn_label_keys = set()
 
     # Render Isolines Overlay (Efficiency Isolines, Power Isolines)
     if isolines_list:
@@ -311,12 +312,52 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
 
         # Option 4: Direct labels on each impeller curve
         if legend_mode == 'curve_labels' and len(pts) > 1:
-            idx = int(len(pts) * 0.85)
-            lx, ly = pts[idx]
-            clean_lbl = label.replace(' (Max)', '')
-            tw = len(clean_lbl) * 5 + 8
+            raw_label = label
+            clean_lbl = raw_label.replace(' (Max)', '').strip()
+
+            # Extract numeric value for deduplication (e.g. 228 from "228 mm" or "Ø228 mm (81%)")
+            num_match = re.search(r'(\d+(?:\.\d+)?)', clean_lbl)
+            val_key = num_match.group(1) if num_match else clean_lbl
+
+            if val_key in drawn_label_keys:
+                continue
+            drawn_label_keys.add(val_key)
+
+            # Format text badge according to user label_format choice
+            if label_format == 'simple':
+                display_text = re.sub(r'Ø|(?:\s*\(\d+%\))', '', clean_lbl).strip()
+            elif label_format == 'percent':
+                display_text = clean_lbl
+            else:
+                display_text = clean_lbl
+
+            # Check if user dragged custom label position in pump data
+            pos = None
+            if custom_label_pos and isinstance(custom_label_pos, dict):
+                for k in [clean_lbl, raw_label, f"HQ_{clean_lbl}", f"eff_{clean_lbl}", f"pow_{clean_lbl}", f"npsh_{clean_lbl}", val_key]:
+                    if k in custom_label_pos:
+                        pos = custom_label_pos[k]
+                        break
+
+            if pos and isinstance(pos, dict) and 'x' in pos and 'y' in pos:
+                try:
+                    c_x = float(pos['x'])
+                    c_y = float(pos['y'])
+                    lx = padding_left + ((c_x - x_min) / (x_max - x_min)) * plot_w
+                    ly = padding_top + plot_h - ((c_y - y_min) / (y_max - y_min)) * plot_h
+                except Exception:
+                    idx = int(len(pts) * 0.85)
+                    lx, ly = pts[idx]
+            else:
+                idx = int(len(pts) * 0.85)
+                lx, ly = pts[idx]
+
+            lx = min(max(float(padding_left + 15), float(lx)), float(width - padding_right - 15))
+            ly = min(max(float(padding_top + 10), float(ly)), float(height - padding_bottom - 5))
+
+            tw = len(display_text) * 5 + 8
             labels.append(f'<rect x="{lx - tw/2:.1f}" y="{ly - 10:.1f}" width="{tw}" height="12" fill="#ffffff" fill-opacity="0.9" stroke="{color}" stroke-width="0.8" rx="3" />')
-            labels.append(f'<text x="{lx:.1f}" y="{ly - 1.5:.1f}" font-size="7.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="{color}" text-anchor="middle">{clean_lbl}</text>')
+            labels.append(f'<text x="{lx:.1f}" y="{ly - 1.5:.1f}" font-size="7.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="{color}" text-anchor="middle">{display_text}</text>')
 
     # Render Multi-Curve Legend Box with customizable positioning
     legend_svg = ""
@@ -630,13 +671,16 @@ def _build_report_curve_context(pump, report):
             from pump_curves import speed_lines as calc_speed_lines
             spd_objs = calc_speed_lines(pump, values_str=rpm_str)
             for sl in spd_objs:
-                hq_curves_list.append({
-                    'label': sl['label'],
-                    'x': sl['q'],
-                    'y': sl['h'],
-                    'color': '#9333ea',
-                    'is_secondary': True
-                })
+                lbl = sl.get('label', '')
+                if sl.get('q') and sl.get('h'):
+                    hq_curves_list.append({'label': lbl, 'x': sl['q'], 'y': sl['h'], 'color': '#9333ea', 'is_secondary': True})
+                if sl.get('q') and sl.get('eta'):
+                    eta_curves_list.append({'label': lbl, 'x': sl['q'], 'y': sl['eta'], 'color': '#9333ea', 'is_secondary': True})
+                pwr_arr = sl.get('pow') or sl.get('power')
+                if sl.get('q') and pwr_arr:
+                    pow_curves_list.append({'label': lbl, 'x': sl['q'], 'y': pwr_arr, 'color': '#9333ea', 'is_secondary': True})
+                if sl.get('q') and sl.get('npsh'):
+                    npsh_curves_list.append({'label': lbl, 'x': sl['q'], 'y': sl['npsh'], 'color': '#9333ea', 'is_secondary': True})
         except Exception as e:
             print("RPM overlay lines calculation notice:", e)
 
@@ -649,15 +693,22 @@ def _build_report_curve_context(pump, report):
             from pump_curves import _dia_overlay_lines
             dia_objs = _dia_overlay_lines(pump, values_str=dia_str)
             for dl in dia_objs:
-                hq_curves_list.append({
-                    'label': dl['label'],
-                    'x': dl['q'],
-                    'y': dl['h'],
-                    'color': '#d97706',
-                    'is_secondary': True
-                })
+                lbl = dl.get('label', '')
+                if dl.get('q') and dl.get('h'):
+                    hq_curves_list.append({'label': lbl, 'x': dl['q'], 'y': dl['h'], 'color': '#d97706', 'is_secondary': True})
+                if dl.get('q') and dl.get('eta'):
+                    eta_curves_list.append({'label': lbl, 'x': dl['q'], 'y': dl['eta'], 'color': '#d97706', 'is_secondary': True})
+                pwr_arr = dl.get('pow') or dl.get('power')
+                if dl.get('q') and pwr_arr:
+                    pow_curves_list.append({'label': lbl, 'x': dl['q'], 'y': pwr_arr, 'color': '#d97706', 'is_secondary': True})
+                if dl.get('q') and dl.get('npsh'):
+                    npsh_curves_list.append({'label': dl['label'], 'x': dl['q'], 'y': dl['npsh'], 'color': '#d97706', 'is_secondary': True})
         except Exception as e:
             print("Diameter overlay lines calculation notice:", e)
+
+    # Custom Label Positions & Format
+    custom_label_pos = pump.get_custom_label_pos() if hasattr(pump, 'get_custom_label_pos') else {}
+    label_fmt = getattr(report, 'label_format', 'auto') or 'auto'
 
     # Read Report Legend Visibility & Position Preferences
     rep_leg_mode = getattr(report, 'legend_mode', 'pump_default') or 'pump_default'
@@ -678,22 +729,26 @@ def _build_report_curve_context(pump, report):
     svg_hq = generate_chart_svg(
         hq_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", f"Head ({pump.unit_h or 'm'})",
         custom_range=h_custom_range, height=240, isolines_list=hq_isolines_list,
-        show_legend=show_leg_hq, legend_position=leg_pos, legend_mode=effective_legend_mode
+        show_legend=show_leg_hq, legend_position=leg_pos, legend_mode=effective_legend_mode,
+        custom_label_pos=custom_label_pos, label_format=label_fmt
     )
 
     svg_eta = generate_chart_svg(
         eta_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", "Efficiency (%)",
-        custom_range=eta_custom_range, height=240, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode
+        custom_range=eta_custom_range, height=240, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode,
+        custom_label_pos=custom_label_pos, label_format=label_fmt
     )
 
     svg_pow = generate_chart_svg(
         pow_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", f"Power ({pump.unit_pow or 'kW'})",
-        custom_range=pow_custom_range, height=240, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode
+        custom_range=pow_custom_range, height=240, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode,
+        custom_label_pos=custom_label_pos, label_format=label_fmt
     )
 
     svg_npsh = generate_chart_svg(
         npsh_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", f"NPSHr ({pump.unit_npsh or 'm'})",
-        custom_range=npsh_custom_range, height=240, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode
+        custom_range=npsh_custom_range, height=240, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode,
+        custom_label_pos=custom_label_pos, label_format=label_fmt
     ) if (has_npsh and getattr(report, 'show_npsh_curves', True)) else ""
 
     bep_info = None
@@ -790,6 +845,7 @@ def save_report():
     report.show_legend = 'show_legend' in request.form
     report.legend_position = request.form.get('legend_position', 'top_right').strip()
     report.legend_mode = request.form.get('legend_mode', 'pump_default').strip()
+    report.label_format = request.form.get('label_format', 'auto').strip()
 
     report.header_text = request.form.get('header_text', 'PUMP MASTER PRO - TECHNICAL DATASHEET').strip()
     report.footer_text = request.form.get('footer_text', 'Generated by Pump Master Pro Engineering Suite').strip()

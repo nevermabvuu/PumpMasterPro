@@ -1047,6 +1047,31 @@ function buildHQChart(data, showSystem, showClean) {
   return { traces, layout };
 }
 
+/* ── Helper: Get active overlay lines (RPM or Diameter Overlay) based on test basis and form toggles ── */
+function getActiveOverlayLines(familyData) {
+  if (!familyData) return [];
+  const famType = familyData.pump?.family_type || 'trimmed_impeller';
+  const isVarSpeed = (famType === 'variable_speed');
+
+  const rpmEl = typeof document !== 'undefined' ? document.getElementById('chkRpmOverlay') : null;
+  const diaEl = typeof document !== 'undefined' ? document.getElementById('chkDiaOverlay') : null;
+
+  const chkRpm = rpmEl ? rpmEl.checked : isVarSpeed;
+  const chkDia = diaEl ? diaEl.checked : !isVarSpeed;
+
+  const lines = [];
+
+  if (chkRpm && familyData.rpm_overlay && familyData.rpm_overlay.length > 0) {
+    lines.push(...familyData.rpm_overlay);
+  }
+
+  if (chkDia && familyData.dia_overlay && familyData.dia_overlay.length > 0) {
+    lines.push(...familyData.dia_overlay);
+  }
+
+  return lines;
+}
+
 /* ── Build Efficiency Chart ── */
 // This function creates the Efficiency vs Flow (Q) graph.
 // Beginner Note: If "Direct Labels" mode is enabled, we attach label badges (e.g. Ø228 mm)
@@ -1107,15 +1132,11 @@ function buildEffChart(familyData, singleData, showClean) {
   });
 
   /* ── Overlay Speed / Impeller Trims on Efficiency Chart ── */
-  const spdLinesE = familyData?.speed_lines || [];
+  const spdLinesE = getActiveOverlayLines(familyData);
   if (spdLinesE.length > 0) {
     spdLinesE.forEach((sl, i) => {
       const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
-      const baseRpm = familyData?.pump?.speed_rpm || 1450;
-      const baseDia = familyData?.pump?.impeller_dia_mm || 300;
-      const lineLabel = sl.label || (isVarSpeed 
-        ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
-        : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
+      const lineLabel = sl.label || '';
 
       if (sl.eta) {
         traces.push({
@@ -1290,15 +1311,12 @@ function buildEffPowerChart(familyData, singleData, showClean) {
   });
 
   /* ── Overlay Speed / Impeller Trims on Efficiency & Power Chart ── */
-  const spdLinesEP = familyData?.speed_lines || [];
+  const spdLinesEP = getActiveOverlayLines(familyData);
   if (spdLinesEP.length > 0) {
     spdLinesEP.forEach((sl, i) => {
       const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
-      const baseRpm = familyData?.pump?.speed_rpm || 1450;
-      const baseDia = familyData?.pump?.impeller_dia_mm || 300;
-      const lineLabel = sl.label || (isVarSpeed 
-        ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
-        : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
+      const lineLabel = sl.label || '';
+      const pwrArr = sl.pow || sl.power;
 
       if (sl.eta) {
         traces.push({
@@ -1310,11 +1328,11 @@ function buildEffPowerChart(familyData, singleData, showClean) {
           hovertemplate: `${lineLabel} η<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
         });
       }
-      if (sl.power) {
+      if (pwrArr) {
         traces.push({
           type: 'scatter', mode: 'lines',
           name: `P ${lineLabel}`,
-          x: sl.q, y: sl.power,
+          x: sl.q, y: pwrArr,
           line: { color: col, width: 1.5, dash: 'dashdot' },
           yaxis: 'y2', showlegend: false,
           hovertemplate: `${lineLabel} P<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
@@ -1477,21 +1495,18 @@ function buildPowerChart(familyData, singleData, showClean) {
   });
 
   /* ── Overlay Speed / Impeller Trims on Power Chart ── */
-  const spdLinesP = familyData?.speed_lines || [];
+  const spdLinesP = getActiveOverlayLines(familyData);
   if (spdLinesP.length > 0) {
     spdLinesP.forEach((sl, i) => {
       const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
-      const baseRpm = familyData?.pump?.speed_rpm || 1450;
-      const baseDia = familyData?.pump?.impeller_dia_mm || 300;
-      const lineLabel = sl.label || (isVarSpeed 
-        ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
-        : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
+      const lineLabel = sl.label || '';
+      const pwrArr = sl.pow || sl.power;
 
-      if (sl.power) {
+      if (pwrArr) {
         traces.push({
           type: 'scatter', mode: 'lines',
           name: `P ${lineLabel}`,
-          x: sl.q, y: sl.power,
+          x: sl.q, y: pwrArr,
           line: { color: col, width: 1.5, dash: 'dashdot' },
           showlegend: false,
           hovertemplate: `${lineLabel} P<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
@@ -1630,15 +1645,11 @@ function buildNpshChart(familyData, singleData) {
   });
 
   /* ── Overlay Speed / Impeller Trims on NPSHr Chart ── */
-  const spdLinesN = familyData?.speed_lines || [];
+  const spdLinesN = getActiveOverlayLines(familyData);
   if (spdLinesN.length > 0) {
     spdLinesN.forEach((sl, i) => {
       const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
-      const baseRpm = familyData?.pump?.speed_rpm || 1450;
-      const baseDia = familyData?.pump?.impeller_dia_mm || 300;
-      const lineLabel = sl.label || (isVarSpeed 
-        ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
-        : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
+      const lineLabel = sl.label || '';
 
       if (sl.npsh) {
         traces.push({

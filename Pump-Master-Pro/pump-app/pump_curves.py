@@ -76,7 +76,7 @@ def _npsh_raw(pump, q_array):
     Beginners Note: Evaluates polynomial up to poly_order_npsh degree (1 to 5).
     """
     deg = _safe_deg(getattr(pump, 'poly_order_npsh', None), 2)
-    coeffs = [getattr(pump, 'npsh_c0', 1.0), getattr(pump, 'npsh_c1', 0.0), getattr(pump, 'npsh_c2', 0.0), getattr(pump, 'npsh_c3', 0.0), getattr(pump, 'npsh_c4', 0.0), getattr(pump, 'npsh_c5', 0.0)][:deg + 1]
+    coeffs = [getattr(pump, 'npsh_c0', 0.0), getattr(pump, 'npsh_c1', 0.0), getattr(pump, 'npsh_c2', 0.0), getattr(pump, 'npsh_c3', 0.0), getattr(pump, 'npsh_c4', 0.0), getattr(pump, 'npsh_c5', 0.0)][:deg + 1]
     return np.clip(_poly_array(coeffs, q_array), 0, None)
 
 
@@ -1015,12 +1015,13 @@ def fit_pump_polynomials(q_h, q_eta, q_npsh=None, q_p=None, rho=1000.0, poly_ord
     eta_bep_fit = float(eta_dense_clipped[bep_idx])
 
     # ── NPSH polynomial ──
-    npsh_c = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    npsh_c = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     if q_npsh and len(q_npsh) >= 2:
         q_npsh_arr = np.array(q_npsh, dtype=float)
-        deg_npsh = min(deg_npsh_target, max(1, len(q_npsh_arr) - 1))
-        c_npsh = np.polyfit(q_npsh_arr[:, 0], q_npsh_arr[:, 1], deg_npsh)
-        npsh_c = ([float(v) for v in reversed(c_npsh)] + [0.0] * 6)[:6]
+        if np.max(q_npsh_arr[:, 1]) > 1e-3:
+            deg_npsh = min(deg_npsh_target, max(1, len(q_npsh_arr) - 1))
+            c_npsh = np.polyfit(q_npsh_arr[:, 0], q_npsh_arr[:, 1], deg_npsh)
+            npsh_c = ([float(v) for v in reversed(c_npsh)] + [0.0] * 6)[:6]
 
     # ── Power polynomial ──
     p_pad = _fit_power_from_data(

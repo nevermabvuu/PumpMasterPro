@@ -63,7 +63,7 @@ class Pump(db.Model):
     eff_b5 = db.Column(db.Float, default=0.0)
 
     # NPSH polynomial: NPSHr (m) = npsh_c0 + npsh_c1*Q + npsh_c2*Q^2 + npsh_c3*Q^3 + npsh_c4*Q^4 + npsh_c5*Q^5
-    npsh_c0 = db.Column(db.Float, default=1.0)
+    npsh_c0 = db.Column(db.Float, default=0.0)
     npsh_c1 = db.Column(db.Float, default=0.0)
     npsh_c2 = db.Column(db.Float, default=0.0)
     npsh_c3 = db.Column(db.Float, default=0.0)
@@ -703,6 +703,10 @@ class Pump(db.Model):
             getattr(self, 'pow_p5', 0)
         )
 
+    def has_npsh_poly(self):
+        """True when valid stored non-zero NPSH polynomial coefficients are available."""
+        return any(abs(getattr(self, f'npsh_c{i}', 0.0) or 0.0) > 1e-6 for i in range(6))
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -719,7 +723,7 @@ class Pump(db.Model):
             'eff_b0': getattr(self, 'eff_b0', 0.0), 'eff_b1': getattr(self, 'eff_b1', 0.0),
             'eff_b2': getattr(self, 'eff_b2', 0.0), 'eff_b3': getattr(self, 'eff_b3', 0.0),
             'eff_b4': getattr(self, 'eff_b4', 0.0), 'eff_b5': getattr(self, 'eff_b5', 0.0),
-            'npsh_c0': getattr(self, 'npsh_c0', 1.0), 'npsh_c1': getattr(self, 'npsh_c1', 0.0),
+            'npsh_c0': getattr(self, 'npsh_c0', 0.0), 'npsh_c1': getattr(self, 'npsh_c1', 0.0),
             'npsh_c2': getattr(self, 'npsh_c2', 0.0), 'npsh_c3': getattr(self, 'npsh_c3', 0.0),
             'npsh_c4': getattr(self, 'npsh_c4', 0.0), 'npsh_c5': getattr(self, 'npsh_c5', 0.0),
             'pow_p0': getattr(self, 'pow_p0', 0.0), 'pow_p1': getattr(self, 'pow_p1', 0.0),

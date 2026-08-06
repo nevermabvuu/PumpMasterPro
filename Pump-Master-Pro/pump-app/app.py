@@ -148,8 +148,9 @@ with app.app_context():
                         if vals and max(vals) < 600 and (s_rpm is None or max(vals) < s_rpm * 0.7):
                             conn.execute(text("UPDATE pumps SET graph_dia_overlay_values = :d_val, graph_show_dia_overlay = 1, graph_speed_line_values = '' WHERE id = :pid"), {"d_val": spd_val, "pid": pid})
                 conn.execute(text("UPDATE pumps SET graph_show_speed_lines = 0 WHERE graph_show_rpm_overlay = 0 AND (graph_rpm_values IS NULL OR graph_rpm_values = '')"))
+                conn.execute(text("UPDATE pumps SET npsh_c0 = 0.0 WHERE npsh_c0 = 1.0 AND npsh_c1 = 0.0 AND npsh_c2 = 0.0 AND npsh_c3 = 0.0 AND npsh_c4 = 0.0 AND npsh_c5 = 0.0"))
             except Exception as e:
-                print("VS pump data cleanup notice:", e)
+                print("Pump data cleanup notice:", e)
 
             conn.commit()
 

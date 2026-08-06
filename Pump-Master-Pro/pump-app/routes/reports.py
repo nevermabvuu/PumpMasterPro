@@ -374,8 +374,8 @@ def _build_report_curve_context(pump, report):
     primary_color = report.primary_color if report and report.primary_color else '#1e3a8a'
     mode = report.curve_display_mode if report and report.curve_display_mode else 'all'
 
-    # Check NPSH Availability (e.g. ISF pumps without NPSH data have max NPSH = 0)
-    has_npsh = max(npsh_pts) > 0.05 and any(abs(getattr(pump, f'npsh_c{i}', 0.0) or 0.0) > 1e-6 for i in range(6))
+    # Check NPSH Availability (e.g. pumps without NPSH data have max NPSH = 0)
+    has_npsh = max(npsh_pts) > 0.05 and (pump.has_npsh_poly() if hasattr(pump, 'has_npsh_poly') else any(abs(getattr(pump, f'npsh_c{i}', 0.0) or 0.0) > 1e-6 for i in range(6)))
 
     # 1. Parse custom curve diameters from pump.curve_diameters (supporting ;, |, ,, spaces)
     custom_d_list = _parse_diameters_string(getattr(pump, 'curve_diameters', None))

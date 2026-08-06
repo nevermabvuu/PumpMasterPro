@@ -145,7 +145,7 @@ def _pump_from_form(f, pump=None):
     pump.eff_b4 = _get_float(f, 'eff_b4', getattr(pump, 'eff_b4', 0.0))
     pump.eff_b5 = _get_float(f, 'eff_b5', getattr(pump, 'eff_b5', 0.0))
 
-    pump.npsh_c0 = _get_float(f, 'npsh_c0', getattr(pump, 'npsh_c0', 1.0))
+    pump.npsh_c0 = _get_float(f, 'npsh_c0', getattr(pump, 'npsh_c0', 0.0))
     pump.npsh_c1 = _get_float(f, 'npsh_c1', getattr(pump, 'npsh_c1', 0.0))
     pump.npsh_c2 = _get_float(f, 'npsh_c2', getattr(pump, 'npsh_c2', 0.0))
     pump.npsh_c3 = _get_float(f, 'npsh_c3', getattr(pump, 'npsh_c3', 0.0))

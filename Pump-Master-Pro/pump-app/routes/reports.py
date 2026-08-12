@@ -189,12 +189,15 @@ def find_custom_pos(custom_label_pos, candidate_keys):
 
     return None
 
-def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", custom_range=None, width=480, height=240, isolines_list=None, show_legend=True, legend_position='top_right', legend_mode='each', custom_label_pos=None, label_format='auto'):
+def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", custom_range=None, width=480, height=240, isolines_list=None, show_legend=True, legend_position='top_right', legend_mode='each', custom_label_pos=None, label_format='auto', chart_type='hq'):
     """
     Beginners Note: Generates pure inline SVG XML vector markup for single or multi-curve pump charts.
     Accepts exact axis range settings (min, max, major, minor) set for the pump in pump-data,
     supports displaying multiple impeller diameter/speed curves (all, max_only, min_max),
     renders constant efficiency/power isolines and speed lines, and supports configurable legend placement & direct curve labels!
+    
+    chart_type parameter ('hq', 'eff', 'pow', 'npsh') ensures label drag coordinates saved on one graph (e.g. H-Q Head in meters)
+    do not bleed into other graphs with different Y-axis units (e.g. Efficiency in %, Power in kW).
     """
     if not curves_list and not isolines_list:
         return ""
@@ -221,6 +224,9 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
         return ""
 
     axis = custom_range or {}
+    has_custom_x_max = ('x_max' in axis and axis['x_max'] is not None)
+    has_custom_y_max = ('y_max' in axis and axis['y_max'] is not None)
+
     x_min = _safe_range_val(axis.get('x_min'), min(all_x))
     x_max = _safe_range_val(axis.get('x_max'), max(all_x))
     x_major = _safe_float(axis.get('x_major'))
@@ -238,10 +244,11 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
     x_ticks = _calculate_axis_ticks(x_min, x_max, x_major)
     y_ticks = _calculate_axis_ticks(y_min, y_max, y_major)
 
-    if x_ticks:
+    # Preserve exact custom bounds when provided to maintain pixel-perfect matching with pump-data Plotly charts
+    if x_ticks and not has_custom_x_max:
         x_min = x_ticks[0]
         x_max = max(x_max, x_ticks[-1])
-    if y_ticks:
+    if y_ticks and not has_custom_y_max:
         y_min = y_ticks[0]
         y_max = max(y_max, y_ticks[-1])
 
@@ -315,12 +322,17 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                         num_m = re.search(r'(\d+(?:\.\d+)?)', iso_label)
                         iso_val = num_m.group(1) if num_m else clean_iso
                         
-                        candidate_keys = [
-                            f"eta_{iso_val}_0", f"eta_{iso_val}_1", f"eta_{iso_val}_{iso_idx}", f"eta_{iso_val}", f"iso_{iso_val}",
-                            f"pow_{iso_val}_0", f"pow_{iso_val}_1", f"pow_{iso_val}_{iso_idx}", f"pow_{iso_val}", f"pow_iso_{iso_val}",
-                            f"npsh_{iso_val}_0", f"npsh_{iso_val}_1", f"npsh_{iso_val}_{iso_idx}", f"npsh_{iso_val}", f"npsh_iso_{iso_val}",
-                            iso_label, clean_iso, iso_val
-                        ]
+                        # Isolines candidates prioritized by chart_type
+                        if chart_type == 'eff':
+                            candidate_keys = [f"eta_{iso_val}_0", f"eta_{iso_val}_{iso_idx}", f"eta_{iso_val}", f"iso_{iso_val}"]
+                        elif chart_type == 'pow':
+                            candidate_keys = [f"pow_{iso_val}_0", f"pow_{iso_val}_{iso_idx}", f"pow_{iso_val}", f"pow_iso_{iso_val}"]
+                        elif chart_type == 'npsh':
+                            candidate_keys = [f"npsh_{iso_val}_0", f"npsh_{iso_val}_{iso_idx}", f"npsh_{iso_val}", f"npsh_iso_{iso_val}"]
+                        else:
+                            candidate_keys = [f"eta_{iso_val}_0", f"eta_{iso_val}_{iso_idx}", f"pow_{iso_val}_{iso_idx}", f"npsh_{iso_val}_{iso_idx}", iso_label, clean_iso, iso_val]
+
+                        candidate_keys.extend([iso_label, clean_iso, iso_val])
                         pos = find_custom_pos(custom_label_pos, candidate_keys)
 
                         if pos and isinstance(pos, dict) and 'x' in pos and 'y' in pos:
@@ -342,12 +354,20 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                         labels.append(f'<text x="{m_px:.1f}" y="{m_py - 3:.1f}" font-size="7.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="{iso_color}" text-anchor="middle">{iso_label}</text>')
 
     # Render Primary & Trim Pump Curve Paths
+    sec_count = 0
     for c_idx, c in enumerate(curves_list or []):
         x_pts = c.get('x', [])
         y_pts = c.get('y', [])
         color = c.get('color', '#1e3a8a')
         label = c.get('label', f'Curve {c_idx+1}')
-        dash_style = 'stroke-dasharray="4,4"' if c.get('is_secondary') else ''
+        is_sec = c.get('is_secondary', False)
+        dash_style = 'stroke-dasharray="4,4"' if is_sec else ''
+
+        if is_sec:
+            sec_idx = sec_count
+            sec_count += 1
+        else:
+            sec_idx = c_idx
 
         if len(x_pts) != len(y_pts) or len(x_pts) == 0:
             continue
@@ -362,22 +382,22 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
         for px, py in pts[1:]:
             path_d += f" L {px:.1f},{py:.1f}"
 
-        stroke_w = 2.5 if not c.get('is_secondary') else 1.8
+        stroke_w = 2.5 if not is_sec else 1.8
         paths_svg.append(f'<path d="{path_d}" fill="none" stroke="{color}" stroke-width="{stroke_w}" {dash_style} stroke-linecap="round" />')
         legend_items.append({'label': label, 'color': color})
 
         # Option 4: Direct labels on each impeller curve
         if legend_mode == 'curve_labels' and len(pts) > 1:
             raw_label = label
-            clean_lbl = raw_label.replace(' (Max)', '').strip()
+            clean_lbl = raw_label.replace(' (Max)', '').replace(' (Fitted)', '').strip()
 
-            # Extract numeric value for deduplication (e.g. 228 from "228 mm" or "Ø228 mm (81%)")
+            dedup_key = f"{c_idx}_{clean_lbl}"
+            if dedup_key in drawn_label_keys:
+                continue
+            drawn_label_keys.add(dedup_key)
+
             num_match = re.search(r'(\d+(?:\.\d+)?)', clean_lbl)
             val_key = num_match.group(1) if num_match else clean_lbl
-
-            if val_key in drawn_label_keys:
-                continue
-            drawn_label_keys.add(val_key)
 
             # Format text badge according to user label_format choice
             if label_format == 'simple':
@@ -385,15 +405,35 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             else:
                 display_text = clean_lbl
 
-            # Check if user dragged custom label position in pump data
-            candidate_keys = [
-                f"spd_lbl_{c_idx}", f"dia_lbl_{c_idx}", f"curve_{c_idx}",
-                f"eff_spd_{c_idx}", f"pow_spd_{c_idx}", f"npsh_spd_{c_idx}",
-                clean_lbl, raw_label,
-                f"HQ_{clean_lbl}", f"eff_{clean_lbl}", f"pow_{clean_lbl}", f"npsh_{clean_lbl}",
-                f"eff_{val_key}", f"pow_{val_key}", f"npsh_{val_key}",
-                val_key
-            ]
+            # Beginners Note: Chart-specific candidate keys prevent cross-chart label position bleeding
+            # (e.g. preventing Head in meters from spd_lbl_0 on H-Q graph from overriding Efficiency % on Efficiency graph).
+            if chart_type == 'eff':
+                candidate_keys = [
+                    f"eff_spd_{sec_idx}", f"eff_dia_{sec_idx}", f"effpow_spd_{sec_idx}", f"effpow_dia_{sec_idx}",
+                    f"eff_spd_{c_idx}", f"eff_dia_{c_idx}", f"eff_{val_key}", f"eff_{clean_lbl}"
+                ]
+            elif chart_type == 'pow':
+                candidate_keys = [
+                    f"pow_spd_{sec_idx}", f"pow_dia_{sec_idx}", f"pow_spd_{c_idx}", f"pow_dia_{c_idx}",
+                    f"pow_{val_key}", f"pow_{clean_lbl}"
+                ]
+            elif chart_type == 'npsh':
+                candidate_keys = [
+                    f"npsh_spd_{sec_idx}", f"npsh_dia_{sec_idx}", f"npsh_spd_{c_idx}", f"npsh_dia_{c_idx}",
+                    f"npsh_{val_key}", f"npsh_{clean_lbl}"
+                ]
+            else:  # 'hq'
+                candidate_keys = [
+                    f"spd_lbl_{sec_idx}", f"dia_lbl_{sec_idx}", f"spd_lbl_{c_idx}", f"dia_lbl_{c_idx}",
+                    f"curve_{c_idx}", f"dia_{val_key}", f"rpm_{val_key}", f"spd_{val_key}",
+                    f"HQ_{clean_lbl}"
+                ]
+
+            # Fallback general keys if specific chart keys were not found
+            candidate_keys.extend([
+                clean_lbl, raw_label, val_key
+            ])
+
             pos = find_custom_pos(custom_label_pos, candidate_keys)
 
             if pos and isinstance(pos, dict) and 'x' in pos and 'y' in pos:
@@ -512,6 +552,13 @@ def _build_report_curve_context(pump, report):
 
     palette = ['#1e3a8a', '#0284c7', '#475569', '#d97706']
 
+    report_show_dia = getattr(report, 'show_dia_overlay', None)
+    if report_show_dia is None:
+        report_show_dia = getattr(report, 'show_family', None)
+    if report_show_dia is None:
+        report_show_dia = getattr(pump, 'graph_show_family', True)
+    show_dia = bool(report_show_dia) if report_show_dia is not None else True
+
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
     is_var_speed = (fam_type == 'variable_speed')
 
@@ -582,10 +629,11 @@ def _build_report_curve_context(pump, report):
 
             cur_color = primary_color if is_primary else palette[min(c_idx, len(palette)-1)]
 
-            hq_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_h, 'color': cur_color, 'is_secondary': not is_primary})
-            eta_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_eta, 'color': '#059669' if is_primary else '#10b981', 'is_secondary': not is_primary})
-            pow_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_pow, 'color': '#dc2626' if is_primary else '#f97316', 'is_secondary': not is_primary})
-            npsh_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_npsh, 'color': '#0d9488' if is_primary else '#14b8a6', 'is_secondary': not is_primary})
+            if is_primary or show_dia:
+                hq_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_h, 'color': cur_color, 'is_secondary': not is_primary})
+                eta_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_eta, 'color': '#059669' if is_primary else '#10b981', 'is_secondary': not is_primary})
+                pow_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_pow, 'color': '#dc2626' if is_primary else '#f97316', 'is_secondary': not is_primary})
+                npsh_curves_list.append({'label': lbl, 'x': q_pts, 'y': c_npsh, 'color': '#0d9488' if is_primary else '#14b8a6', 'is_secondary': not is_primary})
 
     # Read Exact Axis Scales configured for the pump in pump-data (min, max, major, minor)
     x_common = {
@@ -787,25 +835,25 @@ def _build_report_curve_context(pump, report):
         hq_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", f"Head ({pump.unit_h or 'm'})",
         custom_range=h_custom_range, height=240, isolines_list=hq_isolines_list,
         show_legend=show_leg_hq, legend_position=leg_pos, legend_mode=effective_legend_mode,
-        custom_label_pos=custom_label_pos, label_format=label_fmt
+        custom_label_pos=custom_label_pos, label_format=label_fmt, chart_type='hq'
     )
 
     svg_eta = generate_chart_svg(
         eta_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", "Efficiency (%)",
         custom_range=eta_custom_range, height=240, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode,
-        custom_label_pos=custom_label_pos, label_format=label_fmt
+        custom_label_pos=custom_label_pos, label_format=label_fmt, chart_type='eff'
     )
 
     svg_pow = generate_chart_svg(
         pow_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", f"Power ({pump.unit_pow or 'kW'})",
         custom_range=pow_custom_range, height=240, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode,
-        custom_label_pos=custom_label_pos, label_format=label_fmt
+        custom_label_pos=custom_label_pos, label_format=label_fmt, chart_type='pow'
     )
 
     svg_npsh = generate_chart_svg(
         npsh_curves_list, f"Flow ({pump.unit_q or 'm³/h'})", f"NPSHr ({pump.unit_npsh or 'm'})",
         custom_range=npsh_custom_range, height=240, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode,
-        custom_label_pos=custom_label_pos, label_format=label_fmt
+        custom_label_pos=custom_label_pos, label_format=label_fmt, chart_type='npsh'
     ) if (has_npsh and getattr(report, 'show_npsh_curves', True)) else ""
 
     bep_info = None

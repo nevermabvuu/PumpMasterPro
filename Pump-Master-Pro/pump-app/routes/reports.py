@@ -159,6 +159,36 @@ def _parse_diameters_string(raw_str):
         except (TypeError, ValueError):
             pass
     return results
+def find_custom_pos(custom_label_pos, candidate_keys):
+    """
+    Search custom_label_pos dictionary with exact and fuzzy/normalized key matching
+    so dragged coordinates from pump-data always map to report SVG elements.
+    """
+    if not custom_label_pos or not isinstance(custom_label_pos, dict):
+        return None
+
+    # 1. Direct exact key match
+    for k in candidate_keys:
+        if k in custom_label_pos and isinstance(custom_label_pos[k], dict):
+            v = custom_label_pos[k]
+            if 'x' in v and 'y' in v and v['x'] is not None and v['y'] is not None:
+                return v
+
+    # 2. Fuzzy normalized key match (removes non-alphanumeric chars)
+    norm_dict = {}
+    for k, v in custom_label_pos.items():
+        if isinstance(v, dict) and 'x' in v and 'y' in v and v['x'] is not None and v['y'] is not None:
+            nk = re.sub(r'[^a-z0-9]', '', str(k).lower())
+            if nk:
+                norm_dict[nk] = v
+
+    for k in candidate_keys:
+        nk = re.sub(r'[^a-z0-9]', '', str(k).lower())
+        if nk in norm_dict:
+            return norm_dict[nk]
+
+    return None
+
 def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", custom_range=None, width=480, height=240, isolines_list=None, show_legend=True, legend_position='top_right', legend_mode='each', custom_label_pos=None, label_format='auto'):
     """
     Beginners Note: Generates pure inline SVG XML vector markup for single or multi-curve pump charts.
@@ -258,7 +288,7 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
 
     # Render Isolines Overlay (Efficiency Isolines, Power Isolines)
     if isolines_list:
-        for iso in isolines_list:
+        for iso_idx, iso in enumerate(isolines_list):
             iso_x = iso.get('x', [])
             iso_y = iso.get('y', [])
             iso_color = iso.get('color', '#059669')
@@ -281,8 +311,34 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                     paths_svg.append(f'<path d="{path_d}" fill="none" stroke="{iso_color}" stroke-width="1.2" {iso_dash} stroke-linecap="round" stroke-linejoin="round" />')
 
                     if iso_label:
-                        m_idx = 0  # Label near top max intersection point
-                        m_px, m_py = pts[m_idx]
+                        clean_iso = iso_label.replace('%','').replace('kW','').replace('m','').strip()
+                        num_m = re.search(r'(\d+(?:\.\d+)?)', iso_label)
+                        iso_val = num_m.group(1) if num_m else clean_iso
+                        
+                        candidate_keys = [
+                            f"eta_{iso_val}_0", f"eta_{iso_val}_1", f"eta_{iso_val}_{iso_idx}", f"eta_{iso_val}", f"iso_{iso_val}",
+                            f"pow_{iso_val}_0", f"pow_{iso_val}_1", f"pow_{iso_val}_{iso_idx}", f"pow_{iso_val}", f"pow_iso_{iso_val}",
+                            f"npsh_{iso_val}_0", f"npsh_{iso_val}_1", f"npsh_{iso_val}_{iso_idx}", f"npsh_{iso_val}", f"npsh_iso_{iso_val}",
+                            iso_label, clean_iso, iso_val
+                        ]
+                        pos = find_custom_pos(custom_label_pos, candidate_keys)
+
+                        if pos and isinstance(pos, dict) and 'x' in pos and 'y' in pos:
+                            try:
+                                c_x = float(pos['x'])
+                                c_y = float(pos['y'])
+                                m_px = padding_left + ((c_x - x_min) / (x_max - x_min)) * plot_w
+                                m_py = padding_top + plot_h - ((c_y - y_min) / (y_max - y_min)) * plot_h
+                            except Exception:
+                                m_idx = 0
+                                m_px, m_py = pts[m_idx]
+                        else:
+                            m_idx = 0
+                            m_px, m_py = pts[m_idx]
+
+                        m_px = min(max(float(padding_left + 10), float(m_px)), float(width - padding_right - 10))
+                        m_py = min(max(float(padding_top + 10), float(m_py)), float(height - padding_bottom - 5))
+
                         labels.append(f'<text x="{m_px:.1f}" y="{m_py - 3:.1f}" font-size="7.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="{iso_color}" text-anchor="middle">{iso_label}</text>')
 
     # Render Primary & Trim Pump Curve Paths
@@ -326,18 +382,19 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             # Format text badge according to user label_format choice
             if label_format == 'simple':
                 display_text = re.sub(r'Ø|(?:\s*\(\d+%\))', '', clean_lbl).strip()
-            elif label_format == 'percent':
-                display_text = clean_lbl
             else:
                 display_text = clean_lbl
 
             # Check if user dragged custom label position in pump data
-            pos = None
-            if custom_label_pos and isinstance(custom_label_pos, dict):
-                for k in [clean_lbl, raw_label, f"HQ_{clean_lbl}", f"eff_{clean_lbl}", f"pow_{clean_lbl}", f"npsh_{clean_lbl}", val_key]:
-                    if k in custom_label_pos:
-                        pos = custom_label_pos[k]
-                        break
+            candidate_keys = [
+                f"spd_lbl_{c_idx}", f"dia_lbl_{c_idx}", f"curve_{c_idx}",
+                f"eff_spd_{c_idx}", f"pow_spd_{c_idx}", f"npsh_spd_{c_idx}",
+                clean_lbl, raw_label,
+                f"HQ_{clean_lbl}", f"eff_{clean_lbl}", f"pow_{clean_lbl}", f"npsh_{clean_lbl}",
+                f"eff_{val_key}", f"pow_{val_key}", f"npsh_{val_key}",
+                val_key
+            ]
+            pos = find_custom_pos(custom_label_pos, candidate_keys)
 
             if pos and isinstance(pos, dict) and 'x' in pos and 'y' in pos:
                 try:

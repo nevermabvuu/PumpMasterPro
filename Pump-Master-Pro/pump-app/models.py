@@ -593,6 +593,7 @@ class Pump(db.Model):
             'graph_unit_npsh': extra_opts.get('graph_unit_npsh', ''),
             'graph_unit_pow': extra_opts.get('graph_unit_pow', ''),
             'legend_mode': extra_opts.get('legend_mode', 'each'),
+            'label_format': extra_opts.get('label_format', 'percent'),
             'custom_label_pos': self.get_custom_label_pos()
         }
 
@@ -679,6 +680,7 @@ class Pump(db.Model):
         if 'graph_unit_npsh' in opts: extra_opts['graph_unit_npsh'] = opts['graph_unit_npsh']
         if 'graph_unit_pow' in opts: extra_opts['graph_unit_pow'] = opts['graph_unit_pow']
         if 'legend_mode' in opts: extra_opts['legend_mode'] = opts['legend_mode']
+        if 'label_format' in opts: extra_opts['label_format'] = opts['label_format']
         extra_opts['custom_label_pos'] = self.get_custom_label_pos()
         self.graph_options_json = json.dumps(extra_opts)
 

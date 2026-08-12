@@ -329,7 +329,10 @@ def api_save_label_pos(pump_id):
     """Save custom label positions for a pump ID."""
     pump = Pump.query.get_or_404(pump_id)
     data = request.get_json(force=True, silent=True) or {}
-    pump.set_custom_label_pos(data, overwrite=False)
+    if data.get('reset') or data.get('overwrite'):
+        pump.graph_custom_label_pos = '{}'
+    else:
+        pump.set_custom_label_pos(data, overwrite=False)
     db.session.commit()
     saved = pump.get_custom_label_pos()
     return jsonify({'status': 'ok', 'label_pos': saved})

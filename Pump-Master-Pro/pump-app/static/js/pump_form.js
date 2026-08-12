@@ -697,6 +697,7 @@ function collectGraphOptions() {
     graph_unit_npsh: document.getElementById('preview-unit-npsh')?.value || '',
     graph_unit_pow: document.getElementById('preview-unit-pow')?.value || '',
     legend_mode: document.getElementById('selLegendMode')?.value || 'each',
+    label_format: document.getElementById('selLabelFormat')?.value || 'auto',
     curve_label_flow_pct: parseFloat(document.getElementById('txtCurveLabelFlowPct')?.value) || 100,
     curve_label_vpos: document.getElementById('selCurveLabelVPos')?.value || 'top',
     curve_label_pos: document.getElementById('selCurveLabelPos')?.value || 'middle-top',
@@ -775,6 +776,9 @@ function applyGraphOptions(opts) {
     document.getElementById('selLegendMode').value = opts.legend_mode;
     const g = document.getElementById('groupCurveLabelPos');
     if (g) g.style.display = opts.legend_mode === 'curve_labels' ? '' : 'none';
+  }
+  if (opts.label_format && document.getElementById('selLabelFormat')) {
+    document.getElementById('selLabelFormat').value = opts.label_format;
   }
   if (opts.curve_label_flow_pct !== undefined && document.getElementById('txtCurveLabelFlowPct')) {
     document.getElementById('txtCurveLabelFlowPct').value = opts.curve_label_flow_pct;
@@ -1029,7 +1033,7 @@ function bindPreviewEvents() {
   if (isPreviewEventsBound) return;
   isPreviewEventsBound = true;
 
-  const ids = ['chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'txtSpeedLineValues', 'chkShowOther', 'selLegendMode', 'txtCurveLabelFlowPct', 'selCurveLabelVPos', 'selCurveLabelPos'];
+  const ids = ['chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'txtSpeedLineValues', 'chkShowOther', 'selLegendMode', 'selLabelFormat', 'txtCurveLabelFlowPct', 'selCurveLabelVPos', 'selCurveLabelPos'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) {
@@ -2636,17 +2640,17 @@ function updateFamilyTypeUI(isUserChange = false) {
   const wrapRpm = document.getElementById('wrapRpmOverlay');
   const wrapDia = document.getElementById('wrapDiaOverlay');
 
-  if (isVarSpeed) {
-    if (chkRpm) chkRpm.checked = true;
-    if (chkDia) chkDia.checked = false;
-    if (wrapRpm) wrapRpm.style.display = '';
-    if (wrapDia) wrapDia.style.display = 'none';
-  } else {
-    if (chkDia) chkDia.checked = true;
-    if (chkRpm) chkRpm.checked = false;
-    if (wrapDia) wrapDia.style.display = '';
-    if (wrapRpm) wrapRpm.style.display = 'none';
+  if (isUserChange || window._isNewPumpSetup) {
+    if (isVarSpeed) {
+      if (chkRpm) chkRpm.checked = true;
+      if (chkDia) chkDia.checked = false;
+    } else {
+      if (chkDia) chkDia.checked = true;
+      if (chkRpm) chkRpm.checked = false;
+    }
   }
+  if (wrapRpm) wrapRpm.style.display = chkRpm?.checked ? '' : 'none';
+  if (wrapDia) wrapDia.style.display = chkDia?.checked ? '' : 'none';
 
   // Update Main Curve Property Label & Unit Selector in Card 3 Header
   const lblMainProp = document.getElementById('lblMainCurveProperty');
@@ -2898,7 +2902,7 @@ function parseCSVOrTXT(text) {
 function bindPreviewOptions() {
   ['chkShowHQ', 'chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'txtSpeedLineValues',
     'chkRpmOverlay', 'txtRpmValues', 'chkDiaOverlay', 'txtDiaOverlayValues', 'chkShowOther',
-    'chkShowEff', 'chkShowPower', 'chkShowNpsh', 'chkCombineEffPower', 'selLegendMode',
+    'chkShowEff', 'chkShowPower', 'chkShowNpsh', 'chkCombineEffPower', 'selLegendMode', 'selLabelFormat',
     'txtEffLevels', 'txtPowerLevels', 'txtNpshLevels', 'numTrimPenalty',
     'clrHeadColor', 'selHeadWeight', 'selHeadStyle',
     'clrEffColor', 'selEffWeight', 'selEffStyle',
@@ -2950,11 +2954,21 @@ function bindPreviewOptions() {
 
   const resetPosBtn = document.getElementById('btnResetLabelPos');
   if (resetPosBtn) {
-    resetPosBtn.addEventListener('click', () => {
-      customLabelPositions = {};
-      refreshPreviewCharts();
-    });
+    resetPosBtn.addEventListener('click', resetGraphLabelPositions);
   }
+}
+
+function resetGraphLabelPositions() {
+  customLabelPositions = {};
+  const pid = (typeof pumpId !== 'undefined' && pumpId) ? pumpId : (document.getElementById('pump_id')?.value || null);
+  if (pid) {
+    fetch(`/papi/pump/${pid}/label-pos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reset: true })
+    }).catch(() => {});
+  }
+  refreshPreviewCharts();
 }
 
 // serializeGraphOptions is defined above (line ~572)

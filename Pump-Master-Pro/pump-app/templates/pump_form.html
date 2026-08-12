@@ -643,6 +643,15 @@
               </select>
             </div>
 
+            <div class="mb-2">
+              <label class="block text-[11px] text-[#8b949e] mb-1 font-medium">Curve Label Format</label>
+              <select id="selLabelFormat"
+                class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-[#e6edf3] focus:outline-none">
+                <option value="percent" selected>1. With % Values (e.g. Ø228 mm (81%))</option>
+                <option value="simple">2. Simple Values Only (e.g. 228 mm)</option>
+              </select>
+            </div>
+
             <div class="space-y-2 bg-[#0d1117] p-2.5 rounded border border-[#30363d]" id="collapseCurveStyles">
               <div class="grid grid-cols-12 gap-2 text-[10px] font-semibold text-[#8b949e] uppercase">
                 <span class="col-span-3">Type</span>
@@ -874,8 +883,15 @@
               <i class="bi bi-layers text-[#58a6ff]"></i>
               <span>Performance Map Preview</span>
             </div>
-            <i class="bi bi-chevron-down text-[#8b949e] transition-transform duration-200" id="curvePreviewChevron"
-              style="transform: rotate(180deg)"></i>
+            <div class="flex items-center gap-3">
+              <button type="button" class="btn-reset-graph-labels text-[11px] px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-[#58a6ff] border border-[#30363d] transition-colors flex items-center gap-1"
+                onclick="event.stopPropagation(); resetGraphLabelPositions();"
+                title="Reset label positions for curves to default">
+                <i class="bi bi-arrow-counterclockwise text-xs"></i>Reset Labels
+              </button>
+              <i class="bi bi-chevron-down text-[#8b949e] transition-transform duration-200" id="curvePreviewChevron"
+                style="transform: rotate(180deg)"></i>
+            </div>
           </div>
           <div class="p-1" id="curvePreviewBody">
             <div id="chartWarman" class="w-full" style="height:380px"></div>
@@ -891,10 +907,17 @@
                 <i class="bi bi-speedometer2 me-1"></i>
                 <span>Efficiency &amp; Power — Flow</span>
               </div>
-              <i class="bi bi-chevron-down text-[#8b949e] hover:text-white transition-transform duration-200 cursor-pointer p-1"
-                id="chevronEffPower"
-                onclick="toggleCard('bodyEffPower', 'chevronEffPower'); event.stopPropagation();"
-                style="transform: rotate(180deg)"></i>
+              <div class="flex items-center gap-3">
+                <button type="button" class="btn-reset-graph-labels text-[11px] px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-[#58a6ff] border border-[#30363d] transition-colors flex items-center gap-1"
+                  onclick="event.stopPropagation(); resetGraphLabelPositions();"
+                  title="Reset label positions for curves to default">
+                  <i class="bi bi-arrow-counterclockwise text-xs"></i>Reset Labels
+                </button>
+                <i class="bi bi-chevron-down text-[#8b949e] hover:text-white transition-transform duration-200 cursor-pointer p-1"
+                  id="chevronEffPower"
+                  onclick="toggleCard('bodyEffPower', 'chevronEffPower'); event.stopPropagation();"
+                  style="transform: rotate(180deg)"></i>
+              </div>
             </div>
             <div class="p-1" id="bodyEffPower">
               <div id="chartEffPower" style="height:260px"></div>
@@ -909,10 +932,17 @@
                 <i class="bi bi-speedometer2 me-1"></i>
                 <span>Efficiency — Flow</span>
               </div>
-              <i class="bi bi-chevron-down text-[#8b949e] hover:text-white transition-transform duration-200 cursor-pointer p-1"
-                id="chevronEff"
-                onclick="toggleCard('bodyEff', 'chevronEff'); event.stopPropagation();"
-                style="transform: rotate(180deg)"></i>
+              <div class="flex items-center gap-3">
+                <button type="button" class="btn-reset-graph-labels text-[11px] px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-[#58a6ff] border border-[#30363d] transition-colors flex items-center gap-1"
+                  onclick="event.stopPropagation(); resetGraphLabelPositions();"
+                  title="Reset label positions for curves to default">
+                  <i class="bi bi-arrow-counterclockwise text-xs"></i>Reset Labels
+                </button>
+                <i class="bi bi-chevron-down text-[#8b949e] hover:text-white transition-transform duration-200 cursor-pointer p-1"
+                  id="chevronEff"
+                  onclick="toggleCard('bodyEff', 'chevronEff'); event.stopPropagation();"
+                  style="transform: rotate(180deg)"></i>
+              </div>
             </div>
             <div class="p-1" id="bodyEff">
               <div id="chartEff" style="height:260px"></div>
@@ -927,10 +957,17 @@
                 <i class="bi bi-lightning-fill me-1"></i>
                 <span>Power — Flow</span>
               </div>
-              <i class="bi bi-chevron-down text-[#8b949e] hover:text-white transition-transform duration-200 cursor-pointer p-1"
-                id="chevronPower"
-                onclick="toggleCard('bodyPower', 'chevronPower'); event.stopPropagation();"
-                style="transform: rotate(180deg)"></i>
+              <div class="flex items-center gap-3">
+                <button type="button" class="btn-reset-graph-labels text-[11px] px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-[#58a6ff] border border-[#30363d] transition-colors flex items-center gap-1"
+                  onclick="event.stopPropagation(); resetGraphLabelPositions();"
+                  title="Reset label positions for curves to default">
+                  <i class="bi bi-arrow-counterclockwise text-xs"></i>Reset Labels
+                </button>
+                <i class="bi bi-chevron-down text-[#8b949e] hover:text-white transition-transform duration-200 cursor-pointer p-1"
+                  id="chevronPower"
+                  onclick="toggleCard('bodyPower', 'chevronPower'); event.stopPropagation();"
+                  style="transform: rotate(180deg)"></i>
+              </div>
             </div>
             <div class="p-1" id="bodyPower">
               <div id="chartPower" style="height:260px"></div>
@@ -945,10 +982,17 @@
                 <i class="bi bi-arrow-up-right me-1"></i>
                 <span>NPSHr — Flow</span>
               </div>
-              <i class="bi bi-chevron-down text-[#8b949e] hover:text-white transition-transform duration-200 cursor-pointer p-1"
-                id="chevronNpsh"
-                onclick="toggleCard('bodyNpsh', 'chevronNpsh'); event.stopPropagation();"
-                style="transform: rotate(180deg)"></i>
+              <div class="flex items-center gap-3">
+                <button type="button" class="btn-reset-graph-labels text-[11px] px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-[#58a6ff] border border-[#30363d] transition-colors flex items-center gap-1"
+                  onclick="event.stopPropagation(); resetGraphLabelPositions();"
+                  title="Reset label positions for curves to default">
+                  <i class="bi bi-arrow-counterclockwise text-xs"></i>Reset Labels
+                </button>
+                <i class="bi bi-chevron-down text-[#8b949e] hover:text-white transition-transform duration-200 cursor-pointer p-1"
+                  id="chevronNpsh"
+                  onclick="toggleCard('bodyNpsh', 'chevronNpsh'); event.stopPropagation();"
+                  style="transform: rotate(180deg)"></i>
+              </div>
             </div>
             <div class="p-1" id="bodyNpsh">
               <div id="chartNpsh" style="height:260px"></div>

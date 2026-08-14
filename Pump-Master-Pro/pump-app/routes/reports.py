@@ -635,11 +635,13 @@ def _build_report_curve_context(pump, report):
             lbl = f"{d_fmt} mm" + (" (Max)" if is_primary else "")
             d_ratio = (d_val / max_d) if max_d > 0 else 1.0
 
+            # Beginners Note: Trimmed impeller NPSHr scales as npsh_pts * (d_ratio**2), matching pump_curves.py physics
+            # so smaller trim diameters (e.g. 182 mm) have lower NPSHr values than the max diameter (e.g. 228 mm).
             c_q = [round(v * d_ratio, 2) for v in q_pts]
             c_h = [round(v * (d_ratio**2), 2) for v in h_pts]
             c_eta = [round(max(0.0, v * (1.0 - 0.05 * (1.0 - d_ratio))), 2) for v in eta_pts]
             c_pow = [round(v * (d_ratio**3), 2) for v in pow_pts]
-            c_npsh = [round(v * ((1.0 / d_ratio)**0.5), 2) for v in npsh_pts]
+            c_npsh = [round(v * (d_ratio**2), 2) for v in npsh_pts]
 
             cur_color = primary_color if is_primary else palette[min(c_idx, len(palette)-1)]
 
@@ -778,7 +780,7 @@ def _build_report_curve_context(pump, report):
         except Exception as e:
             print("NPSH isolines calculation notice:", e)
 
-    # 4. RPM Overlay Lines (only add overlay speed lines to H-Q graph if requested and not already primary curves)
+    # 4. RPM Overlay Lines (append overlay speed curves across HQ, Efficiency, Power, and NPSHr graphs)
     report_show_rpm = getattr(report, 'show_rpm_overlay', None)
     if report_show_rpm is None:
         report_show_rpm = getattr(report, 'show_speed_lines', True)
@@ -793,10 +795,17 @@ def _build_report_curve_context(pump, report):
                 lbl = sl.get('label', '')
                 if sl.get('q') and sl.get('h'):
                     hq_curves_list.append({'label': lbl, 'x': sl['q'], 'y': sl['h'], 'color': '#9333ea', 'is_secondary': True})
+                if sl.get('q') and sl.get('eta'):
+                    eta_curves_list.append({'label': lbl, 'x': sl['q'], 'y': sl['eta'], 'color': '#9333ea', 'is_secondary': True})
+                pwr_arr = sl.get('pow') or sl.get('power')
+                if sl.get('q') and pwr_arr:
+                    pow_curves_list.append({'label': lbl, 'x': sl['q'], 'y': pwr_arr, 'color': '#9333ea', 'is_secondary': True})
+                if sl.get('q') and sl.get('npsh'):
+                    npsh_curves_list.append({'label': lbl, 'x': sl['q'], 'y': sl['npsh'], 'color': '#9333ea', 'is_secondary': True})
         except Exception as e:
             print("RPM overlay lines calculation notice:", e)
 
-    # 4b. Diameter Overlay Lines (only add overlay diameter lines to H-Q graph if requested and not already primary trim curves)
+    # 4b. Diameter Overlay Lines (append overlay diameter lines across HQ, Efficiency, Power, and NPSHr graphs)
     report_show_dia = bool(getattr(report, 'show_dia_overlay', False))
     dia_str = (getattr(pump, 'graph_dia_overlay_values', None) or '').strip()
 
@@ -808,6 +817,13 @@ def _build_report_curve_context(pump, report):
                 lbl = dl.get('label', '')
                 if dl.get('q') and dl.get('h'):
                     hq_curves_list.append({'label': lbl, 'x': dl['q'], 'y': dl['h'], 'color': '#d97706', 'is_secondary': True})
+                if dl.get('q') and dl.get('eta'):
+                    eta_curves_list.append({'label': lbl, 'x': dl['q'], 'y': dl['eta'], 'color': '#d97706', 'is_secondary': True})
+                pwr_arr = dl.get('pow') or dl.get('power')
+                if dl.get('q') and pwr_arr:
+                    pow_curves_list.append({'label': lbl, 'x': dl['q'], 'y': pwr_arr, 'color': '#d97706', 'is_secondary': True})
+                if dl.get('q') and dl.get('npsh'):
+                    npsh_curves_list.append({'label': lbl, 'x': dl['q'], 'y': dl['npsh'], 'color': '#d97706', 'is_secondary': True})
         except Exception as e:
             print("Diameter overlay lines calculation notice:", e)
 

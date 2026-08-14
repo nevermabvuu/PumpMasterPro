@@ -161,7 +161,7 @@ def _parse_diameters_string(raw_str):
     return results
 def find_custom_pos(custom_label_pos, candidate_keys):
     """
-    Search custom_label_pos dictionary with exact and fuzzy/normalized key matching
+    Beginners Note: Search custom_label_pos dictionary with exact, fuzzy/normalized, and prefix branch matching
     so dragged coordinates from pump-data always map to report SVG elements.
     """
     if not custom_label_pos or not isinstance(custom_label_pos, dict):
@@ -186,6 +186,16 @@ def find_custom_pos(custom_label_pos, candidate_keys):
         nk = re.sub(r'[^a-z0-9]', '', str(k).lower())
         if nk in norm_dict:
             return norm_dict[nk]
+
+    # 3. Branch prefix key matching for isolines & curves (e.g. matching 'pow_30' with 'pow_30_4', 'eta_75' with 'eta_75_left')
+    for k in candidate_keys:
+        clean_k = str(k).strip()
+        if not clean_k or len(clean_k) < 3:
+            continue
+        for db_key, pos_val in custom_label_pos.items():
+            if isinstance(pos_val, dict) and 'x' in pos_val and 'y' in pos_val:
+                if db_key.startswith(clean_k + '_') or clean_k.startswith(db_key + '_'):
+                    return pos_val
 
     return None
 
@@ -302,6 +312,8 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             iso_label = iso.get('label', '')
             iso_dash = iso.get('dash', 'stroke-dasharray="2,2"')
 
+            iso_branch = iso.get('branch', '')
+            iso_t_idx = iso.get('type_idx', iso_idx)
             if len(iso_x) == len(iso_y) and len(iso_x) > 1:
                 pts = []
                 for x, y in zip(iso_x, iso_y):
@@ -322,21 +334,36 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                         num_m = re.search(r'(\d+(?:\.\d+)?)', iso_label)
                         iso_val = num_m.group(1) if num_m else clean_iso
                         
-                        # Isolines candidates strictly scoped by chart_type to prevent cross-chart position bleeding
+                        # Beginners Note: Build exact branch and array index keys (e.g. pow_30_4, eta_75_left, npsh_2.5_1) matching pump-data 100%
+                        branch_suffix = f"_{iso_branch}" if iso_branch else ""
+                        
                         if chart_type == 'eff':
-                            candidate_keys = [f"eta_{iso_val}_0", f"eta_{iso_val}_{iso_idx}", f"eta_{iso_val}", f"iso_eff_{iso_val}"]
-                        elif chart_type == 'pow':
-                            candidate_keys = [f"pow_{iso_val}_0", f"pow_{iso_val}_{iso_idx}", f"pow_{iso_val}", f"iso_pow_{iso_val}"]
-                        elif chart_type == 'npsh':
-                            candidate_keys = [f"npsh_{iso_val}_0", f"npsh_{iso_val}_{iso_idx}", f"npsh_{iso_val}", f"iso_npsh_{iso_val}"]
-                        else:
                             candidate_keys = [
-                                f"eta_{iso_val}_0", f"eta_{iso_val}_{iso_idx}", f"eta_{iso_val}",
-                                f"pow_{iso_val}_0", f"pow_{iso_val}_{iso_idx}", f"pow_{iso_val}",
-                                f"npsh_{iso_val}_0", f"npsh_{iso_val}_{iso_idx}", f"npsh_{iso_val}",
+                                f"eta_{iso_val}{branch_suffix}", f"eta_{iso_val}_{iso_t_idx}", f"eta_{iso_val}_left", f"eta_{iso_val}_right",
+                                f"eta_{iso_val}_{iso_idx}", f"eta_{iso_val}_0", f"eta_{iso_val}_1", f"eta_{iso_val}", f"iso_eff_{iso_val}"
+                            ]
+                        elif chart_type == 'pow':
+                            candidate_keys = [
+                                f"pow_{iso_val}{branch_suffix}", f"pow_{iso_val}_{iso_t_idx}", f"pow_{iso_val}_{iso_idx}", f"pow_{iso_val}_0", f"pow_{iso_val}_1",
+                                f"pow_{iso_val}", f"iso_pow_{iso_val}"
+                            ]
+                        elif chart_type == 'npsh':
+                            candidate_keys = [
+                                f"npsh_{iso_val}{branch_suffix}", f"npsh_{iso_val}_{iso_t_idx}", f"npsh_{iso_val}_{iso_idx}", f"npsh_{iso_val}_0", f"npsh_{iso_val}_1",
+                                f"npsh_{iso_val}", f"iso_npsh_{iso_val}"
+                            ]
+                        else:  # 'hq' chart containing efficiency, power, and npsh isolines
+                            candidate_keys = [
+                                f"pow_{iso_val}_{iso_t_idx}", f"eta_{iso_val}_{iso_t_idx}", f"npsh_{iso_val}_{iso_t_idx}",
+                                f"pow_{iso_val}{branch_suffix}", f"eta_{iso_val}{branch_suffix}", f"npsh_{iso_val}{branch_suffix}",
+                                f"eta_{iso_val}_left", f"eta_{iso_val}_right",
+                                f"pow_{iso_val}_{iso_idx}", f"eta_{iso_val}_{iso_idx}", f"npsh_{iso_val}_{iso_idx}",
+                                f"pow_{iso_val}_0", f"pow_{iso_val}_1", f"eta_{iso_val}_0", f"eta_{iso_val}_1", f"npsh_{iso_val}_0", f"npsh_{iso_val}_1",
+                                f"pow_{iso_val}", f"eta_{iso_val}", f"npsh_{iso_val}",
                                 f"hq_iso_{iso_val}", f"iso_hq_{iso_val}", iso_label, clean_iso, iso_val
                             ]
 
+                        candidate_keys.extend([iso_label, clean_iso, iso_val])
                         pos = find_custom_pos(custom_label_pos, candidate_keys)
 
                         if pos and isinstance(pos, dict) and 'x' in pos and 'y' in pos:
@@ -346,16 +373,18 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                                 m_px = padding_left + ((c_x - x_min) / (x_max - x_min)) * plot_w
                                 m_py = padding_top + plot_h - ((c_y - y_min) / (y_max - y_min)) * plot_h
                             except Exception:
-                                m_idx = 0
+                                m_idx = int(len(pts) / 2)
                                 m_px, m_py = pts[m_idx]
                         else:
-                            m_idx = 0
+                            # Beginners Note: Fallback to midpoint of isoline curve (matching pump_curves.js) to avoid top-left corner label clashing
+                            m_idx = int(len(pts) / 2)
                             m_px, m_py = pts[m_idx]
 
                         m_px = min(max(float(padding_left + 10), float(m_px)), float(width - padding_right - 10))
                         m_py = min(max(float(padding_top + 10), float(m_py)), float(height - padding_bottom - 5))
 
-                        labels.append(f'<text x="{m_px:.1f}" y="{m_py - 3:.1f}" font-size="7.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="{iso_color}" text-anchor="middle">{iso_label}</text>')
+                        # Beginners Note: dominant-baseline="central" centers the text vertically on (m_px, m_py) without Y-offset displacement
+                        labels.append(f'<text x="{m_px:.1f}" y="{m_py:.1f}" font-size="7.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="{iso_color}" text-anchor="middle" dominant-baseline="central">{iso_label}</text>')
 
     # Render Primary & Trim Pump Curve Paths
     sec_count = 0
@@ -715,13 +744,15 @@ def _build_report_curve_context(pump, report):
         try:
             from pump_curves import efficiency_isolines
             iso_objs = efficiency_isolines(pump, iso_levels=levels)
-            for iso in iso_objs:
+            for iso_i, iso in enumerate(iso_objs):
                 eta_val = iso.get('eta', 0.0)
                 lbl_val = f"{int(round(eta_val)) if abs(eta_val - round(eta_val)) < 1e-4 else round(eta_val,1)}%"
                 hq_isolines_list.append({
                     'x': iso.get('q', []),
                     'y': iso.get('h', []),
                     'label': lbl_val,
+                    'branch': iso.get('branch'),
+                    'type_idx': iso_i,
                     'color': '#059669',
                     'dash': 'stroke-dasharray="2,2"'
                 })
@@ -741,13 +772,15 @@ def _build_report_curve_context(pump, report):
         try:
             from pump_curves import power_isolines
             pwr_objs = power_isolines(pump, power_levels=p_levels)
-            for p_iso in pwr_objs:
+            for p_i, p_iso in enumerate(pwr_objs):
                 p_val = p_iso.get('power', 0.0)
                 p_lbl = f"{int(round(p_val)) if abs(p_val - round(p_val)) < 1e-4 else round(p_val,1)} {pump.unit_pow or 'kW'}"
                 hq_isolines_list.append({
                     'x': p_iso.get('q', []),
                     'y': p_iso.get('h', []),
                     'label': p_lbl,
+                    'branch': p_iso.get('branch'),
+                    'type_idx': p_i,
                     'color': '#d97706',
                     'dash': 'stroke-dasharray="3,3"'
                 })
@@ -767,13 +800,15 @@ def _build_report_curve_context(pump, report):
         try:
             from pump_curves import npsh_isolines
             npsh_objs = npsh_isolines(pump, iso_levels=n_levels)
-            for n_iso in npsh_objs:
+            for n_i, n_iso in enumerate(npsh_objs):
                 n_val = n_iso.get('npsh', 0.0)
                 n_lbl = f"{int(round(n_val)) if abs(n_val - round(n_val)) < 1e-4 else round(n_val,1)} m"
                 hq_isolines_list.append({
                     'x': n_iso.get('q', []),
                     'y': n_iso.get('h', []),
                     'label': n_lbl,
+                    'branch': n_iso.get('branch'),
+                    'type_idx': n_i,
                     'color': '#2563eb',
                     'dash': 'stroke-dasharray="4,2"'
                 })

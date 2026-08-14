@@ -16,7 +16,8 @@ with app.app_context():
         'pow_15': {'x': 110.0, 'y': 15.0},
         '228 mm': {'x': 130.0, 'y': 35.0}
     }
-    pump.set_custom_label_pos(custom_pos)
+    if pump:
+        pump.set_custom_label_pos(custom_pos)
 
     curves = [{'label': '228 mm', 'x': [0, 50, 100, 150], 'y': [50, 45, 35, 20]}]
     isolines = [{'label': '75%', 'x': [0, 50, 100, 150], 'y': [10, 20, 25, 20], 'color': '#059669'}]

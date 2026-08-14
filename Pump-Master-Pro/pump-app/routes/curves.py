@@ -196,7 +196,7 @@ def api_preview_warman_chart():
         try: extra_curves = json.loads(extra_curves)
         except Exception: extra_curves = []
     if isinstance(extra_curves, list):
-        pump._transient_extra_curves = extra_curves
+        setattr(pump, '_transient_extra_curves', extra_curves)
         pump.sync_curve_fields(extra_curves_data=extra_curves)
 
     liquid = data.get('liquid', 'water')

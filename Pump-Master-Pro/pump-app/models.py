@@ -857,6 +857,9 @@ class Supplier(db.Model):
     # One-to-many relationship with report configurations
     reports = db.relationship('ReportConfig', backref='supplier', lazy=True, cascade='all, delete-orphan')
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -917,11 +920,15 @@ class ReportConfig(db.Model):
     created_at = db.Column(db.DateTime, default=_utcnow)
     updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow)
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     def to_dict(self):
+        sup = getattr(self, 'supplier', None)
         return {
             'id': self.id,
             'supplier_id': self.supplier_id,
-            'supplier_name': self.supplier.name if self.supplier else 'Default / Generic',
+            'supplier_name': sup.name if sup else 'Default / Generic',
             'title': self.title or 'Standard Pump Technical Datasheet',
             'description': self.description or '',
             'template_name': self.template_name or 'standard_datasheet.html',

@@ -213,7 +213,7 @@
                   <div class="grid grid-cols-2 gap-1.5 text-xs text-[#c9d1d9]">
                     <label class="flex items-center gap-2 p-1.5 rounded bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 cursor-pointer">
                       <input type="checkbox" name="is_multistage" id="chkMultistage" class="accent-[#58a6ff] rounded"
-                        {% if pump and pump.is_multistage %}checked{% endif %} onchange="document.getElementById('divNumStages').style.display=this.checked?'block':'none'">
+                        {% if pump and pump.is_multistage %}checked{% endif %} onchange="document.getElementById('divNumStages').classList.toggle('hidden', !this.checked); document.getElementById('divNumStages').style.display=this.checked?'block':'none';">
                       <span>Multi-Stage Pump</span>
                     </label>
                     <label class="flex items-center gap-2 p-1.5 rounded bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 cursor-pointer">
@@ -243,7 +243,7 @@
                     </label>
                   </div>
 
-                  <div id="divNumStages" class="pt-1" style="display: {{ 'block' if pump and pump.is_multistage else 'none' }};">
+                  <div id="divNumStages" class="pt-1 {% if not (pump and pump.is_multistage) %}hidden{% endif %}">
                     <label class="block text-[11px] font-medium text-[#58a6ff] mb-0.5">Number of Stages</label>
                     <input type="number" name="num_stages" min="1" max="50"
                       class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2 py-1 text-xs text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]"

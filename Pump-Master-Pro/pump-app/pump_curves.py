@@ -530,7 +530,7 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
     if not iso_levels:
         lo = max(20, int((eta_max * 0.40) // 5) * 5)
         hi = int(eta_max // 5) * 5
-        iso_levels = list(range(lo, hi, 5))
+        iso_levels = [float(x) for x in range(lo, hi, 5)]
         if eta_max - hi >= 1.5:
             iso_levels.append(round(eta_max, 1))
 
@@ -548,7 +548,7 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
                 'h': (bep_h * ratios_line ** 2).tolist(),
                 'label_q': round(bep_q, 2),
                 'label_h': round(bep_h, 2),
-                'label_text': "BEP " + str(int(round(eta_max))) + "%",
+                'label_text': "BEP " + str(round(eta_max)) + "%",
                 'is_closed': False
             })
             continue
@@ -616,7 +616,7 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
                 'q': loop_q, 'h': loop_h,
                 'label_q': round(left_pts[0][0], 2),
                 'label_h': round(left_pts[0][1], 2),
-                'label_text': str(int(round(eta_t))) + "%",
+                'label_text': str(round(eta_t)) + "%",
                 'is_closed': True
             })
         else:
@@ -630,7 +630,7 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
                     'q': l_q, 'h': l_h,
                     'label_q': round(l_q[0], 2),
                     'label_h': round(l_h[0], 2),
-                    'label_text': str(int(round(eta_t))) + "%",
+                    'label_text': str(round(eta_t)) + "%",
                     'is_closed': False
                 })
             if len(right_pts) >= 2:
@@ -642,7 +642,7 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
                     'q': r_q, 'h': r_h,
                     'label_q': round(r_q[0], 2),
                     'label_h': round(r_h[0], 2),
-                    'label_text': str(int(round(eta_t))) + "%",
+                    'label_text': str(round(eta_t)) + "%",
                     'is_closed': False
                 })
 
@@ -795,11 +795,11 @@ def speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00), values_str=None, n_points
         for rpm in parsed_items:
             k = rpm / rpm_max if rpm_max > 0 else 1.0
             rpm_fmt = f"{int(round(rpm))}" if abs(rpm - round(rpm)) < 1e-4 else f"{rpm:g}"
-            items_to_process.append((k, rpm, f"{rpm_fmt} RPM ({int(round(k * 100))}%)"))
+            items_to_process.append((k, rpm, f"{rpm_fmt} RPM ({round(k * 100)}%)"))
     else:
         for k in ratios:
-            rpm_val = int(round(rpm_max * k))
-            items_to_process.append((k, rpm_val, f"{rpm_val} RPM ({int(round(k * 100))}%)"))
+            rpm_val = round(rpm_max * k)
+            items_to_process.append((k, rpm_val, f"{rpm_val} RPM ({round(k * 100)}%)"))
 
     q_base = np.linspace(0, pump.q_max or 100.0, n_points)
     H_base = hq_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
@@ -957,7 +957,7 @@ def _dia_overlay_lines(pump, values_str, n_points=100,
         eta_k = np.clip(eta_base, 0, 100)
 
         d_fmt = f"{int(round(d))}" if abs(d - round(d)) < 1e-4 else f"{d:g}"
-        label = f"Ø{d_fmt} mm ({int(round(k * 100))}%)"
+        label = f"Ø{d_fmt} mm ({round(k * 100)}%)"
 
         result.append({
             'dia': d,
@@ -1061,21 +1061,21 @@ def fit_pump_polynomials(q_h, q_eta, q_npsh=None, q_p=None, rho=1000.0, poly_ord
         'poly_order_eff': deg_eff_target,
         'poly_order_npsh': deg_npsh_target,
         'poly_order_pow': deg_pow_target if poly_order_pow else 2,
-        'hq_a0': round(float(a_pad[0]), 6), 'hq_a1': round(float(a_pad[1]), 8),
-        'hq_a2': round(float(a_pad[2]), 10), 'hq_a3': round(float(a_pad[3]), 12),
-        'hq_a4': round(float(a_pad[4]), 14), 'hq_a5': round(float(a_pad[5]), 16),
-        'eff_b0': round(float(b_pad[0]), 6), 'eff_b1': round(float(b_pad[1]), 8),
-        'eff_b2': round(float(b_pad[2]), 10), 'eff_b3': round(float(b_pad[3]), 12),
-        'eff_b4': round(float(b_pad[4]), 14), 'eff_b5': round(float(b_pad[5]), 16),
-        'npsh_c0': round(float(npsh_c[0]), 6), 'npsh_c1': round(float(npsh_c[1]), 8),
-        'npsh_c2': round(float(npsh_c[2]), 10), 'npsh_c3': round(float(npsh_c[3]), 12),
-        'npsh_c4': round(float(npsh_c[4]), 14), 'npsh_c5': round(float(npsh_c[5]), 16),
-        'pow_p0': round(float(p_pad[0]), 4), 'pow_p1': round(float(p_pad[1]), 6),
-        'pow_p2': round(float(p_pad[2]), 8), 'pow_p3': round(float(p_pad[3]), 10),
-        'pow_p4': round(float(p_pad[4]), 12), 'pow_p5': round(float(p_pad[5]), 14),
+        'hq_a0': round(a_pad[0], 6), 'hq_a1': round(a_pad[1], 8),
+        'hq_a2': round(a_pad[2], 10), 'hq_a3': round(a_pad[3], 12),
+        'hq_a4': round(a_pad[4], 14), 'hq_a5': round(a_pad[5], 16),
+        'eff_b0': round(b_pad[0], 6), 'eff_b1': round(b_pad[1], 8),
+        'eff_b2': round(b_pad[2], 10), 'eff_b3': round(b_pad[3], 12),
+        'eff_b4': round(b_pad[4], 14), 'eff_b5': round(b_pad[5], 16),
+        'npsh_c0': round(npsh_c[0], 6), 'npsh_c1': round(npsh_c[1], 8),
+        'npsh_c2': round(npsh_c[2], 10), 'npsh_c3': round(npsh_c[3], 12),
+        'npsh_c4': round(npsh_c[4], 14), 'npsh_c5': round(npsh_c[5], 16),
+        'pow_p0': round(p_pad[0], 4), 'pow_p1': round(p_pad[1], 6),
+        'pow_p2': round(p_pad[2], 8), 'pow_p3': round(p_pad[3], 10),
+        'pow_p4': round(p_pad[4], 12), 'pow_p5': round(p_pad[5], 14),
         'q_max': round(q_max_fit, 2),
         'q_bep': round(q_bep_fit, 2),
-        'h_shutoff': round(float(a_pad[0]), 2),
+        'h_shutoff': round(a_pad[0], 2),
         'eta_bep': round(eta_bep_fit, 1),
         'r2_hq': round(r2_hq, 4),
         'r2_eta': round(r2_eta, 4),

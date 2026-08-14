@@ -43,7 +43,7 @@
             <h3 class="text-sm font-bold text-[#e6edf3] flex items-center gap-1.5">
               <i class="bi bi-building text-[#58a6ff]"></i> {{ s.name }}
             </h3>
-            <button onclick='editSupplier({{ s.to_dict()|tojson }})' class="text-xs text-[#8b949e] hover:text-[#58a6ff] p-1" title="Edit Supplier">
+            <button data-supplier='{{ s.to_dict()|tojson }}' onclick="editSupplier(JSON.parse(this.dataset.supplier))" class="text-xs text-[#8b949e] hover:text-[#58a6ff] p-1" title="Edit Supplier">
               <i class="bi bi-pencil"></i>
             </button>
           </div>
@@ -109,7 +109,7 @@
             </td>
             <td class="py-3 px-4">
               <div class="flex items-center gap-1.5">
-                <span class="w-3.5 h-3.5 rounded-full border border-white/20 inline-block" style="background-color: {{ r.primary_color }};"></span>
+                <span class="w-3.5 h-3.5 rounded-full border border-white/20 inline-block report-color-swatch" data-color="{{ r.primary_color or '#1e3a8a' }}"></span>
                 <span class="font-mono text-[11px]">{{ r.primary_color }}</span>
               </div>
             </td>
@@ -117,7 +117,7 @@
               <a href="{{ url_for('reports.view_report', report_id=r.id, pump_id=1) }}" target="_blank" class="px-2.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] rounded border border-[#30363d] font-medium text-xs inline-flex items-center gap-1" title="View Report in Browser">
                 <i class="bi bi-eye"></i> View
               </a>
-              <button onclick='editReport({{ r.to_dict()|tojson }})' class="px-2.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#e6edf3] rounded border border-[#30363d] font-medium text-xs inline-flex items-center gap-1">
+              <button data-report='{{ r.to_dict()|tojson }}' onclick="editReport(JSON.parse(this.dataset.report))" class="px-2.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#e6edf3] rounded border border-[#30363d] font-medium text-xs inline-flex items-center gap-1">
                 <i class="bi bi-gear"></i> Configure
               </button>
               <form action="{{ url_for('reports.delete_report', id=r.id) }}" method="POST" class="inline" onsubmit="return confirm('Delete report configuration?');">
@@ -434,5 +434,9 @@
   function closeReportModal() {
     document.getElementById('reportModal').classList.add('hidden');
   }
+
+  document.querySelectorAll('.report-color-swatch').forEach(function(el) {
+    if (el.dataset.color) el.style.backgroundColor = el.dataset.color;
+  });
 </script>
 {% endblock %}

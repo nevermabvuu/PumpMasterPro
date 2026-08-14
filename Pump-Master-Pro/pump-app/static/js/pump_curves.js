@@ -449,15 +449,19 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
       const cleanRaw = cleanStr(rawText);
       const numRaw = rawText.replace(/[^0-9.]/g, '');
 
+      // Beginner Note: Match SVG DOM text elements with annotation data objects across HQ, Efficiency, Power, and NPSH graphs
       const candidates = annotations.filter(a => {
         if (!a || !a.name) return false;
         if (a.name === rawText) return true;
         const cleanName = cleanStr(a.name);
         const cleanText = cleanStr(a.text);
         if (cleanName === cleanRaw || cleanText === cleanRaw) return true;
-        if (a.name.startsWith('eta_') || a.name.startsWith('pow_') || a.name.startsWith('npsh_')) {
+        if (a.name.startsWith('eta_') || a.name.startsWith('pow_') || a.name.startsWith('npsh_') || a.name.startsWith('spd_') || a.name.startsWith('dia_')) {
           const numName = a.name.replace(/[^0-9.]/g, '');
           if (numRaw && numName && numRaw === numName) return true;
+          const trimmedCleanText = cleanText.replace(/^(p|eta|npsh|h)/, '');
+          const trimmedCleanRaw = cleanRaw.replace(/^(p|eta|npsh|h)/, '');
+          if (trimmedCleanText && (trimmedCleanText === trimmedCleanRaw || cleanRaw.includes(trimmedCleanText) || cleanText.includes(cleanRaw))) return true;
         }
         return false;
       });
@@ -1731,13 +1735,22 @@ function buildPowerChart(familyData, singleData, showClean) {
         const vKey = (isVarSpeed ? 'rpm_' : 'dia_') + Math.round(fam.dia);
         drawnBadgeKeysP.add(vKey);
         const lblText = formatCurveLabel(fam.dia, fam.ratio, isVarSpeed, unitsP.labelFormat, baseDia, baseRpm);
-        if (!lblText) return;
         const curveKey = `pow_${lblText}`;
         const altKey = lblText;
+        // Beginner Note: Look up saved custom label positions for Power graph using annName (pow_dia_0, pow_spd_0)
+        const annName = (isVarSpeed ? 'pow_spd_' : 'pow_dia_') + idx;
+        const candidateKeys = [annName, `pow_dia_${idx}`, `pow_spd_${idx}`, curveKey, altKey, `pow_${lblText}`];
+        let pos = null;
+        if (customLabelPositions && typeof customLabelPositions === 'object') {
+          for (const k of candidateKeys) {
+            if (customLabelPositions[k] && customLabelPositions[k].x !== undefined) {
+              pos = customLabelPositions[k]; break;
+            }
+          }
+        }
 
         let targetQ = 0, targetPow = 0, xanchor = 'left', yanchor = 'bottom', xshift = 4, yshift = 4;
-        if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
-          const pos = customLabelPositions[curveKey] || customLabelPositions[altKey];
+        if (pos) {
           targetQ = pos.x;
           targetPow = pos.y;
           xanchor = 'center'; yanchor = 'middle'; xshift = 0; yshift = 0;
@@ -1747,7 +1760,6 @@ function buildPowerChart(familyData, singleData, showClean) {
           targetPow = fam.power[lastIdx];
         }
 
-        const annName = (isVarSpeed ? 'pow_spd_' : 'pow_dia_') + idx;
         layout.annotations.push({
           x: targetQ, y: targetPow,
           text: `<b>P ${lblText}</b>`,

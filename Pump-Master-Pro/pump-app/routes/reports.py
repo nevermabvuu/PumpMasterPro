@@ -438,34 +438,54 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             else:
                 display_text = clean_lbl
 
-            # Beginners Note: Strictly chart-scoped candidate keys prevent cross-chart label position bleeding.
-            # Primary diameter index (c_idx) is prioritized first (e.g. eff_dia_0, eff_dia_1, eff_dia_2, eff_dia_3)
-            # so trimmed impeller curves match pump-data saved positions 100% without index shifts.
+            # Beginners Note: Disambiguate RPM speed curves vs Impeller diameter curves to prevent RPM curves
+            # from inheriting saved positions belonging to diameter curves (and vice-versa).
+            is_rpm_lbl = ('rpm' in clean_lbl.lower()) or ('rpm' in raw_label.lower())
+
             if chart_type == 'eff':
-                candidate_keys = [
-                    f"eff_dia_{c_idx}", f"eff_spd_{c_idx}",
-                    f"eff_spd_{sec_idx}", f"eff_dia_{sec_idx}", f"effpow_spd_{sec_idx}", f"effpow_dia_{sec_idx}",
-                    f"eff_{val_key}", f"eff_{clean_lbl}"
-                ]
+                if is_rpm_lbl:
+                    candidate_keys = [
+                        f"eff_spd_{c_idx}", f"eff_spd_{sec_idx}", f"effpow_spd_{sec_idx}",
+                        f"eff_{val_key}", f"eff_{clean_lbl}"
+                    ]
+                else:
+                    candidate_keys = [
+                        f"eff_dia_{c_idx}", f"eff_dia_{sec_idx}", f"effpow_dia_{sec_idx}",
+                        f"eff_{val_key}", f"eff_{clean_lbl}"
+                    ]
             elif chart_type == 'pow':
-                candidate_keys = [
-                    f"pow_dia_{c_idx}", f"pow_spd_{c_idx}",
-                    f"pow_spd_{sec_idx}", f"pow_dia_{sec_idx}",
-                    f"pow_{val_key}", f"pow_{clean_lbl}"
-                ]
+                if is_rpm_lbl:
+                    candidate_keys = [
+                        f"pow_spd_{c_idx}", f"pow_spd_{sec_idx}",
+                        f"pow_{val_key}", f"pow_{clean_lbl}"
+                    ]
+                else:
+                    candidate_keys = [
+                        f"pow_dia_{c_idx}", f"pow_dia_{sec_idx}",
+                        f"pow_{val_key}", f"pow_{clean_lbl}"
+                    ]
             elif chart_type == 'npsh':
-                candidate_keys = [
-                    f"npsh_dia_{c_idx}", f"npsh_spd_{c_idx}",
-                    f"npsh_spd_{sec_idx}", f"npsh_dia_{sec_idx}",
-                    f"npsh_{val_key}", f"npsh_{clean_lbl}"
-                ]
+                if is_rpm_lbl:
+                    candidate_keys = [
+                        f"npsh_spd_{c_idx}", f"npsh_spd_{sec_idx}",
+                        f"npsh_{val_key}", f"npsh_{clean_lbl}"
+                    ]
+                else:
+                    candidate_keys = [
+                        f"npsh_dia_{c_idx}", f"npsh_dia_{sec_idx}",
+                        f"npsh_{val_key}", f"npsh_{clean_lbl}"
+                    ]
             else:  # 'hq'
-                candidate_keys = [
-                    f"dia_lbl_{c_idx}", f"spd_lbl_{c_idx}", f"curve_{c_idx}",
-                    f"spd_lbl_{sec_idx}", f"dia_lbl_{sec_idx}",
-                    f"dia_{val_key}", f"rpm_{val_key}", f"spd_{val_key}",
-                    f"HQ_{clean_lbl}"
-                ]
+                if is_rpm_lbl:
+                    candidate_keys = [
+                        f"spd_lbl_{c_idx}", f"spd_lbl_{sec_idx}", f"curve_{c_idx}",
+                        f"rpm_{val_key}", f"spd_{val_key}", f"HQ_{clean_lbl}"
+                    ]
+                else:
+                    candidate_keys = [
+                        f"dia_lbl_{c_idx}", f"dia_lbl_{sec_idx}", f"curve_{c_idx}",
+                        f"dia_{val_key}", f"HQ_{clean_lbl}"
+                    ]
 
             # Chart-specific candidate keys are used to prevent cross-chart label position bleeding.
             if chart_type == 'hq':
@@ -601,6 +621,10 @@ def _build_report_curve_context(pump, report):
         report_show_dia = getattr(pump, 'graph_show_family', True)
     show_dia = bool(report_show_dia) if report_show_dia is not None else True
 
+    report_show_rpm = getattr(report, 'show_rpm_overlay', None)
+    if report_show_rpm is None:
+        report_show_rpm = getattr(report, 'show_speed_lines', True)
+
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
     is_var_speed = (fam_type == 'variable_speed')
 
@@ -674,7 +698,9 @@ def _build_report_curve_context(pump, report):
 
             cur_color = primary_color if is_primary else palette[min(c_idx, len(palette)-1)]
 
-            if is_primary or show_dia:
+            # Beginners Note: In RPM mode (show_dia = False, show_rpm = True), do not append diameter curves (e.g. 228mm Max),
+            # so the report exclusively displays the requested RPM curves without diameter label collisions.
+            if show_dia or (not show_dia and not bool(report_show_rpm) and is_primary):
                 hq_curves_list.append({'label': lbl, 'x': c_q, 'y': c_h, 'color': cur_color, 'is_secondary': not is_primary})
                 eta_curves_list.append({'label': lbl, 'x': c_q, 'y': c_eta, 'color': cur_color, 'is_secondary': not is_primary})
                 pow_curves_list.append({'label': lbl, 'x': c_q, 'y': c_pow, 'color': cur_color, 'is_secondary': not is_primary})

@@ -1250,6 +1250,8 @@ async function refreshPreviewCharts() {
     graph_speed_line_values: document.getElementById('txtSpeedLineValues')?.value || '',
     graph_rpm_values: document.getElementById('txtRpmValues')?.value || '',
     graph_dia_overlay_values: document.getElementById('txtDiaOverlayValues')?.value || '',
+    graph_show_rpm_overlay: document.getElementById('chkRpmOverlay')?.checked || false,
+    graph_show_dia_overlay: document.getElementById('chkDiaOverlay')?.checked || false,
   };
 
   try {

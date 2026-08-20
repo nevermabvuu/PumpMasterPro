@@ -531,7 +531,7 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
               annObj.yshift = 0;
 
               if (container && container.layout && Array.isArray(container.layout.annotations)) {
-                const match = container.layout.annotations.find(a => (a.name && a.name === annObj.name) || (a.text && a.text === annObj.text));
+                const match = container.layout.annotations.find(a => a.name && a.name === annObj.name);
                 if (match) {
                   match.x = coords.x;
                   match.y = coords.y;
@@ -604,8 +604,8 @@ function buildWarmanChart(data, opts = {}) {
   const chkDia = chkDiaEl ? chkDiaEl.checked : !isVarSpeed;
   const showFamily = isVarSpeed ? (chkRpm || (!chkRpm && !chkDia)) : (chkDia || (!chkRpm && !chkDia));
 
-  const spd_lines = getActiveOverlayLines(data);
-  const dia_overlay = data.dia_overlay || [];
+  const spd_lines = (!isVarSpeed && chkRpm) ? (data.rpm_overlay || []) : [];
+  const dia_overlay = (isVarSpeed && chkDia) ? (data.dia_overlay || []) : [];
 
   const legendMode = units.legendMode || 'each';
   const labelPos = units.labelPos || 'middle-top';
@@ -761,7 +761,7 @@ function buildWarmanChart(data, opts = {}) {
 
       /* Non-clashing Efficiency Label Badge Annotation */
       if (iso.label_q !== undefined && iso.label_h !== undefined) {
-        const branchKey = iso.branch ? `_${iso.branch}` : `_${idx}`;
+        const branchKey = iso.branch !== undefined ? `_${iso.branch}` : `_${idx}`;
         const key = `eta_${iso.eta}${branchKey}`;
         const legacyKey = `eta_${iso.eta}`;
 
@@ -809,7 +809,7 @@ function buildWarmanChart(data, opts = {}) {
         hovertemplate: `P = ${pl.power} ${lblPow}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
       });
       if (pl.q.length > 0) {
-        const branchKey = pl.branch ? `_${pl.branch}` : `_${idx}`;
+        const branchKey = pl.branch !== undefined ? `_${pl.branch}` : `_${idx}`;
         const key = `pow_${pl.power}${branchKey}`;
         let targetQ = 0;
         let targetH = 0;
@@ -854,7 +854,7 @@ function buildWarmanChart(data, opts = {}) {
         hovertemplate: `NPSHr = ${nl.npsh} ${lblNpsh}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
       });
       if (nl.q.length > 0) {
-        const branchKey = nl.branch ? `_${nl.branch}` : `_${idx}`;
+        const branchKey = nl.branch !== undefined ? `_${nl.branch}` : `_${idx}`;
         const key = `npsh_${nl.npsh}${branchKey}`;
         let targetQ = 0;
         let targetH = 0;
@@ -957,16 +957,29 @@ function buildWarmanChart(data, opts = {}) {
             drawnBadgeKeysHQ.add(vKey);
             const lineLabel = formatCurveLabel(sl.val || sl.speed_rpm || sl.dia, sl.speed_ratio || sl.ratio, isRpm, units.labelFormat, baseDia, baseRpm);
             if (lineLabel) {
-              const lastIdx = Math.floor(sl.q.length * 0.90);
+              const annName = `spd_lbl_${i}`;
+              let targetQ = 0, targetH = 0;
+              let pos = null;
+              if (customLabelPositions && typeof customLabelPositions === 'object' && customLabelPositions[annName]) {
+                pos = customLabelPositions[annName];
+              }
+              if (pos && pos.x !== undefined) {
+                targetQ = pos.x;
+                targetH = pos.y;
+              } else {
+                const lastIdx = Math.floor(sl.q.length * 0.90);
+                targetQ = sl.q[lastIdx];
+                targetH = sl.h[lastIdx];
+              }
               annotations.push({
-                x: sl.q[lastIdx], y: sl.h[lastIdx],
+                x: targetQ, y: targetH,
                 text: `<b>${lineLabel}</b>`,
                 showarrow: false, captureevents: true,
                 font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
                 bgcolor: 'rgba(15, 23, 42, 0.90)',
                 bordercolor: col, borderwidth: 1, borderpad: 2,
                 xanchor: 'center', yanchor: 'middle',
-                name: `spd_lbl_${i}`
+                name: annName
               });
             }
           }
@@ -998,18 +1011,31 @@ function buildWarmanChart(data, opts = {}) {
           const vKey = 'dia_' + dlVal;
           if (!drawnBadgeKeysHQ.has(vKey)) {
             drawnBadgeKeysHQ.add(vKey);
-            const lineLabel = formatCurveLabel(dl.dia, dl.ratio, isVarSpeed, units.labelFormat, baseDia, baseRpm);
+            const lineLabel = formatCurveLabel(dl.dia, dl.ratio, false, units.labelFormat, baseDia, baseRpm);
             if (lineLabel) {
-              const lastIdx = Math.floor(dl.q.length * 0.90);
+              const annName = `dia_lbl_${i}`;
+              let targetQ = 0, targetH = 0;
+              let pos = null;
+              if (customLabelPositions && typeof customLabelPositions === 'object' && customLabelPositions[annName]) {
+                pos = customLabelPositions[annName];
+              }
+              if (pos && pos.x !== undefined) {
+                targetQ = pos.x;
+                targetH = pos.y;
+              } else {
+                const lastIdx = Math.floor(dl.q.length * 0.90);
+                targetQ = dl.q[lastIdx];
+                targetH = dl.h[lastIdx];
+              }
               annotations.push({
-                x: dl.q[lastIdx], y: dl.h[lastIdx],
+                x: targetQ, y: targetH,
                 text: `<b>${lineLabel}</b>`,
                 showarrow: false, captureevents: true,
                 font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
                 bgcolor: 'rgba(15, 23, 42, 0.90)',
                 bordercolor: col, borderwidth: 1, borderpad: 2,
                 xanchor: 'center', yanchor: 'middle',
-                name: `dia_lbl_${i}`
+                name: annName
               });
             }
           }
@@ -1168,11 +1194,13 @@ function getActiveOverlayLines(familyData) {
 
   const lines = [];
 
-  if (chkRpm && familyData.rpm_overlay && familyData.rpm_overlay.length > 0) {
+  // For Trimmed Impeller pumps, Diameter is the primary family, and RPM is the overlay.
+  if (chkRpm && !isVarSpeed && familyData.rpm_overlay && familyData.rpm_overlay.length > 0) {
     lines.push(...familyData.rpm_overlay);
   }
 
-  if (chkDia && familyData.dia_overlay && familyData.dia_overlay.length > 0) {
+  // For Variable Speed pumps, RPM is the primary family, and Diameter is the overlay.
+  if (chkDia && isVarSpeed && familyData.dia_overlay && familyData.dia_overlay.length > 0) {
     lines.push(...familyData.dia_overlay);
   }
 
@@ -1359,7 +1387,7 @@ function buildEffChart(familyData, singleData, showClean) {
         const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
         const lineLabel = formatCurveLabel(sl.val || sl.speed_rpm || sl.dia, sl.speed_ratio || sl.ratio, isRpm, units.labelFormat, baseDia, baseRpm);
         if (!lineLabel) return;
-        const curveKey = `eff_spd_${i}`;
+        const curveKey = `eff_${isVarSpeed ? 'dia' : 'spd'}_${i}`;
         const candidateKeys = [curveKey, `spd_lbl_${i}`, lineLabel, `eff_${lineLabel}`];
         let pos = null;
         if (customLabelPositions && typeof customLabelPositions === 'object') {
@@ -1602,7 +1630,7 @@ function buildEffPowerChart(familyData, singleData, showClean) {
         ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
         : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
 
-      const curveKey = `eff_spd_${i}`;
+      const curveKey = `eff_${isVarSpeed ? 'dia' : 'spd'}_${i}`;
       let targetQ = 0, targetEta = 0, xanchor = 'center', yanchor = 'middle', xshift = 0, yshift = 0;
       if (customLabelPositions && customLabelPositions[curveKey]) {
         const pos = customLabelPositions[curveKey];
@@ -1787,7 +1815,7 @@ function buildPowerChart(familyData, singleData, showClean) {
         const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
         const lineLabel = formatCurveLabel(sl.val || sl.speed_rpm || sl.dia, sl.speed_ratio || sl.ratio, isRpm, unitsP.labelFormat, baseDia, baseRpm);
         if (!lineLabel) return;
-        const curveKey = `pow_spd_${i}`;
+        const curveKey = `pow_${isVarSpeed ? 'dia' : 'spd'}_${i}`;
         const candidateKeys = [curveKey, `spd_lbl_${i}`, lineLabel, `pow_${lineLabel}`];
         let pos = null;
         if (customLabelPositions && typeof customLabelPositions === 'object') {
@@ -1969,7 +1997,7 @@ function buildNpshChart(familyData, singleData) {
         const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
         const lineLabel = formatCurveLabel(sl.val || sl.speed_rpm || sl.dia, sl.speed_ratio || sl.ratio, isRpm, unitsN.labelFormat, baseDia, baseRpm);
         if (!lineLabel) return;
-        const curveKey = `npsh_spd_${i}`;
+        const curveKey = `npsh_${isVarSpeed ? 'dia' : 'spd'}_${i}`;
         const candidateKeys = [curveKey, `spd_lbl_${i}`, lineLabel, `npsh_${lineLabel}`];
         let pos = null;
         if (customLabelPositions && typeof customLabelPositions === 'object') {

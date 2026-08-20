@@ -112,7 +112,9 @@ def api_warman_chart(pump_id):
                              slurry_cv=cv, slurry_d50=d50, rho_solid=rho_s,
                              eff_levels=eff_levels, power_levels=power_levels,
                              npsh_levels=npsh_levels, force_affinity=force_affinity,
-                             trim_penalty=trim_penalty)
+                             trim_penalty=trim_penalty,
+                             show_rpm_overlay=bool(getattr(pump, 'graph_show_rpm_overlay', False)),
+                             show_dia_overlay=bool(getattr(pump, 'graph_show_dia_overlay', False)))
 
     sh = _get_float(args, 'static_head', 0.0)
     pk = _get_float(args, 'pipe_k', 0.0)
@@ -234,7 +236,9 @@ def api_preview_warman_chart():
                                    slurry_cv=cv, slurry_d50=d50, rho_solid=rho_s,
                                    eff_levels=eff_levels, power_levels=power_levels,
                                    npsh_levels=npsh_levels, force_affinity=force_affinity,
-                                   trim_penalty=trim_penalty)
+                                   trim_penalty=trim_penalty,
+                                   show_rpm_overlay=bool(data.get('graph_show_rpm_overlay', False)),
+                                   show_dia_overlay=bool(data.get('graph_show_dia_overlay', False)))
 
     sh = float(data.get('static_head', 0.0))
     pk = float(data.get('pipe_k', 0.0))

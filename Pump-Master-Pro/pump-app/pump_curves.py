@@ -456,16 +456,24 @@ def _bep_for_ratio(pump, ratio, h_base, eta_base, pwr_base, q_base, trim_penalty
 def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
                         slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650,
                         iso_levels=None, n_ratio_steps=100, n_base=400,
-                        trim_penalty=None):
+                        trim_penalty=None, override_r_min=None,
+                        override_trim_penalty=None):
     """
     Generate smooth, parabolic Warman-style efficiency isolines across the pump operating envelope.
 
     Scans a dense 2D grid (Q, ratio) to produce smooth continuous U-loops for closed
     efficiency contours, and smooth continuous rays for open efficiency contours.
+
+    Args:
+        override_r_min: When set, overrides the computed minimum ratio (e.g. from RPM overlay range).
+        override_trim_penalty: When set, forces a specific trim penalty coefficient
+                               (use 0 for RPM-based isolines on trimmed impeller pumps).
     """
     diameters = pump.get_diameters()
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
-    if diameters and len(diameters) >= 2 and max(diameters) > min(diameters):
+    if override_r_min is not None:
+        r_min = override_r_min
+    elif diameters and len(diameters) >= 2 and max(diameters) > min(diameters):
         d_max = max(diameters)
         d_min = min(diameters)
         r_min = d_min / d_max if d_max > 0 else 0.70
@@ -493,7 +501,10 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
 
     # Calculate dynamic trim penalty coefficient
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
-    if fam_type == 'variable_speed':
+    if override_trim_penalty is not None:
+        try: trim_penalty_coeff = float(override_trim_penalty)
+        except (ValueError, TypeError): trim_penalty_coeff = 0.0
+    elif fam_type == 'variable_speed':
         trim_penalty_coeff = 0.0
     elif trim_penalty is not None:
         try: trim_penalty_coeff = float(trim_penalty)
@@ -655,11 +666,17 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
 def power_isolines(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
                    slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650,
                    n_power_lines=5, n_ratio_steps=40, n_base=1000,
-                   power_levels=None):
-    """Constant shaft-power lines across the H-Q family."""
+                   power_levels=None, override_r_min=None):
+    """Constant shaft-power lines across the H-Q family.
+
+    Args:
+        override_r_min: When set, overrides the computed minimum ratio (e.g. from RPM overlay range).
+    """
     diameters = pump.get_diameters()
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
-    if diameters and len(diameters) >= 2 and max(diameters) > min(diameters):
+    if override_r_min is not None:
+        r_min = override_r_min
+    elif diameters and len(diameters) >= 2 and max(diameters) > min(diameters):
         d_max = max(diameters)
         d_min = min(diameters)
         r_min = d_min / d_max if d_max > 0 else 0.70
@@ -710,11 +727,18 @@ def power_isolines(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
 
 def npsh_isolines(pump, liquid='water', viscosity_cSt=1.0,
                   slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650,
-                  iso_levels=None, n_ratio_steps=40, n_base=1000):
-    """Constant NPSHr lines across the H-Q family."""
+                  iso_levels=None, n_ratio_steps=40, n_base=1000,
+                  override_r_min=None):
+    """Constant NPSHr lines across the H-Q family.
+
+    Args:
+        override_r_min: When set, overrides the computed minimum ratio (e.g. from RPM overlay range).
+    """
     diameters = pump.get_diameters()
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
-    if diameters and len(diameters) >= 2 and max(diameters) > min(diameters):
+    if override_r_min is not None:
+        r_min = override_r_min
+    elif diameters and len(diameters) >= 2 and max(diameters) > min(diameters):
         d_max = max(diameters)
         d_min = min(diameters)
         r_min = d_min / d_max if d_max > 0 else 0.70
@@ -834,25 +858,93 @@ def speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00), values_str=None, n_points
     return result
 
 
+def _compute_iso_override(pump, show_rpm_overlay=False, show_dia_overlay=False):
+    """Determine isoline override parameters based on test basis and active overlays.
+
+    Returns (override_r_min, override_trim_penalty) — both None if no override needed.
+
+    Rules:
+        Trimmed Impeller: isolines follow diameter (default). Switch to RPM only when
+                          RPM overlay is ON and diameter overlay is OFF.
+        Variable Speed:   isolines follow RPM (default). Switch to diameter only when
+                          diameter overlay is ON and RPM overlay is OFF.
+    """
+    fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+    is_var_speed = (fam_type == 'variable_speed')
+
+    if is_var_speed and show_dia_overlay and not show_rpm_overlay:
+        # Variable speed pump showing only diameter overlay → isolines based on diameter ratios
+        dia_str = (getattr(pump, 'graph_dia_overlay_values', '') or '').strip()
+        if dia_str:
+            parsed = []
+            cleaned = re.sub(r'[,;\s]+', ',', dia_str)
+            for p in cleaned.split(','):
+                p = p.strip()
+                if p:
+                    try: parsed.append(float(p))
+                    except ValueError: pass
+            if parsed:
+                d_max_imp = pump.impeller_dia_mm or 300.0
+                d_max = max(max(parsed), d_max_imp)
+                d_min = min(parsed)
+                r_min = d_min / d_max if d_max > 0 else 0.70
+                # Diameter-based isolines on a variable speed pump use a trim penalty
+                return r_min, 20.0
+        return None, None
+
+    elif not is_var_speed and show_rpm_overlay and not show_dia_overlay:
+        # Trimmed impeller pump showing only RPM overlay → isolines based on RPM ratios
+        rpm_str = (getattr(pump, 'graph_rpm_values', '') or
+                   getattr(pump, 'graph_speed_line_values', '') or '').strip()
+        if rpm_str:
+            parsed = []
+            cleaned = re.sub(r'[,;\s]+', ',', rpm_str)
+            for p in cleaned.split(','):
+                p = p.strip()
+                if p:
+                    try: parsed.append(float(p))
+                    except ValueError: pass
+            if parsed:
+                rpm_max = pump.speed_rpm or 1450.0
+                if max(parsed) > rpm_max:
+                    rpm_max = max(parsed)
+                rpm_min = min(parsed)
+                r_min = rpm_min / rpm_max if rpm_max > 0 else 0.70
+                # RPM-based isolines have no trim penalty (speed change, not diameter trim)
+                return r_min, 0.0
+        return None, None
+
+    # Default: no override needed — isolines follow the pump's primary family type
+    return None, None
+
+
 def warman_chart_data(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
                       slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650,
                       eff_levels=None, power_levels=None, npsh_levels=None,
-                      force_affinity=False, trim_penalty=None):
+                      force_affinity=False, trim_penalty=None,
+                      show_rpm_overlay=False, show_dia_overlay=False):
     """Return everything needed to render a Warman performance map."""
     family   = family_curves_diameter(pump, n_points=100, liquid=liquid, rho=rho,
                                       viscosity_cSt=viscosity_cSt, slurry_cv=slurry_cv,
                                       slurry_d50=slurry_d50, rho_solid=rho_solid,
                                       force_affinity=force_affinity, trim_penalty=trim_penalty)
+
+    # Determine isoline override based on test basis + active overlay combination
+    iso_r_min, iso_trim = _compute_iso_override(pump, show_rpm_overlay, show_dia_overlay)
+
     isolines = efficiency_isolines(pump, liquid=liquid, viscosity_cSt=viscosity_cSt,
                                    slurry_cv=slurry_cv, slurry_d50=slurry_d50,
                                    rho_solid=rho_solid, iso_levels=eff_levels,
-                                   trim_penalty=trim_penalty)
+                                   trim_penalty=trim_penalty,
+                                   override_r_min=iso_r_min,
+                                   override_trim_penalty=iso_trim)
     pwr_iso  = power_isolines(pump, liquid=liquid, rho=rho, viscosity_cSt=viscosity_cSt,
                               slurry_cv=slurry_cv, slurry_d50=slurry_d50, rho_solid=rho_solid,
-                              power_levels=power_levels)
+                              power_levels=power_levels, override_r_min=iso_r_min)
     npsh_iso = npsh_isolines(pump, liquid=liquid, viscosity_cSt=viscosity_cSt,
                              slurry_cv=slurry_cv, slurry_d50=slurry_d50,
-                             rho_solid=rho_solid, iso_levels=npsh_levels)
+                             rho_solid=rho_solid, iso_levels=npsh_levels,
+                             override_r_min=iso_r_min)
     bep_max  = bep_point(pump, liquid, rho, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
 
     # RPM overlay lines (uses graph_rpm_values — always RPM values)

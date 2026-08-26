@@ -310,10 +310,10 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             iso_y = iso.get('y', [])
             iso_color = iso.get('color', '#059669')
             iso_label = iso.get('label', '')
-            iso_dash = 'stroke-dasharray="3,3"' if iso.get('dashed', False) else ''
+            iso_dash = iso.get('dash', 'stroke-dasharray="2,2"')
+
             iso_branch = iso.get('branch', '')
             iso_t_idx = iso.get('type_idx', iso_idx)
-            is_closed = iso.get('is_closed', False)
             if len(iso_x) == len(iso_y) and len(iso_x) > 1:
                 pts = []
                 for x, y in zip(iso_x, iso_y):
@@ -334,68 +334,57 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                         num_m = re.search(r'(\d+(?:\.\d+)?)', iso_label)
                         iso_val = num_m.group(1) if num_m else clean_iso
                         
-                        iso_type = iso.get('iso_type')
-                        branches_to_draw = ['left', 'right'] if is_closed else [iso_branch]
+                        # Beginners Note: Build exact branch and array index keys (e.g. pow_30_4, eta_75_left, npsh_2.5_1) matching pump-data 100%
+                        branch_suffix = f"_{iso_branch}" if iso_branch else ""
+                        
+                        if chart_type == 'eff':
+                            candidate_keys = [
+                                f"eta_{iso_val}{branch_suffix}", f"eta_{iso_val}_{iso_t_idx}", f"eta_{iso_val}_left", f"eta_{iso_val}_right",
+                                f"eta_{iso_val}_{iso_idx}", f"eta_{iso_val}_0", f"eta_{iso_val}_1", f"eta_{iso_val}", f"iso_eff_{iso_val}"
+                            ]
+                        elif chart_type == 'pow':
+                            candidate_keys = [
+                                f"pow_{iso_val}{branch_suffix}", f"pow_{iso_val}_{iso_t_idx}", f"pow_{iso_val}_{iso_idx}", f"pow_{iso_val}_0", f"pow_{iso_val}_1",
+                                f"pow_{iso_val}", f"iso_pow_{iso_val}"
+                            ]
+                        elif chart_type == 'npsh':
+                            candidate_keys = [
+                                f"npsh_{iso_val}{branch_suffix}", f"npsh_{iso_val}_{iso_t_idx}", f"npsh_{iso_val}_{iso_idx}", f"npsh_{iso_val}_0", f"npsh_{iso_val}_1",
+                                f"npsh_{iso_val}", f"iso_npsh_{iso_val}"
+                            ]
+                        else:  # 'hq' chart containing efficiency, power, and npsh isolines
+                            candidate_keys = [
+                                f"pow_{iso_val}_{iso_t_idx}", f"eta_{iso_val}_{iso_t_idx}", f"npsh_{iso_val}_{iso_t_idx}",
+                                f"pow_{iso_val}{branch_suffix}", f"eta_{iso_val}{branch_suffix}", f"npsh_{iso_val}{branch_suffix}",
+                                f"eta_{iso_val}_left", f"eta_{iso_val}_right",
+                                f"pow_{iso_val}_{iso_idx}", f"eta_{iso_val}_{iso_idx}", f"npsh_{iso_val}_{iso_idx}",
+                                f"pow_{iso_val}_0", f"pow_{iso_val}_1", f"eta_{iso_val}_0", f"eta_{iso_val}_1", f"npsh_{iso_val}_0", f"npsh_{iso_val}_1",
+                                f"pow_{iso_val}", f"eta_{iso_val}", f"npsh_{iso_val}",
+                                f"hq_iso_{iso_val}", f"iso_hq_{iso_val}", iso_label, clean_iso, iso_val
+                            ]
 
-                        for current_branch in branches_to_draw:
-                            # Beginners Note: Build exact branch and array index keys (e.g. pow_30_4, eta_75_left, npsh_2.5_1) matching pump-data 100%
-                            branch_suffix = f"_{current_branch}" if current_branch else ""
-                            
-                            if chart_type == 'eff' or iso_type == 'eta':
-                                candidate_keys = [
-                                    f"eta_{iso_val}{branch_suffix}", f"eta_{iso_val}_{iso_t_idx}",
-                                    f"eta_{iso_val}", f"iso_eff_{iso_val}"
-                                ]
-                            elif chart_type == 'pow' or iso_type == 'pow':
-                                candidate_keys = [
-                                    f"pow_{iso_val}{branch_suffix}", f"pow_{iso_val}_{iso_t_idx}",
-                                    f"pow_{iso_val}", f"iso_pow_{iso_val}"
-                                ]
-                            elif chart_type == 'npsh' or iso_type == 'npsh':
-                                candidate_keys = [
-                                    f"npsh_{iso_val}{branch_suffix}", f"npsh_{iso_val}_{iso_t_idx}",
-                                    f"npsh_{iso_val}", f"iso_npsh_{iso_val}"
-                                ]
-                            else:  # Fallback if iso_type is missing
-                                candidate_keys = [
-                                    f"pow_{iso_val}_{iso_t_idx}", f"eta_{iso_val}_{iso_t_idx}", f"npsh_{iso_val}_{iso_t_idx}",
-                                    f"pow_{iso_val}{branch_suffix}", f"eta_{iso_val}{branch_suffix}", f"npsh_{iso_val}{branch_suffix}",
-                                    f"pow_{iso_val}", f"eta_{iso_val}", f"npsh_{iso_val}",
-                                    f"hq_iso_{iso_val}", f"iso_hq_{iso_val}", iso_label, clean_iso, iso_val
-                                ]
+                        candidate_keys.extend([iso_label, clean_iso, iso_val])
+                        pos = find_custom_pos(custom_label_pos, candidate_keys)
 
-                            candidate_keys.extend([iso_label, clean_iso, iso_val])
-                            pos = find_custom_pos(custom_label_pos, candidate_keys)
-
-                            if pos and isinstance(pos, dict) and 'x' in pos and 'y' in pos:
-                                try:
-                                    c_x = float(pos['x'])
-                                    c_y = float(pos['y'])
-                                    m_px = padding_left + ((c_x - x_min) / (x_max - x_min)) * plot_w
-                                    m_py = padding_top + plot_h - ((c_y - y_min) / (y_max - y_min)) * plot_h
-                                except Exception:
-                                    if current_branch == 'left' or (is_closed and current_branch == 'left'):
-                                        m_idx = 0
-                                    elif current_branch == 'right' or (is_closed and current_branch == 'right'):
-                                        m_idx = len(pts) - 1
-                                    else:
-                                        m_idx = int(len(pts) / 2)
-                                    m_px, m_py = pts[m_idx]
-                            else:
-                                # Beginners Note: Fallback to midpoint of isoline curve (matching pump_curves.js) to avoid top-left corner label clashing
-                                if current_branch == 'left' or (is_closed and current_branch == 'left'):
-                                    m_idx = 0
-                                elif current_branch == 'right' or (is_closed and current_branch == 'right'):
-                                    m_idx = len(pts) - 1
-                                else:
-                                    m_idx = int(len(pts) / 2)
+                        if pos and isinstance(pos, dict) and 'x' in pos and 'y' in pos:
+                            try:
+                                c_x = float(pos['x'])
+                                c_y = float(pos['y'])
+                                m_px = padding_left + ((c_x - x_min) / (x_max - x_min)) * plot_w
+                                m_py = padding_top + plot_h - ((c_y - y_min) / (y_max - y_min)) * plot_h
+                            except Exception:
+                                m_idx = int(len(pts) / 2)
                                 m_px, m_py = pts[m_idx]
+                        else:
+                            # Beginners Note: Fallback to midpoint of isoline curve (matching pump_curves.js) to avoid top-left corner label clashing
+                            m_idx = int(len(pts) / 2)
+                            m_px, m_py = pts[m_idx]
 
-                            m_px = min(max(float(padding_left + 10), float(m_px)), float(width - padding_right - 10))
-                            m_py = min(max(float(padding_top + 10), float(m_py)), float(height - padding_bottom - 5))
+                        m_px = min(max(float(padding_left + 10), float(m_px)), float(width - padding_right - 10))
+                        m_py = min(max(float(padding_top + 10), float(m_py)), float(height - padding_bottom - 5))
 
-                            # Beginners Note: We use standard baseline offset (m_py + 2.5) instead of dominant-baseline which fails in some PDF engines
-                            labels.append(f'<text x="{m_px:.1f}" y="{m_py + 2.5:.1f}" font-size="7.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="{iso_color}" text-anchor="middle">{iso_label}</text>')
+                        # Beginners Note: dominant-baseline="central" centers the text vertically on (m_px, m_py) without Y-offset displacement
+                        labels.append(f'<text x="{m_px:.1f}" y="{m_py:.1f}" font-size="7.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="{iso_color}" text-anchor="middle" dominant-baseline="central">{iso_label}</text>')
 
     # Render Primary & Trim Pump Curve Paths
     sec_count = 0
@@ -408,7 +397,7 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
         dash_style = 'stroke-dasharray="4,4"' if is_sec else ''
 
         if is_sec:
-            sec_idx = c.get('type_idx', sec_count)
+            sec_idx = sec_count
             sec_count += 1
         else:
             sec_idx = c_idx
@@ -456,45 +445,45 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             if chart_type == 'eff':
                 if is_rpm_lbl:
                     candidate_keys = [
-                        f"effpow_spd_{sec_idx}", f"eff_spd_{sec_idx}", f"eff_spd_{c_idx}",
+                        f"eff_spd_{c_idx}", f"eff_spd_{sec_idx}", f"effpow_spd_{sec_idx}",
                         f"eff_{val_key}", f"eff_{clean_lbl}"
                     ]
                 else:
                     candidate_keys = [
-                        f"effpow_dia_{sec_idx}", f"eff_dia_{sec_idx}", f"eff_dia_{c_idx}",
+                        f"eff_dia_{c_idx}", f"eff_dia_{sec_idx}", f"effpow_dia_{sec_idx}",
                         f"eff_{val_key}", f"eff_{clean_lbl}"
                     ]
             elif chart_type == 'pow':
                 if is_rpm_lbl:
                     candidate_keys = [
-                        f"effpow_spd_{sec_idx}", f"pow_spd_{sec_idx}", f"pow_spd_{c_idx}",
+                        f"pow_spd_{c_idx}", f"pow_spd_{sec_idx}",
                         f"pow_{val_key}", f"pow_{clean_lbl}"
                     ]
                 else:
                     candidate_keys = [
-                        f"effpow_dia_{sec_idx}", f"pow_dia_{sec_idx}", f"pow_dia_{c_idx}",
+                        f"pow_dia_{c_idx}", f"pow_dia_{sec_idx}",
                         f"pow_{val_key}", f"pow_{clean_lbl}"
                     ]
             elif chart_type == 'npsh':
                 if is_rpm_lbl:
                     candidate_keys = [
-                        f"npsh_spd_{sec_idx}", f"npsh_spd_{c_idx}",
+                        f"npsh_spd_{c_idx}", f"npsh_spd_{sec_idx}",
                         f"npsh_{val_key}", f"npsh_{clean_lbl}"
                     ]
                 else:
                     candidate_keys = [
-                        f"npsh_dia_{sec_idx}", f"npsh_dia_{c_idx}",
+                        f"npsh_dia_{c_idx}", f"npsh_dia_{sec_idx}",
                         f"npsh_{val_key}", f"npsh_{clean_lbl}"
                     ]
             else:  # 'hq'
                 if is_rpm_lbl:
                     candidate_keys = [
-                        f"spd_lbl_{sec_idx}", f"spd_lbl_{c_idx}", f"curve_{c_idx}",
+                        f"spd_lbl_{c_idx}", f"spd_lbl_{sec_idx}", f"curve_{c_idx}",
                         f"rpm_{val_key}", f"spd_{val_key}", f"HQ_{clean_lbl}"
                     ]
                 else:
                     candidate_keys = [
-                        f"dia_lbl_{sec_idx}", f"dia_lbl_{c_idx}", f"curve_{c_idx}",
+                        f"dia_lbl_{c_idx}", f"dia_lbl_{sec_idx}", f"curve_{c_idx}",
                         f"dia_{val_key}", f"HQ_{clean_lbl}"
                     ]
 
@@ -504,42 +493,30 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
 
             pos = find_custom_pos(custom_label_pos, candidate_keys)
 
-            is_custom_pos = False
             if pos and isinstance(pos, dict) and 'x' in pos and 'y' in pos:
                 try:
                     c_x = float(pos['x'])
-                    # Beginners Note: Do NOT forcefully snap c_y to the curve. Respect the user's dragged Y-coordinate.
-                    c_y = float(pos['y'])
+                    # Snap Y coordinate directly onto the curve line at flow c_x to ensure exact attachment
+                    if len(x_pts) > 1 and min(x_pts) <= c_x <= max(x_pts):
+                        c_y = float(np.interp(c_x, x_pts, y_pts))
+                    else:
+                        c_y = float(pos['y'])
 
                     lx = padding_left + ((c_x - x_min) / (x_max - x_min)) * plot_w
                     ly = padding_top + plot_h - ((c_y - y_min) / (y_max - y_min)) * plot_h
-                    is_custom_pos = True
                 except Exception:
-                    pass
-
-            tw = len(display_text) * 5 + 8
-
-            if not is_custom_pos:
-                if not is_sec and chart_type == 'hq':
-                    # Main curves on HQ: default to tail end of the curve (matching pump-data UI)
-                    idx = len(pts) - 1
-                    lx, ly = pts[idx]
-                    # Shift right and up to match UI's xanchor='left', yanchor='bottom', xshift=4, yshift=4
-                    lx += (tw / 2.0) + 4
-                    ly -= 12
-                else:
-                    # Overlays and other charts default to 0.85 index, shifted up slightly
                     idx = int(len(pts) * 0.85)
                     lx, ly = pts[idx]
-                    ly -= 10
+            else:
+                idx = int(len(pts) * 0.85)
+                lx, ly = pts[idx]
 
             lx = min(max(float(padding_left + 15), float(lx)), float(width - padding_right - 15))
             ly = min(max(float(padding_top + 10), float(ly)), float(height - padding_bottom - 5))
 
-            # Beginners Note: Center the rect and text exactly on (lx, ly) to perfectly match the UI's yanchor='middle'.
-            # We use standard baseline offset (ly + 2.5) instead of dominant-baseline which fails in some PDF engines.
-            labels.append(f'<rect x="{lx - tw/2:.1f}" y="{ly - 6:.1f}" width="{tw}" height="12" fill="#ffffff" fill-opacity="0.9" stroke="{color}" stroke-width="0.8" rx="3" />')
-            labels.append(f'<text x="{lx:.1f}" y="{ly + 2.5:.1f}" font-size="7.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="{color}" text-anchor="middle">{display_text}</text>')
+            tw = len(display_text) * 5 + 8
+            labels.append(f'<rect x="{lx - tw/2:.1f}" y="{ly - 10:.1f}" width="{tw}" height="12" fill="#ffffff" fill-opacity="0.9" stroke="{color}" stroke-width="0.8" rx="3" />')
+            labels.append(f'<text x="{lx:.1f}" y="{ly - 1.5:.1f}" font-size="7.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="{color}" text-anchor="middle">{display_text}</text>')
 
     # Render Multi-Curve Legend Box with customizable positioning
     legend_svg = ""
@@ -641,59 +618,51 @@ def _build_report_curve_context(pump, report):
     if report_show_dia is None:
         report_show_dia = getattr(report, 'show_family', None)
     if report_show_dia is None:
-        report_show_dia = getattr(pump, 'graph_show_dia_overlay', None)
-    if report_show_dia is None:
         report_show_dia = getattr(pump, 'graph_show_family', True)
     show_dia = bool(report_show_dia) if report_show_dia is not None else True
 
     report_show_rpm = getattr(report, 'show_rpm_overlay', None)
     if report_show_rpm is None:
-        report_show_rpm = getattr(report, 'show_speed_lines', None)
-    if report_show_rpm is None:
-        report_show_rpm = getattr(pump, 'graph_show_rpm_overlay', None)
-    if report_show_rpm is None:
-        report_show_rpm = getattr(pump, 'graph_show_speed_lines', False)
+        report_show_rpm = getattr(report, 'show_speed_lines', True)
 
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
     is_var_speed = (fam_type == 'variable_speed')
 
     # For variable_speed pumps, generate curves from graph_rpm_values / graph_speed_line_values
-    show_rpm_flag = bool(report_show_rpm) if report_show_rpm is not None else True
     if is_var_speed:
-        if show_rpm_flag:
-            rpm_str = (getattr(pump, 'graph_rpm_values', None) or getattr(pump, 'graph_speed_line_values', None) or '').strip()
-            rpm_list = _parse_diameters_string(rpm_str)
-            if not rpm_list:
-                base_rpm = pump.speed_rpm or 1000.0
-                rpm_list = [base_rpm, base_rpm * 0.9, base_rpm * 0.8, base_rpm * 0.7]
-            rpm_list.sort(reverse=True)
-            base_rpm = rpm_list[0] if rpm_list else (pump.speed_rpm or 1000.0)
+        rpm_str = (getattr(pump, 'graph_rpm_values', None) or getattr(pump, 'graph_speed_line_values', None) or '').strip()
+        rpm_list = _parse_diameters_string(rpm_str)
+        if not rpm_list:
+            base_rpm = pump.speed_rpm or 1000.0
+            rpm_list = [base_rpm, base_rpm * 0.9, base_rpm * 0.8, base_rpm * 0.7]
+        rpm_list.sort(reverse=True)
+        base_rpm = rpm_list[0] if rpm_list else (pump.speed_rpm or 1000.0)
 
-            if mode == 'max_only':
-                rpm_to_plot = [rpm_list[0]]
-            elif mode == 'min_max':
-                rpm_to_plot = [rpm_list[0], rpm_list[-1]] if len(rpm_list) >= 2 else rpm_list
-            else:
-                rpm_to_plot = rpm_list
+        if mode == 'max_only':
+            rpm_to_plot = [rpm_list[0]]
+        elif mode == 'min_max':
+            rpm_to_plot = [rpm_list[0], rpm_list[-1]] if len(rpm_list) >= 2 else rpm_list
+        else:
+            rpm_to_plot = rpm_list
 
-            for c_idx, rpm_val in enumerate(rpm_to_plot):
-                is_primary = (c_idx == 0)
-                k = rpm_val / base_rpm if base_rpm > 0 else 1.0
-                rpm_fmt = f"{round(rpm_val)}" if abs(rpm_val - round(rpm_val)) < 1e-4 else f"{round(rpm_val, 1)}"
-                lbl = f"{rpm_fmt} RPM" + (" (Max)" if is_primary else "")
+        for c_idx, rpm_val in enumerate(rpm_to_plot):
+            is_primary = (c_idx == 0)
+            k = rpm_val / base_rpm if base_rpm > 0 else 1.0
+            rpm_fmt = f"{round(rpm_val)}" if abs(rpm_val - round(rpm_val)) < 1e-4 else f"{round(rpm_val, 1)}"
+            lbl = f"{rpm_fmt} RPM" + (" (Max)" if is_primary else "")
 
-                c_q = [round(v * k, 2) for v in q_pts]
-                c_h = [round(v * (k**2), 2) for v in h_pts]
-                c_eta = [round(max(0.0, v), 2) for v in eta_pts]  # No penalty for variable speed
-                c_pow = [round(v * (k**3), 2) for v in pow_pts]
-                c_npsh = [round(v * (k**2), 2) for v in npsh_pts]
+            c_q = [round(v * k, 2) for v in q_pts]
+            c_h = [round(v * (k**2), 2) for v in h_pts]
+            c_eta = [round(max(0.0, v), 2) for v in eta_pts]  # No penalty for variable speed
+            c_pow = [round(v * (k**3), 2) for v in pow_pts]
+            c_npsh = [round(v * (k**2), 2) for v in npsh_pts]
 
-                cur_color = primary_color if is_primary else palette[min(c_idx, len(palette)-1)]
+            cur_color = primary_color if is_primary else palette[min(c_idx, len(palette)-1)]
 
-                hq_curves_list.append({'label': lbl, 'x': c_q, 'y': c_h, 'color': cur_color, 'is_secondary': False})
-                eta_curves_list.append({'label': lbl, 'x': c_q, 'y': c_eta, 'color': cur_color, 'is_secondary': False})
-                pow_curves_list.append({'label': lbl, 'x': c_q, 'y': c_pow, 'color': cur_color, 'is_secondary': False})
-                npsh_curves_list.append({'label': lbl, 'x': c_q, 'y': c_npsh, 'color': cur_color, 'is_secondary': False})
+            hq_curves_list.append({'label': lbl, 'x': c_q, 'y': c_h, 'color': cur_color, 'is_secondary': not is_primary})
+            eta_curves_list.append({'label': lbl, 'x': c_q, 'y': c_eta, 'color': cur_color, 'is_secondary': not is_primary})
+            pow_curves_list.append({'label': lbl, 'x': c_q, 'y': c_pow, 'color': cur_color, 'is_secondary': not is_primary})
+            npsh_curves_list.append({'label': lbl, 'x': c_q, 'y': c_npsh, 'color': cur_color, 'is_secondary': not is_primary})
     else:
         # Trimmed impeller: original diameter-based logic
         if mode == 'max_only':
@@ -787,13 +756,6 @@ def _build_report_curve_context(pump, report):
     # Build Isolines (Efficiency, Power, Speed lines) for the H-Q map
     hq_isolines_list = []
 
-    # Determine isoline override based on test basis + active overlay combination
-    # (same logic as pump_curves._compute_iso_override, applied to report overlay settings)
-    from pump_curves import _compute_iso_override
-    iso_r_min, iso_trim = _compute_iso_override(pump,
-                                                 show_rpm_overlay=bool(report_show_rpm),
-                                                 show_dia_overlay=show_dia)
-
     # 1. Efficiency Isolines
     show_eff = getattr(report, 'show_eff_isolines', True)
     if show_eff is None:
@@ -807,9 +769,7 @@ def _build_report_curve_context(pump, report):
         levels = _parse_diameters_string(eff_iso_str) if (eff_iso_str and str(eff_iso_str).strip()) else None
         try:
             from pump_curves import efficiency_isolines
-            iso_objs = efficiency_isolines(pump, iso_levels=levels,
-                                           override_r_min=iso_r_min,
-                                           override_trim_penalty=iso_trim)
+            iso_objs = efficiency_isolines(pump, iso_levels=levels)
             for iso_i, iso in enumerate(iso_objs):
                 eta_val = iso.get('eta', 0.0)
                 lbl_val = f"{int(round(eta_val)) if abs(eta_val - round(eta_val)) < 1e-4 else round(eta_val,1)}%"
@@ -818,9 +778,7 @@ def _build_report_curve_context(pump, report):
                     'y': iso.get('h', []),
                     'label': lbl_val,
                     'branch': iso.get('branch'),
-                    'is_closed': iso.get('is_closed', False),
                     'type_idx': iso_i,
-                    'iso_type': 'eta',
                     'color': '#059669',
                     'dash': 'stroke-dasharray="2,2"'
                 })
@@ -839,8 +797,7 @@ def _build_report_curve_context(pump, report):
         p_levels = _parse_diameters_string(pwr_iso_str) if (pwr_iso_str and str(pwr_iso_str).strip()) else None
         try:
             from pump_curves import power_isolines
-            pwr_objs = power_isolines(pump, power_levels=p_levels,
-                                      override_r_min=iso_r_min)
+            pwr_objs = power_isolines(pump, power_levels=p_levels)
             for p_i, p_iso in enumerate(pwr_objs):
                 p_val = p_iso.get('power', 0.0)
                 p_lbl = f"{int(round(p_val)) if abs(p_val - round(p_val)) < 1e-4 else round(p_val,1)} {pump.unit_pow or 'kW'}"
@@ -850,7 +807,6 @@ def _build_report_curve_context(pump, report):
                     'label': p_lbl,
                     'branch': p_iso.get('branch'),
                     'type_idx': p_i,
-                    'iso_type': 'pow',
                     'color': '#d97706',
                     'dash': 'stroke-dasharray="3,3"'
                 })
@@ -869,8 +825,7 @@ def _build_report_curve_context(pump, report):
         n_levels = _parse_diameters_string(npsh_iso_str) if (npsh_iso_str and str(npsh_iso_str).strip()) else None
         try:
             from pump_curves import npsh_isolines
-            npsh_objs = npsh_isolines(pump, iso_levels=n_levels,
-                                      override_r_min=iso_r_min)
+            npsh_objs = npsh_isolines(pump, iso_levels=n_levels)
             for n_i, n_iso in enumerate(npsh_objs):
                 n_val = n_iso.get('npsh', 0.0)
                 n_lbl = f"{int(round(n_val)) if abs(n_val - round(n_val)) < 1e-4 else round(n_val,1)} m"
@@ -880,7 +835,6 @@ def _build_report_curve_context(pump, report):
                     'label': n_lbl,
                     'branch': n_iso.get('branch'),
                     'type_idx': n_i,
-                    'iso_type': 'npsh',
                     'color': '#2563eb',
                     'dash': 'stroke-dasharray="4,2"'
                 })
@@ -890,11 +844,7 @@ def _build_report_curve_context(pump, report):
     # 4. RPM Overlay Lines (append overlay speed curves across HQ, Efficiency, Power, and NPSHr graphs)
     report_show_rpm = getattr(report, 'show_rpm_overlay', None)
     if report_show_rpm is None:
-        report_show_rpm = getattr(report, 'show_speed_lines', None)
-    if report_show_rpm is None:
-        report_show_rpm = getattr(pump, 'graph_show_rpm_overlay', None)
-    if report_show_rpm is None:
-        report_show_rpm = getattr(pump, 'graph_show_speed_lines', False)
+        report_show_rpm = getattr(report, 'show_speed_lines', True)
 
     rpm_str = (getattr(pump, 'graph_rpm_values', None) or getattr(pump, 'graph_speed_line_values', None) or '').strip()
 
@@ -902,42 +852,39 @@ def _build_report_curve_context(pump, report):
         try:
             from pump_curves import speed_lines as calc_speed_lines
             spd_objs = calc_speed_lines(pump, values_str=rpm_str)
-            for sl_idx, sl in enumerate(spd_objs):
+            for sl in spd_objs:
                 lbl = sl.get('label', '')
                 if sl.get('q') and sl.get('h'):
-                    hq_curves_list.append({'label': lbl, 'x': sl['q'], 'y': sl['h'], 'color': '#9333ea', 'is_secondary': True, 'type_idx': sl_idx})
+                    hq_curves_list.append({'label': lbl, 'x': sl['q'], 'y': sl['h'], 'color': '#9333ea', 'is_secondary': True})
                 if sl.get('q') and sl.get('eta'):
-                    eta_curves_list.append({'label': lbl, 'x': sl['q'], 'y': sl['eta'], 'color': '#9333ea', 'is_secondary': True, 'type_idx': sl_idx})
+                    eta_curves_list.append({'label': lbl, 'x': sl['q'], 'y': sl['eta'], 'color': '#9333ea', 'is_secondary': True})
                 pwr_arr = sl.get('pow') or sl.get('power')
                 if sl.get('q') and pwr_arr:
-                    pow_curves_list.append({'label': lbl, 'x': sl['q'], 'y': pwr_arr, 'color': '#9333ea', 'is_secondary': True, 'type_idx': sl_idx})
+                    pow_curves_list.append({'label': lbl, 'x': sl['q'], 'y': pwr_arr, 'color': '#9333ea', 'is_secondary': True})
                 if sl.get('q') and sl.get('npsh'):
-                    npsh_curves_list.append({'label': lbl, 'x': sl['q'], 'y': sl['npsh'], 'color': '#9333ea', 'is_secondary': True, 'type_idx': sl_idx})
+                    npsh_curves_list.append({'label': lbl, 'x': sl['q'], 'y': sl['npsh'], 'color': '#9333ea', 'is_secondary': True})
         except Exception as e:
             print("RPM overlay lines calculation notice:", e)
 
     # 4b. Diameter Overlay Lines (append overlay diameter lines across HQ, Efficiency, Power, and NPSHr graphs)
-    report_show_dia = getattr(report, 'show_dia_overlay', None)
-    if report_show_dia is None:
-        report_show_dia = getattr(pump, 'graph_show_dia_overlay', False)
-    
+    report_show_dia = bool(getattr(report, 'show_dia_overlay', False))
     dia_str = (getattr(pump, 'graph_dia_overlay_values', None) or '').strip()
 
     if report_show_dia and dia_str and is_var_speed:
         try:
             from pump_curves import _dia_overlay_lines
             dia_objs = _dia_overlay_lines(pump, values_str=dia_str)
-            for dl_idx, dl in enumerate(dia_objs):
+            for dl in dia_objs:
                 lbl = dl.get('label', '')
                 if dl.get('q') and dl.get('h'):
-                    hq_curves_list.append({'label': lbl, 'x': dl['q'], 'y': dl['h'], 'color': '#d97706', 'is_secondary': True, 'type_idx': dl_idx})
+                    hq_curves_list.append({'label': lbl, 'x': dl['q'], 'y': dl['h'], 'color': '#d97706', 'is_secondary': True})
                 if dl.get('q') and dl.get('eta'):
-                    eta_curves_list.append({'label': lbl, 'x': dl['q'], 'y': dl['eta'], 'color': '#d97706', 'is_secondary': True, 'type_idx': dl_idx})
+                    eta_curves_list.append({'label': lbl, 'x': dl['q'], 'y': dl['eta'], 'color': '#d97706', 'is_secondary': True})
                 pwr_arr = dl.get('pow') or dl.get('power')
                 if dl.get('q') and pwr_arr:
-                    pow_curves_list.append({'label': lbl, 'x': dl['q'], 'y': pwr_arr, 'color': '#d97706', 'is_secondary': True, 'type_idx': dl_idx})
+                    pow_curves_list.append({'label': lbl, 'x': dl['q'], 'y': pwr_arr, 'color': '#d97706', 'is_secondary': True})
                 if dl.get('q') and dl.get('npsh'):
-                    npsh_curves_list.append({'label': lbl, 'x': dl['q'], 'y': dl['npsh'], 'color': '#d97706', 'is_secondary': True, 'type_idx': dl_idx})
+                    npsh_curves_list.append({'label': lbl, 'x': dl['q'], 'y': dl['npsh'], 'color': '#d97706', 'is_secondary': True})
         except Exception as e:
             print("Diameter overlay lines calculation notice:", e)
 

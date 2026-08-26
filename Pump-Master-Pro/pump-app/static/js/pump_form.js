@@ -930,6 +930,11 @@ function getPumpFormData() {
 
 function convertUnitCurveData(data, qUnit, hUnit, npshUnit, powUnit) {
   const converted = JSON.parse(JSON.stringify(data));
+  const baseQ = document.getElementById('unit_q_field')?.value || (typeof window.pumpObj !== 'undefined' && window.pumpObj && window.pumpObj.unit_q ? window.pumpObj.unit_q : 'm3h');
+  const baseH = document.getElementById('unit_h_field')?.value || (typeof window.pumpObj !== 'undefined' && window.pumpObj && window.pumpObj.unit_h ? window.pumpObj.unit_h : 'm');
+  const baseNpsh = document.getElementById('unit_npsh_field')?.value || (typeof window.pumpObj !== 'undefined' && window.pumpObj && window.pumpObj.unit_npsh ? window.pumpObj.unit_npsh : 'm');
+  const basePow = document.getElementById('unit_pow_field')?.value || (typeof window.pumpObj !== 'undefined' && window.pumpObj && (window.pumpObj.unit_pow || window.pumpObj.unit_power) ? (window.pumpObj.unit_pow || window.pumpObj.unit_power) : 'kw');
+
   const qFactor = CONVERSIONS.q[qUnit] || 1.0;
   const hFactor = CONVERSIONS.h[hUnit] || 1.0;
   const npshFactor = CONVERSIONS.npsh[npshUnit] || 1.0;
@@ -957,6 +962,11 @@ function convertUnitCurveData(data, qUnit, hUnit, npshUnit, powUnit) {
 
 function convertUnitWarmanData(data, qUnit, hUnit, npshUnit, powUnit) {
   const converted = JSON.parse(JSON.stringify(data));
+  const baseQ = document.getElementById('unit_q_field')?.value || (typeof window.pumpObj !== 'undefined' && window.pumpObj && window.pumpObj.unit_q ? window.pumpObj.unit_q : 'm3h');
+  const baseH = document.getElementById('unit_h_field')?.value || (typeof window.pumpObj !== 'undefined' && window.pumpObj && window.pumpObj.unit_h ? window.pumpObj.unit_h : 'm');
+  const baseNpsh = document.getElementById('unit_npsh_field')?.value || (typeof window.pumpObj !== 'undefined' && window.pumpObj && window.pumpObj.unit_npsh ? window.pumpObj.unit_npsh : 'm');
+  const basePow = document.getElementById('unit_pow_field')?.value || (typeof window.pumpObj !== 'undefined' && window.pumpObj && (window.pumpObj.unit_pow || window.pumpObj.unit_power) ? (window.pumpObj.unit_pow || window.pumpObj.unit_power) : 'kw');
+
   const qFactor = CONVERSIONS.q[qUnit] || 1.0;
   const hFactor = CONVERSIONS.h[hUnit] || 1.0;
   const npshFactor = CONVERSIONS.npsh[npshUnit] || 1.0;
@@ -1008,6 +1018,38 @@ function convertUnitWarmanData(data, qUnit, hUnit, npshUnit, powUnit) {
       sl.q = sl.q.map(v => v * qFactor);
       sl.h = sl.h.map(v => v * hFactor);
       if (sl.power) sl.power = sl.power.map(v => v * powFactor);
+      if (sl.npsh) sl.npsh = sl.npsh.map(v => v * npshFactor);
+      if (sl.bep) {
+        sl.bep.q = sl.bep.q * qFactor;
+        sl.bep.h = sl.bep.h * hFactor;
+        if (sl.bep.power) sl.bep.power = sl.bep.power * powFactor;
+        if (sl.bep.npsh) sl.bep.npsh = sl.bep.npsh * npshFactor;
+      }
+    });
+  }
+
+  if (converted.rpm_overlay) {
+    converted.rpm_overlay.forEach(sl => {
+      sl.q = sl.q.map(v => v * qFactor);
+      sl.h = sl.h.map(v => v * hFactor);
+      if (sl.power) sl.power = sl.power.map(v => v * powFactor);
+      if (sl.pow) sl.pow = sl.pow.map(v => v * powFactor);
+      if (sl.npsh) sl.npsh = sl.npsh.map(v => v * npshFactor);
+      if (sl.bep) {
+        sl.bep.q = sl.bep.q * qFactor;
+        sl.bep.h = sl.bep.h * hFactor;
+        if (sl.bep.power) sl.bep.power = sl.bep.power * powFactor;
+        if (sl.bep.npsh) sl.bep.npsh = sl.bep.npsh * npshFactor;
+      }
+    });
+  }
+
+  if (converted.dia_overlay) {
+    converted.dia_overlay.forEach(sl => {
+      sl.q = sl.q.map(v => v * qFactor);
+      sl.h = sl.h.map(v => v * hFactor);
+      if (sl.power) sl.power = sl.power.map(v => v * powFactor);
+      if (sl.pow) sl.pow = sl.pow.map(v => v * powFactor);
       if (sl.npsh) sl.npsh = sl.npsh.map(v => v * npshFactor);
       if (sl.bep) {
         sl.bep.q = sl.bep.q * qFactor;
@@ -1303,7 +1345,7 @@ function renderPreviewChartsData(warmanData, curveData) {
     displaylogo: false
   };
 
-  const wc = buildWarmanChart(warmanData, {
+  const chartOpts = {
     showIsolines: showEffIso,
     showPowerIso: showPowerIso,
     showNpshIso: showNpshIso,
@@ -1311,7 +1353,9 @@ function renderPreviewChartsData(warmanData, curveData) {
     showDiaOverlay: showDiaOverlay,
     showNpshCurve: showNpshCurve,
     npshYAxis: npshYAxis
-  });
+  };
+
+  const wc = buildWarmanChart(warmanData, chartOpts);
 
   const unitQ = document.getElementById('preview-unit-q')?.value || 'm3h';
   const unitH = document.getElementById('preview-unit-h')?.value || 'm';
@@ -1375,7 +1419,7 @@ function renderPreviewChartsData(warmanData, curveData) {
     const currentPumpId = parseInt(document.getElementById('pump-init-data')?.dataset?.pumpId) || 0;
 
     if (showEff && showPower && combineEffPower) {
-      const effPow = buildEffPowerChart(warmanData, curveData, showClean);
+      const effPow = buildEffPowerChart(warmanData, curveData, showClean, chartOpts);
       effPow.layout.xaxis.title = `Flow Q (${labelQ})`;
       effPow.layout.yaxis.title = 'Efficiency (%)';
       effPow.layout.yaxis2.title = `Shaft Power P (${labelPow})`;
@@ -1387,7 +1431,7 @@ function renderPreviewChartsData(warmanData, curveData) {
       }
     } else {
       if (showEff) {
-        const eff = buildEffChart(warmanData, curveData, showClean);
+        const eff = buildEffChart(warmanData, curveData, showClean, chartOpts);
         eff.layout.xaxis.title = `Flow Q (${labelQ})`;
         eff.layout.yaxis.title = 'Efficiency (%)';
         Plotly.react('chartEff', eff.traces, eff.layout, PLOTLY_CONFIG);
@@ -1398,7 +1442,7 @@ function renderPreviewChartsData(warmanData, curveData) {
         }
       }
       if (showPower) {
-        const power = buildPowerChart(warmanData, curveData, showClean);
+        const power = buildPowerChart(warmanData, curveData, showClean, chartOpts);
         power.layout.xaxis.title = `Flow Q (${labelQ})`;
         power.layout.yaxis.title = `Shaft Power P (${labelPow})`;
         Plotly.react('chartPower', power.traces, power.layout, PLOTLY_CONFIG);
@@ -1411,7 +1455,7 @@ function renderPreviewChartsData(warmanData, curveData) {
     }
 
     if (showNpsh) {
-      const npsh = buildNpshChart(warmanData, curveData);
+      const npsh = buildNpshChart(warmanData, curveData, chartOpts);
       npsh.layout.xaxis.title = `Flow Q (${labelQ})`;
       npsh.layout.yaxis.title = `NPSHr (${labelNpsh})`;
       Plotly.react('chartNpsh', npsh.traces, npsh.layout, PLOTLY_CONFIG);
@@ -2700,6 +2744,25 @@ function updateFamilyTypeUI(isUserChange = false) {
     txtSpeedLineValues.placeholder = isVarSpeed ? 'e.g. 480, 440, 400, 360' : 'e.g. 1000, 900, 800, 700';
   }
 
+  // Update Overlay Checkbox Labels & Values
+  const lblRpmOverlayCheck = document.getElementById('lblRpmOverlayCheck');
+  const lblDiaOverlayCheck = document.getElementById('lblDiaOverlayCheck');
+  const lblRpmValuesInput = document.getElementById('lblRpmValuesInput');
+  const lblDiaValuesInput = document.getElementById('lblDiaValuesInput');
+
+  if (lblRpmOverlayCheck) {
+    lblRpmOverlayCheck.textContent = isVarSpeed ? 'Show Speed / RPM Curves (Primary - RPM)' : 'Show Speed / RPM Overlay Curves (Secondary - RPM)';
+  }
+  if (lblDiaOverlayCheck) {
+    lblDiaOverlayCheck.textContent = isVarSpeed ? 'Show Impeller Diameter Overlay Curves (Secondary - mm)' : 'Show Impeller Diameter Curves (Primary - mm)';
+  }
+  if (lblRpmValuesInput) {
+    lblRpmValuesInput.textContent = 'RPMs (comma or semicolon separated):';
+  }
+  if (lblDiaValuesInput) {
+    lblDiaValuesInput.textContent = 'Diameters in mm (comma or semicolon separated):';
+  }
+
   // Update additional curve card labels & units
   document.querySelectorAll('.extra-dia-label').forEach(lbl => {
     lbl.textContent = isVarSpeed ? 'Speed:' : 'Dia:';
@@ -2962,6 +3025,7 @@ function bindPreviewOptions() {
 
 function resetGraphLabelPositions() {
   customLabelPositions = {};
+  if (typeof serializeGraphOptions === 'function') serializeGraphOptions();
   const pid = (typeof pumpId !== 'undefined' && pumpId) ? pumpId : (document.getElementById('pump_id')?.value || null);
   if (pid) {
     fetch(`/papi/pump/${pid}/label-pos`, {

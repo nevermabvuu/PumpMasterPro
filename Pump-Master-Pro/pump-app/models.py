@@ -899,6 +899,12 @@ class ReportConfig(db.Model):
     show_npsh_curves = db.Column(db.Boolean, default=True)
     show_speed_lines = db.Column(db.Boolean, default=True)
     show_rpm_overlay = db.Column(db.Boolean, default=False)
+
+    # Unit Settings for the Report (Overrides Pump Base Units)
+    unit_flow = db.Column(db.String(10), default='m3h')
+    unit_head = db.Column(db.String(10), default='m')
+    unit_power = db.Column(db.String(10), default='kw')
+    unit_npsh = db.Column(db.String(10), default='m')
     show_dia_overlay = db.Column(db.Boolean, default=False)
     show_additional_graphs = db.Column(db.Boolean, default=True)
     show_legend = db.Column(db.Boolean, default=True)
@@ -955,5 +961,9 @@ class ReportConfig(db.Model):
             'show_extended_specs': bool(self.show_extended_specs),
             'show_notes': bool(self.show_notes),
             'is_active': bool(self.is_active),
-            'created_at': self.created_at.isoformat() if self.created_at else ''
+            'created_at': self.created_at.isoformat() if self.created_at else '',
+            'unit_flow': getattr(self, 'unit_flow', None),
+            'unit_head': getattr(self, 'unit_head', None),
+            'unit_power': getattr(self, 'unit_power', None),
+            'unit_npsh': getattr(self, 'unit_npsh', None)
         }

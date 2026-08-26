@@ -361,8 +361,11 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
                 'power': round(float(pwr_arr[idx_bep]), 2)
             }
 
+        def _make_fitted():
+            fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+            is_vs = (fam_type == 'variable_speed')
             c_use_custom = c.get('use_custom_style', False) or (c.get('style_mode') == 'custom')
-            return {
+            res = {
                 'dia': d,
                 'is_max': False,
                 'ratio': round(r, 4),
@@ -379,10 +382,16 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
                 'weight': c.get('weight'),
                 'style': c.get('style')
             }
+            if is_vs:
+                res['rpm'] = d
+                res['speed_rpm'] = d
+                res['val'] = d
+            return res
 
         def _make_affinity():
             fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
-            penalty = 0.0 if fam_type == 'variable_speed' else trim_penalty_coeff * (1.0 - r)
+            is_vs = (fam_type == 'variable_speed')
+            penalty = 0.0 if is_vs else trim_penalty_coeff * (1.0 - r)
             eta_trimmed = np.clip(eta_base - penalty, 0, 100)
             use_custom = False
             c_color = None
@@ -407,7 +416,7 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
                 c_weight = matched_extra.get('weight')
                 c_style = matched_extra.get('style')
 
-            return {
+            res = {
                 'dia': d,
                 'is_max': d == d_max,
                 'ratio': round(r, 4),
@@ -424,6 +433,11 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
                 'weight': c_weight,
                 'style': c_style
             }
+            if is_vs:
+                res['rpm'] = d
+                res['speed_rpm'] = d
+                res['val'] = d
+            return res
 
         if eff_mode == 'both' and can_fit:
             family.append(_make_fitted())
@@ -624,9 +638,19 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
 
             isolines.append({
                 'eta': eta_t,
+                'branch': 'left',
                 'q': loop_q, 'h': loop_h,
                 'label_q': round(left_pts[0][0], 2),
                 'label_h': round(left_pts[0][1], 2),
+                'label_text': str(round(eta_t)) + "%",
+                'is_closed': True
+            })
+            isolines.append({
+                'eta': eta_t,
+                'branch': 'right',
+                'q': [], 'h': [],
+                'label_q': round(right_pts[0][0], 2),
+                'label_h': round(right_pts[0][1], 2),
                 'label_text': str(round(eta_t)) + "%",
                 'is_closed': True
             })
@@ -841,19 +865,31 @@ def speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00), values_str=None, n_points
 
         bep_idx = int(np.argmax(eta_k[:int(n_points * 0.95)])) if len(eta_k) > 0 else 0
 
+        bep_dict = {
+            'q': round(float(Q_k[bep_idx]), 2) if len(Q_k) > bep_idx else 0.0,
+            'h': round(float(H_k[bep_idx]), 2) if len(H_k) > bep_idx else 0.0,
+            'eta': round(float(eta_k[bep_idx]), 2) if len(eta_k) > bep_idx else 0.0,
+            'power': round(float(P_k[bep_idx]), 2) if len(P_k) > bep_idx else 0.0,
+            'npsh': round(float(NPSH_k[bep_idx]), 2) if len(NPSH_k) > bep_idx else 0.0,
+        }
+
         result.append({
-            'dia': (pump.impeller_dia_mm or 300.0) if is_var_speed else val,
-            'rpm': val if is_var_speed else (pump.speed_rpm or 1450.0),
+            'dia': (pump.impeller_dia_mm or 300.0) if not is_var_speed else val,
+            'rpm': val if not is_var_speed else (pump.speed_rpm or 1450.0),
+            'speed_rpm': val,
+            'speed_ratio': round(float(k), 4),
             'ratio': round(float(k), 4),
             'label': label,
             'q': [round(v, 3) for v in Q_k.tolist()],
             'h': [round(v, 3) for v in H_k.tolist()],
             'eta': [round(v, 2) for v in eta_k.tolist()],
             'pow': [round(v, 3) for v in P_k.tolist()],
+            'power': [round(v, 3) for v in P_k.tolist()],
             'npsh': [round(v, 3) for v in NPSH_k.tolist()],
-            'bep_q': round(float(Q_k[bep_idx]), 2) if len(Q_k) > bep_idx else 0.0,
-            'bep_h': round(float(H_k[bep_idx]), 2) if len(H_k) > bep_idx else 0.0,
-            'bep_eta': round(float(eta_k[bep_idx]), 2) if len(eta_k) > bep_idx else 0.0,
+            'bep': bep_dict,
+            'bep_q': bep_dict['q'],
+            'bep_h': bep_dict['h'],
+            'bep_eta': bep_dict['eta'],
         })
     return result
 
@@ -1048,18 +1084,34 @@ def _dia_overlay_lines(pump, values_str, n_points=100,
         NPSH_k = np.clip(npsh_base * (k ** 2), 0, None)
         eta_k = np.clip(eta_base, 0, 100)
 
+        bep_idx = int(np.argmax(eta_k[:int(n_points * 0.95)])) if len(eta_k) > 0 else 0
+
         d_fmt = f"{int(round(d))}" if abs(d - round(d)) < 1e-4 else f"{d:g}"
         label = f"Ø{d_fmt} mm ({round(k * 100)}%)"
 
+        bep_dict = {
+            'q': round(float(Q_k[bep_idx]), 2) if len(Q_k) > bep_idx else 0.0,
+            'h': round(float(H_k[bep_idx]), 2) if len(H_k) > bep_idx else 0.0,
+            'eta': round(float(eta_k[bep_idx]), 2) if len(eta_k) > bep_idx else 0.0,
+            'power': round(float(P_k[bep_idx]), 2) if len(P_k) > bep_idx else 0.0,
+            'npsh': round(float(NPSH_k[bep_idx]), 2) if len(NPSH_k) > bep_idx else 0.0,
+        }
+
         result.append({
             'dia': d,
+            'rpm': pump.speed_rpm or 1450.0,
             'ratio': round(float(k), 4),
             'label': label,
             'q': [round(v, 3) for v in Q_k.tolist()],
             'h': [round(v, 3) for v in H_k.tolist()],
             'eta': [round(v, 2) for v in eta_k.tolist()],
             'pow': [round(v, 3) for v in P_k.tolist()],
+            'power': [round(v, 3) for v in P_k.tolist()],
             'npsh': [round(v, 3) for v in NPSH_k.tolist()],
+            'bep': bep_dict,
+            'bep_q': bep_dict['q'],
+            'bep_h': bep_dict['h'],
+            'bep_eta': bep_dict['eta'],
         })
     return result
 

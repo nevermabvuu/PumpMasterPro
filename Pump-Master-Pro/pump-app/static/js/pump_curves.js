@@ -203,6 +203,7 @@ function getGraphDisplayUnits() {
     q: document.getElementById('preview-unit-q')?.value || 'm3h',
     h: document.getElementById('preview-unit-h')?.value || 'm',
     npsh: document.getElementById('preview-unit-npsh')?.value || 'm',
+    labelFormat: document.getElementById('selLabelFormat')?.value || 'percent',
     pow: document.getElementById('preview-unit-pow')?.value || 'kw',
     legendMode: document.getElementById('selLegendMode')?.value || 'each',
 
@@ -513,8 +514,6 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
   }, 250);
 }
 
-
-
 /* ══════════════════════════════════════════════════════════════════════════
    WARMAN PERFORMANCE MAP
    ══════════════════════════════════════════════════════════════════════════ */
@@ -522,8 +521,71 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
 /* ── Speed-line colour palette — warm oranges ────────────────────────────── */
 const SPD_COLORS = ['#664400', '#995500', '#cc7700', '#ff9900'];  // 70%→80%→90%→100%
 
+function isDuplicateOverlay(overlayLine, family, isVarSpeed, isSecondaryDia) {
+  if (!family || family.length === 0) return false;
+  return family.some(fam => {
+    if (isVarSpeed && !isSecondaryDia) {
+      // Family is RPM and overlay is RPM
+      const oRpm = overlayLine.rpm !== undefined ? overlayLine.rpm : (overlayLine.speed_rpm !== undefined ? overlayLine.speed_rpm : overlayLine.val);
+      const fRpm = fam.rpm !== undefined ? fam.rpm : fam.dia;
+      if (oRpm !== undefined && fRpm !== undefined && Math.abs(fRpm - oRpm) < 2) {
+        return true;
+      }
+    } else if (!isVarSpeed && isSecondaryDia) {
+      // Family is diameter mm and overlay is diameter mm
+      const oDia = overlayLine.dia !== undefined ? overlayLine.dia : overlayLine.val;
+      const fDia = fam.dia;
+      if (oDia !== undefined && fDia !== undefined && Math.abs(fDia - oDia) < 1) {
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+function filterOverlayLines(overlayList, family, isVarSpeed, isSecondaryDia) {
+  if (!overlayList || overlayList.length === 0) return [];
+  if (!family || family.length === 0) return overlayList;
+  return overlayList.filter(ol => !isDuplicateOverlay(ol, family, isVarSpeed, isSecondaryDia));
+}
+
+function getCurveDisplaySelection(data, opts = {}) {
+  const famType = data?.pump?.family_type || 'trimmed_impeller';
+  const isVarSpeed = (famType === 'variable_speed');
+
+  const rpmEl = typeof document !== 'undefined' ? document.getElementById('chkRpmOverlay') : null;
+  const diaEl = typeof document !== 'undefined' ? document.getElementById('chkDiaOverlay') : null;
+
+  const showSpeedLines = opts.showSpeedLines !== undefined ? Boolean(opts.showSpeedLines) : Boolean(rpmEl ? rpmEl.checked : isVarSpeed);
+  const showDiaOverlay = opts.showDiaOverlay !== undefined ? Boolean(opts.showDiaOverlay) : Boolean(diaEl ? diaEl.checked : !isVarSpeed);
+
+  const showPrimary = isVarSpeed ? showSpeedLines : showDiaOverlay;
+  const showSecondary = isVarSpeed ? showDiaOverlay : showSpeedLines;
+
+  const primaryFamily = data?.family || [];
+  const raw_spd_lines = data?.speed_lines || data?.rpm_overlay || [];
+  const raw_dia_overlay = data?.dia_overlay || [];
+
+  const spd_lines = filterOverlayLines(raw_spd_lines, primaryFamily, isVarSpeed, false);
+  const dia_overlay = filterOverlayLines(raw_dia_overlay, primaryFamily, isVarSpeed, true);
+  const secondaryLines = isVarSpeed ? dia_overlay : spd_lines;
+
+  return {
+    famType,
+    isVarSpeed,
+    showSpeedLines,
+    showDiaOverlay,
+    showPrimary,
+    showSecondary,
+    primaryFamily,
+    secondaryLines,
+    spd_lines,
+    dia_overlay
+  };
+}
+
 function buildWarmanChart(data, opts = {}) {
-  const { showIsolines = true, showPowerIso = false, showNpshIso = false, showSpeedLines = false, showDiaOverlay = false, showNpshCurve = false, npshYAxis = 'y2', dutyQ, dutyH } = opts;
+  const { showIsolines = true, showPowerIso = false, showNpshIso = false, showNpshCurve = false, npshYAxis = 'y2', dutyQ, dutyH } = opts;
   const units = getGraphDisplayUnits();
   const lblQ = typeof getUnitLabel === 'function' ? getUnitLabel('q', units.q) : units.q;
   const lblH = typeof getUnitLabel === 'function' ? getUnitLabel('h', units.h) : units.h;
@@ -532,19 +594,34 @@ function buildWarmanChart(data, opts = {}) {
 
   const traces = [];
   const annotations = [];
-  const family = data.family || [];
-  const famType = data.pump?.family_type || 'trimmed_impeller';
-  const isVarSpeed = (famType === 'variable_speed');
-  const formatFamLabel = (val) => isVarSpeed ? `${val} RPM` : `Ø${val} mm`;
+
+  const sel = getCurveDisplaySelection(data, opts);
+  const { isVarSpeed, showPrimary, showSecondary, primaryFamily, secondaryLines } = sel;
+
+  const labelFormat = units.labelFormat || 'percent';
+  const baseRpmForLabel = data.pump?.speed_rpm || 1450;
+  const maxDiaForLabel = data.pump?.impeller_dia_mm || 300;
+
+  const formatLineLabel = (lineObj, isDia) => {
+    if (lineObj.label) return lineObj.label;
+    if (isDia) {
+      const d = lineObj.dia !== undefined ? lineObj.dia : (lineObj.val !== undefined ? lineObj.val : lineObj.rpm);
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (d / maxDiaForLabel));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormat === 'percent' ? `Ø${d} mm (${pct}%)` : `Ø${d} mm`;
+    } else {
+      const r = lineObj.rpm !== undefined ? lineObj.rpm : (lineObj.speed_rpm !== undefined ? lineObj.speed_rpm : (lineObj.val !== undefined ? lineObj.val : lineObj.dia));
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (r / baseRpmForLabel));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormat === 'percent' ? `${r} RPM (${pct}%)` : `${r} RPM`;
+    }
+  };
+
   const isolines = data.isolines || [];
   const pwr_iso = data.power_isolines || [];
   const npsh_iso = data.npsh_isolines || [];
-  const spd_lines = data.speed_lines || data.rpm_overlay || [];
-  const dia_overlay = data.dia_overlay || [];
 
   const legendMode = units.legendMode || 'each';
-  const labelPos = units.labelPos || 'middle-top';
-
   const headColor = units.headColor || '#58a6ff';
   const headWeight = units.headWeight || 2.0;
   const headStyle = units.headStyle || 'solid';
@@ -561,17 +638,40 @@ function buildWarmanChart(data, opts = {}) {
   const npshWeight = units.npshWeight || 1.5;
   const npshStyle = units.npshStyle || 'dashdot';
 
-  const nDia = family.length;
+  /* ── 1. Determine active main curves vs secondary overlay curves ── */
+  let activeMainCurves = [];
+  let activeOverlayCurves = [];
+  let isMainDia = !isVarSpeed;
 
-  /* ── H-Q curves (one per diameter / speed) ──── */
-  family.forEach((d, i) => {
+  if (showPrimary && !showSecondary) {
+    activeMainCurves = primaryFamily;
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
+  } else if (!showPrimary && showSecondary) {
+    activeMainCurves = secondaryLines;
+    activeOverlayCurves = [];
+    isMainDia = isVarSpeed; // Secondary on VS is diameter; on ISF is RPM
+  } else if (showPrimary && showSecondary) {
+    activeMainCurves = primaryFamily;
+    activeOverlayCurves = secondaryLines;
+    isMainDia = !isVarSpeed;
+  } else {
+    // Neither selected -> show base curve only
+    activeMainCurves = primaryFamily.slice(0, 1);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
+  }
+
+  /* ── 2. Render Main H-Q Curves ── */
+  activeMainCurves.forEach((d, i) => {
+    const isMax = d.is_max || i === 0;
     const tag = d.label_tag || (d.curve_mode === 'fit' ? ' (Fitted)' : '');
     const useCustom = d.use_custom_style || d.style_mode === 'custom';
     const col = (useCustom && d.color) ? d.color : headColor;
-    const lw = (useCustom && d.weight) ? d.weight : (d.is_max ? headWeight : Math.max(1.0, headWeight - 0.5));
+    const lw = (useCustom && d.weight) ? d.weight : (isMax ? headWeight : Math.max(1.0, headWeight - 0.5));
     const dash = (useCustom && d.style) ? d.style : (d.label_tag ? 'dash' : headStyle);
 
-    const lblText = formatFamLabel(d.dia);
+    const lblText = formatLineLabel(d, isMainDia);
     const showInLegend = (legendMode === 'curve_labels') ? (i === 0) : (legendMode !== 'curve_labels');
     const traceName = (legendMode === 'curve_labels') ? 'Head H' : `${lblText}${tag}`;
 
@@ -584,82 +684,104 @@ function buildWarmanChart(data, opts = {}) {
       hovertemplate: `${lblText}${tag}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
     });
 
-    /* BEP star on each curve */
-    if (d.bep) {
+    /* BEP star marker on each main curve */
+    const bepObj = d.bep;
+    if (bepObj && bepObj.q !== undefined && bepObj.h !== undefined) {
       traces.push({
         type: 'scatter', mode: 'markers',
         name: `BEP ${lblText}${tag}`,
-        x: [d.bep.q], y: [d.bep.h],
+        x: [bepObj.q], y: [bepObj.h],
         marker: {
-          size: d.is_max ? 10 : 7, color: col, symbol: 'star',
+          size: isMax ? 10 : 7, color: col, symbol: 'star',
           line: { color: '#fff', width: 1 }
         },
         showlegend: false,
-        hovertemplate: `BEP ${lblText}${tag}<br>Q=${d.bep.q} ${lblQ}<br>H=${d.bep.h} ${lblH}<br>η=${d.bep.eta}%<extra></extra>`,
+        hovertemplate: `BEP ${lblText}${tag}<br>Q=${bepObj.q} ${lblQ}<br>H=${bepObj.h} ${lblH}${bepObj.eta ? `<br>η=${bepObj.eta}%` : ''}<extra></extra>`,
       });
     }
-  });
 
-  /* ── Direct Impeller Curve Labels (if Mode 3: curve_labels) ──── */
-  if (legendMode === 'curve_labels') {
-    family.forEach((d, i) => {
-      if (!d.q || d.q.length === 0) return;
-      const col = d.color || headColor;
-      const tag = d.label_tag || (d.curve_mode === 'fit' ? ' (Fitted)' : '');
-      const lblText = formatFamLabel(d.dia);
+    /* Direct Curve Labels (Mode 3: curve_labels) */
+    if (legendMode === 'curve_labels' && d.q && d.q.length > 0) {
       const curveKey = `${lblText}${tag}`;
-
-      let targetQ = 0;
-      let targetH = 0;
-      let xanchor = 'center';
-      let yanchor = 'middle';
-      let xshift = 0;
-      let yshift = 0;
+      let targetQ = 0, targetH = 0;
+      let xanchor = 'left', yanchor = 'bottom', xshift = 4, yshift = 4;
 
       if (customLabelPositions && customLabelPositions[curveKey]) {
         targetQ = customLabelPositions[curveKey].x;
         targetH = customLabelPositions[curveKey].y;
-        xanchor = 'center';
-        yanchor = 'middle';
-        xshift = 0;
-        yshift = 0;
+        xanchor = 'center'; yanchor = 'middle'; xshift = 0; yshift = 0;
       } else {
-        // Initial default placement at tail end of curve line
         const lastIdx = d.q.length - 1;
         targetQ = d.q[lastIdx];
         targetH = d.h[lastIdx];
-        xanchor = 'left';
-        xshift = 4;
-        yanchor = 'bottom';
-        yshift = 4;
       }
 
       annotations.push({
-        x: targetQ,
-        y: targetH,
+        x: targetQ, y: targetH,
         text: `<b>${curveKey}</b>`,
-        showarrow: false,
-        captureevents: true,
+        showarrow: false, captureevents: true,
         font: { color: '#ffffff', size: 10, family: 'Arial, sans-serif' },
         bgcolor: 'rgba(22, 27, 34, 0.92)',
-        bordercolor: col,
-        borderwidth: 1.5,
-        borderpad: 4,
-        xanchor: xanchor,
-        yanchor: yanchor,
-        xshift: xshift,
-        yshift: yshift,
+        bordercolor: col, borderwidth: 1.5, borderpad: 4,
+        xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
         name: curveKey
       });
+    }
+  });
+
+  /* ── 3. Render Secondary Overlay Curves (when both are enabled) ── */
+  if (activeOverlayCurves.length > 0) {
+    const isOverlayDia = isVarSpeed; // Secondary overlay on VS is diameter; on ISF is RPM
+    activeOverlayCurves.forEach((ol, i) => {
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const lw = (ol.ratio === 1.0 || ol.speed_ratio === 1.0) ? 2.0 : 1.5;
+      const lineLabel = formatLineLabel(ol, isOverlayDia);
+      const dash = isOverlayDia ? 'dash' : ((ol.ratio === 1.0 || ol.speed_ratio === 1.0) ? 'solid' : 'dot');
+
+      traces.push({
+        type: 'scatter', mode: 'lines',
+        name: lineLabel,
+        x: ol.q, y: ol.h,
+        line: { color: col, width: lw, dash: dash },
+        showlegend: legendMode !== 'curve_labels',
+        hovertemplate: `${lineLabel}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
+      });
+
+      /* BEP tick marker on overlay curve */
+      const bepObj = ol.bep;
+      if (bepObj && bepObj.q !== undefined && bepObj.h !== undefined) {
+        traces.push({
+          type: 'scatter', mode: 'markers',
+          name: `BEP ${lineLabel}`,
+          x: [bepObj.q], y: [bepObj.h],
+          marker: {
+            size: 6, color: col, symbol: 'diamond',
+            line: { color: '#fff', width: 0.8 }
+          },
+          showlegend: false,
+          hovertemplate: `BEP ${lineLabel}<br>Q=${bepObj.q} ${lblQ}<br>H=${bepObj.h} ${lblH}<extra></extra>`,
+        });
+      }
+
+      /* Direct label badge on each overlay curve */
+      if (ol.q && ol.q.length > 0 && ol.h && ol.h.length > 0) {
+        const lastIdx = Math.floor(ol.q.length * 0.90);
+        annotations.push({
+          x: ol.q[lastIdx], y: ol.h[lastIdx],
+          text: `<b>${lineLabel}</b>`,
+          showarrow: false, captureevents: true,
+          font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
+          bgcolor: 'rgba(15, 23, 42, 0.90)',
+          bordercolor: col, borderwidth: 1, borderpad: 2,
+          xanchor: 'center', yanchor: 'middle',
+          name: `ol_lbl_${i}`
+        });
+      }
     });
   }
 
-  /* ── Efficiency isolines ──── */
+  /* ── 4. Efficiency isolines ──── */
   if (showIsolines && isolines.length > 0) {
-    const etaVals = isolines.map(l => l.eta);
-    const etaMin = Math.min(...etaVals);
-    const etaMax = Math.max(...etaVals);
-
     isolines.forEach((iso, idx) => {
       const showInLegend = (legendMode === 'curve_labels') ? (idx === 0) : false;
       const traceName = (legendMode === 'curve_labels') ? 'Efficiency η' : `η = ${iso.eta}%`;
@@ -709,7 +831,7 @@ function buildWarmanChart(data, opts = {}) {
     });
   }
 
-  /* ── Power isolines ──── */
+  /* ── 5. Power isolines ──── */
   if (showPowerIso && pwr_iso.length > 0) {
     pwr_iso.forEach((pl, idx) => {
       const showInLegend = (legendMode === 'curve_labels') ? (idx === 0) : false;
@@ -754,7 +876,7 @@ function buildWarmanChart(data, opts = {}) {
     });
   }
 
-  /* ── NPSH isolines ──── */
+  /* ── 6. NPSH isolines ──── */
   if (showNpshIso && npsh_iso.length > 0) {
     npsh_iso.forEach((nl, idx) => {
       const showInLegend = (legendMode === 'curve_labels') ? (idx === 0) : false;
@@ -827,106 +949,25 @@ function buildWarmanChart(data, opts = {}) {
     }
   }
 
-  /* ── Speed / Impeller Overlay Lines ──── */
-  if (showSpeedLines && spd_lines.length > 0) {
-    spd_lines.forEach((sl, i) => {
-      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
-      const lw = sl.speed_ratio === 1.0 ? 2.2 : 1.5;
-      const baseRpm = data.pump?.speed_rpm || 1450;
-      const baseDia = data.pump?.impeller_dia_mm || 300;
-      const lineLabel = sl.label || (isVarSpeed 
-        ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
-        : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
-
-      traces.push({
-        type: 'scatter', mode: 'lines',
-        name: lineLabel,
-        x: sl.q, y: sl.h,
-        line: { color: col, width: lw, dash: sl.speed_ratio === 1.0 ? 'solid' : 'dot' },
-        showlegend: legendMode !== 'curve_labels',
-        hovertemplate: `${lineLabel}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
-      });
-      /* BEP tick on overlay line */
-      if (sl.bep) {
-        traces.push({
-          type: 'scatter', mode: 'markers',
-          name: `BEP ${lineLabel}`,
-          x: [sl.bep.q], y: [sl.bep.h],
-          marker: {
-            size: 6, color: col, symbol: 'diamond',
-            line: { color: '#fff', width: 0.8 }
-          },
-          showlegend: false,
-          hovertemplate: `BEP ${lineLabel}<br>Q=${sl.bep.q} ${lblQ}<br>H=${sl.bep.h} ${lblH}<extra></extra>`,
-        });
-      }
-
-      /* Direct label badge on each overlay curve */
-      if (sl.q && sl.q.length > 0 && sl.h && sl.h.length > 0) {
-        const lastIdx = Math.floor(sl.q.length * 0.90);
-        annotations.push({
-          x: sl.q[lastIdx], y: sl.h[lastIdx],
-          text: `<b>${lineLabel}</b>`,
-          showarrow: false, captureevents: true,
-          font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
-          bgcolor: 'rgba(15, 23, 42, 0.90)',
-          bordercolor: col, borderwidth: 1, borderpad: 2,
-          xanchor: 'center', yanchor: 'middle',
-          name: `spd_lbl_${i}`
-        });
-      }
-    });
-  }
-
-  /* ── Diameter Overlay Lines ──── */
-  if (showDiaOverlay && dia_overlay.length > 0) {
-    dia_overlay.forEach((dl, i) => {
-      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
-      const lw = 1.5;
-      const lineLabel = dl.label || `Ø${dl.dia} mm`;
-
-      traces.push({
-        type: 'scatter', mode: 'lines',
-        name: lineLabel,
-        x: dl.q, y: dl.h,
-        line: { color: col, width: lw, dash: 'dash' },
-        showlegend: legendMode !== 'curve_labels',
-        hovertemplate: `${lineLabel}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
-      });
-
-      /* Direct label badge on each overlay curve */
-      if (dl.q && dl.q.length > 0 && dl.h && dl.h.length > 0) {
-        const lastIdx = Math.floor(dl.q.length * 0.90);
-        annotations.push({
-          x: dl.q[lastIdx], y: dl.h[lastIdx],
-          text: `<b>${lineLabel}</b>`,
-          showarrow: false, captureevents: true,
-          font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
-          bgcolor: 'rgba(15, 23, 42, 0.90)',
-          bordercolor: col, borderwidth: 1, borderpad: 2,
-          xanchor: 'center', yanchor: 'middle',
-          name: `dia_lbl_${i}`
-        });
-      }
-    });
-  }
-
-  /* ── NPSH standard curves (secondary or same axis) ── */
+  /* ── 7. NPSH standard curves (secondary or same axis) ── */
   if (showNpshCurve) {
-    family.forEach((d, i) => {
+    const npshCurves = [...activeMainCurves, ...activeOverlayCurves];
+    npshCurves.forEach((d, i) => {
+      if (!d.npsh) return;
+      const lblText = formatLineLabel(d, isMainDia);
       traces.push({
         type: 'scatter', mode: 'lines',
-        name: `NPSHr Ø${d.dia} mm`,
+        name: `NPSHr ${lblText}`,
         x: d.q, y: d.npsh,
         line: { color: DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)], width: 1.5, dash: 'dashdot' },
         yaxis: npshYAxis,
         showlegend: legendMode === 'hq_only',
-        hovertemplate: `Ø${d.dia} mm NPSHr<br>Q=%{x:.1f} ${lblQ}<br>NPSHr=%{y:.2f} ${lblNpsh}<extra></extra>`
+        hovertemplate: `${lblText} NPSHr<br>Q=%{x:.1f} ${lblQ}<br>NPSHr=%{y:.2f} ${lblNpsh}<extra></extra>`
       });
     });
   }
 
-  /* ── System curve ──── */
+  /* ── 8. System curve ──── */
   if (data.system_q && data.system_h) {
     traces.push({
       type: 'scatter', mode: 'lines', name: 'System Curve',
@@ -937,7 +978,7 @@ function buildWarmanChart(data, opts = {}) {
     });
   }
 
-  /* ── Duty point ──── */
+  /* ── 9. Duty point ──── */
   if (dutyQ && dutyH) traces.push(dutyTrace(dutyQ, dutyH));
 
   const layout = makeLayout('Flow Q (m³/h)', 'Head H (m)', {
@@ -1048,51 +1089,38 @@ function buildHQChart(data, showSystem, showClean) {
 }
 
 /* ── Helper: Get active overlay lines (RPM or Diameter Overlay) based on test basis and form toggles ── */
-function getActiveOverlayLines(familyData) {
+function getActiveOverlayLines(familyData, opts = {}) {
   if (!familyData) return [];
-  const famType = familyData.pump?.family_type || 'trimmed_impeller';
-  const isVarSpeed = (famType === 'variable_speed');
-
-  const rpmEl = typeof document !== 'undefined' ? document.getElementById('chkRpmOverlay') : null;
-  const diaEl = typeof document !== 'undefined' ? document.getElementById('chkDiaOverlay') : null;
-
-  const chkRpm = rpmEl ? rpmEl.checked : isVarSpeed;
-  const chkDia = diaEl ? diaEl.checked : !isVarSpeed;
-
-  const lines = [];
-
-  if (chkRpm && familyData.rpm_overlay && familyData.rpm_overlay.length > 0) {
-    lines.push(...familyData.rpm_overlay);
-  }
-
-  if (chkDia && familyData.dia_overlay && familyData.dia_overlay.length > 0) {
-    lines.push(...familyData.dia_overlay);
-  }
-
-  return lines;
+  const sel = getCurveDisplaySelection(familyData, opts);
+  return sel.secondaryLines || [];
 }
 
 /* ── Build Efficiency Chart ── */
-// This function creates the Efficiency vs Flow (Q) graph.
-// Beginner Note: If "Direct Labels" mode is enabled, we attach label badges (e.g. Ø228 mm)
-// directly to each curve on this graph too, so the user can drag them or use Arrow keys.
-function buildEffChart(familyData, singleData, showClean) {
+function buildEffChart(familyData, singleData, showClean, opts = {}) {
   const traces = [];
-  let family = [];
-  if (familyData && familyData.family) {
-    family = familyData.family;
-  } else if (familyData) {
-    family = [{
-      dia: familyData.pump?.impeller_dia_mm || (typeof PUMP_MAIN_DIA !== 'undefined' ? PUMP_MAIN_DIA : null) || 0,
-      is_max: true,
-      ratio: 1.0,
-      q: familyData.q,
-      h: familyData.h,
-      eta: familyData.eta,
-      power: familyData.power,
-      npsh: familyData.npsh,
-      bep: familyData.bep
-    }];
+  const sel = getCurveDisplaySelection(familyData || singleData, opts);
+  const { isVarSpeed, showPrimary, showSecondary, primaryFamily, secondaryLines } = sel;
+
+  let activeMainCurves = [];
+  let activeOverlayCurves = [];
+  let isMainDia = !isVarSpeed;
+
+  if (showPrimary && !showSecondary) {
+    activeMainCurves = primaryFamily.length ? primaryFamily : (familyData ? [familyData] : []);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
+  } else if (!showPrimary && showSecondary) {
+    activeMainCurves = secondaryLines;
+    activeOverlayCurves = [];
+    isMainDia = isVarSpeed;
+  } else if (showPrimary && showSecondary) {
+    activeMainCurves = primaryFamily.length ? primaryFamily : (familyData ? [familyData] : []);
+    activeOverlayCurves = secondaryLines;
+    isMainDia = !isVarSpeed;
+  } else {
+    activeMainCurves = primaryFamily.length ? primaryFamily.slice(0, 1) : (familyData ? [familyData] : []);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
   }
 
   const units = getGraphDisplayUnits();
@@ -1100,14 +1128,31 @@ function buildEffChart(familyData, singleData, showClean) {
   const effWeight = units.effWeight || 1.5;
   const effStyle = units.effStyle || 'dot';
 
-  const isVarSpeed = (familyData?.pump?.family_type === 'variable_speed');
-  const formatFamLbl = (v) => isVarSpeed ? `${v} RPM` : `Ø${v} mm`;
+  const labelFormat = (typeof getGraphDisplayUnits === 'function' ? getGraphDisplayUnits().labelFormat : 'percent') || 'percent';
+  const baseRpmE = familyData?.pump?.speed_rpm || singleData?.pump?.speed_rpm || 1450;
+  const maxDiaE = familyData?.pump?.impeller_dia_mm || singleData?.pump?.impeller_dia_mm || 300;
 
-  family.forEach((fam, idx) => {
-    const isMax = fam.is_max;
+  const formatLineLabel = (lineObj, isDia) => {
+    if (lineObj.label) return lineObj.label;
+    if (isDia) {
+      const d = lineObj.dia !== undefined ? lineObj.dia : (lineObj.val !== undefined ? lineObj.val : lineObj.rpm);
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (d / maxDiaE));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormat === 'percent' ? `Ø${d} mm (${pct}%)` : `Ø${d} mm`;
+    } else {
+      const r = lineObj.rpm !== undefined ? lineObj.rpm : (lineObj.speed_rpm !== undefined ? lineObj.speed_rpm : (lineObj.val !== undefined ? lineObj.val : lineObj.dia));
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (r / baseRpmE));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormat === 'percent' ? `${r} RPM (${pct}%)` : `${r} RPM`;
+    }
+  };
+
+  activeMainCurves.forEach((fam, idx) => {
+    if (!fam.eta) return;
+    const isMax = fam.is_max || idx === 0;
     const lw = isMax ? (effWeight + 0.7) : effWeight;
     const showInLegend = (units.legendMode === 'curve_labels') ? (idx === 0) : (units.legendMode === 'each');
-    const lblText = formatFamLbl(fam.dia);
+    const lblText = formatLineLabel(fam, isMainDia);
     const traceName = (units.legendMode === 'curve_labels') ? 'Efficiency η' : `η ${lblText}`;
 
     traces.push({
@@ -1119,24 +1164,24 @@ function buildEffChart(familyData, singleData, showClean) {
       hovertemplate: `${lblText}<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
     });
 
-    if (fam.bep) {
+    const bepObj = fam.bep;
+    if (bepObj && bepObj.q !== undefined && bepObj.eta !== undefined) {
       traces.push({
         type: 'scatter', mode: 'markers',
         name: `BEP ${lblText}`,
-        x: [fam.bep.q], y: [fam.bep.eta],
+        x: [bepObj.q], y: [bepObj.eta],
         marker: { size: isMax ? 10 : 7, color: effColor, symbol: 'star', line: { color: '#fff', width: 1 } },
         showlegend: false,
-        hovertemplate: `BEP ${lblText}<br>Q=${fam.bep.q}<br>η=${fam.bep.eta}%<extra></extra>`
+        hovertemplate: `BEP ${lblText}<br>Q=${bepObj.q}<br>η=${bepObj.eta}%<extra></extra>`
       });
     }
   });
 
-  /* ── Overlay Speed / Impeller Trims on Efficiency Chart ── */
-  const spdLinesE = getActiveOverlayLines(familyData);
-  if (spdLinesE.length > 0) {
-    spdLinesE.forEach((sl, i) => {
+  if (activeOverlayCurves.length > 0) {
+    const isOverlayDia = isVarSpeed;
+    activeOverlayCurves.forEach((sl, i) => {
       const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
-      const lineLabel = sl.label || '';
+      const lineLabel = formatLineLabel(sl, isOverlayDia);
 
       if (sl.eta) {
         traces.push({
@@ -1168,10 +1213,10 @@ function buildEffChart(familyData, singleData, showClean) {
 
   layout.annotations = layout.annotations || [];
 
-  family.forEach((fam, idx) => {
+  activeMainCurves.forEach((fam, idx) => {
     if (!fam.q || fam.q.length === 0 || !fam.eta) return;
     const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
-    const lblText = formatFamLbl(fam.dia);
+    const lblText = formatLineLabel(fam, isMainDia);
     const curveKey = `eff_${lblText}`;
     const altKey = lblText;
 
@@ -1199,18 +1244,15 @@ function buildEffChart(familyData, singleData, showClean) {
     });
   });
 
-  if (spdLinesE.length > 0) {
-    spdLinesE.forEach((sl, i) => {
+  if (activeOverlayCurves.length > 0) {
+    const isOverlayDia = isVarSpeed;
+    activeOverlayCurves.forEach((sl, i) => {
       if (!sl.q || sl.q.length === 0 || !sl.eta) return;
       const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
-      const baseRpm = familyData?.pump?.speed_rpm || 1450;
-      const baseDia = familyData?.pump?.impeller_dia_mm || 300;
-      const lineLabel = sl.label || (isVarSpeed 
-        ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
-        : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
-
+      const lineLabel = formatLineLabel(sl, isOverlayDia);
       const curveKey = `eff_spd_${i}`;
-      let targetQ = 0, targetEta = 0, xanchor = 'center', yanchor = 'middle', xshift = 0, yshift = 0;
+
+      let targetQ = 0, targetEta = 0;
       if (customLabelPositions && customLabelPositions[curveKey]) {
         const pos = customLabelPositions[curveKey];
         targetQ = pos.x; targetEta = pos.y;
@@ -1226,7 +1268,7 @@ function buildEffChart(familyData, singleData, showClean) {
         font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
         bgcolor: 'rgba(15, 23, 42, 0.90)',
         bordercolor: col, borderwidth: 1, borderpad: 2,
-        xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
+        xanchor: 'center', yanchor: 'middle',
         name: curveKey
       });
     });
@@ -1236,23 +1278,31 @@ function buildEffChart(familyData, singleData, showClean) {
 }
 
 /* ── Build Efficiency & Power Combined Chart ── */
-function buildEffPowerChart(familyData, singleData, showClean) {
+function buildEffPowerChart(familyData, singleData, showClean, opts = {}) {
   const traces = [];
-  let family = [];
-  if (familyData && familyData.family) {
-    family = familyData.family;
-  } else if (familyData) {
-    family = [{
-      dia: familyData.pump?.impeller_dia_mm || (typeof PUMP_MAIN_DIA !== 'undefined' ? PUMP_MAIN_DIA : null) || 0,
-      is_max: true,
-      ratio: 1.0,
-      q: familyData.q,
-      h: familyData.h,
-      eta: familyData.eta,
-      power: familyData.power,
-      npsh: familyData.npsh,
-      bep: familyData.bep
-    }];
+  const sel = getCurveDisplaySelection(familyData || singleData, opts);
+  const { isVarSpeed, showPrimary, showSecondary, primaryFamily, secondaryLines } = sel;
+
+  let activeMainCurves = [];
+  let activeOverlayCurves = [];
+  let isMainDia = !isVarSpeed;
+
+  if (showPrimary && !showSecondary) {
+    activeMainCurves = primaryFamily.length ? primaryFamily : (familyData ? [familyData] : []);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
+  } else if (!showPrimary && showSecondary) {
+    activeMainCurves = secondaryLines;
+    activeOverlayCurves = [];
+    isMainDia = isVarSpeed;
+  } else if (showPrimary && showSecondary) {
+    activeMainCurves = primaryFamily.length ? primaryFamily : (familyData ? [familyData] : []);
+    activeOverlayCurves = secondaryLines;
+    isMainDia = !isVarSpeed;
+  } else {
+    activeMainCurves = primaryFamily.length ? primaryFamily.slice(0, 1) : (familyData ? [familyData] : []);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
   }
 
   const unitsEP = getGraphDisplayUnits();
@@ -1264,58 +1314,76 @@ function buildEffPowerChart(familyData, singleData, showClean) {
   const powWeight = unitsEP.powWeight || 1.5;
   const powStyle = unitsEP.powStyle || 'longdash';
 
-  const famType = familyData?.pump?.family_type || singleData?.pump?.family_type || 'trimmed_impeller';
-  const isVarSpeed = (famType === 'variable_speed');
-  const formatFamLbl = (v) => isVarSpeed ? `${v} RPM` : `Ø${v} mm`;
+  const labelFormatEP = (typeof getGraphDisplayUnits === 'function' ? getGraphDisplayUnits().labelFormat : 'percent') || 'percent';
+  const baseRpmEP = familyData?.pump?.speed_rpm || singleData?.pump?.speed_rpm || 1450;
+  const maxDiaEP = familyData?.pump?.impeller_dia_mm || singleData?.pump?.impeller_dia_mm || 300;
 
-  family.forEach((fam, idx) => {
-    const isMax = fam.is_max;
+  const formatLineLabel = (lineObj, isDia) => {
+    if (lineObj.label) return lineObj.label;
+    if (isDia) {
+      const d = lineObj.dia !== undefined ? lineObj.dia : (lineObj.val !== undefined ? lineObj.val : lineObj.rpm);
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (d / maxDiaEP));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormatEP === 'percent' ? `Ø${d} mm (${pct}%)` : `Ø${d} mm`;
+    } else {
+      const r = lineObj.rpm !== undefined ? lineObj.rpm : (lineObj.speed_rpm !== undefined ? lineObj.speed_rpm : (lineObj.val !== undefined ? lineObj.val : lineObj.dia));
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (r / baseRpmEP));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormatEP === 'percent' ? `${r} RPM (${pct}%)` : `${r} RPM`;
+    }
+  };
+
+  activeMainCurves.forEach((fam, idx) => {
+    const isMax = fam.is_max || idx === 0;
     const showEffLegend = (unitsEP.legendMode === 'curve_labels') ? (idx === 0) : (unitsEP.legendMode === 'each');
-    const showPowLegend = (unitsEP.legendMode === 'curve_labels') ? (idx === 0) : (unitsEP.legendMode === 'each');
-    const lblText = formatFamLbl(fam.dia);
+    const lblText = formatLineLabel(fam, isMainDia);
 
     // Efficiency on y1 (left side)
-    traces.push({
-      type: 'scatter', mode: 'lines',
-      name: (unitsEP.legendMode === 'curve_labels') ? 'Efficiency η' : `η ${lblText}`,
-      x: fam.q, y: fam.eta,
-      line: { color: effColor, width: isMax ? (effWeight + 0.7) : effWeight, dash: effStyle },
-      yaxis: 'y1',
-      showlegend: showEffLegend,
-      hovertemplate: `${lblText} η<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
-    });
-
-    if (fam.bep) {
+    if (fam.eta) {
       traces.push({
-        type: 'scatter', mode: 'markers',
-        name: `BEP ${lblText}`,
-        x: [fam.bep.q], y: [fam.bep.eta],
-        marker: { size: isMax ? 10 : 7, color: effColor, symbol: 'star', line: { color: '#fff', width: 1 } },
+        type: 'scatter', mode: 'lines',
+        name: (unitsEP.legendMode === 'curve_labels') ? 'Efficiency η' : `η ${lblText}`,
+        x: fam.q, y: fam.eta,
+        line: { color: effColor, width: isMax ? (effWeight + 0.7) : effWeight, dash: effStyle },
         yaxis: 'y1',
-        showlegend: false,
-        hovertemplate: `BEP ${lblText}<br>Q=${fam.bep.q}<br>η=${fam.bep.eta}%<extra></extra>`
+        showlegend: showEffLegend,
+        hovertemplate: `${lblText} η<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
       });
+
+      const bepObj = fam.bep;
+      if (bepObj && bepObj.q !== undefined && bepObj.eta !== undefined) {
+        traces.push({
+          type: 'scatter', mode: 'markers',
+          name: `BEP ${lblText}`,
+          x: [bepObj.q], y: [bepObj.eta],
+          marker: { size: isMax ? 10 : 7, color: effColor, symbol: 'star', line: { color: '#fff', width: 1 } },
+          yaxis: 'y1',
+          showlegend: false,
+          hovertemplate: `BEP ${lblText}<br>Q=${bepObj.q}<br>η=${bepObj.eta}%<extra></extra>`
+        });
+      }
     }
 
     // Power on y2 (right side)
-    if (fam.power) {
+    const pwrArr = fam.power || fam.pow;
+    if (pwrArr) {
       traces.push({
         type: 'scatter', mode: 'lines',
         name: `P ${lblText}`,
-        x: fam.q, y: fam.power,
+        x: fam.q, y: pwrArr,
         line: { color: powColor, width: isMax ? (powWeight + 0.7) : powWeight, dash: powStyle },
         yaxis: 'y2',
+        showlegend: false,
         hovertemplate: `${lblText} P<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
       });
     }
   });
 
-  /* ── Overlay Speed / Impeller Trims on Efficiency & Power Chart ── */
-  const spdLinesEP = getActiveOverlayLines(familyData);
-  if (spdLinesEP.length > 0) {
-    spdLinesEP.forEach((sl, i) => {
+  if (activeOverlayCurves.length > 0) {
+    const isOverlayDia = isVarSpeed;
+    activeOverlayCurves.forEach((sl, i) => {
       const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
-      const lineLabel = sl.label || '';
+      const lineLabel = formatLineLabel(sl, isOverlayDia);
       const pwrArr = sl.pow || sl.power;
 
       if (sl.eta) {
@@ -1380,10 +1448,10 @@ function buildEffPowerChart(familyData, singleData, showClean) {
 
   layout.annotations = layout.annotations || [];
 
-  family.forEach((fam, idx) => {
+  activeMainCurves.forEach((fam, idx) => {
     if (!fam.q || fam.q.length === 0 || !fam.eta) return;
     const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
-    const lblText = formatFamLbl(fam.dia);
+    const lblText = formatLineLabel(fam, isMainDia);
     const curveKey = `eff_${lblText}`;
     const altKey = lblText;
 
@@ -1411,18 +1479,15 @@ function buildEffPowerChart(familyData, singleData, showClean) {
     });
   });
 
-  if (spdLinesEP.length > 0) {
-    spdLinesEP.forEach((sl, i) => {
+  if (activeOverlayCurves.length > 0) {
+    const isOverlayDia = isVarSpeed;
+    activeOverlayCurves.forEach((sl, i) => {
       if (!sl.q || sl.q.length === 0 || !sl.eta) return;
       const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
-      const baseRpm = familyData?.pump?.speed_rpm || 1450;
-      const baseDia = familyData?.pump?.impeller_dia_mm || 300;
-      const lineLabel = sl.label || (isVarSpeed 
-        ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
-        : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
-
+      const lineLabel = formatLineLabel(sl, isOverlayDia);
       const curveKey = `eff_spd_${i}`;
-      let targetQ = 0, targetEta = 0, xanchor = 'center', yanchor = 'middle', xshift = 0, yshift = 0;
+
+      let targetQ = 0, targetEta = 0;
       if (customLabelPositions && customLabelPositions[curveKey]) {
         const pos = customLabelPositions[curveKey];
         targetQ = pos.x; targetEta = pos.y;
@@ -1438,7 +1503,7 @@ function buildEffPowerChart(familyData, singleData, showClean) {
         font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
         bgcolor: 'rgba(15, 23, 42, 0.90)',
         bordercolor: col, borderwidth: 1, borderpad: 2,
-        xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
+        xanchor: 'center', yanchor: 'middle',
         name: curveKey
       });
     });
@@ -1448,23 +1513,31 @@ function buildEffPowerChart(familyData, singleData, showClean) {
 }
 
 /* ── Build Shaft Power Chart ── */
-function buildPowerChart(familyData, singleData, showClean) {
+function buildPowerChart(familyData, singleData, showClean, opts = {}) {
   const traces = [];
-  let family = [];
-  if (familyData && familyData.family) {
-    family = familyData.family;
-  } else if (familyData) {
-    family = [{
-      dia: familyData.pump?.impeller_dia_mm || (typeof PUMP_MAIN_DIA !== 'undefined' ? PUMP_MAIN_DIA : null) || 0,
-      is_max: true,
-      ratio: 1.0,
-      q: familyData.q,
-      h: familyData.h,
-      eta: familyData.eta,
-      power: familyData.power,
-      npsh: familyData.npsh,
-      bep: familyData.bep
-    }];
+  const sel = getCurveDisplaySelection(familyData || singleData, opts);
+  const { isVarSpeed, showPrimary, showSecondary, primaryFamily, secondaryLines } = sel;
+
+  let activeMainCurves = [];
+  let activeOverlayCurves = [];
+  let isMainDia = !isVarSpeed;
+
+  if (showPrimary && !showSecondary) {
+    activeMainCurves = primaryFamily.length ? primaryFamily : (familyData ? [familyData] : []);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
+  } else if (!showPrimary && showSecondary) {
+    activeMainCurves = secondaryLines;
+    activeOverlayCurves = [];
+    isMainDia = isVarSpeed;
+  } else if (showPrimary && showSecondary) {
+    activeMainCurves = primaryFamily.length ? primaryFamily : (familyData ? [familyData] : []);
+    activeOverlayCurves = secondaryLines;
+    isMainDia = !isVarSpeed;
+  } else {
+    activeMainCurves = primaryFamily.length ? primaryFamily.slice(0, 1) : (familyData ? [familyData] : []);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
   }
 
   const unitsP = getGraphDisplayUnits();
@@ -1472,21 +1545,37 @@ function buildPowerChart(familyData, singleData, showClean) {
   const powWeight = unitsP.powWeight || 1.5;
   const powStyle = unitsP.powStyle || 'longdash';
 
-  const famType = familyData?.pump?.family_type || singleData?.pump?.family_type || 'trimmed_impeller';
-  const isVarSpeed = (famType === 'variable_speed');
-  const formatFamLbl = (v) => isVarSpeed ? `${v} RPM` : `Ø${v} mm`;
+  const labelFormatP = (typeof getGraphDisplayUnits === 'function' ? getGraphDisplayUnits().labelFormat : 'percent') || 'percent';
+  const baseRpmP = familyData?.pump?.speed_rpm || singleData?.pump?.speed_rpm || 1450;
+  const maxDiaP = familyData?.pump?.impeller_dia_mm || singleData?.pump?.impeller_dia_mm || 300;
 
-  family.forEach((fam, idx) => {
-    const isMax = fam.is_max;
+  const formatLineLabel = (lineObj, isDia) => {
+    if (lineObj.label) return lineObj.label;
+    if (isDia) {
+      const d = lineObj.dia !== undefined ? lineObj.dia : (lineObj.val !== undefined ? lineObj.val : lineObj.rpm);
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (d / maxDiaP));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormatP === 'percent' ? `Ø${d} mm (${pct}%)` : `Ø${d} mm`;
+    } else {
+      const r = lineObj.rpm !== undefined ? lineObj.rpm : (lineObj.speed_rpm !== undefined ? lineObj.speed_rpm : (lineObj.val !== undefined ? lineObj.val : lineObj.dia));
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (r / baseRpmP));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormatP === 'percent' ? `${r} RPM (${pct}%)` : `${r} RPM`;
+    }
+  };
+
+  activeMainCurves.forEach((fam, idx) => {
+    const isMax = fam.is_max || idx === 0;
     const showInLegend = (unitsP.legendMode === 'curve_labels') ? (idx === 0) : (unitsP.legendMode === 'each');
-    const lblText = formatFamLbl(fam.dia);
+    const lblText = formatLineLabel(fam, isMainDia);
     const traceName = (unitsP.legendMode === 'curve_labels') ? 'Power P' : `P ${lblText}`;
+    const pwrArr = fam.power || fam.pow;
 
-    if (fam.power) {
+    if (pwrArr) {
       traces.push({
         type: 'scatter', mode: 'lines',
         name: traceName,
-        x: fam.q, y: fam.power,
+        x: fam.q, y: pwrArr,
         line: { color: powColor, width: isMax ? (powWeight + 0.7) : powWeight, dash: powStyle },
         showlegend: showInLegend,
         hovertemplate: `${lblText}<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
@@ -1494,12 +1583,11 @@ function buildPowerChart(familyData, singleData, showClean) {
     }
   });
 
-  /* ── Overlay Speed / Impeller Trims on Power Chart ── */
-  const spdLinesP = getActiveOverlayLines(familyData);
-  if (spdLinesP.length > 0) {
-    spdLinesP.forEach((sl, i) => {
+  if (activeOverlayCurves.length > 0) {
+    const isOverlayDia = isVarSpeed;
+    activeOverlayCurves.forEach((sl, i) => {
       const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
-      const lineLabel = sl.label || '';
+      const lineLabel = formatLineLabel(sl, isOverlayDia);
       const pwrArr = sl.pow || sl.power;
 
       if (pwrArr) {
@@ -1532,10 +1620,11 @@ function buildPowerChart(familyData, singleData, showClean) {
 
   layout.annotations = layout.annotations || [];
 
-  family.forEach((fam, idx) => {
-    if (!fam.q || fam.q.length === 0 || !fam.power) return;
+  activeMainCurves.forEach((fam, idx) => {
+    const pwrArr = fam.power || fam.pow;
+    if (!fam.q || fam.q.length === 0 || !pwrArr) return;
     const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
-    const lblText = formatFamLbl(fam.dia);
+    const lblText = formatLineLabel(fam, isMainDia);
     const curveKey = `pow_${lblText}`;
     const altKey = lblText;
 
@@ -1548,7 +1637,7 @@ function buildPowerChart(familyData, singleData, showClean) {
     } else {
       const lastIdx = Math.floor(fam.q.length * 0.95);
       targetQ = fam.q[lastIdx];
-      targetPow = fam.power[lastIdx];
+      targetPow = pwrArr[lastIdx];
     }
 
     layout.annotations.push({
@@ -1563,24 +1652,22 @@ function buildPowerChart(familyData, singleData, showClean) {
     });
   });
 
-  if (spdLinesP.length > 0) {
-    spdLinesP.forEach((sl, i) => {
-      if (!sl.q || sl.q.length === 0 || !sl.power) return;
+  if (activeOverlayCurves.length > 0) {
+    const isOverlayDia = isVarSpeed;
+    activeOverlayCurves.forEach((sl, i) => {
+      const pwrArr = sl.pow || sl.power;
+      if (!sl.q || sl.q.length === 0 || !pwrArr) return;
       const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
-      const baseRpm = familyData?.pump?.speed_rpm || 1450;
-      const baseDia = familyData?.pump?.impeller_dia_mm || 300;
-      const lineLabel = sl.label || (isVarSpeed 
-        ? (sl.val ? `Ø${sl.val} mm (${Math.round((sl.val / baseDia) * 100)}%)` : `Ø${Math.round(baseDia * sl.speed_ratio)} mm (${Math.round(sl.speed_ratio * 100)}%)`)
-        : (sl.val ? `${Math.round(sl.val)} rpm (${Math.round((sl.val / baseRpm) * 100)}%)` : `${sl.speed_rpm || Math.round(baseRpm * sl.speed_ratio)} rpm (${Math.round(sl.speed_ratio * 100)}%)`));
-
+      const lineLabel = formatLineLabel(sl, isOverlayDia);
       const curveKey = `pow_spd_${i}`;
-      let targetQ = 0, targetPow = 0, xanchor = 'center', yanchor = 'middle', xshift = 0, yshift = 0;
+
+      let targetQ = 0, targetPow = 0;
       if (customLabelPositions && customLabelPositions[curveKey]) {
         const pos = customLabelPositions[curveKey];
         targetQ = pos.x; targetPow = pos.y;
       } else {
         const lastIdx = Math.floor(sl.q.length * 0.90);
-        targetQ = sl.q[lastIdx]; targetPow = sl.power[lastIdx];
+        targetQ = sl.q[lastIdx]; targetPow = pwrArr[lastIdx];
       }
 
       layout.annotations.push({
@@ -1590,7 +1677,7 @@ function buildPowerChart(familyData, singleData, showClean) {
         font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
         bgcolor: 'rgba(15, 23, 42, 0.90)',
         bordercolor: col, borderwidth: 1, borderpad: 2,
-        xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
+        xanchor: 'center', yanchor: 'middle',
         name: curveKey
       });
     });
@@ -1600,23 +1687,31 @@ function buildPowerChart(familyData, singleData, showClean) {
 }
 
 /* ── Build NPSHr Chart ── */
-function buildNpshChart(familyData, singleData) {
+function buildNpshChart(familyData, singleData, opts = {}) {
   const traces = [];
-  let family = [];
-  if (familyData && familyData.family) {
-    family = familyData.family;
-  } else if (familyData) {
-    family = [{
-      dia: familyData.pump?.impeller_dia_mm || (typeof PUMP_MAIN_DIA !== 'undefined' ? PUMP_MAIN_DIA : null) || 0,
-      is_max: true,
-      ratio: 1.0,
-      q: familyData.q,
-      h: familyData.h,
-      eta: familyData.eta,
-      power: familyData.power,
-      npsh: familyData.npsh,
-      bep: familyData.bep
-    }];
+  const sel = getCurveDisplaySelection(familyData || singleData, opts);
+  const { isVarSpeed, showPrimary, showSecondary, primaryFamily, secondaryLines } = sel;
+
+  let activeMainCurves = [];
+  let activeOverlayCurves = [];
+  let isMainDia = !isVarSpeed;
+
+  if (showPrimary && !showSecondary) {
+    activeMainCurves = primaryFamily.length ? primaryFamily : (familyData ? [familyData] : []);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
+  } else if (!showPrimary && showSecondary) {
+    activeMainCurves = secondaryLines;
+    activeOverlayCurves = [];
+    isMainDia = isVarSpeed;
+  } else if (showPrimary && showSecondary) {
+    activeMainCurves = primaryFamily.length ? primaryFamily : (familyData ? [familyData] : []);
+    activeOverlayCurves = secondaryLines;
+    isMainDia = !isVarSpeed;
+  } else {
+    activeMainCurves = primaryFamily.length ? primaryFamily.slice(0, 1) : (familyData ? [familyData] : []);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
   }
 
   const unitsN = getGraphDisplayUnits();
@@ -1624,14 +1719,30 @@ function buildNpshChart(familyData, singleData) {
   const npshWeight = unitsN.npshWeight || 1.5;
   const npshStyle = unitsN.npshStyle || 'dashdot';
 
-  const famType = familyData?.pump?.family_type || singleData?.pump?.family_type || 'trimmed_impeller';
-  const isVarSpeed = (famType === 'variable_speed');
-  const formatFamLbl = (v) => isVarSpeed ? `${v} RPM` : `Ø${v} mm`;
+  const labelFormatN = (typeof getGraphDisplayUnits === 'function' ? getGraphDisplayUnits().labelFormat : 'percent') || 'percent';
+  const baseRpmN = familyData?.pump?.speed_rpm || singleData?.pump?.speed_rpm || 1450;
+  const maxDiaN = familyData?.pump?.impeller_dia_mm || singleData?.pump?.impeller_dia_mm || 300;
 
-  family.forEach((fam, idx) => {
-    const isMax = fam.is_max;
+  const formatLineLabel = (lineObj, isDia) => {
+    if (lineObj.label) return lineObj.label;
+    if (isDia) {
+      const d = lineObj.dia !== undefined ? lineObj.dia : (lineObj.val !== undefined ? lineObj.val : lineObj.rpm);
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (d / maxDiaN));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormatN === 'percent' ? `Ø${d} mm (${pct}%)` : `Ø${d} mm`;
+    } else {
+      const r = lineObj.rpm !== undefined ? lineObj.rpm : (lineObj.speed_rpm !== undefined ? lineObj.speed_rpm : (lineObj.val !== undefined ? lineObj.val : lineObj.dia));
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (r / baseRpmN));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormatN === 'percent' ? `${r} RPM (${pct}%)` : `${r} RPM`;
+    }
+  };
+
+  activeMainCurves.forEach((fam, idx) => {
+    if (!fam.npsh) return;
+    const isMax = fam.is_max || idx === 0;
     const showInLegend = (unitsN.legendMode === 'curve_labels') ? (idx === 0) : (unitsN.legendMode === 'each');
-    const lblText = formatFamLbl(fam.dia);
+    const lblText = formatLineLabel(fam, isMainDia);
     const traceName = (unitsN.legendMode === 'curve_labels') ? 'NPSHr' : `NPSHr ${lblText}`;
 
     traces.push({
@@ -1644,12 +1755,11 @@ function buildNpshChart(familyData, singleData) {
     });
   });
 
-  /* ── Overlay Speed / Impeller Trims on NPSHr Chart ── */
-  const spdLinesN = getActiveOverlayLines(familyData);
-  if (spdLinesN.length > 0) {
-    spdLinesN.forEach((sl, i) => {
+  if (activeOverlayCurves.length > 0) {
+    const isOverlayDia = isVarSpeed;
+    activeOverlayCurves.forEach((sl, i) => {
       const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
-      const lineLabel = sl.label || '';
+      const lineLabel = formatLineLabel(sl, isOverlayDia);
 
       if (sl.npsh) {
         traces.push({
@@ -1671,25 +1781,26 @@ function buildNpshChart(familyData, singleData) {
   }
 
   // Add direct curve label badges if Mode 3 (curve_labels) is active
-  if (unitsN.legendMode === 'curve_labels' && family.length > 0) {
+  if (unitsN.legendMode === 'curve_labels' && activeMainCurves.length > 0) {
     layout.annotations = layout.annotations || [];
-    family.forEach((fam, idx) => {
+    activeMainCurves.forEach((fam, idx) => {
       if (!fam.q || fam.q.length === 0 || !fam.npsh) return;
       const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
-      const lblText = formatFamLbl(fam.dia);
+      const lblText = formatLineLabel(fam, isMainDia);
       const curveKey = `npsh_${lblText}`;
       const altKey = lblText;
 
-      let targetQ = 0, targetNpsh = 0, xanchor = 'center', yanchor = 'middle', xshift = 0, yshift = 0;
+      let targetQ = 0, targetNpsh = 0;
+      let xanchor = 'left', yanchor = 'bottom', xshift = 4, yshift = 4;
       if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
         const pos = customLabelPositions[curveKey] || customLabelPositions[altKey];
         targetQ = pos.x;
         targetNpsh = pos.y;
+        xanchor = 'center'; yanchor = 'middle'; xshift = 0; yshift = 0;
       } else {
         const lastIdx = fam.q.length - 1;
         targetQ = fam.q[lastIdx];
         targetNpsh = fam.npsh[lastIdx];
-        xanchor = 'left'; yanchor = 'bottom'; xshift = 4; yshift = 4;
       }
 
       layout.annotations.push({

@@ -312,6 +312,45 @@
         </div>
       </div>
 
+      <!-- Report Units Override -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
+        <span class="block text-xs font-bold text-[#f0883e] uppercase tracking-wider">
+          <i class="bi bi-ruler me-1"></i> Display Units for Graphs &amp; Output
+        </span>
+        <div class="grid grid-cols-4 gap-3 text-xs">
+          <div>
+            <label class="block text-[11px] text-[#8b949e] mb-1">Flow (Q):</label>
+            <select name="unit_flow" id="rep_unit_flow" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-[#f0883e]">
+              <option value="m3h">m³/h</option>
+              <option value="ls">L/s</option>
+              <option value="gpm">US gpm</option>
+              <option value="lmin">L/min</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] text-[#8b949e] mb-1">Head (H):</label>
+            <select name="unit_head" id="rep_unit_head" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-[#f0883e]">
+              <option value="m">m</option>
+              <option value="ft">ft</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] text-[#8b949e] mb-1">Power (P):</label>
+            <select name="unit_power" id="rep_unit_power" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-[#f0883e]">
+              <option value="kw">kW</option>
+              <option value="hp">hp</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] text-[#8b949e] mb-1">NPSHr:</label>
+            <select name="unit_npsh" id="rep_unit_npsh" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-[#f0883e]">
+              <option value="m">m</option>
+              <option value="ft">ft</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <!-- Header, Footer & Branding Customization -->
       <div class="grid grid-cols-3 gap-3">
         <div>
@@ -399,6 +438,12 @@
     document.getElementById('rep_legend_position').value = 'top_right';
     if (document.getElementById('rep_legend_mode')) document.getElementById('rep_legend_mode').value = 'pump_default';
     if (document.getElementById('rep_label_format')) document.getElementById('rep_label_format').value = 'auto';
+    
+    if (document.getElementById('rep_unit_flow')) document.getElementById('rep_unit_flow').value = 'm3h';
+    if (document.getElementById('rep_unit_head')) document.getElementById('rep_unit_head').value = 'm';
+    if (document.getElementById('rep_unit_power')) document.getElementById('rep_unit_power').value = 'kw';
+    if (document.getElementById('rep_unit_npsh')) document.getElementById('rep_unit_npsh').value = 'm';
+
     document.getElementById('reportModalTitle').innerHTML = '<i class="bi bi-sliders2 text-[#58a6ff]"></i> Add PDF Report Setting';
     document.getElementById('reportModal').classList.remove('hidden');
   }
@@ -427,6 +472,12 @@
     document.getElementById('rep_legend_position').value = r.legend_position || 'top_right';
     if (document.getElementById('rep_legend_mode')) document.getElementById('rep_legend_mode').value = r.legend_mode || 'pump_default';
     if (document.getElementById('rep_label_format')) document.getElementById('rep_label_format').value = r.label_format || 'auto';
+    
+    if (document.getElementById('rep_unit_flow')) document.getElementById('rep_unit_flow').value = r.unit_flow || 'm3h';
+    if (document.getElementById('rep_unit_head')) document.getElementById('rep_unit_head').value = r.unit_head || 'm';
+    if (document.getElementById('rep_unit_power')) document.getElementById('rep_unit_power').value = r.unit_power || 'kw';
+    if (document.getElementById('rep_unit_npsh')) document.getElementById('rep_unit_npsh').value = r.unit_npsh || 'm';
+
     document.getElementById('reportModalTitle').innerHTML = '<i class="bi bi-gear text-[#58a6ff]"></i> Configure PDF Report Setting';
     document.getElementById('reportModal').classList.remove('hidden');
   }

@@ -952,6 +952,8 @@ class ReportConfig(db.Model):
             'show_legend': bool(self.show_legend),
             'legend_position': self.legend_position or 'top_right',
             'legend_mode': getattr(self, 'legend_mode', 'pump_default') or 'pump_default',
+            # Beginners Note: Serialize label_format ('auto', 'percent', 'simple') so the configure modal populates the selected dropdown value
+            'label_format': getattr(self, 'label_format', 'auto') or 'auto',
             'header_text': self.header_text or '',
             'footer_text': self.footer_text or '',
             'primary_color': self.primary_color or '#1e3a8a',

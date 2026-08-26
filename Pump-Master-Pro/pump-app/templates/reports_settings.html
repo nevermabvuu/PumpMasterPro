@@ -296,7 +296,8 @@
           <div>
             <label class="block text-[11px] text-[#8b949e] mb-1">Curve Label Format:</label>
             <select name="label_format" id="rep_label_format" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-[#38bdf8]">
-              <option value="percent">With % Values (e.g. Ø228 mm (81%))</option>
+              <option value="auto">Use Pump Defaults (from pump-data)</option>
+              <option value="percent">With % Values (e.g. Ø228 mm (100%))</option>
               <option value="simple">Simple Values Only (e.g. 228 mm)</option>
             </select>
           </div>
@@ -437,6 +438,7 @@
     document.getElementById('rep_show_legend').checked = true;
     document.getElementById('rep_legend_position').value = 'top_right';
     if (document.getElementById('rep_legend_mode')) document.getElementById('rep_legend_mode').value = 'pump_default';
+    // Beginners Note: Default new report configuration to 'auto' (inherits active pump-data setting)
     if (document.getElementById('rep_label_format')) document.getElementById('rep_label_format').value = 'auto';
     
     if (document.getElementById('rep_unit_flow')) document.getElementById('rep_unit_flow').value = 'm3h';
@@ -471,6 +473,7 @@
     document.getElementById('rep_show_legend').checked = r.show_legend !== undefined ? r.show_legend : true;
     document.getElementById('rep_legend_position').value = r.legend_position || 'top_right';
     if (document.getElementById('rep_legend_mode')) document.getElementById('rep_legend_mode').value = r.legend_mode || 'pump_default';
+    // Beginners Note: Populate the dropdown with saved label_format value ('auto', 'percent', 'simple') from ReportConfig.to_dict()
     if (document.getElementById('rep_label_format')) document.getElementById('rep_label_format').value = r.label_format || 'auto';
     
     if (document.getElementById('rep_unit_flow')) document.getElementById('rep_unit_flow').value = r.unit_flow || 'm3h';

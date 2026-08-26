@@ -119,6 +119,72 @@ def _safe_range_val(val, default_val):
         return default_val
 
 
+def _clean_axis_scale(min_v, max_v, maj_v, minr_v, conv_factor=1.0, default_min=0.0, default_max=100.0):
+    """
+    Beginners Note: Normalizes axis scale bounds and intervals.
+    - If conv_factor == 1.0 (primary units / no conversion): strictly respects user-defined graph bounds and intervals.
+    - If conv_factor != 1.0 (display units converted): adapts intervals to the closest standard engineering round numbers
+      (multiples of 1, 1.5, 2, 2.5, 5, 10 * 10^k yielding clean 5s, 10s, 20s, 50s...) and expands max to the next clean multiple,
+      ensuring highly readable axes without awkward fractional decimals (e.g. 20, 40, 60... instead of 21.6, 43.2, 64.8...).
+    """
+    import math
+    is_conv = abs(conv_factor - 1.0) > 1e-4
+
+    raw_min = (float(min_v) * conv_factor) if min_v is not None else float(default_min)
+    raw_max = (float(max_v) * conv_factor) if max_v is not None else (float(default_max) if default_max is not None else None)
+    raw_maj = (float(maj_v) * conv_factor) if maj_v is not None else None
+    raw_minr = (float(minr_v) * conv_factor) if minr_v is not None else None
+
+    if not is_conv or raw_max is None:
+        return {
+            'min': raw_min,
+            'max': raw_max,
+            'major': raw_maj,
+            'minor': raw_minr
+        }
+
+    span = raw_max - raw_min
+    if span <= 0:
+        return {'min': raw_min, 'max': raw_max, 'major': raw_maj, 'minor': raw_minr}
+
+    target_step = raw_maj if (raw_maj and raw_maj > 0) else (span / 5.0)
+
+    # Standard clean multipliers in any decade: 1, 1.5, 2, 2.5, 5, 10
+    multipliers = [1.0, 1.5, 2.0, 2.5, 5.0, 10.0]
+    mag = 10.0 ** math.floor(math.log10(target_step)) if target_step > 0 else 1.0
+    candidates = []
+    for m in [0.1, 1.0, 10.0]:
+        for mult in multipliers:
+            candidates.append(mult * mag * m)
+
+    candidates = sorted(list(set([round(c, 6) for c in candidates if c > 0])))
+    reasonable = [c for c in candidates if 2.5 <= (span / c) <= 12.0]
+    if not reasonable:
+        reasonable = candidates
+
+    clean_step = min(reasonable, key=lambda c: abs(c - target_step))
+
+    # Clean max: ceiling to the nearest multiple of clean_step so that all curve data fits and ends on a clean tick
+    num_steps = math.ceil((raw_max - raw_min) / clean_step - 1e-5)
+    clean_max = raw_min + num_steps * clean_step
+
+    # Clean minor step
+    clean_minor = None
+    if raw_minr and raw_minr > 0 and raw_maj and raw_maj > 0:
+        sub_divs = round(raw_maj / raw_minr)
+        if sub_divs > 1:
+            allowed_divs = [2, 4, 5, 10]
+            best_div = min(allowed_divs, key=lambda d: abs(d - sub_divs))
+            clean_minor = round(clean_step / best_div, 4) if (clean_step / best_div) < 1 else round(clean_step / best_div, 2)
+
+    return {
+        'min': raw_min,
+        'max': clean_max,
+        'major': clean_step,
+        'minor': clean_minor
+    }
+
+
 def _calculate_axis_ticks(min_v, max_v, major_step=None):
     """
     Beginners Note: Calculates exact clean engineering major tick mark values (e.g. 0, 15, 30, 45, 60 or 0, 20, 40, 60, 80).
@@ -131,24 +197,27 @@ def _calculate_axis_ticks(min_v, max_v, major_step=None):
 
     span = max_v - min_v
 
-    # Check if user-provided major_step is valid and produces 2 to 12 ticks
+    # Check if user-provided major_step is valid and produces 2 to 14 ticks
     if major_step and major_step > 0:
-        num_ticks = span / float(major_step)
-        if 2 <= num_ticks <= 12:
+        step = float(major_step)
+        num_ticks = span / step
+        if 2 <= num_ticks <= 14:
             ticks = []
             curr = min_v
-            while curr <= max_v + 1e-5:
-                ticks.append(round(curr, 2))
-                curr += float(major_step)
+            while curr <= max_v + (step * 0.05):
+                ticks.append(round(curr, 4) if step < 1 else round(curr, 2))
+                curr += step
             return ticks
 
     # Fallback auto clean engineering step calculation
     raw_step = span / 5.0
-    magnitude = 10 ** np.floor(np.log10(raw_step)) if raw_step > 0 else 1.0
+    magnitude = 10.0 ** np.floor(np.log10(raw_step)) if raw_step > 0 else 1.0
     normalized = raw_step / magnitude
 
     if normalized <= 1.2:
         clean_step = 1.0 * magnitude
+    elif normalized <= 1.8:
+        clean_step = 1.5 * magnitude
     elif normalized <= 2.2:
         clean_step = 2.0 * magnitude
     elif normalized <= 3.5:
@@ -158,16 +227,10 @@ def _calculate_axis_ticks(min_v, max_v, major_step=None):
     else:
         clean_step = 10.0 * magnitude
 
-    # Special clean step presets for standard Head / Flow spans (e.g. 0 to 60 -> 15; 0 to 80 -> 20)
-    if 40 <= max_v <= 65 and min_v == 0:
-        clean_step = 15.0
-    elif 65 < max_v <= 90 and min_v == 0:
-        clean_step = 20.0
-
     ticks = []
     curr = min_v
-    while curr <= max_v + 1e-5:
-        ticks.append(round(curr, 2))
+    while curr <= max_v + (clean_step * 0.05):
+        ticks.append(round(curr, 4) if clean_step < 1 else round(curr, 2))
         curr += clean_step
 
     return ticks
@@ -468,17 +531,20 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             num_match = re.search(r'(\d+(?:\.\d+)?)', clean_lbl)
             val_key = num_match.group(1) if num_match else clean_lbl
             pct_val = c.get('pct')
-
-            # Format text badge according to user label_format choice
-            if label_format == 'simple':
-                display_text = re.sub(r'Ø|(?:\s*\(\d+%\))', '', clean_lbl).strip()
-            else:
-                display_text = clean_lbl
-
-            # Beginners Note: Disambiguate RPM speed curves vs Impeller diameter curves to prevent RPM curves
-            # from inheriting saved positions belonging to diameter curves (and vice-versa).
             is_rpm_lbl = ('rpm' in clean_lbl.lower()) or ('rpm' in raw_label.lower())
             chart_prefix = f"{chart_type}_" if chart_type != 'hq' else ""
+
+            # Format text badge according to user label_format choice
+            if label_format == 'percent':
+                if is_rpm_lbl:
+                    display_text = f"{val_key} RPM ({pct_val}%)" if pct_val is not None else f"{val_key} RPM"
+                else:
+                    display_text = f"Ø{val_key} mm ({pct_val}%)" if pct_val is not None else f"Ø{val_key} mm"
+            else:  # simple
+                if is_rpm_lbl:
+                    display_text = f"{val_key} RPM"
+                else:
+                    display_text = f"{val_key} mm"
 
             candidate_keys = []
             if is_rpm_lbl:
@@ -840,12 +906,17 @@ def _build_report_curve_context(pump, report):
     x_flow_max = getattr(pump, 'axis_flow_max', None)
     x_flow_maj = getattr(pump, 'axis_flow_major', None)
     x_flow_minr = getattr(pump, 'axis_flow_minor', None)
+
+    x_clean = _clean_axis_scale(
+        x_flow_min, x_flow_max, x_flow_maj, x_flow_minr,
+        conv_factor=fQ_raw, default_min=(pump.q_min or 0.0) * fQ_curve, default_max=q_max * fQ_curve
+    )
     
     x_common = {
-        'x_min': (float(x_flow_min) * fQ_raw) if x_flow_min is not None else ((pump.q_min or 0.0) * fQ_curve),
-        'x_max': (float(x_flow_max) * fQ_raw) if x_flow_max is not None else (q_max * fQ_curve),
-        'x_major': (float(x_flow_maj) * fQ_raw) if x_flow_maj is not None else None,
-        'x_minor': (float(x_flow_minr) * fQ_raw) if x_flow_minr is not None else None,
+        'x_min': x_clean['min'],
+        'x_max': x_clean['max'],
+        'x_major': x_clean['major'],
+        'x_minor': x_clean['minor'],
     }
 
     # Head Y-Axis MIN defaults to 0.0 for standard pump head baseline
@@ -854,51 +925,68 @@ def _build_report_curve_context(pump, report):
     h_maj_val = getattr(pump, 'axis_head_major', None)
     h_minr_val = getattr(pump, 'axis_head_minor', None)
     
-    if h_min_val is None or h_min_val == '' or float(h_min_val) == 20.0:
-        h_min = 0.0
-    else:
-        h_min = float(h_min_val) * fH_raw
+    if h_min_val is not None and (h_min_val == '' or float(h_min_val) == 20.0):
+        h_min_val = 0.0
+
+    h_clean = _clean_axis_scale(
+        h_min_val, h_max_val, h_maj_val, h_minr_val,
+        conv_factor=fH_raw, default_min=0.0, default_max=(max(h_pts) * 1.12 if max(h_pts) > 0 else 10.0) * fH_curve
+    )
 
     h_custom_range = dict(x_common)
     h_custom_range.update({
-        'y_min': h_min,
-        'y_max': (float(h_max_val) * fH_raw) if h_max_val is not None else ((max(h_pts) * 1.12 if max(h_pts) > 0 else 10.0) * fH_curve),
-        'y_major': (float(h_maj_val) * fH_raw) if h_maj_val is not None else None,
-        'y_minor': (float(h_minr_val) * fH_raw) if h_minr_val is not None else None,
+        'y_min': h_clean['min'],
+        'y_max': h_clean['max'],
+        'y_major': h_clean['major'],
+        'y_minor': h_clean['minor'],
     })
 
     eta_min_val = getattr(pump, 'axis_eff_min', None)
     eta_max_val = getattr(pump, 'axis_eff_max', None)
+    eta_maj_val = getattr(pump, 'axis_eff_major', None)
+    eta_minr_val = getattr(pump, 'axis_eff_minor', None)
+    eta_clean = _clean_axis_scale(
+        eta_min_val, eta_max_val, eta_maj_val, eta_minr_val,
+        conv_factor=1.0, default_min=0.0, default_max=100.0
+    )
     eta_custom_range = dict(x_common)
     eta_custom_range.update({
-        'y_min': float(eta_min_val) if eta_min_val is not None else 0.0,
-        'y_max': float(eta_max_val) if eta_max_val is not None else 100.0,
-        'y_major': float(getattr(pump, 'axis_eff_major', None)) if getattr(pump, 'axis_eff_major', None) is not None else None,
-        'y_minor': float(getattr(pump, 'axis_eff_minor', None)) if getattr(pump, 'axis_eff_minor', None) is not None else None,
+        'y_min': eta_clean['min'],
+        'y_max': eta_clean['max'],
+        'y_major': eta_clean['major'],
+        'y_minor': eta_clean['minor'],
     })
 
     pow_min_val = getattr(pump, 'axis_power_min', None)
     pow_max_val = getattr(pump, 'axis_power_max', None)
     pow_maj_val = getattr(pump, 'axis_power_major', None)
     pow_minr_val = getattr(pump, 'axis_power_minor', None)
+    pow_clean = _clean_axis_scale(
+        pow_min_val, pow_max_val, pow_maj_val, pow_minr_val,
+        conv_factor=fPow_raw, default_min=0.0, default_max=(max(pow_pts) * 1.15 if max(pow_pts) > 0 else 10.0) * fPow_curve
+    )
     pow_custom_range = dict(x_common)
     pow_custom_range.update({
-        'y_min': (float(pow_min_val) * fPow_raw) if pow_min_val is not None else 0.0,
-        'y_max': (float(pow_max_val) * fPow_raw) if pow_max_val is not None else ((max(pow_pts) * 1.15 if max(pow_pts) > 0 else 10.0) * fPow_curve),
-        'y_major': (float(pow_maj_val) * fPow_raw) if pow_maj_val is not None else None,
-        'y_minor': (float(pow_minr_val) * fPow_raw) if pow_minr_val is not None else None,
+        'y_min': pow_clean['min'],
+        'y_max': pow_clean['max'],
+        'y_major': pow_clean['major'],
+        'y_minor': pow_clean['minor'],
     })
 
     npsh_min_val = getattr(pump, 'axis_npsh_min', None)
     npsh_max_val = getattr(pump, 'axis_npsh_max', None)
     npsh_maj_val = getattr(pump, 'axis_npsh_major', None)
     npsh_minr_val = getattr(pump, 'axis_npsh_minor', None)
+    npsh_clean = _clean_axis_scale(
+        npsh_min_val, npsh_max_val, npsh_maj_val, npsh_minr_val,
+        conv_factor=fNpsh_raw, default_min=0.0, default_max=(max(npsh_pts) * 1.2 if max(npsh_pts) > 0 else 10.0) * fNpsh_curve
+    )
     npsh_custom_range = dict(x_common)
     npsh_custom_range.update({
-        'y_min': (float(npsh_min_val) * fNpsh_raw) if npsh_min_val is not None else 0.0,
-        'y_max': (float(npsh_max_val) * fNpsh_raw) if npsh_max_val is not None else ((max(npsh_pts) * 1.2 if max(npsh_pts) > 0 else 10.0) * fNpsh_curve),
-        'y_major': (float(npsh_maj_val) * fNpsh_raw) if npsh_maj_val is not None else None,
-        'y_minor': (float(npsh_minr_val) * fNpsh_raw) if npsh_minr_val is not None else None,
+        'y_min': npsh_clean['min'],
+        'y_max': npsh_clean['max'],
+        'y_major': npsh_clean['major'],
+        'y_minor': npsh_clean['minor'],
     })
 
     # Build Isolines (Efficiency, Power, Speed lines) for the H-Q map
@@ -1009,7 +1097,11 @@ def _build_report_curve_context(pump, report):
     fNpsh_raw = CURVE_CONVERSIONS['npsh'].get(rep_unit_npsh.lower(), 1.0) / CURVE_CONVERSIONS['npsh'].get(base_unit_npsh.lower(), 1.0)
 
     raw_custom_pos = pump.get_custom_label_pos() if hasattr(pump, 'get_custom_label_pos') else {}
-    label_fmt = getattr(report, 'label_format', 'auto') or 'auto'
+    rep_label_fmt = getattr(report, 'label_format', 'auto') or 'auto'
+    if rep_label_fmt == 'auto' or rep_label_fmt == 'pump_default':
+        label_fmt = p_opts.get('label_format', 'percent')
+    else:
+        label_fmt = rep_label_fmt
 
     # Scale custom label positions cleanly per chart type
     custom_pos_hq = {}

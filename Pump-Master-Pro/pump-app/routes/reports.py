@@ -84,6 +84,11 @@ def render_pdf_with_headless_browser(html_content, output_path):
             '--disable-gpu',
             '--no-sandbox',
             '--no-pdf-header-footer',
+            '--force-device-scale-factor=2',
+            '--high-dpi-support=1',
+            '--enable-font-antialiasing',
+            '--font-render-hinting=max',
+            '--window-size=2480,3508',
             '--virtual-time-budget=5000',
             f'--print-to-pdf={output_path}',
             file_uri
@@ -310,24 +315,26 @@ def find_custom_pos(custom_label_pos, candidate_keys):
 
 def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", custom_range=None, width=720, height=240, isolines_list=None, show_legend=True, legend_position='top_right', legend_mode='each', custom_label_pos=None, label_format='auto', chart_type='hq'):
     """
-    Beginners Note: Generates pure inline SVG XML vector markup for single or multi-curve pump charts.
+    Beginners Note: Generates pure inline SVG XML vector markup for single or multi-curve pump charts in Ultra-HD resolution.
     Accepts exact axis range settings (min, max, major, minor) set for the pump in pump-data,
     supports displaying multiple impeller diameter/speed curves (all, max_only, min_max),
-    renders constant efficiency/power isolines and speed lines, and supports configurable legend placement & direct curve labels!
-    
-    chart_type parameter ('hq', 'eff', 'pow', 'npsh') ensures label drag coordinates saved on one graph (e.g. H-Q Head in meters)
-    do not bleed into other graphs with different Y-axis units (e.g. Efficiency in %, Power in kW).
+    renders constant efficiency/power isolines and speed lines, and supports configurable legend placement & direct curve labels.
     """
     if not curves_list and not isolines_list:
         return ""
 
-    padding_left = 40
-    padding_right = 16
-    padding_top = 10
-    padding_bottom = 24
+    # Scale to Ultra-HD high-density internal vector coordinate space
+    VIEW_W = 960
+    scale = VIEW_W / 720.0
+    VIEW_H = max(100, int(round(height * scale)))
 
-    plot_w = width - padding_left - padding_right
-    plot_h = height - padding_top - padding_bottom
+    padding_left = 50
+    padding_right = 18
+    padding_top = 12
+    padding_bottom = 28
+
+    plot_w = VIEW_W - padding_left - padding_right
+    plot_h = VIEW_H - padding_top - padding_bottom
 
     # Extract X & Y values across curves & isolines
     all_x = []
@@ -363,7 +370,6 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
     x_ticks = _calculate_axis_ticks(x_min, x_max, x_major)
     y_ticks = _calculate_axis_ticks(y_min, y_max, y_major)
 
-    # Preserve exact custom bounds when provided to maintain pixel-perfect matching with pump-data Plotly charts
     if x_ticks and not has_custom_x_max:
         x_min = x_ticks[0]
         x_max = max(x_max, x_ticks[-1])
@@ -380,7 +386,7 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
         while curr_m < x_max - 1e-5:
             if not any(abs(curr_m - t) < 1e-4 for t in x_ticks):
                 px = padding_left + ((curr_m - x_min) / (x_max - x_min)) * plot_w
-                grid_lines.append(f'<line x1="{px:.1f}" y1="{padding_top}" x2="{px:.1f}" y2="{padding_top + plot_h}" stroke="#cbd5e1" stroke-width="0.7" stroke-dasharray="1,3" />')
+                grid_lines.append(f'<line x1="{px:.1f}" y1="{padding_top}" x2="{px:.1f}" y2="{padding_top + plot_h}" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="2,3" />')
             curr_m += x_minor
 
     # Y Minor Grid Lines (if set in pump-data)
@@ -389,24 +395,24 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
         while curr_m < y_max - 1e-5:
             if not any(abs(curr_m - t) < 1e-4 for t in y_ticks):
                 py = padding_top + plot_h - ((curr_m - y_min) / (y_max - y_min)) * plot_h
-                grid_lines.append(f'<line x1="{padding_left}" y1="{py:.1f}" x2="{width - padding_right}" y2="{py:.1f}" stroke="#cbd5e1" stroke-width="0.7" stroke-dasharray="1,3" />')
+                grid_lines.append(f'<line x1="{padding_left}" y1="{py:.1f}" x2="{VIEW_W - padding_right}" y2="{py:.1f}" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="2,3" />')
             curr_m += y_minor
 
     # X Major Grid Lines & Labels
     for val in x_ticks:
         if x_min - 1e-5 <= val <= x_max + 1e-5:
             px = padding_left + ((val - x_min) / (x_max - x_min)) * plot_w
-            grid_lines.append(f'<line x1="{px:.1f}" y1="{padding_top}" x2="{px:.1f}" y2="{padding_top + plot_h}" stroke="#94a3b8" stroke-dasharray="3,3" stroke-width="1.2" />')
+            grid_lines.append(f'<line x1="{px:.1f}" y1="{padding_top}" x2="{px:.1f}" y2="{padding_top + plot_h}" stroke="#cbd5e1" stroke-dasharray="3,3" stroke-width="1.0" />')
             val_str = f"{val:.0f}" if abs(val - round(val)) < 1e-5 else f"{val:.1f}"
-            labels.append(f'<text x="{px:.1f}" y="{padding_top + plot_h + 11}" font-size="8.5" font-family="Helvetica, Arial, sans-serif" fill="#475569" text-anchor="middle">{val_str}</text>')
+            labels.append(f'<text x="{px:.1f}" y="{padding_top + plot_h + 13}" font-size="9.5" font-weight="600" font-family="\'Segoe UI\', -apple-system, BlinkMacSystemFont, Arial, sans-serif" fill="#475569" text-anchor="middle">{val_str}</text>')
 
     # Y Major Grid Lines & Labels
     for val in y_ticks:
         if y_min - 1e-5 <= val <= y_max + 1e-5:
             py = padding_top + plot_h - ((val - y_min) / (y_max - y_min)) * plot_h
-            grid_lines.append(f'<line x1="{padding_left}" y1="{py:.1f}" x2="{width - padding_right}" y2="{py:.1f}" stroke="#94a3b8" stroke-dasharray="3,3" stroke-width="1.2" />')
+            grid_lines.append(f'<line x1="{padding_left}" y1="{py:.1f}" x2="{VIEW_W - padding_right}" y2="{py:.1f}" stroke="#cbd5e1" stroke-dasharray="3,3" stroke-width="1.0" />')
             val_str = f"{val:.0f}" if abs(val - round(val)) < 1e-5 else f"{val:.1f}"
-            labels.append(f'<text x="{padding_left - 5}" y="{py + 3:.1f}" font-size="8.5" font-family="Helvetica, Arial, sans-serif" fill="#475569" text-anchor="end">{val_str}</text>')
+            labels.append(f'<text x="{padding_left - 6}" y="{py + 3.5:.1f}" font-size="9.5" font-weight="600" font-family="\'Segoe UI\', -apple-system, BlinkMacSystemFont, Arial, sans-serif" fill="#475569" text-anchor="end">{val_str}</text>')
 
     paths_svg = []
     legend_items = []
@@ -419,7 +425,7 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             iso_y = iso.get('y', [])
             iso_color = iso.get('color', '#059669')
             iso_label = iso.get('label', '')
-            iso_dash = iso.get('dash', 'stroke-dasharray="2,2"')
+            iso_dash = iso.get('dash', 'stroke-dasharray="2.5,2.5"')
 
             iso_branch = iso.get('branch', '')
             iso_t_idx = iso.get('type_idx', iso_idx)
@@ -437,7 +443,7 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                 for x, y in zip(iso_x, iso_y):
                     raw_px = padding_left + ((x - x_min) / (x_max - x_min)) * plot_w
                     raw_py = padding_top + plot_h - ((y - y_min) / (y_max - y_min)) * plot_h
-                    px = min(max(float(padding_left), float(raw_px)), float(width - padding_right))
+                    px = min(max(float(padding_left), float(raw_px)), float(VIEW_W - padding_right))
                     py = min(max(float(padding_top), float(raw_py)), float(padding_top + plot_h))
                     pts.append((px, py))
 
@@ -445,7 +451,7 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                     path_d = f"M {pts[0][0]:.1f},{pts[0][1]:.1f}"
                     for px, py in pts[1:]:
                         path_d += f" L {px:.1f},{py:.1f}"
-                    paths_svg.append(f'<path d="{path_d}" fill="none" stroke="{iso_color}" stroke-width="1.2" {iso_dash} stroke-linecap="round" stroke-linejoin="round" />')
+                    paths_svg.append(f'<path d="{path_d}" fill="none" stroke="{iso_color}" stroke-width="1.3" {iso_dash} stroke-linecap="round" stroke-linejoin="round" />')
 
                     if iso_label:
                         clean_iso = iso_label.replace('%','').replace('kW','').replace('hp','').replace('m','').replace('ft','').strip()
@@ -492,11 +498,11 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                             m_idx = int(len(pts) / 2)
                             m_px, m_py = pts[m_idx]
 
-                        m_px = min(max(float(padding_left + 10), float(m_px)), float(width - padding_right - 10))
-                        m_py = min(max(float(padding_top + 10), float(m_py)), float(height - padding_bottom - 5))
+                        m_px = min(max(float(padding_left + 12), float(m_px)), float(VIEW_W - padding_right - 12))
+                        m_py = min(max(float(padding_top + 10), float(m_py)), float(VIEW_H - padding_bottom - 6))
 
                         # Beginners Note: dominant-baseline="central" centers the text vertically on (m_px, m_py) without Y-offset displacement
-                        labels.append(f'<text x="{m_px:.1f}" y="{m_py:.1f}" font-size="7.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="{iso_color}" text-anchor="middle" dominant-baseline="central">{iso_label}</text>')
+                        labels.append(f'<text x="{m_px:.1f}" y="{m_py:.1f}" font-size="9" font-weight="700" font-family="\'Segoe UI\', -apple-system, BlinkMacSystemFont, Arial, sans-serif" fill="{iso_color}" text-anchor="middle" dominant-baseline="central" paint-order="stroke" stroke="#ffffff" stroke-width="3.5px" stroke-linejoin="round">{iso_label}</text>')
 
     # Render Primary & Trim Pump Curve Paths
     sec_count = 0
@@ -506,7 +512,7 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
         color = c.get('color', '#1e3a8a')
         label = c.get('label', f'Curve {c_idx+1}')
         is_sec = c.get('is_secondary', False)
-        dash_style = 'stroke-dasharray="4,4"' if is_sec else ''
+        dash_style = 'stroke-dasharray="5,4"' if is_sec else ''
 
         if is_sec:
             sec_idx = sec_count
@@ -514,21 +520,26 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
         else:
             sec_idx = c_idx
 
-        if len(x_pts) != len(y_pts) or len(x_pts) == 0:
+        if not x_pts or not y_pts or len(x_pts) != len(y_pts):
             continue
 
         pts = []
         for x, y in zip(x_pts, y_pts):
-            px = padding_left + ((x - x_min) / (x_max - x_min)) * plot_w
-            py = padding_top + plot_h - ((y - y_min) / (y_max - y_min)) * plot_h
+            raw_px = padding_left + ((x - x_min) / (x_max - x_min)) * plot_w
+            raw_py = padding_top + plot_h - ((y - y_min) / (y_max - y_min)) * plot_h
+            px = min(max(float(padding_left), float(raw_px)), float(VIEW_W - padding_right))
+            py = min(max(float(padding_top), float(raw_py)), float(padding_top + plot_h))
             pts.append((px, py))
+
+        if not pts:
+            continue
 
         path_d = f"M {pts[0][0]:.1f},{pts[0][1]:.1f}"
         for px, py in pts[1:]:
             path_d += f" L {px:.1f},{py:.1f}"
 
-        stroke_w = 2.5 if not is_sec else 1.8
-        paths_svg.append(f'<path d="{path_d}" fill="none" stroke="{color}" stroke-width="{stroke_w}" {dash_style} stroke-linecap="round" />')
+        stroke_w = 2.6 if not is_sec else 1.8
+        paths_svg.append(f'<path d="{path_d}" fill="none" stroke="{color}" stroke-width="{stroke_w}" {dash_style} stroke-linecap="round" stroke-linejoin="round" />')
         pct_val = c.get('pct')
         legend_items.append({'label': label, 'color': color, 'pct': pct_val, 'val': c.get('val')})
 
@@ -644,36 +655,36 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                 idx = int(len(pts) * 0.85)
                 lx, ly = pts[idx]
 
-            lx = min(max(float(padding_left + 15), float(lx)), float(width - padding_right - 15))
-            ly = min(max(float(padding_top + 10), float(ly)), float(height - padding_bottom - 5))
+            lx = min(max(float(padding_left + 18), float(lx)), float(VIEW_W - padding_right - 18))
+            ly = min(max(float(padding_top + 12), float(ly)), float(VIEW_H - padding_bottom - 6))
 
-            tw = len(display_text) * 5 + 8
-            labels.append(f'<rect x="{lx - tw/2:.1f}" y="{ly - 10:.1f}" width="{tw}" height="12" fill="#ffffff" fill-opacity="0.9" stroke="{color}" stroke-width="0.8" rx="3" />')
-            labels.append(f'<text x="{lx:.1f}" y="{ly - 1.5:.1f}" font-size="7.5" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="{color}" text-anchor="middle">{display_text}</text>')
+            tw = len(display_text) * 5.8 + 10
+            labels.append(f'<rect x="{lx - tw/2:.1f}" y="{ly - 11:.1f}" width="{tw:.1f}" height="14" fill="#ffffff" fill-opacity="0.95" stroke="{color}" stroke-width="1.0" rx="3.5" />')
+            labels.append(f'<text x="{lx:.1f}" y="{ly - 1.5:.1f}" font-size="9" font-weight="700" font-family="\'Segoe UI\', -apple-system, BlinkMacSystemFont, Arial, sans-serif" fill="{color}" text-anchor="middle">{display_text}</text>')
 
     # Render Multi-Curve Legend Box with customizable positioning
     legend_svg = ""
     if show_legend and legend_mode != 'curve_labels' and legend_mode != 'none' and len(legend_items) >= 1:
         leg_box = []
-        b_w = 120
-        b_h = 14 + len(legend_items) * 13
+        b_w = 135
+        b_h = 16 + len(legend_items) * 14
 
         if legend_position == 'top_left':
-            box_x = padding_left + 8
-            box_y = padding_top + 4
+            box_x = padding_left + 10
+            box_y = padding_top + 6
         elif legend_position == 'bottom_right':
-            box_x = width - padding_right - b_w - 4
-            box_y = height - padding_bottom - b_h - 4
+            box_x = VIEW_W - padding_right - b_w - 6
+            box_y = VIEW_H - padding_bottom - b_h - 6
         elif legend_position == 'bottom_left':
-            box_x = padding_left + 8
-            box_y = height - padding_bottom - b_h - 4
+            box_x = padding_left + 10
+            box_y = VIEW_H - padding_bottom - b_h - 6
         else:  # 'top_right'
-            box_x = width - padding_right - b_w - 4
-            box_y = padding_top + 4
+            box_x = VIEW_W - padding_right - b_w - 6
+            box_y = padding_top + 6
 
-        leg_box.append(f'<rect x="{box_x}" y="{box_y}" width="{b_w}" height="{b_h}" fill="#ffffff" fill-opacity="0.9" stroke="#cbd5e1" rx="4" />')
+        leg_box.append(f'<rect x="{box_x}" y="{box_y}" width="{b_w}" height="{b_h}" fill="#ffffff" fill-opacity="0.95" stroke="#cbd5e1" rx="4" />')
         for l_idx, leg in enumerate(legend_items):
-            ly = box_y + 12 + l_idx * 13
+            ly = box_y + 13 + l_idx * 14
             l_text = leg["label"]
             l_pct = leg.get("pct")
             if label_format == 'percent' and l_pct is not None:
@@ -683,17 +694,17 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             elif label_format == 'simple':
                 l_text = re.sub(r'\s*\(\d+%\)', '', leg['label'])
 
-            leg_box.append(f'<line x1="{box_x + 8}" y1="{ly - 3}" x2="{box_x + 22}" y2="{ly - 3}" stroke="{leg["color"]}" stroke-width="2" />')
-            leg_box.append(f'<text x="{box_x + 26}" y="{ly}" font-size="8" font-family="Helvetica, Arial, sans-serif" fill="#334155">{l_text}</text>')
+            leg_box.append(f'<line x1="{box_x + 8}" y1="{ly - 3}" x2="{box_x + 24}" y2="{ly - 3}" stroke="{leg["color"]}" stroke-width="2.2" stroke-linecap="round" />')
+            leg_box.append(f'<text x="{box_x + 28}" y="{ly}" font-size="9" font-weight="600" font-family="\'Segoe UI\', -apple-system, BlinkMacSystemFont, Arial, sans-serif" fill="#334155">{l_text}</text>')
         legend_svg = "".join(leg_box)
 
-    svg_code = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" preserveAspectRatio="none" width="100%" height="{height}px" style="background:#ffffff; border-radius:4px; display:block; width:100%; height:100%; max-height:{height}px;">
+    svg_code = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {VIEW_W} {VIEW_H}" preserveAspectRatio="none" width="100%" height="100%" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" style="background:#ffffff; border-radius:4px; display:block; width:100%; height:100%; max-height:{height}px;">
   {''.join(grid_lines)}
-  <line x1="{padding_left}" y1="{padding_top + plot_h}" x2="{width - padding_right}" y2="{padding_top + plot_h}" stroke="#475569" stroke-width="1.5" />
+  <line x1="{padding_left}" y1="{padding_top + plot_h}" x2="{VIEW_W - padding_right}" y2="{padding_top + plot_h}" stroke="#475569" stroke-width="1.5" />
   <line x1="{padding_left}" y1="{padding_top}" x2="{padding_left}" y2="{padding_top + plot_h}" stroke="#475569" stroke-width="1.5" />
   {''.join(labels)}
-  <text x="{(padding_left + width - padding_right) / 2}" y="{height - 2}" font-size="9" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#334155" text-anchor="middle">{x_label}</text>
-  <text x="10" y="{(padding_top + padding_top + plot_h) / 2}" font-size="9" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#334155" text-anchor="middle" transform="rotate(-90 10 {(padding_top + padding_top + plot_h) / 2})">{y_label}</text>
+  <text x="{(padding_left + VIEW_W - padding_right) / 2}" y="{VIEW_H - 3}" font-size="10.5" font-weight="700" font-family="\'Segoe UI\', -apple-system, BlinkMacSystemFont, Arial, sans-serif" fill="#1e293b" text-anchor="middle">{x_label}</text>
+  <text x="12" y="{(padding_top + padding_top + plot_h) / 2}" font-size="10.5" font-weight="700" font-family="\'Segoe UI\', -apple-system, BlinkMacSystemFont, Arial, sans-serif" fill="#1e293b" text-anchor="middle" transform="rotate(-90 12 {(padding_top + padding_top + plot_h) / 2})">{y_label}</text>
   {''.join(paths_svg)}
   {legend_svg}
 </svg>'''
@@ -724,7 +735,7 @@ def _build_report_curve_context(pump, report):
     fNpsh_raw = CURVE_CONVERSIONS['npsh'].get(rep_unit_npsh.lower(), 1.0) / CURVE_CONVERSIONS['npsh'].get((pump.unit_npsh or 'm').lower(), 1.0)
 
     q_max = pump.q_max if hasattr(pump, 'q_max') and pump.q_max and pump.q_max > 0 else 200.0
-    q_pts = list(np.linspace(pump.q_min or 0.0, q_max, 60))
+    q_pts = list(np.linspace(pump.q_min or 0.0, q_max, 150))
 
     # Evaluate Primary Max Curve
     h_arr = hq_curve(pump, np.array(q_pts))

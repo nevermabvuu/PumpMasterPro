@@ -1262,6 +1262,7 @@ def save_report():
     supplier_id = request.form.get('supplier_id')
     report.supplier_id = int(supplier_id) if supplier_id and supplier_id.isdigit() else None
     report.title = title
+    report.report_type = request.form.get('report_type', 'Technical Datasheet').strip() or 'Technical Datasheet'
     report.description = request.form.get('description', '').strip()
     report.template_name = request.form.get('template_name', 'standard_datasheet.html').strip()
     

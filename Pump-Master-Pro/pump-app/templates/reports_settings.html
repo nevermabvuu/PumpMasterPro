@@ -76,6 +76,7 @@
         <thead class="bg-[#0d1117] border-b border-[#30363d] text-[#8b949e] uppercase font-mono tracking-wider">
           <tr>
             <th class="py-2.5 px-4">Report Title</th>
+            <th class="py-2.5 px-4">Type</th>
             <th class="py-2.5 px-4">Linked Supplier</th>
             <th class="py-2.5 px-4">HTML Template</th>
             <th class="py-2.5 px-4">Active Graphs</th>
@@ -90,6 +91,11 @@
             <td class="py-3 px-4 font-semibold text-[#e6edf3]">
               <div>{{ r.title }}</div>
               <div class="text-[11px] text-[#8b949e] font-normal truncate max-w-xs">{{ r.description or 'Standard Datasheet' }}</div>
+            </td>
+            <td class="py-3 px-4">
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#0d1117] border border-[#30363d] text-[#7ee787]">
+                {{ r.report_type or 'Technical Datasheet' }}
+              </span>
             </td>
             <td class="py-3 px-4">
               <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#0d1117] border border-[#30363d] text-[#58a6ff]">
@@ -130,7 +136,7 @@
           {% endfor %}
           {% else %}
           <tr>
-            <td colspan="6" class="py-8 text-center text-slate-500">No report configurations found.</td>
+            <td colspan="7" class="py-8 text-center text-slate-500">No report configurations found.</td>
           </tr>
           {% endif %}
         </tbody>
@@ -196,7 +202,19 @@
     <form action="{{ url_for('reports.save_report') }}" method="POST" class="p-4 space-y-4 overflow-y-auto">
       <input type="hidden" name="report_id" id="rep_id">
 
-      <!-- Supplier Link & Title -->
+      <!-- Title & Report Type -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Report Title *</label>
+          <input type="text" name="title" id="rep_title" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="e.g. Standard Pump Technical Datasheet">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Report Type *</label>
+          <input type="text" name="report_type" id="rep_report_type" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="e.g. Technical Datasheet / Quotation">
+        </div>
+      </div>
+
+      <!-- Supplier Link & Template Name Textbox -->
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Linked Supplier *</label>
@@ -209,17 +227,13 @@
         </div>
         <div>
           <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">HTML Template Name *</label>
-          <select name="template_name" id="rep_template_name" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]">
+          <input type="text" name="template_name" id="rep_template_name" required list="template_list" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="e.g. standard_datasheet.html">
+          <datalist id="template_list">
             {% for t in available_templates %}
-            <option value="{{ t }}">{{ t }}</option>
+            <option value="{{ t }}"></option>
             {% endfor %}
-          </select>
+          </datalist>
         </div>
-      </div>
-
-      <div>
-        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Report Title *</label>
-        <input type="text" name="title" id="rep_title" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="e.g. Standard Pump Technical Datasheet">
       </div>
 
       <!-- Graph Show / Hide Preferences -->
@@ -415,9 +429,10 @@
     document.getElementById('supplierModal').classList.add('hidden');
   }
 
-  function openAddReportModal() {
+  function openReportModal() {
     document.getElementById('rep_id').value = '';
     document.getElementById('rep_title').value = '';
+    document.getElementById('rep_report_type').value = 'Technical Datasheet';
     document.getElementById('rep_supplier_id').value = '';
     document.getElementById('rep_template_name').value = 'standard_datasheet.html';
     document.getElementById('rep_header_text').value = 'PUMP MASTER PRO - TECHNICAL DATASHEET';
@@ -449,10 +464,12 @@
     document.getElementById('reportModalTitle').innerHTML = '<i class="bi bi-sliders2 text-[#58a6ff]"></i> Add PDF Report Setting';
     document.getElementById('reportModal').classList.remove('hidden');
   }
+  const openAddReportModal = openReportModal;
 
   function editReport(r) {
     document.getElementById('rep_id').value = r.id;
     document.getElementById('rep_title').value = r.title || '';
+    document.getElementById('rep_report_type').value = r.report_type || 'Technical Datasheet';
     document.getElementById('rep_supplier_id').value = r.supplier_id || '';
     document.getElementById('rep_template_name').value = r.template_name || 'standard_datasheet.html';
     document.getElementById('rep_header_text').value = r.header_text || '';
@@ -492,5 +509,13 @@
   document.querySelectorAll('.report-color-swatch').forEach(function(el) {
     if (el.dataset.color) el.style.backgroundColor = el.dataset.color;
   });
+
+  const colorInput = document.getElementById('rep_primary_color');
+  const colorHex = document.getElementById('rep_color_hex');
+  if (colorInput && colorHex) {
+    colorInput.addEventListener('input', function(e) {
+      colorHex.value = e.target.value;
+    });
+  }
 </script>
 {% endblock %}

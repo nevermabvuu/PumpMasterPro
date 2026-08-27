@@ -884,6 +884,7 @@ class ReportConfig(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=True)
     title = db.Column(db.String(150), nullable=False, default='Standard Pump Technical Datasheet')
+    report_type = db.Column(db.String(100), default='Technical Datasheet')
     description = db.Column(db.Text, default='')
     template_name = db.Column(db.String(100), default='standard_datasheet.html')
 
@@ -936,6 +937,7 @@ class ReportConfig(db.Model):
             'supplier_id': self.supplier_id,
             'supplier_name': sup.name if sup else 'Default / Generic',
             'title': self.title or 'Standard Pump Technical Datasheet',
+            'report_type': getattr(self, 'report_type', 'Technical Datasheet') or 'Technical Datasheet',
             'description': self.description or '',
             'template_name': self.template_name or 'standard_datasheet.html',
             'show_head_flow_graph': bool(self.show_head_flow_graph),

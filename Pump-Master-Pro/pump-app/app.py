@@ -35,6 +35,8 @@ with app.app_context():
             rep_cols = [row[1] for row in rep_res.fetchall()]
             if 'curve_display_mode' not in rep_cols:
                 conn.execute(text("ALTER TABLE reports ADD COLUMN curve_display_mode VARCHAR(20) DEFAULT 'all'"))
+            if 'report_type' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN report_type VARCHAR(100) DEFAULT 'Technical Datasheet'"))
             if 'show_eff_isolines' not in rep_cols:
                 conn.execute(text("ALTER TABLE reports ADD COLUMN show_eff_isolines INTEGER DEFAULT 1"))
             if 'show_power_isolines' not in rep_cols:

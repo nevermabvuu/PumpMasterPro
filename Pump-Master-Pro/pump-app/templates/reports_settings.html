@@ -78,9 +78,10 @@
       <table class="w-full text-left text-xs text-[#c9d1d9]">
         <thead class="bg-[#0d1117] border-b border-[#30363d] text-[#8b949e] uppercase font-mono tracking-wider">
           <tr>
+            <th class="py-2.5 px-4">Report Name</th>
             <th class="py-2.5 px-4">Report Title</th>
             <th class="py-2.5 px-4">Type</th>
-            <th class="py-2.5 px-4">Linked Supplier</th>
+            <th class="py-2.5 px-4">Linked Organisation</th>
             <th class="py-2.5 px-4">HTML Template</th>
             <th class="py-2.5 px-4">Active Graphs</th>
             <th class="py-2.5 px-4">Branding Theme</th>
@@ -91,6 +92,9 @@
           {% if reports %}
           {% for r in reports %}
           <tr class="hover:bg-[#1c2330]/50 transition-colors">
+            <td class="py-3 px-4 font-mono text-xs text-[#58a6ff] font-semibold">
+              <span class="px-2 py-0.5 rounded bg-[#58a6ff]/10 border border-[#58a6ff]/30">{{ r.report_name or 'standard' }}</span>
+            </td>
             <td class="py-3 px-4 font-semibold text-[#e6edf3]">
               <div>{{ r.title }}</div>
               <div class="text-[11px] text-[#8b949e] font-normal truncate max-w-xs">{{ r.description or 'Standard Datasheet' }}</div>
@@ -102,7 +106,7 @@
             </td>
             <td class="py-3 px-4">
               <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#0d1117] border border-[#30363d] text-[#58a6ff]">
-                <i class="bi bi-building"></i> {{ r.supplier.name if r.supplier else 'Default Supplier' }}
+                <i class="bi bi-building"></i> {{ r.organisation.name if r.organisation else (r.supplier.name if r.supplier else 'Default Organisation') }}
               </span>
             </td>
             <td class="py-3 px-4 font-mono text-xs text-[#8b949e]">
@@ -139,7 +143,7 @@
           {% endfor %}
           {% else %}
           <tr>
-            <td colspan="7" class="py-8 text-center text-slate-500">No report configurations found.</td>
+            <td colspan="8" class="py-8 text-center text-slate-500">No report configurations found.</td>
           </tr>
           {% endif %}
         </tbody>
@@ -154,7 +158,7 @@
   <div class="bg-[#161b22] border border-[#30363d] rounded-xl max-w-md w-full overflow-hidden shadow-2xl">
     <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
       <h3 class="text-sm font-bold text-white flex items-center gap-2" id="supplierModalTitle">
-        <i class="bi bi-building text-[#58a6ff]"></i> Add Pump Supplier
+        <i class="bi bi-building text-[#58a6ff]"></i> Add Organisation
       </h3>
       <button onclick="closeSupplierModal()" class="text-[#8b949e] hover:text-white"><i class="bi bi-x-lg"></i></button>
     </div>
@@ -162,8 +166,8 @@
     <form action="{{ url_for('reports.save_supplier') }}" method="POST" class="p-4 space-y-3">
       <input type="hidden" name="supplier_id" id="sup_id">
       <div>
-        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Supplier Name *</label>
-        <input type="text" name="name" id="sup_name" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="e.g. KSB Pumps / Grundfos">
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Organisation Name *</label>
+        <input type="text" name="name" id="sup_name" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="e.g. KSB Pumps / Grundfos / Lytrose">
       </div>
       <div>
         <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Contact Email</label>
@@ -186,7 +190,7 @@
 
       <div class="pt-2 flex justify-end gap-2">
         <button type="button" onclick="closeSupplierModal()" class="px-3 py-1.5 bg-[#21262d] text-xs text-[#c9d1d9] rounded border border-[#30363d]">Cancel</button>
-        <button type="submit" class="px-4 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded">Save Supplier</button>
+        <button type="submit" class="px-4 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded">Save Organisation</button>
       </div>
     </form>
   </div>
@@ -205,38 +209,44 @@
     <form action="{{ url_for('reports.save_report') }}" method="POST" class="p-4 space-y-4 overflow-y-auto">
       <input type="hidden" name="report_id" id="rep_id">
 
-      <!-- Title & Report Type -->
+      <!-- Report Name & Report Title -->
       <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Report Name (ID/Code) *</label>
+          <input type="text" name="report_name" id="rep_report_name" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="e.g. standard / standard_vsd / slurry">
+        </div>
         <div>
           <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Report Title *</label>
           <input type="text" name="title" id="rep_title" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="e.g. Standard Pump Technical Datasheet">
         </div>
+      </div>
+
+      <!-- Report Type & Linked Organisation -->
+      <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Report Type *</label>
           <input type="text" name="report_type" id="rep_report_type" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="e.g. Technical Datasheet / Quotation">
         </div>
-      </div>
-
-      <!-- Supplier Link & Template Name Textbox -->
-      <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Linked Supplier *</label>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Linked Organisation *</label>
           <select name="supplier_id" id="rep_supplier_id" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]">
-            <option value="">-- Select Supplier --</option>
+            <option value="">-- Select Organisation --</option>
             {% for s in suppliers %}
             <option value="{{ s.id }}">{{ s.name }}</option>
             {% endfor %}
           </select>
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">HTML Template Name *</label>
-          <input type="text" name="template_name" id="rep_template_name" required list="template_list" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="e.g. standard_datasheet.html">
-          <datalist id="template_list">
-            {% for t in available_templates %}
-            <option value="{{ t }}"></option>
-            {% endfor %}
-          </datalist>
-        </div>
+      </div>
+
+      <!-- HTML Template Name Textbox -->
+      <div>
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">HTML Template Name *</label>
+        <input type="text" name="template_name" id="rep_template_name" required list="template_list" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="e.g. standard_datasheet.html">
+        <datalist id="template_list">
+          {% for t in available_templates %}
+          <option value="{{ t }}"></option>
+          {% endfor %}
+        </datalist>
       </div>
 
       <!-- Graph Show / Hide Preferences -->
@@ -434,6 +444,7 @@
 
   function openReportModal() {
     document.getElementById('rep_id').value = '';
+    document.getElementById('rep_report_name').value = 'standard';
     document.getElementById('rep_title').value = '';
     document.getElementById('rep_report_type').value = 'Technical Datasheet';
     document.getElementById('rep_supplier_id').value = '';
@@ -471,9 +482,10 @@
 
   function editReport(r) {
     document.getElementById('rep_id').value = r.id;
+    document.getElementById('rep_report_name').value = r.report_name || 'standard';
     document.getElementById('rep_title').value = r.title || '';
     document.getElementById('rep_report_type').value = r.report_type || 'Technical Datasheet';
-    document.getElementById('rep_supplier_id').value = r.supplier_id || '';
+    document.getElementById('rep_supplier_id').value = r.supplier_id || r.organisation_id || '';
     document.getElementById('rep_template_name').value = r.template_name || 'standard_datasheet.html';
     document.getElementById('rep_header_text').value = r.header_text || '';
     document.getElementById('rep_footer_text').value = r.footer_text || '';

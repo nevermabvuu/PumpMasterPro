@@ -201,6 +201,19 @@ def _pump_from_form(f, pump=None):
     pump.application      = f.get('application', pump.application or '')
     pump.notes            = f.get('notes', pump.notes or '')
 
+    # Pump-specific Catalogue Report Preferences (Intersection with Organisation policy)
+    if 'pump_report_mode' in f:
+        p_mode = f.get('pump_report_mode', 'all')
+        if p_mode == 'all':
+            pump.catalogue_report_ids = 'all'
+        else:
+            sel_rep_ids = f.getlist('pump_selected_report_ids') if hasattr(f, 'getlist') else f.get('pump_selected_report_ids', [])
+            if isinstance(sel_rep_ids, list):
+                clean_rep_ids = [str(x).strip() for x in sel_rep_ids if str(x).strip().isdigit()]
+                pump.catalogue_report_ids = ','.join(clean_rep_ids)
+            else:
+                pump.catalogue_report_ids = str(sel_rep_ids or '')
+
     # Extended Setup & Application Modules
     app_mods = f.getlist('app_modules') if hasattr(f, 'getlist') else f.get('app_modules', [])
     if isinstance(app_mods, list):

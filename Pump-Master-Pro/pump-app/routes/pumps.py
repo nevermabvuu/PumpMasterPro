@@ -6,7 +6,7 @@ Filters pumps based on the active organisation's multi-organisation viewing rule
 """
 
 from flask import Blueprint, render_template, request, redirect, url_for
-from models import db, Pump, Organisation
+from models import db, Pump, Organisation, ReportConfig
 from utils import _pump_from_form, get_visible_pumps_query, get_current_organisation, CURRENT_ORGANISATION_ID
 
 pumps_bp = Blueprint('pumps', __name__)
@@ -14,15 +14,17 @@ pumps_bp = Blueprint('pumps', __name__)
 
 @pumps_bp.route('/pump-data', endpoint='pump_data')
 def pump_data():
-    """List all pumps visible to the active organisation, sorted by name."""
+    """List all pumps visible to the active organisation, sorted by name, with configured catalogue reports."""
     pumps = get_visible_pumps_query().order_by(Pump.name).all()
     pump_dicts = [p.to_dict() for p in pumps]
     current_org = get_current_organisation()
+    catalogue_reports = current_org.get_catalogue_reports() if current_org else ReportConfig.query.all()
     return render_template(
         'pump_data.html',
         pumps=pumps,
         pump_dicts=pump_dicts,
-        current_org=current_org
+        current_org=current_org,
+        catalogue_reports=catalogue_reports
     )
 
 
@@ -37,12 +39,14 @@ def pump_new():
     
     organisations = Organisation.query.order_by(Organisation.name.asc()).all()
     current_org = get_current_organisation()
+    all_reports = ReportConfig.query.order_by(ReportConfig.id.asc()).all()
     return render_template(
         'pump_form.html',
         pump=None,
         action='new',
         organisations=organisations,
         current_org=current_org,
+        all_reports=all_reports,
         default_org_id=CURRENT_ORGANISATION_ID
     )
 
@@ -58,12 +62,14 @@ def pump_edit(pump_id):
     
     organisations = Organisation.query.order_by(Organisation.name.asc()).all()
     current_org = get_current_organisation()
+    all_reports = ReportConfig.query.order_by(ReportConfig.id.asc()).all()
     return render_template(
         'pump_form.html',
         pump=pump,
         action='edit',
         organisations=organisations,
         current_org=current_org,
+        all_reports=all_reports,
         default_org_id=pump.organisation_id or CURRENT_ORGANISATION_ID
     )
 

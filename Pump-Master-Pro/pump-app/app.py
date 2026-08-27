@@ -47,6 +47,8 @@ with app.app_context():
             org_cols = [row[1] for row in org_res.fetchall()]
             if 'allowed_view_org_ids' not in org_cols:
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN allowed_view_org_ids VARCHAR(255) DEFAULT ''"))
+            if 'catalogue_report_ids' not in org_cols:
+                conn.execute(text("ALTER TABLE organisations ADD COLUMN catalogue_report_ids VARCHAR(255) DEFAULT ''"))
             if 'default_unit_flow' not in org_cols:
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN default_unit_flow VARCHAR(10) DEFAULT 'm3h'"))
             if 'default_unit_head' not in org_cols:
@@ -69,6 +71,8 @@ with app.app_context():
                     conn.execute(text("UPDATE reports SET organisation_id = supplier_id WHERE organisation_id IS NULL"))
                 else:
                     conn.execute(text("ALTER TABLE reports ADD COLUMN organisation_id INTEGER DEFAULT 2"))
+            if 'report_name' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN report_name VARCHAR(100) DEFAULT 'standard'"))
             if 'curve_display_mode' not in rep_cols:
                 conn.execute(text("ALTER TABLE reports ADD COLUMN curve_display_mode VARCHAR(20) DEFAULT 'all'"))
             if 'report_type' not in rep_cols:
@@ -99,6 +103,9 @@ with app.app_context():
             if 'organisation_id' not in cols:
                 conn.execute(text("ALTER TABLE pumps ADD COLUMN organisation_id INTEGER DEFAULT 2"))
             conn.execute(text("UPDATE pumps SET organisation_id = 2 WHERE organisation_id IS NULL"))
+            if 'catalogue_report_ids' not in cols:
+                conn.execute(text("ALTER TABLE pumps ADD COLUMN catalogue_report_ids VARCHAR(255) DEFAULT 'all'"))
+            conn.execute(text("UPDATE pumps SET catalogue_report_ids = 'all' WHERE catalogue_report_ids IS NULL OR catalogue_report_ids = ''"))
             axis_cols = [
                 'axis_flow_min', 'axis_flow_max', 'axis_flow_major', 'axis_flow_minor',
                 'axis_head_min', 'axis_head_max', 'axis_head_major', 'axis_head_minor',

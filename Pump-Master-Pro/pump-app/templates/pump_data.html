@@ -102,14 +102,56 @@
              title="Edit pump data">
             <i class="bi bi-pencil"></i>
           </a>
-          <!-- PDF Report (purple/blue outline) -->
-          <a href="{{ url_for('reports.view_report', report_id=1, pump_id=pump.id) }}" target="_blank"
+          <!-- PDF Report (Two-level Organisation & Pump Intersection Filter) -->
+          {% set pump_reports = pump.get_effective_catalogue_reports(current_org) %}
+          {% if pump_reports and pump_reports|length > 1 %}
+          <div class="relative inline-block text-left">
+            <button type="button"
+               onclick="toggleReportDropdown('rep-drop-{{ pump.id }}', event)"
+               class="inline-flex items-center justify-center gap-0.5 px-2 py-1.5 rounded text-sm transition-colors report-dropdown-btn"
+               style="border:1px solid rgba(168,85,247,0.35);color:#c084fc;"
+               onmouseover="this.style.background='rgba(168,85,247,0.1)'" onmouseout="this.style.background='transparent'"
+               title="Select PDF Report ({{ pump_reports|length }} available for this pump)">
+              <i class="bi bi-file-earmark-pdf"></i><i class="bi bi-caret-down-fill text-[9px] ms-0.5"></i>
+            </button>
+            <div id="rep-drop-{{ pump.id }}"
+                 class="hidden absolute right-0 bottom-full mb-1 w-64 bg-[#161b22] border border-[#30363d] rounded-lg shadow-2xl py-1 z-40 report-dropdown-menu">
+              <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#8b949e] border-b border-[#30363d] flex items-center justify-between">
+                <span><i class="bi bi-file-earmark-pdf text-[#c084fc] me-1"></i>PDF Reports</span>
+                <span class="text-[#58a6ff] font-mono text-[10px]">{{ pump_reports|length }} active</span>
+              </div>
+              <div class="py-1 max-h-48 overflow-y-auto divide-y divide-[#30363d]/50">
+                {% for rep in pump_reports %}
+                <a href="{{ url_for('reports.view_report', report_id=rep.id, pump_id=pump.id) }}" target="_blank"
+                   class="flex items-center justify-between px-3 py-2 text-xs text-[#e6edf3] hover:bg-[#1c2330] hover:text-[#58a6ff] transition-colors">
+                  <div class="truncate pe-2 text-left">
+                    <div class="font-semibold text-xs text-[#e6edf3] truncate">{{ rep.title }}</div>
+                    <div class="text-[10px] text-[#8b949e] font-mono flex items-center gap-1.5 mt-0.5">
+                      <span class="text-[#c084fc]">#{{ rep.report_name }}</span>
+                      <span>·</span>
+                      <span class="truncate">{{ rep.report_type or 'Technical Datasheet' }}</span>
+                    </div>
+                  </div>
+                  <i class="bi bi-box-arrow-up-right text-[11px] text-[#8b949e] shrink-0"></i>
+                </a>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          {% elif pump_reports and pump_reports|length == 1 %}
+          <a href="{{ url_for('reports.view_report', report_id=pump_reports[0].id, pump_id=pump.id) }}" target="_blank"
              class="inline-flex items-center justify-center px-2.5 py-1.5 rounded text-sm transition-colors"
              style="border:1px solid rgba(168,85,247,0.35);color:#c084fc;"
              onmouseover="this.style.background='rgba(168,85,247,0.1)'" onmouseout="this.style.background='transparent'"
-             title="View / Download PDF Report">
+             title="View PDF Report: {{ pump_reports[0].title }} ({{ pump_reports[0].report_name }})">
             <i class="bi bi-file-earmark-pdf"></i>
           </a>
+          {% else %}
+          <span class="inline-flex items-center justify-center px-2.5 py-1.5 rounded text-sm opacity-30 cursor-not-allowed text-[#8b949e] border border-[#30363d]"
+                title="No PDF report formats enabled for this pump under current organisation policy">
+            <i class="bi bi-file-earmark-x"></i>
+          </span>
+          {% endif %}
           <!-- Compare (teal outline) -->
           <a href="{{ url_for('pump_comparison') }}?ids={{ pump.id }}"
              class="inline-flex items-center justify-center px-2.5 py-1.5 rounded text-sm transition-colors"
@@ -209,5 +251,28 @@
     `;
     container.innerHTML = svgHtml;
   }
+
+  function toggleReportDropdown(id, event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    const menu = document.getElementById(id);
+    if (!menu) return;
+    
+    // Close other open report dropdowns first
+    document.querySelectorAll('.report-dropdown-menu').forEach(m => {
+      if (m.id !== id) m.classList.add('hidden');
+    });
+
+    menu.classList.toggle('hidden');
+  }
+
+  // Click outside to close all dropdowns
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.report-dropdown-btn') && !e.target.closest('.report-dropdown-menu')) {
+      document.querySelectorAll('.report-dropdown-menu').forEach(m => m.classList.add('hidden'));
+    }
+  });
 </script>
 {% endblock %}

@@ -16,15 +16,22 @@ organisations_bp = Blueprint('organisations', __name__, url_prefix='/organisatio
 def settings():
     """
     Beginners Note: Displays the Organisation Settings page with active profile defaults,
-    multi-organisation pump visibility permissions, and registered organisation directory.
+    multi-organisation pump visibility permissions, catalogue report configurations, and registered organisation directory.
     """
     current_org = get_current_organisation()
     all_organisations = Organisation.query.order_by(Organisation.name.asc()).all()
+    all_reports = ReportConfig.query.order_by(ReportConfig.id.asc()).all()
     
     # Calculate statistics and allowed IDs
     allowed_ids = current_org.get_allowed_org_ids() if current_org else None
     view_all_mode = bool(allowed_ids is None)
     allowed_id_set = set(allowed_ids) if allowed_ids is not None else {o.id for o in all_organisations}
+    
+    # Catalogue reports configuration
+    catalogue_reports = current_org.get_catalogue_reports() if current_org else all_reports
+    catalogue_report_id_set = {r.id for r in catalogue_reports}
+    raw_cat_rep = (current_org.catalogue_report_ids or '').strip().lower() if current_org else ''
+    cat_all_mode = (raw_cat_rep == 'all' or (not raw_cat_rep and len(catalogue_reports) == len(all_reports)))
     
     total_pumps = Pump.query.count()
     visible_pumps = get_visible_pumps_query().count()
@@ -38,6 +45,10 @@ def settings():
         'organisations_settings.html',
         current_org=current_org,
         all_organisations=all_organisations,
+        all_reports=all_reports,
+        catalogue_reports=catalogue_reports,
+        catalogue_report_id_set=catalogue_report_id_set,
+        cat_all_mode=cat_all_mode,
         allowed_ids=allowed_ids,
         allowed_id_set=allowed_id_set,
         view_all_mode=view_all_mode,
@@ -45,6 +56,30 @@ def settings():
         visible_pumps=visible_pumps,
         org_pump_counts=org_pump_counts
     )
+
+
+@organisations_bp.route('/catalogue-reports/save', methods=['POST'], endpoint='save_catalogue_reports')
+def save_catalogue_reports():
+    """
+    Beginners Note: Saves which reports should appear in the Pump Catalogue for the active organisation.
+    Can be 'all' or a list of specific ReportConfig IDs (e.g. Standard, Standard_VSD, Slurry Spec).
+    """
+    current_org = get_current_organisation()
+    if not current_org:
+        flash('Active organisation not found.', 'error')
+        return redirect(url_for('organisations.settings'))
+
+    mode = request.form.get('catalogue_report_mode', 'selected')
+    if mode == 'all':
+        current_org.catalogue_report_ids = 'all'
+    else:
+        selected_ids = request.form.getlist('selected_report_ids')
+        clean_ids = [s.strip() for s in selected_ids if s.strip().isdigit()]
+        current_org.catalogue_report_ids = ','.join(clean_ids)
+
+    db.session.commit()
+    flash('Pump Catalogue report viewing preferences saved successfully.', 'success')
+    return redirect(url_for('organisations.settings'))
 
 
 @organisations_bp.route('/profile/save', methods=['POST'], endpoint='save_profile')

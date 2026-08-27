@@ -42,6 +42,9 @@ class Pump(db.Model):
     speed_rpm = db.Column(db.Float, default=1450.0)
     impeller_dia_mm = db.Column(db.Float, default=300.0)
 
+    # Specified report IDs enabled specifically for this pump record (comma-separated ReportConfig IDs or 'all')
+    catalogue_report_ids = db.Column(db.String(255), default='all')
+
     # Test Basis / Family Type: 'trimmed_impeller' (constant speed) or 'variable_speed' (constant diameter)
     family_type = db.Column(db.String(50), default='trimmed_impeller')
 
@@ -838,7 +841,34 @@ class Pump(db.Model):
             'poly_order_eff': self.poly_order_eff or 3,
             'poly_order_npsh': self.poly_order_npsh or 2,
             'poly_order_pow': self.poly_order_pow or 2,
+            'catalogue_report_ids': getattr(self, 'catalogue_report_ids', 'all') or 'all',
         }
+
+    def get_effective_catalogue_reports(self, org=None):
+        """
+        Beginners Note: Two-level intersection filtering for PDF reports in the Pump Catalogue:
+        Level 1: Organisation-allowed reports (org.get_catalogue_reports())
+        Level 2: Pump-specific allowed reports (self.catalogue_report_ids)
+        A report is available in the catalogue ONLY IF permitted by BOTH Organisation AND this specific Pump.
+        """
+        if org is None:
+            from utils import get_current_organisation
+            org = get_current_organisation()
+
+        # Level 1: Organisation-level permitted reports
+        org_reports = org.get_catalogue_reports() if org else ReportConfig.query.all()
+        if not org_reports:
+            return []
+
+        # Level 2: Pump-specific report filter
+        raw_pump_reps = getattr(self, 'catalogue_report_ids', '')
+        if not raw_pump_reps or not raw_pump_reps.strip() or raw_pump_reps.strip().lower() == 'all':
+            return org_reports
+
+        pump_rep_ids = {int(x.strip()) for x in raw_pump_reps.replace(';', ',').split(',') if x.strip().isdigit()}
+        
+        # Intersection: only reports present in both Level 1 and Level 2
+        return [r for r in org_reports if r.id in pump_rep_ids]
 
 
 class Organisation(db.Model):
@@ -858,6 +888,9 @@ class Organisation(db.Model):
     
     # Allowed organisations whose pumps this organisation is permitted to view (comma-separated IDs or 'all')
     allowed_view_org_ids = db.Column(db.String(255), default='')
+    
+    # Specified reports to display in the Pump Catalogue (comma-separated ReportConfig IDs or 'all')
+    catalogue_report_ids = db.Column(db.String(255), default='')
     
     # Defaults for the organisation
     default_unit_flow = db.Column(db.String(10), default='m3h')
@@ -897,6 +930,26 @@ class Organisation(db.Model):
             ids.append(self.id)
         return ids if ids else None
 
+    def get_catalogue_reports(self):
+        """
+        Beginners Note: Returns the list of ReportConfig objects enabled for display in the Pump Catalogue.
+        If specific IDs are configured in catalogue_report_ids, returns those reports.
+        Otherwise returns all reports linked to this organisation, or all active reports.
+        """
+        raw = getattr(self, 'catalogue_report_ids', '')
+        if raw and raw.strip():
+            if raw.strip().lower() == 'all':
+                return ReportConfig.query.all()
+            ids = [int(x.strip()) for x in raw.replace(';', ',').split(',') if x.strip().isdigit()]
+            if ids:
+                reps = ReportConfig.query.filter(ReportConfig.id.in_(ids)).all()
+                if reps:
+                    return reps
+        
+        # Fallback to reports linked to this organisation or all available reports
+        org_reps = ReportConfig.query.filter_by(organisation_id=self.id).all()
+        return org_reps if org_reps else ReportConfig.query.all()
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -907,6 +960,7 @@ class Organisation(db.Model):
             'website': self.website or '',
             'address': self.address or '',
             'allowed_view_org_ids': self.allowed_view_org_ids or '',
+            'catalogue_report_ids': self.catalogue_report_ids or '',
             'default_unit_flow': self.default_unit_flow or 'm3h',
             'default_unit_head': self.default_unit_head or 'm',
             'default_unit_power': self.default_unit_power or 'kw',
@@ -931,6 +985,7 @@ class ReportConfig(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     organisation_id = db.Column(db.Integer, db.ForeignKey('organisations.id'), nullable=True)
+    report_name = db.Column(db.String(100), default='standard')
     title = db.Column(db.String(150), nullable=False, default='Standard Pump Technical Datasheet')
     report_type = db.Column(db.String(100), default='Technical Datasheet')
     description = db.Column(db.Text, default='')
@@ -1005,6 +1060,7 @@ class ReportConfig(db.Model):
             'supplier_id': self.organisation_id,
             'organisation_name': org.name if org else 'Default / Generic',
             'supplier_name': org.name if org else 'Default / Generic',
+            'report_name': getattr(self, 'report_name', 'standard') or 'standard',
             'title': self.title or 'Standard Pump Technical Datasheet',
             'report_type': getattr(self, 'report_type', 'Technical Datasheet') or 'Technical Datasheet',
             'description': self.description or '',

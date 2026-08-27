@@ -246,6 +246,75 @@
         </form>
       </div>
 
+      <!-- CARD: PUMP CATALOGUE REPORT VIEWING PREFERENCES -->
+      <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
+        <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
+            <i class="bi bi-file-earmark-pdf text-[#c084fc]"></i> Pump Catalogue PDF Reports
+          </h2>
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-[#c084fc]/10 text-[#c084fc] border border-[#c084fc]/30">{{ catalogue_reports|length }} Enabled</span>
+        </div>
+
+        <form action="{{ url_for('organisations.save_catalogue_reports') }}" method="POST" class="p-4 space-y-4">
+          <p class="text-xs text-[#8b949e]">
+            Choose which report format(s) are available when viewing pumps in the Catalogue for <strong class="text-white">{{ current_org.name if current_org else 'Lytrose Engineering' }}</strong> (e.g. Standard, Standard VSD, Slurry, etc.).
+          </p>
+
+          <div class="space-y-3 bg-[#0d1117] p-3.5 border border-[#30363d] rounded-lg">
+            <label class="flex items-start gap-2.5 cursor-pointer">
+              <input type="radio" name="catalogue_report_mode" value="all" id="cat_mode_all" class="mt-0.5 accent-[#c084fc]" {% if cat_all_mode %}checked{% endif %} onchange="toggleReportCheckboxes(false)">
+              <div>
+                <span class="block text-xs font-bold text-white">Show All Available Reports</span>
+                <span class="block text-[11px] text-[#8b949e]">Users can generate any configured report template from the pump cards.</span>
+              </div>
+            </label>
+
+            <div class="border-t border-[#30363d]/60 pt-3">
+              <label class="flex items-start gap-2.5 cursor-pointer">
+                <input type="radio" name="catalogue_report_mode" value="selected" id="cat_mode_selected" class="mt-0.5 accent-[#c084fc]" {% if not cat_all_mode %}checked{% endif %} onchange="toggleReportCheckboxes(true)">
+                <div>
+                  <span class="block text-xs font-bold text-white">Show Selected Reports Only</span>
+                  <span class="block text-[11px] text-[#8b949e]">Only the checked report templates below will appear on pump catalogue cards.</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- CHECKBOX LIST OF REPORTS -->
+          <div id="report_checkboxes_container" class="space-y-2 pt-1 {% if cat_all_mode %}opacity-50 pointer-events-none{% endif %}">
+            <span class="block text-[11px] font-semibold text-[#8b949e] uppercase tracking-wider">Select Permitted Report Templates:</span>
+            
+            <div class="space-y-1.5 max-h-56 overflow-y-auto pe-1">
+              {% for rep in all_reports %}
+              <label class="flex items-center justify-between p-2.5 rounded bg-[#0d1117] border border-[#30363d] hover:border-[#c084fc]/50 transition cursor-pointer text-xs">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <input type="checkbox" name="selected_report_ids" value="{{ rep.id }}" class="accent-[#c084fc] rounded" {% if rep.id in catalogue_report_id_set %}checked{% endif %}>
+                  <div class="min-w-0">
+                    <div class="font-medium text-[#e6edf3] flex items-center gap-1.5 truncate">
+                      <span>{{ rep.title }}</span>
+                      <span class="font-mono text-[10px] px-1.5 py-0.2 rounded bg-[#58a6ff]/10 text-[#58a6ff] border border-[#58a6ff]/30">#{{ rep.report_name or 'standard' }}</span>
+                    </div>
+                    <div class="text-[10px] text-[#8b949e] font-mono mt-0.5 flex items-center gap-2">
+                      <span>{{ rep.template_name }}</span>
+                      <span>·</span>
+                      <span class="text-[#7ee787]">{{ rep.report_type or 'Technical Datasheet' }}</span>
+                    </div>
+                  </div>
+                </div>
+                <span class="font-mono text-[10px] text-[#8b949e] shrink-0 ms-2">ID: #{{ rep.id }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="pt-2 flex justify-end">
+            <button type="submit" class="px-4 py-2 bg-[#c084fc] hover:bg-[#d8b4fe] text-xs font-bold text-[#0d1117] rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
+              <i class="bi bi-check2-circle"></i> Save Catalogue Reports
+            </button>
+          </div>
+        </form>
+      </div>
+
     </div>
 
   </div>
@@ -355,6 +424,15 @@
 <script>
   function toggleOrgCheckboxes(enable) {
     const container = document.getElementById('org_checkboxes_container');
+    if (enable) {
+      container.classList.remove('opacity-50', 'pointer-events-none');
+    } else {
+      container.classList.add('opacity-50', 'pointer-events-none');
+    }
+  }
+
+  function toggleReportCheckboxes(enable) {
+    const container = document.getElementById('report_checkboxes_container');
     if (enable) {
       container.classList.remove('opacity-50', 'pointer-events-none');
     } else {

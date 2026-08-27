@@ -262,57 +262,27 @@
       </div>
     </div>
 
-    <!-- 3. EXACT ACCURATE PUMP PERFORMANCE CURVES (SVG VECTOR GRAPHICS) -->
-    <div style="margin-top: 4px;">
+    <!-- 3. EXACT ACCURATE PUMP PERFORMANCE CURVES (DYNAMIC VERTICAL GRAPH AREA) -->
+    <div style="margin-top: {{ report.graph_area_top or '4px' }}; margin-left: {{ report.graph_area_left or '0px' }}; width: {{ report.graph_area_width or '100%' }}; {% if report.graph_area_height and report.graph_area_height != 'auto' %}height: {{ report.graph_area_height }};{% endif %}">
       <div class="section-header">📈 Exact Performance Curves (Evaluated for {{ pump.name }})</div>
 
-      <div class="grid-2">
-        <!-- Graph 1: Head vs Flow (HQ) -->
-        {% if report.show_head_flow_graph %}
-        <div class="graph-card" style="{% if not report.show_additional_graphs %}grid-column: span 2;{% endif %}">
-          <div class="graph-title-bar">
-            <span>Head vs Flow (H-Q)</span>
-            <span style="font-family: monospace; color: {{ report.primary_color if report and report.primary_color else '#1e3a8a' }};">{{ pump.unit_h or 'm' }}</span>
+      {% if curves and curves.ordered_graphs %}
+      <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+        {% for g in curves.ordered_graphs %}
+        <div class="graph-card" style="width: 100%; height: {{ g.calc_h }}px; display: flex; flex-direction: column; overflow: hidden;">
+          <div class="graph-title-bar" style="flex-shrink: 0;">
+            <span>{{ g.title }}</span>
+            <span style="font-family: monospace; color: {{ g.color }};">{{ g.unit }}</span>
           </div>
-          {{ curves.svg_hq | safe }}
-        </div>
-        {% endif %}
-
-        <!-- Graph 2: Efficiency vs Flow (Eta-Q) -->
-        {% if report.show_additional_graphs and report.show_efficiency_graph %}
-        <div class="graph-card">
-          <div class="graph-title-bar">
-            <span>Efficiency vs Flow (η-Q)</span>
-            <span style="font-family: monospace; color: #059669;">%</span>
+          <div style="flex: 1; min-height: 0; width: 100%; display: block; overflow: hidden; background: #ffffff;">
+            {{ g.svg | safe }}
           </div>
-          {{ curves.svg_eta | safe }}
         </div>
-        {% endif %}
+        {% endfor %}
       </div>
-
-      {% if report.show_additional_graphs %}
-      <div class="grid-2">
-        <!-- Graph 3: Power vs Flow (P-Q) -->
-        {% if report.show_power_graph %}
-        <div class="graph-card">
-          <div class="graph-title-bar">
-            <span>Power vs Flow (P-Q)</span>
-            <span style="font-family: monospace; color: #dc2626;">{{ pump.unit_pow or 'kW' }}</span>
-          </div>
-          {{ curves.svg_pow | safe }}
-        </div>
-        {% endif %}
-
-        <!-- Graph 4: NPSHr vs Flow (Auto-hidden if pump has no NPSHr data) -->
-        {% if report.show_npsh_graph and curves.has_npsh %}
-        <div class="graph-card">
-          <div class="graph-title-bar">
-            <span>NPSHr vs Flow</span>
-            <span style="font-family: monospace; color: #0d9488;">{{ pump.unit_npsh or 'm' }}</span>
-          </div>
-          {{ curves.svg_npsh | safe }}
-        </div>
-        {% endif %}
+      {% else %}
+      <div class="graph-card" style="padding: 16px; text-align: center; color: #64748b;">
+        No active performance graphs selected for this report.
       </div>
       {% endif %}
     </div>

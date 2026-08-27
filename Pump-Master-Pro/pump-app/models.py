@@ -1017,6 +1017,7 @@ class ReportConfig(db.Model):
     show_eff_isolines = db.Column(db.Boolean, default=True)
     show_power_isolines = db.Column(db.Boolean, default=False)
     show_npsh_curves = db.Column(db.Boolean, default=True)
+    show_npsh_isolines = db.Column(db.Boolean, default=False)
     show_speed_lines = db.Column(db.Boolean, default=True)
     show_rpm_overlay = db.Column(db.Boolean, default=False)
 
@@ -1031,6 +1032,14 @@ class ReportConfig(db.Model):
     legend_position = db.Column(db.String(30), default='top_right')  # 'top_right', 'top_left', 'bottom_right', 'bottom_left'
     legend_mode = db.Column(db.String(30), default='pump_default')  # 'pump_default', 'each', 'hq_only', 'curve_labels'
     label_format = db.Column(db.String(20), default='auto')  # 'auto', 'percent', 'simple'
+
+    # Graph Area Geometry & Dynamic Vertical Layout
+    graph_area_top = db.Column(db.String(50), default='4px')
+    graph_area_left = db.Column(db.String(50), default='0px')
+    graph_area_width = db.Column(db.String(50), default='100%')
+    graph_area_height = db.Column(db.String(50), default='auto')
+    graph_order = db.Column(db.String(100), default='hq,eta,pow,npsh')
+    graph_splits_json = db.Column(db.Text, default='{"1":[100],"2":[55,45],"3":[40,30,30],"4":[30,25,25,20]}')
 
     # Visual Branding & Section Toggles
     header_text = db.Column(db.String(200), default='PUMP MASTER PRO - TECHNICAL DATASHEET')
@@ -1052,6 +1061,41 @@ class ReportConfig(db.Model):
             kwargs['organisation_id'] = kwargs.pop('supplier_id')
         super().__init__(**kwargs)
 
+    def get_graph_order(self):
+        """Returns the list of graph keys in user-configured display order (e.g. ['hq', 'eta', 'pow', 'npsh'])."""
+        raw = getattr(self, 'graph_order', '') or 'hq,eta,pow,npsh'
+        valid = ['hq', 'eta', 'pow', 'npsh']
+        order = [x.strip().lower() for x in raw.replace(';', ',').split(',') if x.strip().lower() in valid]
+        for v in valid:
+            if v not in order:
+                order.append(v)
+        return order
+
+    def get_graph_splits(self):
+        """Returns height percentage splits for 1, 2, 3, and 4 active graphs."""
+        import json
+        default_splits = {
+            "1": [100.0],
+            "2": [55.0, 45.0],
+            "3": [40.0, 30.0, 30.0],
+            "4": [30.0, 25.0, 25.0, 20.0]
+        }
+        raw = getattr(self, 'graph_splits_json', '')
+        if raw and raw.strip():
+            try:
+                data = json.loads(raw)
+                if isinstance(data, dict):
+                    res = {}
+                    for k in ["1", "2", "3", "4"]:
+                        if k in data and isinstance(data[k], list) and len(data[k]) == int(k):
+                            res[k] = [float(x) for x in data[k]]
+                        else:
+                            res[k] = default_splits[k]
+                    return res
+            except Exception:
+                pass
+        return default_splits
+
     def to_dict(self):
         org = getattr(self, 'organisation', None)
         return {
@@ -1072,6 +1116,7 @@ class ReportConfig(db.Model):
             'show_eff_isolines': bool(self.show_eff_isolines),
             'show_power_isolines': bool(self.show_power_isolines),
             'show_npsh_curves': bool(self.show_npsh_curves),
+            'show_npsh_isolines': bool(getattr(self, 'show_npsh_isolines', False)),
             'show_speed_lines': bool(self.show_speed_lines),
             'show_rpm_overlay': bool(getattr(self, 'show_rpm_overlay', False)),
             'show_dia_overlay': bool(getattr(self, 'show_dia_overlay', False)),
@@ -1081,6 +1126,13 @@ class ReportConfig(db.Model):
             'legend_mode': getattr(self, 'legend_mode', 'pump_default') or 'pump_default',
             # Beginners Note: Serialize label_format ('auto', 'percent', 'simple') so the configure modal populates the selected dropdown value
             'label_format': getattr(self, 'label_format', 'auto') or 'auto',
+            'graph_area_top': getattr(self, 'graph_area_top', '4px') or '4px',
+            'graph_area_left': getattr(self, 'graph_area_left', '0px') or '0px',
+            'graph_area_width': getattr(self, 'graph_area_width', '100%') or '100%',
+            'graph_area_height': getattr(self, 'graph_area_height', 'auto') or 'auto',
+            'graph_order': getattr(self, 'graph_order', 'hq,eta,pow,npsh') or 'hq,eta,pow,npsh',
+            'graph_splits': self.get_graph_splits(),
+            'graph_splits_json': getattr(self, 'graph_splits_json', '') or '{"1":[100],"2":[55,45],"3":[40,30,30],"4":[30,25,25,20]}',
             'header_text': self.header_text or '',
             'footer_text': self.footer_text or '',
             'primary_color': self.primary_color or '#1e3a8a',

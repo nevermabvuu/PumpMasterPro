@@ -308,7 +308,7 @@ def find_custom_pos(custom_label_pos, candidate_keys):
 
     return None
 
-def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", custom_range=None, width=480, height=240, isolines_list=None, show_legend=True, legend_position='top_right', legend_mode='each', custom_label_pos=None, label_format='auto', chart_type='hq'):
+def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", custom_range=None, width=720, height=240, isolines_list=None, show_legend=True, legend_position='top_right', legend_mode='each', custom_label_pos=None, label_format='auto', chart_type='hq'):
     """
     Beginners Note: Generates pure inline SVG XML vector markup for single or multi-curve pump charts.
     Accepts exact axis range settings (min, max, major, minor) set for the pump in pump-data,
@@ -529,7 +529,8 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
 
         stroke_w = 2.5 if not is_sec else 1.8
         paths_svg.append(f'<path d="{path_d}" fill="none" stroke="{color}" stroke-width="{stroke_w}" {dash_style} stroke-linecap="round" />')
-        legend_items.append({'label': label, 'color': color})
+        pct_val = c.get('pct')
+        legend_items.append({'label': label, 'color': color, 'pct': pct_val, 'val': c.get('val')})
 
         # Option 4: Direct labels on each impeller curve
         if legend_mode == 'curve_labels' and len(pts) > 1:
@@ -543,21 +544,27 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
 
             num_match = re.search(r'(\d+(?:\.\d+)?)', clean_lbl)
             val_key = num_match.group(1) if num_match else clean_lbl
-            pct_val = c.get('pct')
             is_rpm_lbl = ('rpm' in clean_lbl.lower()) or ('rpm' in raw_label.lower())
             chart_prefix = f"{chart_type}_" if chart_type != 'hq' else ""
 
             # Format text badge according to user label_format choice
             if label_format == 'percent':
+                if pct_val is not None:
+                    display_text = f"{pct_val}%"
+                elif is_rpm_lbl:
+                    display_text = f"{val_key} RPM"
+                else:
+                    display_text = f"Ø{val_key} mm"
+            elif label_format == 'simple':
+                if is_rpm_lbl:
+                    display_text = f"{val_key} RPM"
+                else:
+                    display_text = f"Ø{val_key} mm"
+            else:  # 'auto': dimension with percentage
                 if is_rpm_lbl:
                     display_text = f"{val_key} RPM ({pct_val}%)" if pct_val is not None else f"{val_key} RPM"
                 else:
                     display_text = f"Ø{val_key} mm ({pct_val}%)" if pct_val is not None else f"Ø{val_key} mm"
-            else:  # simple
-                if is_rpm_lbl:
-                    display_text = f"{val_key} RPM"
-                else:
-                    display_text = f"{val_key} mm"
 
             candidate_keys = []
             if is_rpm_lbl:
@@ -646,10 +653,10 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
 
     # Render Multi-Curve Legend Box with customizable positioning
     legend_svg = ""
-    if show_legend and len(legend_items) >= 1:
+    if show_legend and legend_mode != 'curve_labels' and legend_mode != 'none' and len(legend_items) >= 1:
         leg_box = []
-        b_w = 110
-        b_h = 14 + len(legend_items) * 12
+        b_w = 120
+        b_h = 14 + len(legend_items) * 13
 
         if legend_position == 'top_left':
             box_x = padding_left + 8
@@ -666,12 +673,21 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
 
         leg_box.append(f'<rect x="{box_x}" y="{box_y}" width="{b_w}" height="{b_h}" fill="#ffffff" fill-opacity="0.9" stroke="#cbd5e1" rx="4" />')
         for l_idx, leg in enumerate(legend_items):
-            ly = box_y + 12 + l_idx * 12
+            ly = box_y + 12 + l_idx * 13
+            l_text = leg["label"]
+            l_pct = leg.get("pct")
+            if label_format == 'percent' and l_pct is not None:
+                l_text = f"{leg['label']} ({l_pct}%)" if '%' not in leg['label'] else leg['label']
+            elif label_format == 'auto' and l_pct is not None and '%' not in leg['label']:
+                l_text = f"{leg['label']} ({l_pct}%)"
+            elif label_format == 'simple':
+                l_text = re.sub(r'\s*\(\d+%\)', '', leg['label'])
+
             leg_box.append(f'<line x1="{box_x + 8}" y1="{ly - 3}" x2="{box_x + 22}" y2="{ly - 3}" stroke="{leg["color"]}" stroke-width="2" />')
-            leg_box.append(f'<text x="{box_x + 26}" y="{ly}" font-size="8" font-family="Helvetica, Arial, sans-serif" fill="#334155">{leg["label"]}</text>')
+            leg_box.append(f'<text x="{box_x + 26}" y="{ly}" font-size="8" font-family="Helvetica, Arial, sans-serif" fill="#334155">{l_text}</text>')
         legend_svg = "".join(leg_box)
 
-    svg_code = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="100%" height="auto" style="background:#ffffff; border-radius:4px; display:block;">
+    svg_code = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" preserveAspectRatio="none" width="100%" height="{height}px" style="background:#ffffff; border-radius:4px; display:block; width:100%; height:100%; max-height:{height}px;">
   {''.join(grid_lines)}
   <line x1="{padding_left}" y1="{padding_top + plot_h}" x2="{width - padding_right}" y2="{padding_top + plot_h}" stroke="#475569" stroke-width="1.5" />
   <line x1="{padding_left}" y1="{padding_top}" x2="{padding_left}" y2="{padding_top + plot_h}" stroke="#475569" stroke-width="1.5" />
@@ -775,51 +791,50 @@ def _build_report_curve_context(pump, report):
             report_show_rpm = getattr(pump, 'graph_show_speed_lines', True)
     show_rpm = bool(report_show_rpm) if report_show_rpm is not None else True
 
-    fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
-    is_var_speed = (fam_type == 'variable_speed')
+    # Check Family Type / Test Basis (auto-detects VSD templates so VSD reports display RPM curves and labels)
+    is_variable_speed = (pump.family_type == 'variable_speed') or \
+                        ('vsd' in (getattr(report, 'report_name', '') or '').lower()) or \
+                        ('vsd' in (getattr(report, 'template_name', '') or '').lower()) or \
+                        ('vsd' in (getattr(report, 'title', '') or '').lower()) or \
+                        ('variable' in (getattr(report, 'report_type', '') or '').lower())
 
-    show_primary = show_rpm if is_var_speed else show_dia
-    show_secondary = show_dia if is_var_speed else show_rpm
+    # Determine primary vs secondary display selection
+    show_primary = (show_rpm if is_variable_speed else show_dia)
+    show_secondary = (show_dia if is_variable_speed else show_rpm)
 
-    # ── 1. Variable Speed Pump Curve Family & Overlays ──
-    if is_var_speed:
-        rpm_str = (getattr(pump, 'graph_rpm_values', None) or getattr(pump, 'graph_speed_line_values', None) or '').strip()
-        rpm_list = _parse_diameters_string(rpm_str)
-        if not rpm_list:
-            base_rpm = pump.speed_rpm or 1000.0
-            rpm_list = [base_rpm, base_rpm * 0.9, base_rpm * 0.8, base_rpm * 0.7]
-        rpm_list.sort(reverse=True)
-        base_rpm = rpm_list[0] if rpm_list else (pump.speed_rpm or 1000.0)
+    # ── 1. Variable Speed Family (Constant Diameter, Varying Speeds) ──
+    if is_variable_speed:
+        rpm_str = (getattr(pump, 'graph_rpm_values', None) or '').strip()
+        from pump_curves import speed_lines as calc_speed_lines
+        spd_objs = calc_speed_lines(pump, values_str=rpm_str)
 
         if mode == 'max_only':
-            rpm_to_plot = [rpm_list[0]]
+            lines_to_draw = [spd_objs[0]] if spd_objs else []
         elif mode == 'min_max':
-            rpm_to_plot = [rpm_list[0], rpm_list[-1]] if len(rpm_list) >= 2 else rpm_list
+            lines_to_draw = [spd_objs[0], spd_objs[-1]] if len(spd_objs) >= 2 else (spd_objs if spd_objs else [])
         else:
-            rpm_to_plot = rpm_list
+            lines_to_draw = spd_objs if spd_objs else []
 
-        # Primary RPM curves (rendered when show_primary is True, or as base curve when neither is selected)
-        if show_primary or (not show_primary and not show_secondary):
-            curves_to_draw = rpm_to_plot if show_primary else [rpm_to_plot[0]]
-            for c_idx, rpm_val in enumerate(curves_to_draw):
-                is_primary = (c_idx == 0)
-                k = rpm_val / base_rpm if base_rpm > 0 else 1.0
-                rpm_fmt = f"{round(rpm_val)}" if abs(rpm_val - round(rpm_val)) < 1e-4 else f"{round(rpm_val, 1)}"
-                lbl = f"{rpm_fmt} RPM" + (" (Max)" if is_primary else "")
-                pct = round(k * 100)
+        for c_idx, sl in enumerate(lines_to_draw):
+            is_primary = (c_idx == 0)
+            rpm_val = sl.get('rpm', pump.speed_rpm)
+            s_ratio = sl.get('ratio', 1.0)
+            pct = round(s_ratio * 100) if s_ratio else None
+            lbl = f"{int(round(rpm_val))} RPM (Max)" if is_primary else f"{int(round(rpm_val))} RPM"
 
-                c_q = [round(v * k, 2) for v in q_pts]
-                c_h = [round(v * (k**2), 2) for v in h_pts]
-                c_eta = [round(max(0.0, v), 2) for v in eta_pts]
-                c_pow = [round(v * (k**3), 2) for v in pow_pts]
-                c_npsh = [round(v * (k**2), 2) for v in npsh_pts]
+            k = s_ratio
+            c_q = [round(v * k, 2) for v in q_pts]
+            c_h = [round(v * (k**2), 2) for v in h_pts]
+            c_eta = [round(max(0.0, v), 2) for v in eta_pts]
+            c_pow = [round(v * (k**3), 2) for v in pow_pts]
+            c_npsh = [round(v * (k**2), 2) for v in npsh_pts]
 
-                cur_color = primary_color if is_primary else palette[min(c_idx, len(palette)-1)]
+            cur_color = primary_color if is_primary else palette[min(c_idx, len(palette)-1)]
 
-                hq_curves_list.append({'label': lbl, 'x': c_q, 'y': c_h, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
-                eta_curves_list.append({'label': lbl, 'x': c_q, 'y': c_eta, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
-                pow_curves_list.append({'label': lbl, 'x': c_q, 'y': c_pow, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
-                npsh_curves_list.append({'label': lbl, 'x': c_q, 'y': c_npsh, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
+            hq_curves_list.append({'label': lbl, 'x': c_q, 'y': c_h, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
+            eta_curves_list.append({'label': lbl, 'x': c_q, 'y': c_eta, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
+            pow_curves_list.append({'label': lbl, 'x': c_q, 'y': c_pow, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
+            npsh_curves_list.append({'label': lbl, 'x': c_q, 'y': c_npsh, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
 
         # Secondary Diameter Overlay curves
         dia_str = (getattr(pump, 'graph_dia_overlay_values', None) or '').strip()
@@ -865,19 +880,18 @@ def _build_report_curve_context(pump, report):
             else:
                 d_curves = [max_d, float(round(max_d * 0.93)), float(round(max_d * 0.86)), float(round(max_d * 0.8))]
 
-        # Primary Diameter trim curves (rendered when show_primary is True, or as base curve when neither is selected)
-        if show_primary or (not show_primary and not show_secondary):
-            curves_to_draw = d_curves if show_primary else [d_curves[0]]
-            for c_idx, d_val in enumerate(curves_to_draw):
+        # Primary Diameter trim curves (respects mode: all, min_max, max_only)
+        curves_to_draw = d_curves
+        for c_idx, d_val in enumerate(curves_to_draw):
                 is_primary = (c_idx == 0)
                 d_fmt = f"{round(d_val)}" if abs(d_val - round(d_val)) < 1e-4 else f"{round(d_val, 1)}"
-                lbl = f"{d_fmt} mm" + (" (Max)" if is_primary else "")
-                d_ratio = (d_val / max_d) if max_d > 0 else 1.0
+                lbl = f"Ø{d_fmt} mm (Max)" if is_primary else f"Ø{d_fmt} mm"
+                d_ratio = d_val / max_d
                 pct = round(d_ratio * 100)
 
                 c_q = [round(v * d_ratio, 2) for v in q_pts]
                 c_h = [round(v * (d_ratio**2), 2) for v in h_pts]
-                c_eta = [round(max(0.0, v * (1.0 - 0.05 * (1.0 - d_ratio))), 2) for v in eta_pts]
+                c_eta = [round(max(0.0, v), 2) for v in eta_pts]
                 c_pow = [round(v * (d_ratio**3), 2) for v in pow_pts]
                 c_npsh = [round(v * (d_ratio**2), 2) for v in npsh_pts]
 
@@ -888,8 +902,8 @@ def _build_report_curve_context(pump, report):
                 pow_curves_list.append({'label': lbl, 'x': c_q, 'y': c_pow, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': d_val, 'dia': d_val})
                 npsh_curves_list.append({'label': lbl, 'x': c_q, 'y': c_npsh, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': d_val, 'dia': d_val})
 
-        # Secondary RPM Overlay curves
-        rpm_str = (getattr(pump, 'graph_rpm_values', None) or getattr(pump, 'graph_speed_line_values', None) or '').strip()
+        # Secondary RPM Speed Overlay curves
+        rpm_str = (getattr(pump, 'graph_rpm_overlay_values', None) or '').strip()
         if show_secondary and rpm_str:
             try:
                 from pump_curves import speed_lines as calc_speed_lines
@@ -898,8 +912,8 @@ def _build_report_curve_context(pump, report):
                 for sl_idx, sl in enumerate(spd_objs):
                     lbl = sl.get('label', '')
                     is_top = (sl_idx == 0)
-                    cur_color = (primary_color if is_top else palette[min(sl_idx, len(palette)-1)]) if is_main_sec else '#9333ea'
-                    s_ratio = sl.get('speed_ratio') or sl.get('ratio') or 1.0
+                    cur_color = (primary_color if is_top else palette[min(sl_idx, len(palette)-1)]) if is_main_sec else '#d97706'
+                    s_ratio = sl.get('ratio', 1.0)
                     pct = round(s_ratio * 100) if s_ratio else None
 
                     if sl.get('q') and sl.get('h'):
@@ -1008,8 +1022,13 @@ def _build_report_curve_context(pump, report):
     # Import isoline generators and helper for override scaling
     from pump_curves import _compute_iso_override, efficiency_isolines, power_isolines, npsh_isolines
 
-    # Compute proper isoline range (r_min) and trim penalty based on active curve selection
-    iso_r_min, iso_trim = _compute_iso_override(pump, show_rpm_overlay=show_rpm, show_dia_overlay=show_dia)
+    # Compute isoline range (r_min) bounded strictly by the bottom-most curve plotted on the chart
+    if is_variable_speed:
+        iso_r_min = min([sl.get('ratio', 1.0) for sl in lines_to_draw]) if lines_to_draw else 0.70
+        iso_trim = 0.0
+    else:
+        iso_r_min = min([d / max_d for d in curves_to_draw]) if curves_to_draw else 0.75
+        iso_trim = 20.0
 
     # 1. Efficiency Isolines
     show_eff = getattr(report, 'show_eff_isolines', True)
@@ -1082,7 +1101,7 @@ def _build_report_curve_context(pump, report):
             npsh_objs = npsh_isolines(pump, iso_levels=n_levels, override_r_min=iso_r_min)
             for n_i, n_iso in enumerate(npsh_objs):
                 n_val = n_iso.get('npsh', 0.0)
-                n_lbl = f"{int(round(n_val)) if abs(n_val - round(n_val)) < 1e-4 else round(n_val,1)} m"
+                n_lbl = f"{round(n_val, 1)} {pump.unit_npsh or 'm'}"
                 hq_isolines_list.append({
                     'x': n_iso.get('q', []),
                     'y': n_iso.get('h', []),
@@ -1090,7 +1109,7 @@ def _build_report_curve_context(pump, report):
                     'branch': n_iso.get('branch'),
                     'type_idx': n_i,
                     'iso_type': 'npsh',
-                    'color': '#2563eb',
+                    'color': '#0284c7',
                     'dash': 'stroke-dasharray="4,2"'
                 })
         except Exception as e:
@@ -1111,8 +1130,8 @@ def _build_report_curve_context(pump, report):
 
     raw_custom_pos = pump.get_custom_label_pos() if hasattr(pump, 'get_custom_label_pos') else {}
     rep_label_fmt = getattr(report, 'label_format', 'auto') or 'auto'
-    if rep_label_fmt == 'auto' or rep_label_fmt == 'pump_default':
-        label_fmt = p_opts.get('label_format', 'percent')
+    if rep_label_fmt == 'pump_default':
+        label_fmt = p_opts.get('label_format', 'auto')
     else:
         label_fmt = rep_label_fmt
 
@@ -1173,31 +1192,110 @@ def _build_report_curve_context(pump, report):
     lbl_pow = _unit_label('pow', rep_unit_pow)
     lbl_npsh = _unit_label('npsh', rep_unit_npsh)
 
-    svg_hq = generate_chart_svg(
-        hq_curves_list, f"Flow ({lbl_q})", f"Head ({lbl_h})",
-        custom_range=h_custom_range, height=240, isolines_list=hq_isolines_list,
-        show_legend=show_leg_hq, legend_position=leg_pos, legend_mode=effective_legend_mode,
-        custom_label_pos=custom_pos_hq, label_format=label_fmt, chart_type='hq'
-    )
+    # ── Dynamic Graph Ordering & Height Split Assignment ──
+    hq_active = bool(getattr(report, 'show_head_flow_graph', True))
+    eta_active = bool(getattr(report, 'show_additional_graphs', True) and getattr(report, 'show_efficiency_graph', True))
+    pow_active = bool(getattr(report, 'show_additional_graphs', True) and getattr(report, 'show_power_graph', True))
+    npsh_active = bool(getattr(report, 'show_additional_graphs', True) and getattr(report, 'show_npsh_graph', True) and has_npsh)
 
-    svg_eta = generate_chart_svg(
-        eta_curves_list, f"Flow ({lbl_q})", "Efficiency (%)",
-        custom_range=eta_custom_range, height=240, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode,
-        custom_label_pos=custom_pos_eff, label_format=label_fmt, chart_type='eff'
-    )
+    graph_defs = {
+        'hq': {
+            'title': 'Head vs Flow (H-Q)',
+            'unit': _unit_label('h', rep_unit_h),
+            'color': getattr(report, 'primary_color', '#1e3a8a') or '#1e3a8a',
+            'is_active': hq_active,
+            'builder': lambda h: generate_chart_svg(
+                hq_curves_list, f"Flow ({lbl_q})", f"Head ({lbl_h})",
+                custom_range=h_custom_range, height=h, isolines_list=hq_isolines_list,
+                show_legend=show_leg_hq, legend_position=leg_pos, legend_mode=effective_legend_mode,
+                custom_label_pos=custom_pos_hq, label_format=label_fmt, chart_type='hq'
+            )
+        },
+        'eta': {
+            'title': 'Efficiency vs Flow (η-Q)',
+            'unit': '%',
+            'color': '#059669',
+            'is_active': eta_active,
+            'builder': lambda h: generate_chart_svg(
+                eta_curves_list, f"Flow ({lbl_q})", "Efficiency (%)",
+                custom_range=eta_custom_range, height=h, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode,
+                custom_label_pos=custom_pos_eff, label_format=label_fmt, chart_type='eff'
+            )
+        },
+        'pow': {
+            'title': 'Power vs Flow (P-Q)',
+            'unit': _unit_label('pow', rep_unit_pow),
+            'color': '#dc2626',
+            'is_active': pow_active,
+            'builder': lambda h: generate_chart_svg(
+                pow_curves_list, f"Flow ({lbl_q})", f"Power ({lbl_pow})",
+                custom_range=pow_custom_range, height=h, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode,
+                custom_label_pos=custom_pos_pow, label_format=label_fmt, chart_type='pow'
+            )
+        },
+        'npsh': {
+            'title': 'NPSHr vs Flow',
+            'unit': _unit_label('npsh', rep_unit_npsh),
+            'color': '#0d9488',
+            'is_active': npsh_active,
+            'builder': lambda h: generate_chart_svg(
+                npsh_curves_list, f"Flow ({lbl_q})", f"NPSHr ({lbl_npsh})",
+                custom_range=npsh_custom_range, height=h, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode,
+                custom_label_pos=custom_pos_npsh, label_format=label_fmt, chart_type='npsh'
+            )
+        }
+    }
 
-    svg_pow = generate_chart_svg(
-        pow_curves_list, f"Flow ({lbl_q})", f"Power ({lbl_pow})",
-        custom_range=pow_custom_range, height=240, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode,
-        custom_label_pos=custom_pos_pow, label_format=label_fmt, chart_type='pow'
-    )
+    configured_order = report.get_graph_order() if (report and hasattr(report, 'get_graph_order')) else ['hq', 'eta', 'pow', 'npsh']
+    active_keys = [k for k in configured_order if graph_defs.get(k, {}).get('is_active', False)]
+    active_count = len(active_keys)
 
-    svg_npsh = generate_chart_svg(
-        npsh_curves_list, f"Flow ({lbl_q})", f"NPSHr ({lbl_npsh})",
-        custom_range=npsh_custom_range, height=240, show_legend=show_leg_sub, legend_position=leg_pos, legend_mode=effective_legend_mode,
-        custom_label_pos=custom_pos_npsh, label_format=label_fmt, chart_type='npsh'
-    ) if (has_npsh and getattr(report, 'show_npsh_curves', True)) else ""
+    splits_dict = report.get_graph_splits() if (report and hasattr(report, 'get_graph_splits')) else {}
+    splits = splits_dict.get(str(active_count), [])
+    if not splits or len(splits) != active_count:
+        splits = [round(100.0 / active_count, 1)] * active_count if active_count > 0 else []
 
+    ordered_graphs = []
+    svg_map = {'hq': '', 'eta': '', 'pow': '', 'npsh': ''}
+
+    # Dynamic total reference height from report.graph_area_height (default 520px)
+    raw_area_h = str(getattr(report, 'graph_area_height', 'auto') or 'auto').strip().lower()
+    match_h = re.search(r'(\d+(?:\.\d+)?)', raw_area_h)
+    if match_h:
+        val = float(match_h.group(1))
+        if 'mm' in raw_area_h:
+            total_area_h = val * 3.78
+        elif 'in' in raw_area_h:
+            total_area_h = val * 96.0
+        elif 'pt' in raw_area_h:
+            total_area_h = val * 1.333
+        else:
+            total_area_h = val
+    else:
+        total_area_h = 520.0
+
+    for idx, k in enumerate(active_keys):
+        pct = splits[idx] if idx < len(splits) else (100.0 / active_count)
+        # Scaled SVG height based on split % and total area height
+        calc_h = max(70, int(round(total_area_h * (pct / 100.0))))
+        g_def = graph_defs[k]
+        rendered_svg = g_def['builder'](calc_h)
+        svg_map[k] = rendered_svg
+        ordered_graphs.append({
+            'key': k,
+            'title': g_def['title'],
+            'unit': g_def['unit'],
+            'color': g_def['color'],
+            'height_pct': pct,
+            'calc_h': calc_h,
+            'svg': rendered_svg
+        })
+
+    # Fallback standard SVGs for legacy single references
+    svg_hq = svg_map.get('hq') or (graph_defs['hq']['builder'](240) if hq_active else "")
+    svg_eta = svg_map.get('eta') or (graph_defs['eta']['builder'](240) if eta_active else "")
+    svg_pow = svg_map.get('pow') or (graph_defs['pow']['builder'](240) if pow_active else "")
+    svg_npsh = svg_map.get('npsh') or (graph_defs['npsh']['builder'](240) if npsh_active else "")
 
     bep_info = None
     try:
@@ -1212,6 +1310,8 @@ def _build_report_curve_context(pump, report):
         'svg_eta': svg_eta,
         'svg_pow': svg_pow,
         'svg_npsh': svg_npsh,
+        'ordered_graphs': ordered_graphs,
+        'active_graph_count': active_count,
         'bep_info': bep_info
     }
 
@@ -1221,10 +1321,12 @@ def settings():
     reports = ReportConfig.query.order_by(ReportConfig.id.asc()).all()
     suppliers = Supplier.query.order_by(Supplier.name.asc()).all()
     available_templates = ['standard_datasheet.html', 'compact_datasheet.html', 'slurry_specsheet.html']
+    reports_json = [r.to_dict() for r in reports]
     
     return render_template(
         'reports_settings.html',
         reports=reports,
+        reports_json=reports_json,
         suppliers=suppliers,
         available_templates=available_templates
     )
@@ -1251,9 +1353,30 @@ def save_supplier():
     supplier.phone = request.form.get('phone', '').strip()
     supplier.website = request.form.get('website', '').strip()
     supplier.address = request.form.get('address', '').strip()
+    
+    db.session.commit()
+    flash(f'Supplier "{name}" saved successfully.', 'success')
+    return redirect(url_for('reports.settings'))
+
+
+@reports_bp.route('/settings/report/save_graph_area', methods=['POST'])
+def save_graph_area():
+    """Dedicated endpoint to save Graph Area dimensions, order, and height splits."""
+    report_id = request.form.get('report_id')
+    if not report_id or not report_id.isdigit():
+        flash('Invalid report selected.', 'error')
+        return redirect(url_for('reports.settings'))
+    
+    report = ReportConfig.query.get_or_404(int(report_id))
+    report.graph_area_top = request.form.get('graph_area_top', '4px').strip() or '4px'
+    report.graph_area_left = request.form.get('graph_area_left', '0px').strip() or '0px'
+    report.graph_area_width = request.form.get('graph_area_width', '100%').strip() or '100%'
+    report.graph_area_height = request.form.get('graph_area_height', 'auto').strip() or 'auto'
+    report.graph_order = request.form.get('graph_order', 'hq,eta,pow,npsh').strip() or 'hq,eta,pow,npsh'
+    report.graph_splits_json = request.form.get('graph_splits_json', '').strip() or '{"1":[100],"2":[55,45],"3":[40,30,30],"4":[30,25,25,20]}'
 
     db.session.commit()
-    flash(f'Supplier "{supplier.name}" saved successfully.', 'success')
+    flash(f'Graph area settings for "{report.title}" updated successfully.', 'success')
     return redirect(url_for('reports.settings'))
 
 
@@ -1261,22 +1384,22 @@ def save_supplier():
 def save_report():
     report_id = request.form.get('report_id')
     title = request.form.get('title', '').strip()
+    supplier_id = request.form.get('supplier_id')
     
     if not title:
-        flash('Report Title is required.', 'error')
+        flash('Report title is required.', 'error')
         return redirect(url_for('reports.settings'))
-
+        
     if report_id and report_id.isdigit():
         report = ReportConfig.query.get_or_404(int(report_id))
     else:
         report = ReportConfig()
         db.session.add(report)
 
-    supplier_id = request.form.get('supplier_id')
-    report.supplier_id = int(supplier_id) if supplier_id and supplier_id.isdigit() else None
-    report.report_name = request.form.get('report_name', 'standard').strip() or 'standard'
     report.title = title
+    report.report_name = request.form.get('report_name', 'standard').strip() or 'standard'
     report.report_type = request.form.get('report_type', 'Technical Datasheet').strip() or 'Technical Datasheet'
+    report.organisation_id = int(supplier_id) if supplier_id and supplier_id.isdigit() else None
     report.description = request.form.get('description', '').strip()
     report.template_name = request.form.get('template_name', 'standard_datasheet.html').strip()
     
@@ -1287,7 +1410,8 @@ def save_report():
 
     report.show_eff_isolines = 'show_eff_isolines' in request.form
     report.show_power_isolines = 'show_power_isolines' in request.form
-    report.show_npsh_curves = 'show_npsh_curves' in request.form
+    report.show_npsh_isolines = 'show_npsh_isolines' in request.form or 'show_npsh_curves' in request.form
+    report.show_npsh_curves = report.show_npsh_isolines
     report.show_speed_lines = 'show_speed_lines' in request.form or 'show_rpm_overlay' in request.form
     report.show_rpm_overlay = 'show_rpm_overlay' in request.form or 'show_speed_lines' in request.form
     report.show_dia_overlay = 'show_dia_overlay' in request.form
@@ -1296,6 +1420,14 @@ def save_report():
     report.legend_position = request.form.get('legend_position', 'top_right').strip()
     report.legend_mode = request.form.get('legend_mode', 'pump_default').strip()
     report.label_format = request.form.get('label_format', 'auto').strip()
+
+    # Graph Area Geometry & Vertical Layout Settings
+    report.graph_area_top = request.form.get('graph_area_top', '4px').strip() or '4px'
+    report.graph_area_left = request.form.get('graph_area_left', '0px').strip() or '0px'
+    report.graph_area_width = request.form.get('graph_area_width', '100%').strip() or '100%'
+    report.graph_area_height = request.form.get('graph_area_height', 'auto').strip() or 'auto'
+    report.graph_order = request.form.get('graph_order', 'hq,eta,pow,npsh').strip() or 'hq,eta,pow,npsh'
+    report.graph_splits_json = request.form.get('graph_splits_json', '').strip() or '{"1":[100],"2":[55,45],"3":[40,30,30],"4":[30,25,25,20]}'
 
     report.unit_flow = request.form.get('unit_flow', '').strip() or None
     report.unit_head = request.form.get('unit_head', '').strip() or None

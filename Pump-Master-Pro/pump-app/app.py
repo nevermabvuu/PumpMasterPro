@@ -96,6 +96,18 @@ with app.app_context():
             for rep_overlay in ['show_rpm_overlay', 'show_dia_overlay']:
                 if rep_overlay not in rep_cols:
                     conn.execute(text(f"ALTER TABLE reports ADD COLUMN {rep_overlay} INTEGER DEFAULT 0"))
+            if 'graph_area_top' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN graph_area_top VARCHAR(50) DEFAULT '4px'"))
+            if 'graph_area_left' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN graph_area_left VARCHAR(50) DEFAULT '0px'"))
+            if 'graph_area_width' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN graph_area_width VARCHAR(50) DEFAULT '100%'"))
+            if 'graph_area_height' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN graph_area_height VARCHAR(50) DEFAULT 'auto'"))
+            if 'graph_order' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN graph_order VARCHAR(100) DEFAULT 'hq,eta,pow,npsh'"))
+            if 'graph_splits_json' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN graph_splits_json TEXT DEFAULT '{\"1\":[100],\"2\":[55,45],\"3\":[40,30,30],\"4\":[30,25,25,20]}'"))
 
             # 2. Pumps table schema migrations
             result = conn.execute(text("PRAGMA table_info(pumps)"))

@@ -485,15 +485,13 @@ def efficiency_isolines(pump, liquid='water', viscosity_cSt=1.0,
     """
     diameters = pump.get_diameters()
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+    d_max = max(diameters) if diameters else (pump.speed_rpm if fam_type == 'variable_speed' else (pump.impeller_dia_mm or 300.0))
+    d_min = min(diameters) if (diameters and len(diameters) >= 2) else d_max * 0.70
     if override_r_min is not None:
         r_min = override_r_min
     elif diameters and len(diameters) >= 2 and max(diameters) > min(diameters):
-        d_max = max(diameters)
-        d_min = min(diameters)
         r_min = d_min / d_max if d_max > 0 else 0.70
     else:
-        d_max = max(diameters) if diameters else (pump.speed_rpm if fam_type == 'variable_speed' else (pump.impeller_dia_mm or 300.0))
-        d_min = d_max * 0.70
         r_min = 0.70
 
     q_base = np.linspace(pump.q_min or 0.01, pump.q_max, n_base)
@@ -698,15 +696,13 @@ def power_isolines(pump, liquid='water', rho=1000.0, viscosity_cSt=1.0,
     """
     diameters = pump.get_diameters()
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+    d_max = max(diameters) if diameters else (pump.speed_rpm if fam_type == 'variable_speed' else (pump.impeller_dia_mm or 300.0))
+    d_min = min(diameters) if (diameters and len(diameters) >= 2) else d_max * 0.70
     if override_r_min is not None:
         r_min = override_r_min
     elif diameters and len(diameters) >= 2 and max(diameters) > min(diameters):
-        d_max = max(diameters)
-        d_min = min(diameters)
         r_min = d_min / d_max if d_max > 0 else 0.70
     else:
-        d_max = max(diameters) if diameters else (pump.speed_rpm if fam_type == 'variable_speed' else (pump.impeller_dia_mm or 300.0))
-        d_min = d_max * 0.70
         r_min = 0.70
 
     ratios = np.linspace(r_min, 1.0, n_ratio_steps)
@@ -760,15 +756,13 @@ def npsh_isolines(pump, liquid='water', viscosity_cSt=1.0,
     """
     diameters = pump.get_diameters()
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+    d_max = max(diameters) if diameters else (pump.speed_rpm if fam_type == 'variable_speed' else (pump.impeller_dia_mm or 300.0))
+    d_min = min(diameters) if (diameters and len(diameters) >= 2) else d_max * 0.70
     if override_r_min is not None:
         r_min = override_r_min
     elif diameters and len(diameters) >= 2 and max(diameters) > min(diameters):
-        d_max = max(diameters)
-        d_min = min(diameters)
         r_min = d_min / d_max if d_max > 0 else 0.70
     else:
-        d_max = max(diameters) if diameters else (pump.speed_rpm if fam_type == 'variable_speed' else (pump.impeller_dia_mm or 300.0))
-        d_min = d_max * 0.70
         r_min = 0.70
 
     ratios = np.linspace(r_min, 1.0, n_ratio_steps)

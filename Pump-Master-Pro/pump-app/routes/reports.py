@@ -122,32 +122,49 @@ def _safe_range_val(val, default_val):
 def _clean_axis_scale(min_v, max_v, maj_v, minr_v, conv_factor=1.0, default_min=0.0, default_max=100.0):
     """
     Beginners Note: Normalizes axis scale bounds and intervals.
-    - If conv_factor == 1.0 (primary units / no conversion): strictly respects user-defined graph bounds and intervals.
+    - In pump-data and Plotly (applyAxisScaleSettings):
+      majorVal = number of major divisions across [min, max] (dtick = (max - min) / majorVal).
+      minorVal = number of subdivisions per major interval (minor.nticks = minorVal + 1).
+    - If conv_factor == 1.0 (primary units / no conversion): strictly respects user-defined graph bounds and division step.
     - If conv_factor != 1.0 (display units converted): adapts intervals to the closest standard engineering round numbers
-      (multiples of 1, 1.5, 2, 2.5, 5, 10 * 10^k yielding clean 5s, 10s, 20s, 50s...) and expands max to the next clean multiple,
-      ensuring highly readable axes without awkward fractional decimals (e.g. 20, 40, 60... instead of 21.6, 43.2, 64.8...).
+      (multiples of 1, 1.5, 2, 2.5, 5, 10 * 10^k) and expands max to the next clean multiple.
     """
     import math
     is_conv = abs(conv_factor - 1.0) > 1e-4
 
     raw_min = (float(min_v) * conv_factor) if min_v is not None else float(default_min)
     raw_max = (float(max_v) * conv_factor) if max_v is not None else (float(default_max) if default_max is not None else None)
-    raw_maj = (float(maj_v) * conv_factor) if maj_v is not None else None
-    raw_minr = (float(minr_v) * conv_factor) if minr_v is not None else None
+    
+    span = (raw_max - raw_min) if raw_max is not None else None
+    
+    # Calculate step size from major divisions (matching Plotly: dtick = span / majorVal)
+    if maj_v is not None and float(maj_v) > 0 and span is not None and span > 0:
+        raw_maj_step = span / float(maj_v)
+    elif maj_v is not None and float(maj_v) > 0:
+        raw_maj_step = float(maj_v) * conv_factor
+    else:
+        raw_maj_step = None
+
+    # Calculate minor step size from minor subdivisions (matching Plotly: minor nticks = minorVal + 1)
+    if minr_v is not None and float(minr_v) > 0 and raw_maj_step is not None:
+        raw_minr_step = raw_maj_step / float(minr_v)
+    elif minr_v is not None and float(minr_v) > 0:
+        raw_minr_step = float(minr_v) * conv_factor
+    else:
+        raw_minr_step = None
 
     if not is_conv or raw_max is None:
         return {
             'min': raw_min,
             'max': raw_max,
-            'major': raw_maj,
-            'minor': raw_minr
+            'major': raw_maj_step,
+            'minor': raw_minr_step
         }
 
-    span = raw_max - raw_min
     if span <= 0:
-        return {'min': raw_min, 'max': raw_max, 'major': raw_maj, 'minor': raw_minr}
+        return {'min': raw_min, 'max': raw_max, 'major': raw_maj_step, 'minor': raw_minr_step}
 
-    target_step = raw_maj if (raw_maj and raw_maj > 0) else (span / 5.0)
+    target_step = raw_maj_step if (raw_maj_step and raw_maj_step > 0) else (span / 5.0)
 
     # Standard clean multipliers in any decade: 1, 1.5, 2, 2.5, 5, 10
     multipliers = [1.0, 1.5, 2.0, 2.5, 5.0, 10.0]
@@ -170,12 +187,8 @@ def _clean_axis_scale(min_v, max_v, maj_v, minr_v, conv_factor=1.0, default_min=
 
     # Clean minor step
     clean_minor = None
-    if raw_minr and raw_minr > 0 and raw_maj and raw_maj > 0:
-        sub_divs = round(raw_maj / raw_minr)
-        if sub_divs > 1:
-            allowed_divs = [2, 4, 5, 10]
-            best_div = min(allowed_divs, key=lambda d: abs(d - sub_divs))
-            clean_minor = round(clean_step / best_div, 4) if (clean_step / best_div) < 1 else round(clean_step / best_div, 2)
+    if minr_v is not None and float(minr_v) > 1 and clean_step and clean_step > 0:
+        clean_minor = round(clean_step / float(minr_v), 4) if (clean_step / float(minr_v)) < 1 else round(clean_step / float(minr_v), 2)
 
     return {
         'min': raw_min,
@@ -677,10 +690,10 @@ def _build_report_curve_context(pump, report):
     applies exact pump-data axis scale settings (min, max, major, minor), auto-detects NPSHr availability,
     and supports Curve Display Modes (all, max_only, min_max).
     """
-    rep_unit_q = getattr(report, 'unit_flow', pump.unit_q) or 'm3h'
-    rep_unit_h = getattr(report, 'unit_head', pump.unit_h) or 'm'
-    rep_unit_pow = getattr(report, 'unit_power', pump.unit_pow) or 'kw'
-    rep_unit_npsh = getattr(report, 'unit_npsh', pump.unit_npsh) or 'm'
+    rep_unit_q = getattr(report, 'unit_flow', None) or pump.unit_q or 'm3h'
+    rep_unit_h = getattr(report, 'unit_head', None) or pump.unit_h or 'm'
+    rep_unit_pow = getattr(report, 'unit_power', None) or pump.unit_pow or 'kw'
+    rep_unit_npsh = getattr(report, 'unit_npsh', None) or pump.unit_npsh or 'm'
 
     # Compute scaling factors for curves (curves are ALWAYS generated in m3h, m, kw by pump_curves.py)
     fQ_curve = CURVE_CONVERSIONS['q'].get(rep_unit_q.lower().replace('/', ''), 1.0) / 1.0

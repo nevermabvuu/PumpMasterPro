@@ -1,0 +1,393 @@
+{% extends 'base.html' %}
+
+{% block title %}Organisation Settings &amp; Multi-Company Permissions — Pump Master Pro{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- PAGE HEADER -->
+  <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[#30363d]">
+    <div>
+      <div class="flex items-center gap-2">
+        <h1 class="text-xl font-bold text-[#e6edf3] flex items-center gap-2">
+          <i class="bi bi-buildings text-[#58a6ff]"></i> Organisation Settings &amp; Defaults
+        </h1>
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#238636]/20 border border-[#238636]/40 text-[#3fb950] flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#3fb950] animate-pulse"></span>
+          Active Working Company: {{ current_org.name if current_org else 'Lytrose Engineering' }} (ID #{{ current_org.id if current_org else 2 }})
+        </span>
+      </div>
+      <p class="text-xs text-[#8b949e] mt-1">
+        Manage organisation profiles, unit defaults, branding, and multi-organisation SQL pump visibility rules.
+      </p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button onclick="openOrgModal()" class="px-3.5 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-semibold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
+        <i class="bi bi-building-add"></i> Add Organisation
+      </button>
+    </div>
+  </div>
+
+  <!-- STATS OVERVIEW CARDS -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="p-4 bg-[#161b22] border border-[#30363d] rounded-xl flex items-center justify-between">
+      <div>
+        <div class="text-xs text-[#8b949e] font-medium uppercase tracking-wider">Active Company</div>
+        <div class="text-base font-bold text-[#e6edf3] mt-0.5">{{ current_org.name if current_org else 'Lytrose Engineering' }}</div>
+        <div class="text-[11px] text-[#58a6ff] mt-0.5 font-mono">ID: #{{ current_org.id if current_org else 2 }} · Default Owner for New Pumps</div>
+      </div>
+      <div class="w-10 h-10 rounded-lg bg-[#58a6ff]/10 border border-[#58a6ff]/30 flex items-center justify-center text-[#58a6ff]">
+        <i class="bi bi-building-gear text-lg"></i>
+      </div>
+    </div>
+
+    <div class="p-4 bg-[#161b22] border border-[#30363d] rounded-xl flex items-center justify-between">
+      <div>
+        <div class="text-xs text-[#8b949e] font-medium uppercase tracking-wider">Pump Catalogue Visibility</div>
+        <div class="text-base font-bold text-[#3fb950] mt-0.5">{{ visible_pumps }} of {{ total_pumps }} Pumps Visible</div>
+        <div class="text-[11px] text-[#8b949e] mt-0.5">
+          {% if view_all_mode %}
+            <span class="text-[#7ee787]"><i class="bi bi-globe me-1"></i>Unrestricted (All Organisations)</span>
+          {% else %}
+            <span class="text-[#f0883e]"><i class="bi bi-funnel me-1"></i>Filtered to {{ allowed_id_set|length }} Organisation(s)</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="w-10 h-10 rounded-lg bg-[#3fb950]/10 border border-[#3fb950]/30 flex items-center justify-center text-[#3fb950]">
+        <i class="bi bi-eye text-lg"></i>
+      </div>
+    </div>
+
+    <div class="p-4 bg-[#161b22] border border-[#30363d] rounded-xl flex items-center justify-between">
+      <div>
+        <div class="text-xs text-[#8b949e] font-medium uppercase tracking-wider">Registered Organisations</div>
+        <div class="text-base font-bold text-[#e6edf3] mt-0.5">{{ all_organisations|length }} Registered Profiles</div>
+        <div class="text-[11px] text-[#8b949e] mt-0.5">Manufacturers &amp; Corporate Entities</div>
+      </div>
+      <div class="w-10 h-10 rounded-lg bg-[#a371f7]/10 border border-[#a371f7]/30 flex items-center justify-center text-[#a371f7]">
+        <i class="bi bi-diagram-3 text-lg"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- ── LEFT COLUMN: ACTIVE ORGANISATION PROFILE & ENGINEERING DEFAULTS (7 cols) ── -->
+    <div class="lg:col-span-7 space-y-6">
+      
+      <!-- CARD: ORGANISATION PROFILE & ENGINEERING DEFAULTS -->
+      <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
+        <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
+            <i class="bi bi-sliders text-[#58a6ff]"></i> Active Organisation Profile &amp; Engineering Defaults
+          </h2>
+          <span class="text-xs font-mono text-[#8b949e]">ID #{{ current_org.id }}</span>
+        </div>
+
+        <form action="{{ url_for('organisations.save_profile') }}" method="POST" class="p-4 space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Organisation Name *</label>
+              <input type="text" name="name" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" value="{{ current_org.name if current_org else '' }}">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Contact Email</label>
+              <input type="email" name="contact_email" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" value="{{ current_org.contact_email if current_org else '' }}" placeholder="engineering@company.com">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Phone</label>
+              <input type="text" name="phone" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" value="{{ current_org.phone if current_org else '' }}" placeholder="+27 11 000 0000">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Website</label>
+              <input type="text" name="website" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" value="{{ current_org.website if current_org else '' }}" placeholder="www.lytrose.co.za">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Physical / Division Address</label>
+            <textarea name="address" rows="2" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="Engineering facility or office address...">{{ current_org.address if current_org else '' }}</textarea>
+          </div>
+
+          <!-- Default Engineering Units for Organisation -->
+          <div class="p-3.5 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
+            <span class="block text-xs font-bold text-[#f0883e] uppercase tracking-wider flex items-center gap-1.5">
+              <i class="bi bi-ruler"></i> Organisation Default Engineering Units
+            </span>
+            <p class="text-[11px] text-[#8b949e]">Default unit system used when creating new pumps and generating technical documents.</p>
+            
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+              <div>
+                <label class="block text-[11px] text-[#8b949e] mb-1">Flow Rate (Q):</label>
+                <select name="default_unit_flow" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#f0883e]">
+                  <option value="m3h" {% if current_org and current_org.default_unit_flow == 'm3h' %}selected{% endif %}>m³/h</option>
+                  <option value="ls" {% if current_org and current_org.default_unit_flow == 'ls' %}selected{% endif %}>L/s</option>
+                  <option value="gpm" {% if current_org and current_org.default_unit_flow == 'gpm' %}selected{% endif %}>US gpm</option>
+                  <option value="lmin" {% if current_org and current_org.default_unit_flow == 'lmin' %}selected{% endif %}>L/min</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] text-[#8b949e] mb-1">Head (H):</label>
+                <select name="default_unit_head" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#f0883e]">
+                  <option value="m" {% if current_org and current_org.default_unit_head == 'm' %}selected{% endif %}>m (meters)</option>
+                  <option value="ft" {% if current_org and current_org.default_unit_head == 'ft' %}selected{% endif %}>ft (feet)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] text-[#8b949e] mb-1">Power (P):</label>
+                <select name="default_unit_power" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#f0883e]">
+                  <option value="kw" {% if current_org and current_org.default_unit_power == 'kw' %}selected{% endif %}>kW (kilowatts)</option>
+                  <option value="hp" {% if current_org and current_org.default_unit_power == 'hp' %}selected{% endif %}>hp (horsepower)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] text-[#8b949e] mb-1">NPSHr:</label>
+                <select name="default_unit_npsh" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#f0883e]">
+                  <option value="m" {% if current_org and current_org.default_unit_npsh == 'm' %}selected{% endif %}>m (meters)</option>
+                  <option value="ft" {% if current_org and current_org.default_unit_npsh == 'ft' %}selected{% endif %}>ft (feet)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Branding Primary Color</label>
+              <div class="flex items-center gap-2">
+                <input type="color" name="primary_color" id="org_primary_color" class="h-8 w-12 bg-[#0d1117] border border-[#30363d] rounded p-0.5 cursor-pointer" value="{{ current_org.primary_color if current_org and current_org.primary_color else '#1e3a8a' }}" oninput="document.getElementById('org_color_hex').value = this.value">
+                <input type="text" readonly id="org_color_hex" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-[#8b949e]" value="{{ current_org.primary_color if current_org and current_org.primary_color else '#1e3a8a' }}">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Internal Notes</label>
+              <input type="text" name="notes" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" value="{{ current_org.notes if current_org else '' }}" placeholder="e.g. Head office division">
+            </div>
+          </div>
+
+          <div class="pt-2 flex justify-end">
+            <button type="submit" class="px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
+              <i class="bi bi-check-lg"></i> Save Profile &amp; Defaults
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- ── RIGHT COLUMN: MULTI-ORGANISATION PUMP VISIBILITY RULES (5 cols) ── -->
+    <div class="lg:col-span-5 space-y-6">
+
+      <!-- CARD: MULTI-ORGANISATION SQL FILTER SETTINGS -->
+      <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
+        <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
+            <i class="bi bi-shield-lock text-[#58a6ff]"></i> Multi-Organisation Pump Visibility
+          </h2>
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-[#58a6ff]/10 text-[#58a6ff] border border-[#58a6ff]/30">SQL Filter</span>
+        </div>
+
+        <form action="{{ url_for('organisations.save_visibility') }}" method="POST" class="p-4 space-y-4">
+          <p class="text-xs text-[#8b949e]">
+            Configure which organisations' pump records <strong class="text-white">{{ current_org.name if current_org else 'Lytrose Engineering' }}</strong> can view and search across the Catalogue, Selection Engine, and Comparison module.
+          </p>
+
+          <div class="space-y-3 bg-[#0d1117] p-3.5 border border-[#30363d] rounded-lg">
+            <label class="flex items-start gap-2.5 cursor-pointer">
+              <input type="radio" name="visibility_mode" value="all" id="mode_all" class="mt-0.5 accent-[#58a6ff]" {% if view_all_mode %}checked{% endif %} onchange="toggleOrgCheckboxes(false)">
+              <div>
+                <span class="block text-xs font-bold text-white">View All Organisations' Pumps (Unrestricted)</span>
+                <span class="block text-[11px] text-[#8b949e]">Users can search, select, and view pumps belonging to any organisation in the database.</span>
+              </div>
+            </label>
+
+            <div class="border-t border-[#30363d]/60 pt-3">
+              <label class="flex items-start gap-2.5 cursor-pointer">
+                <input type="radio" name="visibility_mode" value="selected" id="mode_selected" class="mt-0.5 accent-[#58a6ff]" {% if not view_all_mode %}checked{% endif %} onchange="toggleOrgCheckboxes(true)">
+                <div>
+                  <span class="block text-xs font-bold text-white">Filter by Selected Organisations Only</span>
+                  <span class="block text-[11px] text-[#8b949e]">Only pumps belonging to the checked organisations below will be visible.</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- CHECKBOX LIST OF ORGANISATIONS -->
+          <div id="org_checkboxes_container" class="space-y-2 pt-1 {% if view_all_mode %}opacity-50 pointer-events-none{% endif %}">
+            <span class="block text-[11px] font-semibold text-[#8b949e] uppercase tracking-wider">Select Permitted Organisations:</span>
+            
+            <div class="space-y-1.5 max-h-56 overflow-y-auto pe-1">
+              {% for org in all_organisations %}
+              <label class="flex items-center justify-between p-2 rounded bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition cursor-pointer text-xs">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" name="selected_org_ids" value="{{ org.id }}" class="accent-[#58a6ff] rounded" {% if org.id in allowed_id_set %}checked{% endif %} {% if org.id == current_org.id %}checked disabled title="Active company is always included"{% endif %}>
+                  <span class="font-medium text-[#e6edf3]">{{ org.name }}</span>
+                  {% if org.id == current_org.id %}
+                  <span class="text-[10px] px-1.5 py-0.2 rounded bg-[#238636]/20 text-[#3fb950] font-mono">Current</span>
+                  {% endif %}
+                </div>
+                <span class="font-mono text-[11px] text-[#8b949e]">{{ org_pump_counts.get(org.id, 0) }} pumps</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="pt-2 flex justify-end">
+            <button type="submit" class="px-4 py-2 bg-[#58a6ff] hover:bg-[#79c0ff] text-xs font-bold text-[#0d1117] rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
+              <i class="bi bi-shield-check"></i> Apply Visibility Filter
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- SECTION 3: ALL REGISTERED ORGANISATIONS DIRECTORY -->
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
+    <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
+        <i class="bi bi-building text-[#58a6ff]"></i> All Registered Organisations &amp; Manufacturers ({{ all_organisations|length }})
+      </h2>
+      <button onclick="openOrgModal()" class="text-xs text-[#58a6ff] hover:underline flex items-center gap-1">
+        <i class="bi bi-plus-lg"></i> Add New Profile
+      </button>
+    </div>
+
+    <div class="p-4">
+      {% if all_organisations %}
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {% for o in all_organisations %}
+        <div class="p-4 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2 relative group hover:border-[#58a6ff]/50 transition-colors">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full" style="background-color: {{ o.primary_color or '#1e3a8a' }};"></span>
+              <h3 class="text-sm font-bold text-[#e6edf3]">{{ o.name }}</h3>
+            </div>
+            <div class="flex items-center gap-1">
+              <button data-org='{{ o.to_dict()|tojson }}' onclick="editOrg(JSON.parse(this.dataset.org))" class="text-xs text-[#8b949e] hover:text-[#58a6ff] p-1" title="Edit Organisation">
+                <i class="bi bi-pencil"></i>
+              </button>
+              {% if o.id != current_org.id %}
+              <form action="{{ url_for('organisations.delete_organisation', id=o.id) }}" method="POST" class="inline" onsubmit="return confirm('Delete organisation &quot;{{ o.name }}&quot;?');">
+                <button type="submit" class="text-xs text-[#8b949e] hover:text-[#f85149] p-1" title="Delete Organisation">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if o.contact_email %}<p class="text-xs text-[#8b949e]"><i class="bi bi-envelope me-1.5"></i>{{ o.contact_email }}</p>{% endif %}
+          {% if o.phone %}<p class="text-xs text-[#8b949e]"><i class="bi bi-telephone me-1.5"></i>{{ o.phone }}</p>{% endif %}
+          {% if o.website %}<p class="text-xs text-[#58a6ff]"><i class="bi bi-globe me-1.5"></i>{{ o.website }}</p>{% endif %}
+          {% if o.address %}<p class="text-xs text-[#8b949e] truncate"><i class="bi bi-geo-alt me-1.5"></i>{{ o.address }}</p>{% endif %}
+
+          <div class="pt-2 text-[11px] text-[#8b949e] border-t border-[#30363d]/60 flex items-center justify-between">
+            <span class="text-[#3fb950] font-semibold"><i class="bi bi-database me-1"></i>{{ org_pump_counts.get(o.id, 0) }} Pump Records</span>
+            <span class="font-mono text-[10px]">ID: #{{ o.id }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-xs text-[#8b949e] py-4 text-center">No organisations registered yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- ── MODAL: ADD / EDIT ORGANISATION ── -->
+<div id="orgModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl max-w-md w-full overflow-hidden shadow-2xl">
+    <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
+      <h3 class="text-sm font-bold text-white flex items-center gap-2" id="orgModalTitle">
+        <i class="bi bi-building text-[#58a6ff]"></i> Add Organisation
+      </h3>
+      <button onclick="closeOrgModal()" class="text-[#8b949e] hover:text-white"><i class="bi bi-x-lg"></i></button>
+    </div>
+    
+    <form action="{{ url_for('organisations.save_organisation') }}" method="POST" class="p-4 space-y-3">
+      <input type="hidden" name="organisation_id" id="modal_org_id">
+      <div>
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Organisation / Manufacturer Name *</label>
+        <input type="text" name="name" id="modal_org_name" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="e.g. KSB Pumps / Warman / Lytrose">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Contact Email</label>
+        <input type="email" name="contact_email" id="modal_org_email" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="info@company.com">
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Phone</label>
+          <input type="text" name="phone" id="modal_org_phone" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="+1-800-PUMPS">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Website</label>
+          <input type="text" name="website" id="modal_org_website" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="www.company.com">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Address</label>
+        <textarea name="address" id="modal_org_address" rows="2" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="Corporate or division address..."></textarea>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Branding Color</label>
+        <input type="color" name="primary_color" id="modal_org_color" class="h-8 w-12 bg-[#0d1117] border border-[#30363d] rounded p-0.5 cursor-pointer" value="#1e3a8a">
+      </div>
+
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" onclick="closeOrgModal()" class="px-3 py-1.5 bg-[#21262d] text-xs text-[#c9d1d9] rounded border border-[#30363d]">Cancel</button>
+        <button type="submit" class="px-4 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded">Save Organisation</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function toggleOrgCheckboxes(enable) {
+    const container = document.getElementById('org_checkboxes_container');
+    if (enable) {
+      container.classList.remove('opacity-50', 'pointer-events-none');
+    } else {
+      container.classList.add('opacity-50', 'pointer-events-none');
+    }
+  }
+
+  function openOrgModal() {
+    document.getElementById('modal_org_id').value = '';
+    document.getElementById('modal_org_name').value = '';
+    document.getElementById('modal_org_email').value = '';
+    document.getElementById('modal_org_phone').value = '';
+    document.getElementById('modal_org_website').value = '';
+    document.getElementById('modal_org_address').value = '';
+    document.getElementById('modal_org_color').value = '#1e3a8a';
+    document.getElementById('orgModalTitle').innerHTML = '<i class="bi bi-building text-[#58a6ff]"></i> Add Organisation';
+    document.getElementById('orgModal').classList.remove('hidden');
+  }
+
+  function editOrg(o) {
+    document.getElementById('modal_org_id').value = o.id;
+    document.getElementById('modal_org_name').value = o.name || '';
+    document.getElementById('modal_org_email').value = o.contact_email || '';
+    document.getElementById('modal_org_phone').value = o.phone || '';
+    document.getElementById('modal_org_website').value = o.website || '';
+    document.getElementById('modal_org_address').value = o.address || '';
+    document.getElementById('modal_org_color').value = o.primary_color || '#1e3a8a';
+    document.getElementById('orgModalTitle').innerHTML = '<i class="bi bi-pencil text-[#58a6ff]"></i> Edit Organisation';
+    document.getElementById('orgModal').classList.remove('hidden');
+  }
+
+  function closeOrgModal() {
+    document.getElementById('orgModal').classList.add('hidden');
+  }
+</script>
+{% endblock %}

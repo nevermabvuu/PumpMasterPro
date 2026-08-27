@@ -5,10 +5,35 @@ Beginners Note: This module isolates reusable data processing helpers used acros
 """
 
 import json
-from models import db, Pump
+from models import db, Pump, Organisation
 from pump_curves import (
     fit_pump_polynomials, Q_TO_M3H, H_TO_M, POW_TO_KW
 )
+
+# Beginners Note: Active organization ID (fixed to 2: Lytrose Engineering until auth module is implemented)
+CURRENT_ORGANISATION_ID = 2
+
+
+def get_current_organisation():
+    """Return the active organisation (defaults to ID 2: Lytrose Engineering until auth module is added)."""
+    org = Organisation.query.get(CURRENT_ORGANISATION_ID)
+    if not org:
+        org = Organisation.query.first()
+    return org
+
+
+def get_visible_pumps_query():
+    """
+    Beginners Note: Filters pumps based on the active organisation's allowed_view_org_ids setting.
+    A company can view multiple organisations' pumps.
+    """
+    org = get_current_organisation()
+    if not org:
+        return Pump.query
+    allowed_ids = org.get_allowed_org_ids()
+    if allowed_ids is None:  # 'all' allowed or unrestricted
+        return Pump.query
+    return Pump.query.filter(Pump.organisation_id.in_(allowed_ids))
 
 
 def _get_float(d, key, default=0.0):
@@ -116,6 +141,13 @@ def _pump_from_form(f, pump=None):
     """
     if pump is None:
         pump = Pump(hq_a0=0.0, q_max=100.0)
+        pump.organisation_id = CURRENT_ORGANISATION_ID
+
+    org_id_val = f.get('organisation_id')
+    if org_id_val and str(org_id_val).isdigit():
+        pump.organisation_id = int(org_id_val)
+    elif not pump.organisation_id:
+        pump.organisation_id = CURRENT_ORGANISATION_ID
 
     pump.name             = f['name']
     pump.manufacturer     = f.get('manufacturer', pump.manufacturer or '')

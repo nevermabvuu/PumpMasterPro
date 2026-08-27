@@ -6,7 +6,7 @@ Beginners Note: Compares performance curves and metrics across multiple selected
 
 from flask import Blueprint, render_template, request, jsonify
 from models import Pump
-from utils import _get_float
+from utils import _get_float, get_visible_pumps_query
 from pump_curves import full_curve_data, bep_point
 
 comparison_bp = Blueprint('comparison', __name__)
@@ -20,7 +20,7 @@ def pump_comparison():
     h_duty   = request.args.get('h_duty', type=float)
     liquid   = request.args.get('liquid', 'water')
     pumps    = Pump.query.filter(Pump.id.in_(pump_ids)).all() if pump_ids else []
-    all_pumps= Pump.query.order_by(Pump.name).all()
+    all_pumps= get_visible_pumps_query().order_by(Pump.name).all()
     return render_template('pump_comparison.html',
                            pumps=pumps, all_pumps=all_pumps,
                            pump_ids=pump_ids, q_duty=q_duty,

@@ -4,20 +4,27 @@
 {% block content %}
 
 <!-- Page header -->
-<div class="flex justify-between items-center mb-4">
+<div class="flex flex-wrap justify-between items-center gap-3 mb-4">
   <div class="page-header mb-0">
     <h1 class="page-title"><i class="bi bi-database mr-2 text-accent"></i>Pump Catalogue</h1>
     <p class="page-subtitle">
-      {{ pumps|length }} pump{{ 's' if pumps|length != 1 else '' }} —
-      click <i class="bi bi-activity"></i> on any card to open the full Warman performance map
+      {{ pumps|length }} pump{{ 's' if pumps|length != 1 else '' }} visible for <strong class="text-white">{{ current_org.name if current_org else 'Lytrose Engineering' }}</strong> —
+      click <i class="bi bi-activity"></i> on any card to open performance curves
     </p>
   </div>
-  <a href="{{ url_for('pump_new') }}"
-     class="inline-flex items-center gap-1 px-4 py-2 rounded font-semibold text-sm transition-colors"
-     style="background:#58a6ff;color:#0d1117;"
-     onmouseover="this.style.background='#79baff'" onmouseout="this.style.background='#58a6ff'">
-    <i class="bi bi-plus-lg"></i>Add Pump
-  </a>
+  <div class="flex items-center gap-2">
+    <a href="{{ url_for('organisations.settings') }}"
+       class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs font-semibold border border-[#30363d] bg-[#161b22] text-[#8b949e] hover:text-white transition-colors"
+       title="Configure Multi-Organisation View Filters">
+      <i class="bi bi-funnel"></i>View Filter
+    </a>
+    <a href="{{ url_for('pump_new') }}"
+       class="inline-flex items-center gap-1 px-4 py-1.5 rounded font-semibold text-xs transition-colors shadow-sm"
+       style="background:#58a6ff;color:#0d1117;"
+       onmouseover="this.style.background='#79baff'" onmouseout="this.style.background='#58a6ff'">
+      <i class="bi bi-plus-lg"></i>Add Pump
+    </a>
+  </div>
 </div>
 
 {% if pumps %}
@@ -32,7 +39,14 @@
         <div class="flex items-start gap-2 mb-2">
           <div class="flex-1 min-w-0">
             <div class="font-semibold truncate" style="font-size:1rem">{{ pump.name }}</div>
-            <div class="text-muted text-sm">{{ pump.manufacturer or '' }}{% if pump.model_number %} · {{ pump.model_number }}{% endif %}</div>
+            <div class="text-muted text-xs flex items-center gap-1.5 mt-0.5">
+              <span>{{ pump.manufacturer or '' }}{% if pump.model_number %} · {{ pump.model_number }}{% endif %}</span>
+              {% if pump.organisation %}
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-medium bg-[#161b22] border border-[#30363d] text-[#58a6ff]" title="Owning Organisation">
+                <i class="bi bi-building"></i>{{ pump.organisation.name }}
+              </span>
+              {% endif %}
+            </div>
           </div>
           <!-- Badge -->
           <span class="shrink-0 inline-block px-2 py-0.5 rounded text-xs font-bold"

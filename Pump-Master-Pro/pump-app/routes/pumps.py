@@ -2,32 +2,49 @@
 routes/pumps.py — Pump CRUD management blueprint.
 
 Beginners Note: Handles pump database listing, adding new pumps, editing existing pumps, and deleting pumps.
+Filters pumps based on the active organisation's multi-organisation viewing rules.
 """
 
 from flask import Blueprint, render_template, request, redirect, url_for
-from models import db, Pump
-from utils import _pump_from_form
+from models import db, Pump, Organisation
+from utils import _pump_from_form, get_visible_pumps_query, get_current_organisation, CURRENT_ORGANISATION_ID
 
 pumps_bp = Blueprint('pumps', __name__)
 
 
 @pumps_bp.route('/pump-data', endpoint='pump_data')
 def pump_data():
-    """List all pumps sorted by name."""
-    pumps = Pump.query.order_by(Pump.name).all()
+    """List all pumps visible to the active organisation, sorted by name."""
+    pumps = get_visible_pumps_query().order_by(Pump.name).all()
     pump_dicts = [p.to_dict() for p in pumps]
-    return render_template('pump_data.html', pumps=pumps, pump_dicts=pump_dicts)
+    current_org = get_current_organisation()
+    return render_template(
+        'pump_data.html',
+        pumps=pumps,
+        pump_dicts=pump_dicts,
+        current_org=current_org
+    )
 
 
 @pumps_bp.route('/pump-data/new', methods=['GET', 'POST'], endpoint='pump_new')
 def pump_new():
-    """Create a new pump record from form data."""
+    """Create a new pump record from form data (defaults to active organisation: Lytrose Engineering)."""
     if request.method == 'POST':
         pump = _pump_from_form(request.form)
         db.session.add(pump)
         db.session.commit()
         return redirect(url_for('pump_edit', pump_id=pump.id))
-    return render_template('pump_form.html', pump=None, action='new')
+    
+    organisations = Organisation.query.order_by(Organisation.name.asc()).all()
+    current_org = get_current_organisation()
+    return render_template(
+        'pump_form.html',
+        pump=None,
+        action='new',
+        organisations=organisations,
+        current_org=current_org,
+        default_org_id=CURRENT_ORGANISATION_ID
+    )
 
 
 @pumps_bp.route('/pump-data/edit/<int:pump_id>', methods=['GET', 'POST'], endpoint='pump_edit')
@@ -38,7 +55,17 @@ def pump_edit(pump_id):
         _pump_from_form(request.form, pump)
         db.session.commit()
         return redirect(url_for('pump_edit', pump_id=pump.id))
-    return render_template('pump_form.html', pump=pump, action='edit')
+    
+    organisations = Organisation.query.order_by(Organisation.name.asc()).all()
+    current_org = get_current_organisation()
+    return render_template(
+        'pump_form.html',
+        pump=pump,
+        action='edit',
+        organisations=organisations,
+        current_org=current_org,
+        default_org_id=pump.organisation_id or CURRENT_ORGANISATION_ID
+    )
 
 
 @pumps_bp.route('/pump-data/delete/<int:pump_id>', methods=['POST'], endpoint='pump_delete')

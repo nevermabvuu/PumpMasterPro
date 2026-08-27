@@ -34,6 +34,7 @@ class Pump(db.Model):
     __tablename__ = 'pumps'
 
     id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey('organisations.id'), nullable=True, default=2)
     name = db.Column(db.String(100), nullable=False)
     manufacturer = db.Column(db.String(100), default='')
     model_number = db.Column(db.String(100), default='')
@@ -729,6 +730,8 @@ class Pump(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
+            'organisation_id': getattr(self, 'organisation_id', 2) or 2,
+            'organisation_name': self.organisation.name if getattr(self, 'organisation', None) else '',
             'name': self.name,
             'manufacturer': self.manufacturer,
             'model_number': self.model_number,
@@ -838,27 +841,61 @@ class Pump(db.Model):
         }
 
 
-class Supplier(db.Model):
+class Organisation(db.Model):
     """
-    Beginners Note: Supplier Model
-    Represents a Pump Supplier or Manufacturer organization linked to PDF technical reports.
+    Beginners Note: Organisation Model ('organisations' table)
+    Represents an Engineering Organisation or Manufacturer profile, with defaults and multi-organisation visibility rules.
     """
-    __tablename__ = 'suppliers'
+    __tablename__ = 'organisations'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
+    name = db.Column(db.String(150), nullable=False)
     logo_url = db.Column(db.String(255), default='')
     contact_email = db.Column(db.String(100), default='')
     phone = db.Column(db.String(50), default='')
     website = db.Column(db.String(100), default='')
     address = db.Column(db.Text, default='')
+    
+    # Allowed organisations whose pumps this organisation is permitted to view (comma-separated IDs or 'all')
+    allowed_view_org_ids = db.Column(db.String(255), default='')
+    
+    # Defaults for the organisation
+    default_unit_flow = db.Column(db.String(10), default='m3h')
+    default_unit_head = db.Column(db.String(10), default='m')
+    default_unit_power = db.Column(db.String(10), default='kw')
+    default_unit_npsh = db.Column(db.String(10), default='m')
+    primary_color = db.Column(db.String(20), default='#1e3a8a')
+    notes = db.Column(db.Text, default='')
+
     created_at = db.Column(db.DateTime, default=_utcnow)
 
-    # One-to-many relationship with report configurations
-    reports = db.relationship('ReportConfig', backref='supplier', lazy=True, cascade='all, delete-orphan')
+    # Relationships
+    pumps = db.relationship('Pump', backref='organisation', lazy=True)
+    reports = db.relationship('ReportConfig', backref='organisation', lazy=True, cascade='all, delete-orphan')
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+    def get_allowed_org_ids(self):
+        """
+        Beginners Note: Returns list of integer Organisation IDs allowed for viewing.
+        If 'all' or empty is configured, returns None (meaning unrestricted/all).
+        If specific IDs are set, returns list of integers including own ID.
+        """
+        raw = getattr(self, 'allowed_view_org_ids', '')
+        if not raw or not raw.strip():
+            return None
+        raw_str = raw.strip().lower()
+        if raw_str == 'all':
+            return None
+        ids = []
+        for x in raw_str.replace(';', ',').split(','):
+            x = x.strip()
+            if x.isdigit():
+                ids.append(int(x))
+        if self.id and self.id not in ids:
+            ids.append(self.id)
+        return ids if ids else None
 
     def to_dict(self):
         return {
@@ -869,24 +906,51 @@ class Supplier(db.Model):
             'phone': self.phone or '',
             'website': self.website or '',
             'address': self.address or '',
+            'allowed_view_org_ids': self.allowed_view_org_ids or '',
+            'default_unit_flow': self.default_unit_flow or 'm3h',
+            'default_unit_head': self.default_unit_head or 'm',
+            'default_unit_power': self.default_unit_power or 'kw',
+            'default_unit_npsh': self.default_unit_npsh or 'm',
+            'primary_color': self.primary_color or '#1e3a8a',
+            'notes': self.notes or '',
             'created_at': self.created_at.isoformat() if self.created_at else ''
         }
+
+
+# Backward compatibility alias
+Supplier = Organisation
 
 
 class ReportConfig(db.Model):
     """
     Beginners Note: ReportConfig Model ('reports' table)
     Stores custom PDF report templates, graph show/hide preferences, header/footer branding,
-    and supplier links for generating technical pump datasheets.
+    and organisation links for generating technical pump datasheets.
     """
     __tablename__ = 'reports'
 
     id = db.Column(db.Integer, primary_key=True)
-    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey('organisations.id'), nullable=True)
     title = db.Column(db.String(150), nullable=False, default='Standard Pump Technical Datasheet')
     report_type = db.Column(db.String(100), default='Technical Datasheet')
     description = db.Column(db.Text, default='')
     template_name = db.Column(db.String(100), default='standard_datasheet.html')
+
+    @property
+    def supplier_id(self):
+        return self.organisation_id
+
+    @supplier_id.setter
+    def supplier_id(self, val):
+        self.organisation_id = val
+
+    @property
+    def supplier(self):
+        return self.organisation
+
+    @supplier.setter
+    def supplier(self, val):
+        self.organisation = val
 
     # Graph Show/Hide Preferences
     show_head_flow_graph = db.Column(db.Boolean, default=True)
@@ -928,14 +992,19 @@ class ReportConfig(db.Model):
     updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow)
 
     def __init__(self, **kwargs):
+        # Support supplier_id keyword for backward compatibility
+        if 'supplier_id' in kwargs and 'organisation_id' not in kwargs:
+            kwargs['organisation_id'] = kwargs.pop('supplier_id')
         super().__init__(**kwargs)
 
     def to_dict(self):
-        sup = getattr(self, 'supplier', None)
+        org = getattr(self, 'organisation', None)
         return {
             'id': self.id,
-            'supplier_id': self.supplier_id,
-            'supplier_name': sup.name if sup else 'Default / Generic',
+            'organisation_id': self.organisation_id,
+            'supplier_id': self.organisation_id,
+            'organisation_name': org.name if org else 'Default / Generic',
+            'supplier_name': org.name if org else 'Default / Generic',
             'title': self.title or 'Standard Pump Technical Datasheet',
             'report_type': getattr(self, 'report_type', 'Technical Datasheet') or 'Technical Datasheet',
             'description': self.description or '',

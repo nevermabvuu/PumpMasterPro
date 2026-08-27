@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Report Settings &amp; Suppliers — Pump Master Pro{% endblock %}
+{% block title %}Report Settings &amp; Organisations — Pump Master Pro{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
@@ -9,16 +9,19 @@
   <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[#30363d]">
     <div>
       <h1 class="text-xl font-bold text-[#e6edf3] flex items-center gap-2">
-        <i class="bi bi-file-earmark-pdf text-[#58a6ff]"></i> PDF Reports &amp; Supplier Settings
+        <i class="bi bi-file-earmark-pdf text-[#58a6ff]"></i> PDF Reports &amp; Organisation Settings
       </h1>
       <p class="text-xs text-[#8b949e] mt-1">
-        Configure report templates, graph show/hide options, header/footer branding, and supplier profiles.
+        Configure report templates, graph show/hide options, header/footer branding, and linked organisation profiles.
       </p>
     </div>
 
     <div class="flex items-center gap-3">
+      <a href="{{ url_for('organisations.settings') }}" class="px-3.5 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#e6edf3] rounded-lg border border-[#30363d] flex items-center gap-1.5 transition-colors">
+        <i class="bi bi-buildings text-[#58a6ff]"></i> Organisation Defaults &amp; Visibility
+      </a>
       <button onclick="openSupplierModal()" class="px-3.5 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#e6edf3] rounded-lg border border-[#30363d] flex items-center gap-1.5 transition-colors">
-        <i class="bi bi-building-add text-[#58a6ff]"></i> Add Supplier
+        <i class="bi bi-building-add text-[#58a6ff]"></i> Add Organisation
       </button>
       <button onclick="openReportModal()" class="px-3.5 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-semibold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
         <i class="bi bi-plus-lg"></i> Create Report Setting
@@ -26,11 +29,11 @@
     </div>
   </div>
 
-  <!-- SECTION 1: SUPPLIERS MANAGEMENT CARD -->
+  <!-- SECTION 1: ORGANISATIONS MANAGEMENT CARD -->
   <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
     <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
       <h2 class="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
-        <i class="bi bi-building text-[#58a6ff]"></i> Linked Pump Suppliers &amp; Manufacturers ({{ suppliers|length }})
+        <i class="bi bi-building text-[#58a6ff]"></i> Linked Organisations &amp; Manufacturers ({{ suppliers|length }})
       </h2>
     </div>
     

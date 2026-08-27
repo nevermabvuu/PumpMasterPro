@@ -9,9 +9,9 @@ import os
 import re
 import json
 from flask import Flask
-from models import db, Supplier, ReportConfig
+from models import db, Organisation, Supplier, ReportConfig
 from seed_data import seed_pumps
-from routes import main_bp, pumps_bp, curves_bp, selection_bp, comparison_bp, reports_bp
+from routes import main_bp, pumps_bp, curves_bp, selection_bp, comparison_bp, reports_bp, organisations_bp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH  = os.path.join(BASE_DIR, 'pumps.db')
@@ -26,13 +26,49 @@ db.init_app(app)
 
 # ── Database Creation & Auto-Migration ─────────────────────────────────────────
 with app.app_context():
-    db.create_all()
     try:
         from sqlalchemy import text
         with db.engine.connect() as conn:
+            # 0. Rename suppliers table to organisations if suppliers exists and organisations does not
+            table_res = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()
+            existing_tables = [row[0] for row in table_res]
+            if 'suppliers' in existing_tables and 'organisations' not in existing_tables:
+                conn.execute(text("ALTER TABLE suppliers RENAME TO organisations"))
+    except Exception as e:
+        print("Table rename notice:", e)
+
+    db.create_all()
+
+    try:
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            # 0b. Organisations table schema migrations
+            org_res = conn.execute(text("PRAGMA table_info(organisations)"))
+            org_cols = [row[1] for row in org_res.fetchall()]
+            if 'allowed_view_org_ids' not in org_cols:
+                conn.execute(text("ALTER TABLE organisations ADD COLUMN allowed_view_org_ids VARCHAR(255) DEFAULT ''"))
+            if 'default_unit_flow' not in org_cols:
+                conn.execute(text("ALTER TABLE organisations ADD COLUMN default_unit_flow VARCHAR(10) DEFAULT 'm3h'"))
+            if 'default_unit_head' not in org_cols:
+                conn.execute(text("ALTER TABLE organisations ADD COLUMN default_unit_head VARCHAR(10) DEFAULT 'm'"))
+            if 'default_unit_power' not in org_cols:
+                conn.execute(text("ALTER TABLE organisations ADD COLUMN default_unit_power VARCHAR(10) DEFAULT 'kw'"))
+            if 'default_unit_npsh' not in org_cols:
+                conn.execute(text("ALTER TABLE organisations ADD COLUMN default_unit_npsh VARCHAR(10) DEFAULT 'm'"))
+            if 'primary_color' not in org_cols:
+                conn.execute(text("ALTER TABLE organisations ADD COLUMN primary_color VARCHAR(20) DEFAULT '#1e3a8a'"))
+            if 'notes' not in org_cols:
+                conn.execute(text("ALTER TABLE organisations ADD COLUMN notes TEXT DEFAULT ''"))
+
             # 1. Reports table schema migrations
             rep_res = conn.execute(text("PRAGMA table_info(reports)"))
             rep_cols = [row[1] for row in rep_res.fetchall()]
+            if 'organisation_id' not in rep_cols:
+                if 'supplier_id' in rep_cols:
+                    conn.execute(text("ALTER TABLE reports ADD COLUMN organisation_id INTEGER"))
+                    conn.execute(text("UPDATE reports SET organisation_id = supplier_id WHERE organisation_id IS NULL"))
+                else:
+                    conn.execute(text("ALTER TABLE reports ADD COLUMN organisation_id INTEGER DEFAULT 2"))
             if 'curve_display_mode' not in rep_cols:
                 conn.execute(text("ALTER TABLE reports ADD COLUMN curve_display_mode VARCHAR(20) DEFAULT 'all'"))
             if 'report_type' not in rep_cols:
@@ -60,6 +96,9 @@ with app.app_context():
             # 2. Pumps table schema migrations
             result = conn.execute(text("PRAGMA table_info(pumps)"))
             cols = [row[1] for row in result.fetchall()]
+            if 'organisation_id' not in cols:
+                conn.execute(text("ALTER TABLE pumps ADD COLUMN organisation_id INTEGER DEFAULT 2"))
+            conn.execute(text("UPDATE pumps SET organisation_id = 2 WHERE organisation_id IS NULL"))
             axis_cols = [
                 'axis_flow_min', 'axis_flow_max', 'axis_flow_major', 'axis_flow_minor',
                 'axis_head_min', 'axis_head_max', 'axis_head_major', 'axis_head_minor',
@@ -188,11 +227,31 @@ with app.app_context():
                 db.session.add(def_sup)
                 db.session.commit()
 
+            # Ensure Lytrose Engineering (ID = 2) exists as active working organisation
+            lytrose = Organisation.query.get(2)
+            if not lytrose:
+                lytrose = Organisation(
+                    id=2,
+                    name="Lytrose Engineering",
+                    contact_email="sales@lytrose.co.za",
+                    phone="",
+                    website="",
+                    address="",
+                    allowed_view_org_ids="all",
+                    default_unit_flow="m3h",
+                    default_unit_head="m",
+                    default_unit_power="kw",
+                    default_unit_npsh="m",
+                    primary_color="#1e3a8a"
+                )
+                db.session.add(lytrose)
+                db.session.commit()
+
             # Seed default report configuration if table is empty
             if ReportConfig.query.count() == 0:
-                def_sup = Supplier.query.first()
+                def_org = Organisation.query.get(2) or Organisation.query.first()
                 def_rep = ReportConfig(
-                    supplier_id=def_sup.id if def_sup else None,
+                    organisation_id=def_org.id if def_org else None,
                     title="Standard Pump Technical Datasheet",
                     description="Comprehensive engineering datasheet showing duty point, performance curves, construction materials, and operational limits.",
                     template_name="standard_datasheet.html",
@@ -222,6 +281,7 @@ app.register_blueprint(curves_bp)
 app.register_blueprint(selection_bp)
 app.register_blueprint(comparison_bp)
 app.register_blueprint(reports_bp)
+app.register_blueprint(organisations_bp)
 
 
 # Beginners Note: Register url_for alias resolver so templates calling url_for('pump_data')
@@ -229,7 +289,7 @@ app.register_blueprint(reports_bp)
 def handle_url_build_error(error, endpoint, values):
     if '.' not in endpoint:
         from flask import url_for as flask_url_for
-        for bp in ['main', 'pumps', 'curves', 'selection', 'comparison', 'reports']:
+        for bp in ['main', 'pumps', 'curves', 'selection', 'comparison', 'reports', 'organisations']:
             target = f"{bp}.{endpoint}"
             if target in app.view_functions:
                 return flask_url_for(target, **values)

@@ -244,15 +244,32 @@
            onmouseout="if(!this.classList.contains('tw-active')){this.style.color='#8b949e';this.style.background='transparent';}">
           <i class="bi bi-file-earmark-pdf"></i>PDF Reports
         </a>
+        <a class="nav-link-anim {% if 'organisations' in request.endpoint %}tw-active{% endif %}"
+           href="{{ url_for('organisations.settings') }}"
+           style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 0.75rem;border-radius:6px;font-size:0.9rem;text-decoration:none;color:{% if 'organisations' in request.endpoint %}#58a6ff{% else %}#8b949e{% endif %};"
+           onmouseover="if(!this.classList.contains('tw-active')){this.style.color='#e6edf3';this.style.background='#1c2330';}"
+           onmouseout="if(!this.classList.contains('tw-active')){this.style.color='#8b949e';this.style.background='transparent';}">
+          <i class="bi bi-buildings"></i>Organisation
+        </a>
       </div>
 
-      <!-- Beginners Note: Hamburger button — only visible on mobile (<md). Toggles #mobileNav -->
-      <button class="md:hidden p-2 rounded"
-              style="color:#8b949e;background:transparent;border:none;cursor:pointer;"
-              onclick="document.getElementById('mobileNav').classList.toggle('hidden')"
-              onmouseover="this.style.background='#1c2330'" onmouseout="this.style.background='transparent'">
-        <i class="bi bi-list" style="font-size:1.4rem;"></i>
-      </button>
+      <!-- Right Nav / Active Org Badge & Mobile Hamburger -->
+      <div class="flex items-center gap-2">
+        <a href="{{ url_for('organisations.settings') }}"
+           class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-[#e6edf3] border border-[#30363d] transition-colors"
+           title="Active Organisation: Lytrose Engineering (Click to manage settings)">
+          <span class="w-2 h-2 rounded-full bg-[#3fb950] animate-pulse"></span>
+          <span>Lytrose Engineering</span>
+        </a>
+
+        <!-- Beginners Note: Hamburger button — only visible on mobile (<md). Toggles #mobileNav -->
+        <button class="md:hidden p-2 rounded"
+                style="color:#8b949e;background:transparent;border:none;cursor:pointer;"
+                onclick="document.getElementById('mobileNav').classList.toggle('hidden')"
+                onmouseover="this.style.background='#1c2330'" onmouseout="this.style.background='transparent'">
+          <i class="bi bi-list" style="font-size:1.4rem;"></i>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -271,6 +288,12 @@
     <a href="{{ url_for('pump_comparison') }}"
        style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;font-size:0.9rem;color:{% if request.endpoint == 'pump_comparison' %}#58a6ff{% else %}#8b949e{% endif %};">
       <i class="bi bi-bar-chart-line"></i>Comparison</a>
+    <a href="{{ url_for('reports.settings') }}"
+       style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;font-size:0.9rem;color:{% if 'reports' in request.endpoint %}#58a6ff{% else %}#8b949e{% endif %};">
+      <i class="bi bi-file-earmark-pdf"></i>PDF Reports</a>
+    <a href="{{ url_for('organisations.settings') }}"
+       style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;font-size:0.9rem;color:{% if 'organisations' in request.endpoint %}#58a6ff{% else %}#8b949e{% endif %};">
+      <i class="bi bi-buildings"></i>Organisation</a>
   </div>
 </nav>
 

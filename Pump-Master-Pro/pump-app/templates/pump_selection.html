@@ -2,6 +2,21 @@
 {% block title %}Pump Selection — PumpSelect Pro{% endblock %}
 
 {% block content %}
+{#
+  Beginners Note:
+  This is the Pump Selection page. It provides a two-column layout:
+  - Left Panel (2/5): Duty point inputs, liquid options, and advanced filter controls
+  - Right Panel (3/5): Shortlist results table/cards with mini H-Q sparklines and sort controls
+
+  The form POSTs to the same route, and results are rendered server-side on page reload.
+  The JavaScript file (pump_selection.js) handles:
+  - Liquid panel switching
+  - Filter panel expand/collapse
+  - Client-side sort toggling
+  - Mini SVG sparkline rendering from inline data attributes
+  - Compare checkbox logic
+#}
+
 <div class="page-header mb-4">
   <h1 class="page-title"><i class="bi bi-bullseye text-accent mr-2"></i>Pump Selection</h1>
   <p class="page-subtitle">Enter your duty point to find matching pumps from the catalogue</p>
@@ -10,11 +25,12 @@
 <!-- Two-column layout: form (narrower) + results (wider) -->
 <div class="grid grid-cols-1 xl:grid-cols-5 gap-4">
 
-  <!-- ── Selection form (2/5 width on xl) ────────────────────────────── -->
+  <!-- ── Left Panel: Selection Form & Filters (2/5 width on xl) ──────── -->
   <div class="xl:col-span-2">
     <form method="post" id="selectionForm">
 
       <!-- Duty point card -->
+      <!-- Beginners Note: Core inputs for the target operating point (Flow Q, Head H, NPSHa) -->
       <div class="card-dark mb-3">
         <div class="card-header-dark">
           <i class="bi bi-crosshair mr-2"></i>Duty Point
@@ -47,6 +63,7 @@
       </div>
 
       <!-- Liquid options card -->
+      <!-- Beginners Note: Liquid type selection affects curve derating (slurry/viscous corrections) -->
       <div class="card-dark mb-3">
         <div class="card-header-dark">
           <i class="bi bi-droplet mr-2"></i>Liquid Options
@@ -120,7 +137,69 @@
         </div>
       </div>
 
-      <!-- Submit -->
+      <!-- Advanced Filters card (collapsible) -->
+      <!-- Beginners Note: Optional filters to narrow down the pump catalogue before hydraulic evaluation.
+           Collapsed by default to keep the form compact. -->
+      <div class="card-dark mb-3">
+        <div class="card-header-dark cursor-pointer flex items-center justify-between" onclick="toggleFilterPanel()" id="filterToggleBtn">
+          <span><i class="bi bi-funnel mr-2"></i>Advanced Filters</span>
+          <i class="bi bi-chevron-down text-sm transition-transform" id="filterChevron"></i>
+        </div>
+        <div id="filterPanel" class="p-4 border-t border-[#30363d]" style="display:none">
+          <div class="grid grid-cols-2 gap-3">
+            <!-- Manufacturer filter -->
+            <div>
+              <label class="form-label">Manufacturer</label>
+              <select name="filter_manufacturer" class="form-select form-control-dark w-full">
+                <option value="">All Manufacturers</option>
+                {% if filter_options and filter_options.manufacturers %}
+                  {% for mfr in filter_options.manufacturers %}
+                  <option value="{{ mfr }}" {{ 'selected' if form_data.get('filter_manufacturer') == mfr }}>{{ mfr }}</option>
+                  {% endfor %}
+                {% endif %}
+              </select>
+            </div>
+
+            <!-- Pump type filter -->
+            <div>
+              <label class="form-label">Pump Type</label>
+              <select name="filter_pump_type" class="form-select form-control-dark w-full">
+                <option value="">All Types</option>
+                {% if filter_options and filter_options.pump_types %}
+                  {% for pt in filter_options.pump_types %}
+                  <option value="{{ pt }}" {{ 'selected' if form_data.get('filter_pump_type') == pt }}>{{ pt|capitalize }}</option>
+                  {% endfor %}
+                {% endif %}
+              </select>
+            </div>
+
+            <!-- Speed range filters -->
+            <div>
+              <label class="form-label">Min Speed (RPM)</label>
+              <input type="number" name="filter_speed_min" class="form-control form-control-dark w-full"
+                     value="{{ form_data.get('filter_speed_min', '') }}" placeholder="e.g. 500">
+            </div>
+            <div>
+              <label class="form-label">Max Speed (RPM)</label>
+              <input type="number" name="filter_speed_max" class="form-control form-control-dark w-full"
+                     value="{{ form_data.get('filter_speed_max', '') }}" placeholder="e.g. 3000">
+            </div>
+
+            <!-- Size filter -->
+            <div class="col-span-2">
+              <label class="form-label">Size (partial match)</label>
+              <input type="text" name="filter_size" class="form-control form-control-dark w-full"
+                     value="{{ form_data.get('filter_size', '') }}" placeholder="e.g. 6/4">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sort control (hidden input — updated by JS) -->
+      <input type="hidden" name="sort_by" id="sortByInput" value="{{ sort_by or 'rating' }}">
+
+      <!-- Submit button -->
+      <!-- Beginners Note: Submits the form to run the selection engine and display matching pumps -->
       <button type="submit"
               class="w-full flex items-center justify-center gap-2 py-2.5 rounded font-semibold text-sm transition-colors"
               style="background:#58a6ff;color:#0d1117;"
@@ -130,47 +209,70 @@
     </form>
   </div>
 
-  <!-- ── Results (3/5 width on xl) ───────────────────────────────────── -->
+  <!-- ── Right Panel: Shortlist Results (3/5 width on xl) ────────────── -->
   <div class="xl:col-span-3">
     {% if results is not none %}
       {% if results %}
-        <div class="flex items-center mb-3 gap-3 flex-wrap">
-          <h5 class="mb-0 flex items-center gap-2" style="color:#e6edf3;font-size:1rem;font-weight:700;">
-            <i class="bi bi-check-circle" style="color:#3fb950;"></i>
-            {{ results|length }} pump{{ 's' if results|length != 1 else '' }} found
-          </h5>
-          <span class="text-muted text-sm">
-            Duty: Q = {{ form_data.q_duty }} m³/h &bull; H = {{ form_data.h_duty }} m
-            {% if form_data.liquid != 'water' %}&bull; {{ form_data.liquid|capitalize }}{% endif %}
-          </span>
+        <!-- Results header with count and duty summary -->
+        <!-- Beginners Note: Shows how many pumps matched and repeats the duty point for reference -->
+        <div class="flex items-center mb-3 gap-3 flex-wrap justify-between">
+          <div class="flex items-center gap-3">
+            <h5 class="mb-0 flex items-center gap-2" style="color:#e6edf3;font-size:1rem;font-weight:700;">
+              <i class="bi bi-check-circle" style="color:#3fb950;"></i>
+              {{ results|length }} pump{{ 's' if results|length != 1 else '' }} found
+            </h5>
+            <span class="text-muted text-sm">
+              Duty: Q = {{ form_data.q_duty }} m³/h &bull; H = {{ form_data.h_duty }} m
+              {% if form_data.liquid != 'water' %}&bull; {{ form_data.liquid|capitalize }}{% endif %}
+            </span>
+          </div>
+
+          <!-- Sort controls -->
+          <!-- Beginners Note: Buttons to re-sort results by different criteria. Uses JS to update hidden input and resubmit. -->
+          <div class="flex items-center gap-1">
+            <span class="text-muted text-xs mr-1">Sort:</span>
+            <button type="button" class="sort-btn {{ 'sort-active' if sort_by == 'rating' or not sort_by }}"
+                    data-sort="rating" onclick="setSortAndSubmit('rating')">Rating</button>
+            <button type="button" class="sort-btn {{ 'sort-active' if sort_by == 'efficiency' }}"
+                    data-sort="efficiency" onclick="setSortAndSubmit('efficiency')">Efficiency</button>
+            <button type="button" class="sort-btn {{ 'sort-active' if sort_by == 'power' }}"
+                    data-sort="power" onclick="setSortAndSubmit('power')">Power</button>
+            <button type="button" class="sort-btn {{ 'sort-active' if sort_by == 'bep' }}"
+                    data-sort="bep" onclick="setSortAndSubmit('bep')">BEP %</button>
+          </div>
         </div>
 
-        <!-- Compare bar -->
-        <div class="flex gap-2 mb-3 items-center" id="compareBar" style="display:none!important">
-          <span class="text-muted text-sm">Select pumps to compare:</span>
-          <a id="compareBtn" href="#"
-             class="inline-flex items-center gap-1 px-3 py-1 rounded text-sm opacity-50 pointer-events-none"
-             style="border:1px solid rgba(57,211,192,0.4);color:#39d3c0;">
-            <i class="bi bi-bar-chart-line"></i>Compare Selected
-          </a>
-        </div>
-
+        <!-- Shortlist result cards -->
+        <!-- Beginners Note: Each matching pump is displayed as an interactive card with:
+             - Pump identity (name, model, manufacturer, size, speed)
+             - Suitability rating badge
+             - Key performance metrics at duty point
+             - Mini H-Q sparkline SVG showing the pump's envelope with duty point
+             - Trim/speed information
+             - BEP proximity bar
+             - NPSH status
+             - Action buttons (View Curves, Details, Compare checkbox) -->
         {% for r in results %}
-        <div class="result-card mb-3 {{ 'result-excellent' if r.rating >= 80 else ('result-good' if r.rating >= 65 else ('result-acceptable' if r.rating >= 50 else 'result-marginal')) }}">
-          <div class="result-header">
-            <div class="flex items-start gap-3">
+        <div class="sel-card mb-3 {{ 'sel-excellent' if r.rating >= 80 else ('sel-good' if r.rating >= 65 else ('sel-acceptable' if r.rating >= 50 else 'sel-marginal')) }}">
+          <!-- Card Header: Pump identity + rating -->
+          <div class="sel-card-header">
+            <div class="flex items-start gap-3 w-full">
+              <!-- Compare checkbox -->
               <input type="checkbox" class="form-check-input pump-compare-cb mt-1"
                      value="{{ r.pump_id }}" title="Add to comparison"
                      style="width:1rem;height:1rem;accent-color:#58a6ff;">
-              <div class="flex-1">
+              <div class="flex-1 min-w-0">
                 <div class="flex justify-between items-start flex-wrap gap-2">
+                  <!-- Pump name & specs -->
                   <div>
-                    <h5 class="result-title mb-0">{{ r.pump_name }}</h5>
-                    <div class="text-muted text-sm mt-1">
+                    <h5 class="sel-card-title mb-0">{{ r.pump_name }}</h5>
+                    <div class="text-muted text-sm mt-0.5">
                       {{ r.manufacturer }} &bull; {{ r.size }} &bull; {{ r.speed_rpm|int }} rpm
+                      {% if r.is_vsd %}<span class="inline-flex items-center ml-1 px-1.5 py-0 rounded text-[10px] font-semibold" style="background:rgba(88,166,255,0.15);color:#58a6ff;">VSD</span>{% endif %}
                     </div>
                   </div>
-                  <div class="flex items-center gap-2">
+                  <!-- Rating badge -->
+                  <div class="flex items-center gap-2 shrink-0">
                     <div class="rating-badge {{ 'excellent' if r.rating >= 80 else ('good' if r.rating >= 65 else ('acceptable' if r.rating >= 50 else 'marginal')) }}">
                       {{ r.rating_label }}
                     </div>
@@ -181,84 +283,135 @@
             </div>
           </div>
 
-          <div class="result-body">
-            <!-- Performance at duty: 4 equal columns -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-              <div class="perf-metric">
-                <div class="perf-label">Head at Duty</div>
-                <div class="perf-value">{{ r.op_h }} <span class="perf-unit">m</span></div>
-                <div class="text-sm" style="color:{% if r.head_surplus_pct > 15 %}#d29922{% else %}#8b949e{% endif %}">
-                  +{{ r.head_surplus_pct }}% surplus
-                </div>
-              </div>
-              <div class="perf-metric">
-                <div class="perf-label">Efficiency</div>
-                <div class="perf-value" style="color:{% if r.op_eta >= 70 %}#3fb950{% elif r.op_eta >= 55 %}#d29922{% else %}#f85149{% endif %}">
-                  {{ r.op_eta }} <span class="perf-unit">%</span>
-                </div>
-                <div class="text-sm text-muted">BEP: {{ r.bep_eta }}%</div>
-              </div>
-              <div class="perf-metric">
-                <div class="perf-label">Power</div>
-                <div class="perf-value">{{ r.op_power }} <span class="perf-unit">kW</span></div>
-                <div class="text-sm text-muted">BEP: {{ r.bep_power }} kW</div>
-              </div>
-              <div class="perf-metric">
-                <div class="perf-label">NPSHr</div>
-                <div class="perf-value" style="{% if not r.npsh_ok %}color:#f85149;{% endif %}">
-                  {{ r.op_npsh }} <span class="perf-unit">m</span>
-                </div>
-                {% if r.npsh_margin is not none %}
-                  <div class="text-sm" style="color:{% if r.npsh_margin > 0 %}#3fb950{% else %}#f85149{% endif %}">
-                    Margin: {{ r.npsh_margin }} m
+          <!-- Card Body: Metrics + Mini-chart side by side -->
+          <div class="sel-card-body">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+
+              <!-- Performance metrics (7 cols) -->
+              <div class="lg:col-span-7">
+                <!-- Key metrics grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                  <!-- Head at duty -->
+                  <div class="perf-metric">
+                    <div class="perf-label">Head at Duty</div>
+                    <div class="perf-value">{{ r.op_h }} <span class="perf-unit">m</span></div>
+                    <div class="text-xs" style="color:{% if r.head_surplus_pct > 15 %}#d29922{% else %}#8b949e{% endif %}">
+                      +{{ r.head_surplus_pct }}% surplus
+                    </div>
                   </div>
+                  <!-- Efficiency -->
+                  <div class="perf-metric">
+                    <div class="perf-label">Efficiency</div>
+                    <div class="perf-value" style="color:{% if r.op_eta >= 70 %}#3fb950{% elif r.op_eta >= 55 %}#d29922{% else %}#f85149{% endif %}">
+                      {{ r.op_eta }} <span class="perf-unit">%</span>
+                    </div>
+                    <div class="text-xs text-muted">BEP: {{ r.bep_eta }}%</div>
+                  </div>
+                  <!-- Power -->
+                  <div class="perf-metric">
+                    <div class="perf-label">Power</div>
+                    <div class="perf-value">{{ r.op_power }} <span class="perf-unit">kW</span></div>
+                    <div class="text-xs text-muted">BEP: {{ r.bep_power }} kW</div>
+                  </div>
+                  <!-- NPSHr -->
+                  <div class="perf-metric">
+                    <div class="perf-label">NPSHr</div>
+                    <div class="perf-value" style="{% if not r.npsh_ok %}color:#f85149;{% endif %}">
+                      {{ r.op_npsh }} <span class="perf-unit">m</span>
+                    </div>
+                    {% if r.npsh_margin is not none %}
+                      <div class="text-xs" style="color:{% if r.npsh_margin > 0 %}#3fb950{% else %}#f85149{% endif %}">
+                        Margin: {{ r.npsh_margin }} m
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <!-- Trim / Speed information -->
+                <!-- Beginners Note: Shows the optimal impeller diameter or speed to meet the duty exactly -->
+                <div class="flex items-center gap-3 mb-2 text-xs flex-wrap">
+                  {% if r.is_vsd %}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.25);color:#58a6ff;">
+                    <i class="bi bi-speedometer2"></i> Optimal Speed: {{ r.optimal_speed_rpm|int }} RPM ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
+                  </span>
+                  {% else %}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.25);color:#3fb950;">
+                    <i class="bi bi-disc"></i> Trim: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
+                  </span>
+                  {% endif %}
+                  {% if r.duty_in_envelope %}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(63,185,80,0.08);border:1px solid rgba(63,185,80,0.2);color:#3fb950;">
+                    <i class="bi bi-check-circle-fill"></i> Within envelope
+                  </span>
+                  {% endif %}
+                </div>
+
+                <!-- BEP proximity bar -->
+                <!-- Beginners Note: Visual bar showing how close the duty flow is to BEP (best efficiency point) -->
+                <div class="mb-2">
+                  <div class="flex justify-between text-xs mb-0.5">
+                    <span class="text-muted">Operating point (% of BEP flow: {{ r.bep_q }} m³/h)</span>
+                    <span style="color:{% if r.in_preferred_range %}#3fb950{% elif r.in_acceptable_range %}#d29922{% else %}#f85149{% endif %}">
+                      {{ (r.q_ratio * 100)|round|int }}% of BEP
+                    </span>
+                  </div>
+                  <div class="bep-bar">
+                    <div class="bep-zones">
+                      <div class="bep-zone marginal-lo" title="Below acceptable range (< 65% BEP)"></div>
+                      <div class="bep-zone acceptable-lo" title="Acceptable range (65–80% BEP)"></div>
+                      <div class="bep-zone preferred" title="Preferred range (80–120% BEP)"></div>
+                      <div class="bep-zone acceptable-hi" title="Acceptable range (120–135% BEP)"></div>
+                      <div class="bep-zone marginal-hi" title="Above acceptable range (> 135% BEP)"></div>
+                    </div>
+                    <div class="bep-marker" style="left: {{ [0, [100, (r.q_ratio * 100 / 2)|int]|min]|max }}%"></div>
+                  </div>
+                  <div class="flex justify-between mt-0.5" style="font-size:0.6rem;color:#666;">
+                    <span>0%</span><span>65%</span><span>80%</span><span style="font-weight:700">100% BEP</span><span>120%</span><span>135%</span><span>200%</span>
+                  </div>
+                </div>
+
+                <!-- NPSH warning (if applicable) -->
+                {% if not r.npsh_ok %}
+                <div class="text-xs p-1.5 rounded mb-2" style="background:rgba(248,81,73,0.1);border:1px solid rgba(248,81,73,0.3);color:#f85149;">
+                  <i class="bi bi-exclamation-triangle-fill mr-1"></i>
+                  NPSH margin insufficient (NPSHa must be &ge; 1.1 × NPSHr = {{ (r.op_npsh * 1.1)|round(1) }} m)
+                </div>
                 {% endif %}
               </div>
-            </div>
 
-            <!-- BEP proximity bar -->
-            <div class="mb-3">
-              <div class="flex justify-between text-sm mb-1">
-                <span class="text-muted">Operating range (% of BEP flow: {{ r.bep_q }} m³/h)</span>
-                <span style="color:{% if r.in_preferred_range %}#3fb950{% elif r.in_acceptable_range %}#d29922{% else %}#f85149{% endif %}">
-                  {{ (r.q_ratio * 100)|round|int }}% of BEP
-                </span>
-              </div>
-              <div class="bep-bar">
-                <div class="bep-zones">
-                  <div class="bep-zone marginal-lo" title="Below acceptable range (< 65% BEP)"></div>
-                  <div class="bep-zone acceptable-lo" title="Acceptable range (65–80% BEP)"></div>
-                  <div class="bep-zone preferred" title="Preferred range (80–120% BEP)"></div>
-                  <div class="bep-zone acceptable-hi" title="Acceptable range (120–135% BEP)"></div>
-                  <div class="bep-zone marginal-hi" title="Above acceptable range (> 135% BEP)"></div>
+              <!-- Mini H-Q sparkline chart (5 cols) -->
+              <!-- Beginners Note: Inline SVG sparkline showing the pump's H-Q envelope with the duty point.
+                   Data is embedded in a data attribute and rendered by pump_selection.js on page load. -->
+              <div class="lg:col-span-5 flex items-center justify-center">
+                <div class="sparkline-container"
+                     data-chart='{{ r.mini_chart | tojson }}'
+                     id="sparkline-{{ r.pump_id }}">
+                  <!-- SVG will be rendered here by JavaScript -->
+                  <div class="text-center text-muted text-xs py-8">Loading chart...</div>
                 </div>
-                <div class="bep-marker" style="left: {{ [0, [100, (r.q_ratio * 100 / 2)|int]|min]|max }}%"></div>
-              </div>
-              <div class="flex justify-between mt-0.5" style="font-size:0.65rem;color:#666;">
-                <span>0%</span><span>65%</span><span>80%</span><span style="font-weight:700">100% BEP</span><span>120%</span><span>135%</span><span>200%</span>
               </div>
             </div>
 
-            {% if not r.npsh_ok %}
-            <div class="text-sm p-2 rounded mb-3" style="background:rgba(248,81,73,0.1);border:1px solid rgba(248,81,73,0.3);color:#f85149;">
-              <i class="bi bi-exclamation-triangle-fill mr-1"></i>
-              NPSH margin insufficient (NPSHa must be &ge; 1.1 × NPSHr = {{ (r.op_npsh * 1.1)|round(1) }} m)
-            </div>
-            {% endif %}
-
-            <!-- Action buttons -->
-            <div class="flex gap-2 flex-wrap">
+            <!-- Action buttons row -->
+            <!-- Beginners Note: Quick links to view curves, pump details, or generate a report for this pump -->
+            <div class="flex gap-2 flex-wrap mt-2 pt-2" style="border-top:1px solid #21262d;">
               <a href="{{ url_for('pump_curve', pump_id=r.pump_id) }}?liquid={{ form_data.get('liquid','water') }}"
-                 class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium transition-colors"
+                 class="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-colors"
                  style="border:1px solid rgba(63,185,80,0.4);color:#3fb950;"
                  onmouseover="this.style.background='rgba(63,185,80,0.1)'" onmouseout="this.style.background='transparent'">
                 <i class="bi bi-activity"></i>View Curves
               </a>
               <a href="{{ url_for('pump_edit', pump_id=r.pump_id) }}"
-                 class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium transition-colors"
+                 class="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-colors"
                  style="border:1px solid rgba(88,166,255,0.4);color:#58a6ff;"
                  onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
                 <i class="bi bi-info-circle"></i>Details
+              </a>
+              <a href="{{ url_for('reports.view_report', report_id=r.default_report_id, pump_id=r.pump_id) }}"
+                 class="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-colors"
+                 style="border:1px solid rgba(210,153,34,0.4);color:#d29922;"
+                 onmouseover="this.style.background='rgba(210,153,34,0.1)'" onmouseout="this.style.background='transparent'">
+                <i class="bi bi-file-earmark-pdf"></i>Report
               </a>
             </div>
           </div>
@@ -266,6 +419,7 @@
         {% endfor %}
 
         <!-- Compare selected button -->
+        <!-- Beginners Note: Builds a comparison URL from checked pumps and navigates to the comparison page -->
         <div class="flex gap-3 mt-3">
           <a id="compareLink" href="{{ url_for('pump_comparison') }}"
              class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium opacity-50 pointer-events-none"
@@ -275,12 +429,14 @@
         </div>
 
       {% else %}
+        <!-- No matches state -->
+        <!-- Beginners Note: Shown when the selection engine returns zero matches for the given duty point -->
         <div class="empty-state">
           <i class="bi bi-search"></i>
           <h4>No matching pumps found</h4>
           <p>
             No pumps in the catalogue can satisfy Q = {{ form_data.q_duty }} m³/h at H = {{ form_data.h_duty }} m.<br>
-            Try reducing the duty requirements or add more pumps to the catalogue.
+            Try reducing the duty requirements, relaxing the filters, or add more pumps to the catalogue.
           </p>
           <a href="{{ url_for('pump_new') }}"
              class="inline-flex items-center gap-1 px-4 py-2 rounded font-semibold text-sm"
@@ -291,6 +447,8 @@
       {% endif %}
 
     {% else %}
+      <!-- Initial state (no search submitted yet) -->
+      <!-- Beginners Note: Shown on GET when no duty point has been searched yet -->
       <div class="empty-state">
         <i class="bi bi-bullseye"></i>
         <h4>Enter duty point</h4>

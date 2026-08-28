@@ -565,9 +565,9 @@
               <div class="grid grid-cols-3 gap-2 text-xs pt-2 border-t border-[#21262d]">
                 <div>
                   <label class="block text-[11px] text-[#8b949e] mb-1">Legend Mode:</label>
-                  <select name="legend_mode" id="rep_legend_mode" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white">
-                    <option value="pump_default">Default (Inherit from Pump)</option>
+                  <select name="legend_mode" id="rep_legend_mode" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 t                    <option value="pump_default">Pump Default (From Pump-Data)</option>
                     <option value="each">Each Chart (Legend Box)</option>
+                    <option value="chart_custom">Per-Chart Custom Graph Colors &amp; Styles</option>
                     <option value="hq_only">H-Q Only (Legend Box)</option>
                     <option value="curve_labels">Direct Curve Badges / Labels</option>
                     <option value="none">Hide Legend</option>
@@ -699,6 +699,9 @@
 
           <!-- ── VIEW 2: Graph Area, Display Order & Dynamic Height Splits (Right Pane) ── -->
           <div id="graphSettingsPane" class="w-1/2 box-border ps-3 space-y-3.5 shrink-0">
+            <!-- Hidden JSON Storage for Visual Graph Styles -->
+            <input type="hidden" name="graph_styles_json" id="rep_graph_styles_json" value='{}'>
+
             <!-- 1. Graph Area Dimensions & Placement -->
             <div class="p-3.5 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
               <div class="flex items-center justify-between">
@@ -865,8 +868,303 @@
                 </div>
               </div>
             </div>
-          </div>
 
+            <!-- 4. Graph Curve Colors, Thickness & Styles -->
+            <div class="p-3.5 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="block text-xs font-bold text-[#38bdf8] uppercase tracking-wider flex items-center gap-1.5">
+                  <i class="bi bi-palette"></i> 4. Graph Curve Colors, Thickness &amp; Line Styles
+                </span>
+                <span class="text-[10px] text-[#8b949e]">Individual Graph Curves</span>
+              </div>
+              <div class="grid grid-cols-2 gap-3 text-xs">
+                <!-- HQ Curve -->
+                <div class="p-2 bg-[#161b22] rounded border border-[#30363d] space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-white text-[11px]">Head vs Flow (H-Q)</span>
+                    <input type="color" id="style_hq_color" value="#1e3a8a" class="h-6 w-9 bg-transparent border-0 rounded cursor-pointer" oninput="syncGraphStylesToJson()">
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-[10px] text-[#8b949e]">Width (px):</label>
+                      <input type="number" step="any" min="0.1" max="10" id="style_hq_width" value="2.6" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-white" oninput="syncGraphStylesToJson()">
+                    </div>
+                    <div>
+                      <label class="block text-[10px] text-[#8b949e]">Line Style:</label>
+                      <select id="style_hq_style" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1 py-0.5 text-xs text-white" onchange="syncGraphStylesToJson()">
+                        <option value="solid">Solid</option>
+                        <option value="dashed">Dashed</option>
+                        <option value="dotted">Dotted</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Efficiency Curve -->
+                <div class="p-2 bg-[#161b22] rounded border border-[#30363d] space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-white text-[11px]">Efficiency (η-Q)</span>
+                    <input type="color" id="style_eta_color" value="#059669" class="h-6 w-9 bg-transparent border-0 rounded cursor-pointer" oninput="syncGraphStylesToJson()">
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-[10px] text-[#8b949e]">Width (px):</label>
+                      <input type="number" step="any" min="0.1" max="10" id="style_eta_width" value="2.4" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-white" oninput="syncGraphStylesToJson()">
+                    </div>
+                    <div>
+                      <label class="block text-[10px] text-[#8b949e]">Line Style:</label>
+                      <select id="style_eta_style" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1 py-0.5 text-xs text-white" onchange="syncGraphStylesToJson()">
+                        <option value="solid">Solid</option>
+                        <option value="dashed">Dashed</option>
+                        <option value="dotted">Dotted</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Power Curve -->
+                <div class="p-2 bg-[#161b22] rounded border border-[#30363d] space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-white text-[11px]">Power (P-Q)</span>
+                    <input type="color" id="style_pow_color" value="#dc2626" class="h-6 w-9 bg-transparent border-0 rounded cursor-pointer" oninput="syncGraphStylesToJson()">
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-[10px] text-[#8b949e]">Width (px):</label>
+                      <input type="number" step="any" min="0.1" max="10" id="style_pow_width" value="2.4" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-white" oninput="syncGraphStylesToJson()">
+                    </div>
+                    <div>
+                      <label class="block text-[10px] text-[#8b949e]">Line Style:</label>
+                      <select id="style_pow_style" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1 py-0.5 text-xs text-white" onchange="syncGraphStylesToJson()">
+                        <option value="solid">Solid</option>
+                        <option value="dashed">Dashed</option>
+                        <option value="dotted">Dotted</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- NPSH Curve -->
+                <div class="p-2 bg-[#161b22] rounded border border-[#30363d] space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-white text-[11px]">NPSHr vs Flow</span>
+                    <input type="color" id="style_npsh_color" value="#0284c7" class="h-6 w-9 bg-transparent border-0 rounded cursor-pointer" oninput="syncGraphStylesToJson()">
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-[10px] text-[#8b949e]">Width (px):</label>
+                      <input type="number" step="any" min="0.1" max="10" id="style_npsh_width" value="2.4" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-white" oninput="syncGraphStylesToJson()">
+                    </div>
+                    <div>
+                      <label class="block text-[10px] text-[#8b949e]">Line Style:</label>
+                      <select id="style_npsh_style" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1 py-0.5 text-xs text-white" onchange="syncGraphStylesToJson()">
+                        <option value="solid">Solid</option>
+                        <option value="dashed">Dashed</option>
+                        <option value="dotted">Dotted</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 5. Curve Hierarchy Styling (Max, Min, and Trim / Overlay Curves) -->
+            <div class="p-3.5 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="block text-xs font-bold text-[#f59e0b] uppercase tracking-wider flex items-center gap-1.5">
+                  <i class="bi bi-bezier2"></i> 5. Curve Hierarchy Styling (Max, Min &amp; Trim Curves)
+                </span>
+                <span class="text-[10px] text-[#8b949e]">Primary / Secondary Overrides</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2.5 text-xs">
+                <!-- Max Curve -->
+                <div class="p-2 bg-[#161b22] rounded border border-[#30363d] space-y-1.5">
+                  <span class="block font-semibold text-white text-[11px]">Max / Primary Curve</span>
+                  <div class="space-y-1">
+                    <label class="block text-[10px] text-[#8b949e]">Width (px):</label>
+                    <input type="number" step="any" min="0.1" max="10" id="style_max_curve_width" value="2.6" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-white" oninput="syncGraphStylesToJson()">
+                  </div>
+                  <div class="space-y-1">
+                    <label class="block text-[10px] text-[#8b949e]">Style:</label>
+                    <select id="style_max_curve_style" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1 py-0.5 text-xs text-white" onchange="syncGraphStylesToJson()">
+                      <option value="solid">Solid</option>
+                      <option value="dashed">Dashed</option>
+                      <option value="dotted">Dotted</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Min Curve -->
+                <div class="p-2 bg-[#161b22] rounded border border-[#30363d] space-y-1.5">
+                  <span class="block font-semibold text-white text-[11px]">Min / Bottom Curve</span>
+                  <div class="space-y-1">
+                    <label class="block text-[10px] text-[#8b949e]">Width (px):</label>
+                    <input type="number" step="any" min="0.1" max="10" id="style_min_curve_width" value="2.0" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-white" oninput="syncGraphStylesToJson()">
+                  </div>
+                  <div class="space-y-1">
+                    <label class="block text-[10px] text-[#8b949e]">Style:</label>
+                    <select id="style_min_curve_style" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1 py-0.5 text-xs text-white" onchange="syncGraphStylesToJson()">
+                      <option value="dashed">Dashed</option>
+                      <option value="solid">Solid</option>
+                      <option value="dotted">Dotted</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Intermediate Trim / Overlay Curves -->
+                <div class="p-2 bg-[#161b22] rounded border border-[#30363d] space-y-1.5">
+                  <span class="block font-semibold text-white text-[11px]">Intermediate Trim Curves</span>
+                  <div class="space-y-1">
+                    <label class="block text-[10px] text-[#8b949e]">Width (px):</label>
+                    <input type="number" step="any" min="0.1" max="10" id="style_trim_curve_width" value="1.8" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1.5 py-0.5 text-xs text-white" oninput="syncGraphStylesToJson()">
+                  </div>
+                  <div class="space-y-1">
+                    <label class="block text-[10px] text-[#8b949e]">Style:</label>
+                    <select id="style_trim_curve_style" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1 py-0.5 text-xs text-white" onchange="syncGraphStylesToJson()">
+                      <option value="dashed">Dashed</option>
+                      <option value="solid">Solid</option>
+                      <option value="dotted">Dotted</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 6. Typography & Label Badges -->
+            <div class="p-3.5 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="block text-xs font-bold text-[#10b981] uppercase tracking-wider flex items-center gap-1.5">
+                  <i class="bi bi-fonts"></i> 6. Typography &amp; Curve Label Badges
+                </span>
+                <span class="text-[10px] text-[#8b949e]">Fonts &amp; Badges</span>
+              </div>
+              <div class="grid grid-cols-4 gap-2.5 text-xs">
+                <div>
+                  <label class="block text-[10px] text-[#8b949e] mb-1 font-medium">Font Family:</label>
+                  <select id="style_font_family" class="w-full bg-[#161b22] border border-[#30363d] rounded px-1.5 py-1 text-xs text-white" onchange="syncGraphStylesToJson()">
+                    <option value="Segoe UI">Segoe UI</option>
+                    <option value="Inter">Inter</option>
+                    <option value="Roboto">Roboto</option>
+                    <option value="Helvetica">Helvetica / Arial</option>
+                    <option value="Monospace">Monospace</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[10px] text-[#8b949e] mb-1 font-medium">Font Scale:</label>
+                  <select id="style_font_scale" class="w-full bg-[#161b22] border border-[#30363d] rounded px-1.5 py-1 text-xs text-white" onchange="syncGraphStylesToJson()">
+                    <option value="standard">Standard (100%)</option>
+                    <option value="large">Large (+15%)</option>
+                    <option value="small">Compact (-12%)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[10px] text-[#8b949e] mb-1 font-medium">Font Weight:</label>
+                  <select id="style_font_weight" class="w-full bg-[#161b22] border border-[#30363d] rounded px-1.5 py-1 text-xs text-white" onchange="syncGraphStylesToJson()">
+                    <option value="600">Semi-Bold (600)</option>
+                    <option value="700">Bold (700)</option>
+                    <option value="500">Medium (500)</option>
+                    <option value="normal">Normal (400)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[10px] text-[#8b949e] mb-1 font-medium">Curve Badge Style:</label>
+                  <select id="style_badge_style" class="w-full bg-[#161b22] border border-[#30363d] rounded px-1.5 py-1 text-xs text-white" onchange="syncGraphStylesToJson()">
+                    <option value="pill_white">Solid White Pill</option>
+                    <option value="pill_tinted">Tinted Pill Box</option>
+                    <option value="subtle_glow">Subtle Halo Glow</option>
+                    <option value="plain">Plain Text</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- 7. Axes, Grid Lines & Background Canvas -->
+            <div class="p-3.5 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="block text-xs font-bold text-[#ec4899] uppercase tracking-wider flex items-center gap-1.5">
+                  <i class="bi bi-grid-3x3"></i> 7. Axes, Grid Lines &amp; Canvas Styling
+                </span>
+                <span class="text-[10px] text-[#8b949e]">Grid &amp; Axis Frame</span>
+              </div>
+              <div class="grid grid-cols-4 gap-2.5 text-xs">
+                <!-- Major Grid -->
+                <div class="p-2 bg-[#161b22] rounded border border-[#30363d] space-y-1">
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-white text-[10px]">Major Grid</span>
+                    <input type="color" id="style_major_grid_color" value="#cbd5e1" class="h-5 w-7 bg-transparent border-0 rounded cursor-pointer" oninput="syncGraphStylesToJson()">
+                  </div>
+                  <div class="grid grid-cols-2 gap-1">
+                    <input type="number" step="any" min="0.1" max="10" id="style_major_grid_width" value="1.0" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1 py-0.5 text-[10px] text-white" oninput="syncGraphStylesToJson()">
+                    <select id="style_major_grid_style" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-0.5 py-0.5 text-[10px] text-white" onchange="syncGraphStylesToJson()">
+                      <option value="dashed">Dashed</option>
+                      <option value="solid">Solid</option>
+                      <option value="dotted">Dotted</option>
+                      <option value="none">None</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Minor Grid -->
+                <div class="p-2 bg-[#161b22] rounded border border-[#30363d] space-y-1">
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-white text-[10px]">Minor Grid</span>
+                    <input type="color" id="style_minor_grid_color" value="#e2e8f0" class="h-5 w-7 bg-transparent border-0 rounded cursor-pointer" oninput="syncGraphStylesToJson()">
+                  </div>
+                  <div class="grid grid-cols-2 gap-1">
+                    <input type="number" step="any" min="0.1" max="10" id="style_minor_grid_width" value="0.8" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1 py-0.5 text-[10px] text-white" oninput="syncGraphStylesToJson()">
+                    <select id="style_minor_grid_style" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-0.5 py-0.5 text-[10px] text-white" onchange="syncGraphStylesToJson()">
+                      <option value="dotted">Dotted</option>
+                      <option value="dashed">Dashed</option>
+                      <option value="solid">Solid</option>
+                      <option value="none">None</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Axis Lines -->
+                <div class="p-2 bg-[#161b22] rounded border border-[#30363d] space-y-1">
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-white text-[10px]">Axis Frame</span>
+                    <input type="color" id="style_axis_line_color" value="#475569" class="h-5 w-7 bg-transparent border-0 rounded cursor-pointer" oninput="syncGraphStylesToJson()">
+                  </div>
+                  <div>
+                    <label class="block text-[9px] text-[#8b949e]">Thickness (px):</label>
+                    <input type="number" step="any" min="0.1" max="10" id="style_axis_line_width" value="1.5" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-1 py-0.5 text-[10px] text-white" oninput="syncGraphStylesToJson()">
+                  </div>
+                </div>
+
+                <!-- Canvas Background -->
+                <div class="p-2 bg-[#161b22] rounded border border-[#30363d] space-y-1">
+                  <div class="flex items-center justify-between">
+                    <span class="font-semibold text-white text-[10px]">Canvas BG</span>
+                    <input type="color" id="style_chart_bg_color" value="#ffffff" class="h-5 w-7 bg-transparent border-0 rounded cursor-pointer" oninput="syncGraphStylesToJson()">
+                  </div>
+                  <div class="pt-2">
+                    <span class="text-[9px] text-[#8b949e] block leading-tight">Graph plot area background color</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Isolines Palette -->
+              <div class="pt-2 border-t border-[#21262d] flex items-center justify-between text-xs">
+                <span class="text-[11px] text-[#8b949e] font-medium">Isolines Palette:</span>
+                <div class="flex items-center gap-3">
+                  <label class="flex items-center gap-1.5 text-[10px] text-[#c9d1d9]">
+                    <span>η-Q Iso:</span>
+                    <input type="color" id="style_iso_eta_color" value="#059669" class="h-5 w-6 bg-transparent border-0 rounded cursor-pointer" oninput="syncGraphStylesToJson()">
+                  </label>
+                  <label class="flex items-center gap-1.5 text-[10px] text-[#c9d1d9]">
+                    <span>P-Q Iso:</span>
+                    <input type="color" id="style_iso_pow_color" value="#d97706" class="h-5 w-6 bg-transparent border-0 rounded cursor-pointer" oninput="syncGraphStylesToJson()">
+                  </label>
+                  <label class="flex items-center gap-1.5 text-[10px] text-[#c9d1d9]">
+                    <span>NPSH Iso:</span>
+                    <input type="color" id="style_iso_npsh_color" value="#0284c7" class="h-5 w-6 bg-transparent border-0 rounded cursor-pointer" oninput="syncGraphStylesToJson()">
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -986,6 +1284,135 @@
     syncGraphSplitsToJson();
   }
 
+  function syncGraphStylesToJson() {
+    const s = {
+      // 1. Per-Graph Curve Styles
+      hq_color: document.getElementById('style_hq_color')?.value || '#1e3a8a',
+      hq_width: parseFloat(document.getElementById('style_hq_width')?.value) || 2.6,
+      hq_style: document.getElementById('style_hq_style')?.value || 'solid',
+
+      eta_color: document.getElementById('style_eta_color')?.value || '#059669',
+      eta_width: parseFloat(document.getElementById('style_eta_width')?.value) || 2.4,
+      eta_style: document.getElementById('style_eta_style')?.value || 'solid',
+
+      pow_color: document.getElementById('style_pow_color')?.value || '#dc2626',
+      pow_width: parseFloat(document.getElementById('style_pow_width')?.value) || 2.4,
+      pow_style: document.getElementById('style_pow_style')?.value || 'solid',
+
+      npsh_color: document.getElementById('style_npsh_color')?.value || '#0284c7',
+      npsh_width: parseFloat(document.getElementById('style_npsh_width')?.value) || 2.4,
+      npsh_style: document.getElementById('style_npsh_style')?.value || 'solid',
+
+      // 2. Curve Hierarchy Styles
+      max_curve_width: parseFloat(document.getElementById('style_max_curve_width')?.value) || 2.6,
+      max_curve_style: document.getElementById('style_max_curve_style')?.value || 'solid',
+
+      min_curve_width: parseFloat(document.getElementById('style_min_curve_width')?.value) || 2.0,
+      min_curve_style: document.getElementById('style_min_curve_style')?.value || 'dashed',
+
+      trim_curve_width: parseFloat(document.getElementById('style_trim_curve_width')?.value) || 1.8,
+      trim_curve_style: document.getElementById('style_trim_curve_style')?.value || 'dashed',
+
+      // 3. Typography & Badges
+      font_family: document.getElementById('style_font_family')?.value || 'Segoe UI',
+      font_scale: document.getElementById('style_font_scale')?.value || 'standard',
+      font_weight: document.getElementById('style_font_weight')?.value || '600',
+      badge_style: document.getElementById('style_badge_style')?.value || 'pill_white',
+
+      // 4. Axes, Grid & Canvas
+      major_grid_color: document.getElementById('style_major_grid_color')?.value || '#cbd5e1',
+      major_grid_width: parseFloat(document.getElementById('style_major_grid_width')?.value) || 1.0,
+      major_grid_style: document.getElementById('style_major_grid_style')?.value || 'dashed',
+
+      minor_grid_color: document.getElementById('style_minor_grid_color')?.value || '#e2e8f0',
+      minor_grid_width: parseFloat(document.getElementById('style_minor_grid_width')?.value) || 0.8,
+      minor_grid_style: document.getElementById('style_minor_grid_style')?.value || 'dotted',
+
+      axis_line_color: document.getElementById('style_axis_line_color')?.value || '#475569',
+      axis_line_width: parseFloat(document.getElementById('style_axis_line_width')?.value) || 1.5,
+      chart_bg_color: document.getElementById('style_chart_bg_color')?.value || '#ffffff',
+
+      // 5. Isolines
+      iso_eta_color: document.getElementById('style_iso_eta_color')?.value || '#059669',
+      iso_pow_color: document.getElementById('style_iso_pow_color')?.value || '#d97706',
+      iso_npsh_color: document.getElementById('style_iso_npsh_color')?.value || '#0284c7'
+    };
+
+    const jsonEl = document.getElementById('rep_graph_styles_json');
+    if (jsonEl) jsonEl.value = JSON.stringify(s);
+  }
+
+  function setGraphStylesInputs(stylesObj) {
+    const defs = {
+      hq_color: '#1e3a8a', hq_width: 2.6, hq_style: 'solid',
+      eta_color: '#059669', eta_width: 2.4, eta_style: 'solid',
+      pow_color: '#dc2626', pow_width: 2.4, pow_style: 'solid',
+      npsh_color: '#0284c7', npsh_width: 2.4, npsh_style: 'solid',
+      max_curve_width: 2.6, max_curve_style: 'solid',
+      min_curve_width: 2.0, min_curve_style: 'dashed',
+      trim_curve_width: 1.8, trim_curve_style: 'dashed',
+      font_family: 'Segoe UI', font_scale: 'standard', font_weight: '600', badge_style: 'pill_white',
+      major_grid_color: '#cbd5e1', major_grid_width: 1.0, major_grid_style: 'dashed',
+      minor_grid_color: '#e2e8f0', minor_grid_width: 0.8, minor_grid_style: 'dotted',
+      axis_line_color: '#475569', axis_line_width: 1.5, chart_bg_color: '#ffffff',
+      iso_eta_color: '#059669', iso_pow_color: '#d97706', iso_npsh_color: '#0284c7'
+    };
+
+    let s = stylesObj;
+    if (typeof s === 'string') {
+      try { s = JSON.parse(s); } catch (e) { s = defs; }
+    }
+    s = s || defs;
+
+    if (document.getElementById('style_hq_color')) document.getElementById('style_hq_color').value = s.hq_color || defs.hq_color;
+    if (document.getElementById('style_hq_width')) document.getElementById('style_hq_width').value = s.hq_width !== undefined ? s.hq_width : defs.hq_width;
+    if (document.getElementById('style_hq_style')) document.getElementById('style_hq_style').value = s.hq_style || defs.hq_style;
+
+    if (document.getElementById('style_eta_color')) document.getElementById('style_eta_color').value = s.eta_color || defs.eta_color;
+    if (document.getElementById('style_eta_width')) document.getElementById('style_eta_width').value = s.eta_width !== undefined ? s.eta_width : defs.eta_width;
+    if (document.getElementById('style_eta_style')) document.getElementById('style_eta_style').value = s.eta_style || defs.eta_style;
+
+    if (document.getElementById('style_pow_color')) document.getElementById('style_pow_color').value = s.pow_color || defs.pow_color;
+    if (document.getElementById('style_pow_width')) document.getElementById('style_pow_width').value = s.pow_width !== undefined ? s.pow_width : defs.pow_width;
+    if (document.getElementById('style_pow_style')) document.getElementById('style_pow_style').value = s.pow_style || defs.pow_style;
+
+    if (document.getElementById('style_npsh_color')) document.getElementById('style_npsh_color').value = s.npsh_color || defs.npsh_color;
+    if (document.getElementById('style_npsh_width')) document.getElementById('style_npsh_width').value = s.npsh_width !== undefined ? s.npsh_width : defs.npsh_width;
+    if (document.getElementById('style_npsh_style')) document.getElementById('style_npsh_style').value = s.npsh_style || defs.npsh_style;
+
+    if (document.getElementById('style_max_curve_width')) document.getElementById('style_max_curve_width').value = s.max_curve_width !== undefined ? s.max_curve_width : defs.max_curve_width;
+    if (document.getElementById('style_max_curve_style')) document.getElementById('style_max_curve_style').value = s.max_curve_style || defs.max_curve_style;
+
+    if (document.getElementById('style_min_curve_width')) document.getElementById('style_min_curve_width').value = s.min_curve_width !== undefined ? s.min_curve_width : defs.min_curve_width;
+    if (document.getElementById('style_min_curve_style')) document.getElementById('style_min_curve_style').value = s.min_curve_style || defs.min_curve_style;
+
+    if (document.getElementById('style_trim_curve_width')) document.getElementById('style_trim_curve_width').value = s.trim_curve_width !== undefined ? s.trim_curve_width : defs.trim_curve_width;
+    if (document.getElementById('style_trim_curve_style')) document.getElementById('style_trim_curve_style').value = s.trim_curve_style || defs.trim_curve_style;
+
+    if (document.getElementById('style_font_family')) document.getElementById('style_font_family').value = s.font_family || defs.font_family;
+    if (document.getElementById('style_font_scale')) document.getElementById('style_font_scale').value = s.font_scale || defs.font_scale;
+    if (document.getElementById('style_font_weight')) document.getElementById('style_font_weight').value = s.font_weight || defs.font_weight;
+    if (document.getElementById('style_badge_style')) document.getElementById('style_badge_style').value = s.badge_style || defs.badge_style;
+
+    if (document.getElementById('style_major_grid_color')) document.getElementById('style_major_grid_color').value = s.major_grid_color || defs.major_grid_color;
+    if (document.getElementById('style_major_grid_width')) document.getElementById('style_major_grid_width').value = s.major_grid_width !== undefined ? s.major_grid_width : defs.major_grid_width;
+    if (document.getElementById('style_major_grid_style')) document.getElementById('style_major_grid_style').value = s.major_grid_style || defs.major_grid_style;
+
+    if (document.getElementById('style_minor_grid_color')) document.getElementById('style_minor_grid_color').value = s.minor_grid_color || defs.minor_grid_color;
+    if (document.getElementById('style_minor_grid_width')) document.getElementById('style_minor_grid_width').value = s.minor_grid_width !== undefined ? s.minor_grid_width : defs.minor_grid_width;
+    if (document.getElementById('style_minor_grid_style')) document.getElementById('style_minor_grid_style').value = s.minor_grid_style || defs.minor_grid_style;
+
+    if (document.getElementById('style_axis_line_color')) document.getElementById('style_axis_line_color').value = s.axis_line_color || defs.axis_line_color;
+    if (document.getElementById('style_axis_line_width')) document.getElementById('style_axis_line_width').value = s.axis_line_width !== undefined ? s.axis_line_width : defs.axis_line_width;
+    if (document.getElementById('style_chart_bg_color')) document.getElementById('style_chart_bg_color').value = s.chart_bg_color || defs.chart_bg_color;
+
+    if (document.getElementById('style_iso_eta_color')) document.getElementById('style_iso_eta_color').value = s.iso_eta_color || defs.iso_eta_color;
+    if (document.getElementById('style_iso_pow_color')) document.getElementById('style_iso_pow_color').value = s.iso_pow_color || defs.iso_pow_color;
+    if (document.getElementById('style_iso_npsh_color')) document.getElementById('style_iso_npsh_color').value = s.iso_npsh_color || defs.iso_npsh_color;
+
+    syncGraphStylesToJson();
+  }
+
   function openSupplierModal() {
     document.getElementById('sup_id').value = '';
     document.getElementById('sup_name').value = '';
@@ -1032,6 +1459,7 @@
     if (document.getElementById('rep_show_dia_overlay')) document.getElementById('rep_show_dia_overlay').checked = true;
     if (document.getElementById('rep_show_rpm_overlay')) document.getElementById('rep_show_rpm_overlay').checked = true;
     document.getElementById('rep_show_eff_isolines').checked = true;
+    if (document.getElementById('rep_show_power_isolines')) document.getElementById('rep_show_power_isolines').checked = false;
     if (document.getElementById('rep_show_npsh_isolines')) document.getElementById('rep_show_npsh_isolines').checked = false;
     if (document.getElementById('rep_show_legend')) document.getElementById('rep_show_legend').checked = true;
     if (document.getElementById('rep_legend_mode')) document.getElementById('rep_legend_mode').value = 'pump_default';
@@ -1051,6 +1479,7 @@
     if (document.getElementById('rep_graph_area_height')) document.getElementById('rep_graph_area_height').value = 'auto';
     setGraphOrderSelects('hq,eta,pow,npsh');
     setGraphSplitsInputs({"1":[100],"2":[55,45],"3":[40,30,30],"4":[30,25,25,20]});
+    setGraphStylesInputs({});
 
     if (document.getElementById('rep_unit_flow')) document.getElementById('rep_unit_flow').value = 'm3h';
     if (document.getElementById('rep_unit_head')) document.getElementById('rep_unit_head').value = 'm';
@@ -1101,13 +1530,14 @@
     if (document.getElementById('rep_show_notes')) document.getElementById('rep_show_notes').checked = r.show_notes !== undefined ? r.show_notes : true;
     if (document.getElementById('rep_is_active')) document.getElementById('rep_is_active').checked = r.is_active !== undefined ? r.is_active : true;
     
-    // Populate Graph Area Geometry & Splits
+    // Populate Graph Area Geometry & Splits & Styles
     if (document.getElementById('rep_graph_area_top')) document.getElementById('rep_graph_area_top').value = r.graph_area_top || '4px';
     if (document.getElementById('rep_graph_area_left')) document.getElementById('rep_graph_area_left').value = r.graph_area_left || '0px';
     if (document.getElementById('rep_graph_area_width')) document.getElementById('rep_graph_area_width').value = r.graph_area_width || '100%';
     if (document.getElementById('rep_graph_area_height')) document.getElementById('rep_graph_area_height').value = r.graph_area_height || 'auto';
     setGraphOrderSelects(r.graph_order || 'hq,eta,pow,npsh');
     setGraphSplitsInputs(r.graph_splits || r.graph_splits_json);
+    setGraphStylesInputs(r.graph_styles || r.graph_styles_json);
 
     if (document.getElementById('rep_unit_flow')) document.getElementById('rep_unit_flow').value = r.unit_flow || 'm3h';
     if (document.getElementById('rep_unit_head')) document.getElementById('rep_unit_head').value = r.unit_head || 'm';

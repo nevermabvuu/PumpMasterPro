@@ -1040,6 +1040,7 @@ class ReportConfig(db.Model):
     graph_area_height = db.Column(db.String(50), default='auto')
     graph_order = db.Column(db.String(100), default='hq,eta,pow,npsh')
     graph_splits_json = db.Column(db.Text, default='{"1":[100],"2":[55,45],"3":[40,30,30],"4":[30,25,25,20]}')
+    graph_styles_json = db.Column(db.Text, default='{}')
 
     # Visual Branding & Section Toggles
     header_text = db.Column(db.String(200), default='PUMP MASTER PRO - TECHNICAL DATASHEET')
@@ -1096,6 +1097,80 @@ class ReportConfig(db.Model):
                 pass
         return default_splits
 
+    def get_graph_styles(self):
+        """
+        Returns graph visual styles dictionary with comprehensive fallbacks:
+        - Per-graph primary curve colors, thickness, line styles
+        - Max/Min/Trim curve styles
+        - Typography (font family, size scale, weight)
+        - Axes and Grid (major/minor grid colors, widths, styles, axis border)
+        - Isoline colors & styles
+        """
+        import json
+        default_styles = {
+            # 1. Per-Graph Curve Styles
+            'hq_color': '#1e3a8a',
+            'hq_width': 2.6,
+            'hq_style': 'solid',  # solid, dashed, dotted
+            'eta_color': '#059669',
+            'eta_width': 2.4,
+            'eta_style': 'solid',
+            'pow_color': '#dc2626',
+            'pow_width': 2.4,
+            'pow_style': 'solid',
+            'npsh_color': '#0284c7',
+            'npsh_width': 2.4,
+            'npsh_style': 'solid',
+            
+            # 2. Curve Type Hierarchy Styles
+            'max_curve_color': '',  # empty = inherit from chart primary color
+            'max_curve_width': 2.6,
+            'max_curve_style': 'solid',
+            'min_curve_color': '',  # empty = inherit from palette
+            'min_curve_width': 2.0,
+            'min_curve_style': 'dashed',
+            'trim_curve_width': 1.8,
+            'trim_curve_style': 'dashed',
+            'rated_marker_color': '#dc2626',
+            'rated_marker_size': 6.0,
+
+            # 3. Typography & Font Settings
+            'font_family': 'Segoe UI',  # Segoe UI, Inter, Roboto, Arial, Helvetica, monospace
+            'font_scale': 'standard',  # small, standard, large
+            'font_weight': '600',  # normal, 500, 600, 700
+            'badge_style': 'pill_white',  # pill_white, subtle_glow, plain
+
+            # 4. Axes, Grid & Canvas Styles
+            'major_grid_color': '#cbd5e1',
+            'major_grid_width': 1.0,
+            'major_grid_style': 'dashed',  # dashed, solid, dotted, none
+            'minor_grid_color': '#e2e8f0',
+            'minor_grid_width': 0.8,
+            'minor_grid_style': 'dotted',  # dotted, dashed, solid, none
+            'axis_line_color': '#475569',
+            'axis_line_width': 1.5,
+            'chart_bg_color': '#ffffff',
+
+            # 5. Isolines Styling
+            'iso_eta_color': '#059669',
+            'iso_pow_color': '#d97706',
+            'iso_npsh_color': '#0284c7',
+            'iso_width': 1.3,
+            'iso_style': 'dashed'
+        }
+
+        raw = getattr(self, 'graph_styles_json', '')
+        if raw and str(raw).strip():
+            try:
+                data = json.loads(raw)
+                if isinstance(data, dict):
+                    merged = dict(default_styles)
+                    merged.update(data)
+                    return merged
+            except Exception:
+                pass
+        return default_styles
+
     def to_dict(self):
         org = getattr(self, 'organisation', None)
         return {
@@ -1133,6 +1208,8 @@ class ReportConfig(db.Model):
             'graph_order': getattr(self, 'graph_order', 'hq,eta,pow,npsh') or 'hq,eta,pow,npsh',
             'graph_splits': self.get_graph_splits(),
             'graph_splits_json': getattr(self, 'graph_splits_json', '') or '{"1":[100],"2":[55,45],"3":[40,30,30],"4":[30,25,25,20]}',
+            'graph_styles': self.get_graph_styles(),
+            'graph_styles_json': getattr(self, 'graph_styles_json', '') or '{}',
             'header_text': self.header_text or '',
             'footer_text': self.footer_text or '',
             'primary_color': self.primary_color or '#1e3a8a',

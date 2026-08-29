@@ -34,8 +34,8 @@ SPARKLINE_POINTS = 30
 
 def select_pumps(pumps, q_duty, h_duty, npsh_avail=None,
                  liquid='water', rho=1000.0, viscosity_cSt=1.0,
-                 slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650,
-                 tolerance=0.15, filters=None):
+                 slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650.0,
+                 tolerance=0.15, filters=None, operation_mode='fixed'):
     """
     Select pumps that can satisfy the duty point.
 
@@ -72,7 +72,7 @@ def select_pumps(pumps, q_duty, h_duty, npsh_avail=None,
     # ── Step 1: Pre-filter pumps by non-hydraulic criteria ────────────────
     # Beginners Note: Apply user-specified filters to narrow down the pump list before
     # expensive hydraulic evaluation. This improves performance and relevance.
-    filtered_pumps = _apply_filters(pumps, filters)
+    filtered_pumps = _apply_filters(pumps, filters, operation_mode)
 
     results = []
 
@@ -81,7 +81,8 @@ def select_pumps(pumps, q_duty, h_duty, npsh_avail=None,
         result = _evaluate_pump(
             pump, q_duty, h_duty, npsh_avail,
             liquid, rho, viscosity_cSt,
-            slurry_cv, slurry_d50, rho_solid
+            slurry_cv, slurry_d50, rho_solid,
+            operation_mode
         )
         if result is not None:
             results.append(result)
@@ -93,9 +94,9 @@ def select_pumps(pumps, q_duty, h_duty, npsh_avail=None,
 
 # ── Pre-Filtering ─────────────────────────────────────────────────────────────
 
-def _apply_filters(pumps, filters):
+def _apply_filters(pumps, filters, operation_mode):
     """
-    Apply non-hydraulic filters to narrow down the pump list before evaluation.
+    Apply non-hydraulic filters and operation_mode constraint to narrow down the pump list before evaluation.
 
     Beginners Note:
         Filters are applied in order of cheapness (string comparisons before numeric).
@@ -114,20 +115,26 @@ def _apply_filters(pumps, filters):
 
     filtered = []
     for pump in pumps:
+        # Check operation mode compatibility
+        if operation_mode == 'vsd' and not getattr(pump, 'selection_allow_vsd', True):
+            continue
+        if operation_mode == 'fixed' and not getattr(pump, 'selection_allow_fixed_speed', True):
+            continue
+            
         # Manufacturer filter
-        if filters.get('manufacturer'):
+        if filters and filters.get('manufacturer'):
             mfr_list = [m.strip().lower() for m in filters['manufacturer'].split(',') if m.strip()]
             if mfr_list and (pump.manufacturer or '').lower() not in mfr_list:
                 continue
 
         # Pump type filter
-        if filters.get('pump_type'):
+        if filters and filters.get('pump_type'):
             type_list = [t.strip().lower() for t in filters['pump_type'].split(',') if t.strip()]
             if type_list and (pump.pump_type or '').lower() not in type_list:
                 continue
 
         # Speed range filter
-        speed_min = filters.get('speed_min')
+        speed_min = filters.get('speed_min') if filters else None
         if speed_min is not None and speed_min != '':
             try:
                 if pump.speed_rpm < float(speed_min):
@@ -135,7 +142,7 @@ def _apply_filters(pumps, filters):
             except (ValueError, TypeError):
                 pass
 
-        speed_max = filters.get('speed_max')
+        speed_max = filters.get('speed_max') if filters else None
         if speed_max is not None and speed_max != '':
             try:
                 if pump.speed_rpm > float(speed_max):
@@ -144,14 +151,14 @@ def _apply_filters(pumps, filters):
                 pass
 
         # Application module filter (pump must have ALL specified modules)
-        if filters.get('application'):
+        if filters and filters.get('application'):
             req_apps = [a.strip().lower() for a in filters['application'].split(',') if a.strip()]
             pump_apps = [a.strip().lower() for a in (pump.app_modules or '').split(',') if a.strip()]
             if req_apps and not all(ra in pump_apps for ra in req_apps):
                 continue
 
         # Size filter (partial match)
-        if filters.get('size'):
+        if filters and filters.get('size'):
             size_filter = filters['size'].strip().lower()
             if size_filter and size_filter not in (pump.size or '').lower():
                 continue
@@ -165,7 +172,8 @@ def _apply_filters(pumps, filters):
 
 def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
                    liquid, rho, viscosity_cSt,
-                   slurry_cv, slurry_d50, rho_solid):
+                   slurry_cv, slurry_d50, rho_solid,
+                   operation_mode='fixed'):
     """
     Evaluate a single pump against the duty point.
 
@@ -207,7 +215,7 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
     d_min = min(diameters) if len(diameters) > 1 else d_max
 
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
-    is_vsd = fam_type == 'variable_speed'
+    is_vsd = (operation_mode == 'vsd')
 
     # Calculate head at duty for minimum impeller/speed using affinity laws
     if d_min != d_max and d_max > 0:
@@ -232,8 +240,34 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
 
     # Calculate the corresponding physical diameter or speed
     optimal_trim_dia_mm = d_max * optimal_trim_ratio
+    
     if is_vsd:
-        optimal_speed_rpm = pump.speed_rpm * optimal_trim_ratio
+        # User constraint: VSD speed must be within min and max bounds
+        base_speed = pump.speed_rpm if pump.speed_rpm else 1450.0
+        optimal_speed_rpm = base_speed * optimal_trim_ratio
+        
+        # Parse RPM bounds
+        rpm_str = getattr(pump, 'graph_rpm_values', '') or ''
+        rpm_vals = []
+        for v in rpm_str.replace(',', ' ').replace(';', ' ').replace('|', ' ').split():
+            try:
+                rpm_vals.append(float(v))
+            except ValueError:
+                pass
+        
+        if rpm_vals:
+            max_rpm = max(rpm_vals)
+            min_rpm = min(rpm_vals)
+        else:
+            # Fallback to VFD Hz bounds if RPM values aren't explicitly given
+            min_hz = getattr(pump, 'vfd_min_hz', 30.0)
+            max_hz = getattr(pump, 'vfd_max_hz', 50.0)
+            max_rpm = base_speed
+            min_rpm = base_speed * (min_hz / max_hz) if max_hz > 0 else base_speed * 0.6
+            
+        # Reject pump if the required VSD speed is outside bounds
+        if optimal_speed_rpm < min_rpm or optimal_speed_rpm > (max_rpm * 1.05):  # 5% tolerance on max
+            return None
     else:
         optimal_speed_rpm = pump.speed_rpm
 
@@ -333,8 +367,7 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
         'notes': pump.notes or '',
         
         # Default report ID for PDF generation
-        'default_report_id': (pump.get_effective_catalogue_reports()[0].id 
-                              if pump.get_effective_catalogue_reports() else 1),
+        'default_report_id': _get_default_report_id(pump, operation_mode),
     }
 
 
@@ -551,3 +584,30 @@ def get_filter_options(pumps):
         },
         'applications': sorted(applications),
     }
+
+def _get_default_report_id(pump, operation_mode):
+    """
+    Get the default report ID for a pump based on the selected operation mode.
+    First checks the organisation's explicit default for that mode.
+    If not set, attempts to find 'standard_vsd' or 'standard'.
+    """
+    reports = pump.get_effective_catalogue_reports()
+    if not reports:
+        return 1
+        
+    org = pump.organisation
+    if org:
+        if operation_mode == 'vsd' and org.default_report_vsd_id:
+            if any(r.id == org.default_report_vsd_id for r in reports):
+                return org.default_report_vsd_id
+        elif operation_mode == 'fixed' and org.default_report_fixed_speed_id:
+            if any(r.id == org.default_report_fixed_speed_id for r in reports):
+                return org.default_report_fixed_speed_id
+                
+    # Fallback heuristics
+    target_name = 'standard_vsd' if operation_mode == 'vsd' else 'standard'
+    for r in reports:
+        if (r.report_name or '').lower() == target_name:
+            return r.id
+            
+    return reports[0].id

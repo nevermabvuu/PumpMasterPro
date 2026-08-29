@@ -125,7 +125,11 @@ class Pump(db.Model):
     graph_trim_model        = db.Column(db.String(20), default='fit')
     graph_trim_penalty      = db.Column(db.Float, nullable=True)
 
-    # Optional graph JSON options
+    # Selection Engine Flags
+    selection_allow_fixed_speed = db.Column(db.Boolean, default=True)
+    selection_allow_vsd = db.Column(db.Boolean, default=True)
+
+    # Dimensional Data
     graph_options_json      = db.Column(db.Text, default='')
     graph_custom_label_pos  = db.Column(db.Text, default='{}')
 
@@ -842,6 +846,8 @@ class Pump(db.Model):
             'poly_order_npsh': self.poly_order_npsh or 2,
             'poly_order_pow': self.poly_order_pow or 2,
             'catalogue_report_ids': getattr(self, 'catalogue_report_ids', 'all') or 'all',
+            'selection_allow_fixed_speed': getattr(self, 'selection_allow_fixed_speed', True),
+            'selection_allow_vsd': getattr(self, 'selection_allow_vsd', True),
         }
 
     def get_effective_catalogue_reports(self, org=None):
@@ -904,7 +910,11 @@ class Organisation(db.Model):
 
     # Relationships
     pumps = db.relationship('Pump', backref='organisation', lazy=True)
-    reports = db.relationship('ReportConfig', backref='organisation', lazy=True, cascade='all, delete-orphan')
+    reports = db.relationship('ReportConfig', backref='organisation', lazy=True, cascade='all, delete-orphan', foreign_keys='ReportConfig.organisation_id')
+
+    # Default Reports for Pump Selection
+    default_report_fixed_speed_id = db.Column(db.Integer, db.ForeignKey('reports.id'), nullable=True)
+    default_report_vsd_id = db.Column(db.Integer, db.ForeignKey('reports.id'), nullable=True)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -967,7 +977,9 @@ class Organisation(db.Model):
             'default_unit_npsh': self.default_unit_npsh or 'm',
             'primary_color': self.primary_color or '#1e3a8a',
             'notes': self.notes or '',
-            'created_at': self.created_at.isoformat() if self.created_at else ''
+            'created_at': self.created_at.isoformat() if self.created_at else '',
+            'default_report_fixed_speed_id': getattr(self, 'default_report_fixed_speed_id', None),
+            'default_report_vsd_id': getattr(self, 'default_report_vsd_id', None),
         }
 
 

@@ -61,6 +61,27 @@
           </div>
         </div>
       </div>
+      
+      <!-- Operation Mode card -->
+      <div class="card-dark mb-3">
+        <div class="card-header-dark">
+          <i class="bi bi-gear-wide-connected mr-2"></i>Operation Mode
+        </div>
+        <div class="p-4">
+          <div class="space-y-2">
+            <label class="flex items-center gap-2 text-sm cursor-pointer hover:text-white transition-colors">
+              <input type="radio" name="operation_mode" value="fixed" class="accent-[#d29922]" 
+                     {{ 'checked' if form_data.get('operation_mode', 'fixed') == 'fixed' else '' }}>
+              Fixed Speed (Trim Impeller)
+            </label>
+            <label class="flex items-center gap-2 text-sm cursor-pointer hover:text-white transition-colors">
+              <input type="radio" name="operation_mode" value="vsd" class="accent-[#d29922]"
+                     {{ 'checked' if form_data.get('operation_mode') == 'vsd' else '' }}>
+              Variable Speed Drive (VSD)
+            </label>
+          </div>
+        </div>
+      </div>
 
       <!-- Liquid options card -->
       <!-- Beginners Note: Liquid type selection affects curve derating (slurry/viscous corrections) -->

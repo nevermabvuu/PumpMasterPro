@@ -251,6 +251,9 @@ def _pump_from_form(f, pump=None):
     pump.is_self_priming   = 'is_self_priming' in f
     pump.is_non_clog       = 'is_non_clog' in f
     pump.has_inducer       = 'has_inducer' in f
+    
+    pump.selection_allow_fixed_speed = 'selection_allow_fixed_speed' in f
+    pump.selection_allow_vsd = 'selection_allow_vsd' in f
 
     # Flow Control, Throttling & Minimum Flow Orifice Specifications
     pump.is_throttling_capable = 'is_throttling_capable' in f or ('name' in f and 'is_throttling_capable' not in f and pump.is_throttling_capable)

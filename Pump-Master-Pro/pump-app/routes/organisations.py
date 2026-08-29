@@ -76,6 +76,11 @@ def save_catalogue_reports():
         selected_ids = request.form.getlist('selected_report_ids')
         clean_ids = [s.strip() for s in selected_ids if s.strip().isdigit()]
         current_org.catalogue_report_ids = ','.join(clean_ids)
+        
+    fs_rep_id = request.form.get('default_report_fixed_speed_id')
+    vsd_rep_id = request.form.get('default_report_vsd_id')
+    current_org.default_report_fixed_speed_id = int(fs_rep_id) if (fs_rep_id and fs_rep_id.isdigit()) else None
+    current_org.default_report_vsd_id = int(vsd_rep_id) if (vsd_rep_id and vsd_rep_id.isdigit()) else None
 
     db.session.commit()
     flash('Pump Catalogue report viewing preferences saved successfully.', 'success')

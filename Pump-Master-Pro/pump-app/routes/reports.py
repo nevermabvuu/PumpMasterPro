@@ -876,8 +876,7 @@ def _build_report_curve_context(pump, report):
     if report_show_dia is None:
         report_show_dia = getattr(pump, 'graph_show_dia_overlay', None)
         if report_show_dia is None:
-            report_show_dia = getattr(pump, 'graph_show_family', True)
-    show_dia = bool(report_show_dia) if report_show_dia is not None else True
+            report_show_dia = getattr(pump, 'graph_show_family', None)
 
     report_show_rpm = getattr(report, 'show_rpm_overlay', None)
     if report_show_rpm is None:
@@ -885,8 +884,12 @@ def _build_report_curve_context(pump, report):
     if report_show_rpm is None:
         report_show_rpm = getattr(pump, 'graph_show_rpm_overlay', None)
         if report_show_rpm is None:
-            report_show_rpm = getattr(pump, 'graph_show_speed_lines', True)
-    show_rpm = bool(report_show_rpm) if report_show_rpm is not None else True
+            report_show_rpm = getattr(pump, 'graph_show_speed_lines', None)
+            
+    is_vsd_family = getattr(pump, 'family_type', '') == 'variable_speed'
+
+    show_dia = bool(report_show_dia) if report_show_dia is not None else (not is_vsd_family)
+    show_rpm = bool(report_show_rpm) if report_show_rpm is not None else is_vsd_family
 
     # Check Family Type / Test Basis (auto-detects VSD templates so VSD reports display RPM curves and labels)
     is_variable_speed = (pump.family_type == 'variable_speed') or \

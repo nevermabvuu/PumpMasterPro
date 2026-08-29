@@ -82,7 +82,8 @@ def pump_selection():
         # ── Run selection engine ───────────────────────────────────────────
         results = select_pumps(all_pumps, q_duty, h_duty, npsh_avail,
                                liquid, rho, vis, cv, d50, rho_s,
-                               filters=filters)
+                               filters=filters,
+                               operation_mode=f.get('operation_mode', 'fixed'))
 
     # ── Render template with results and filter options ─────────────────────
     return render_template('pump_selection.html',
@@ -135,5 +136,6 @@ def api_select_pumps():
         slurry_d50=_get_float(data, 'slurry_d50', 0.3),
         rho_solid=_get_float(data, 'rho_solid', 2650.0),
         filters=filters,
+        operation_mode=data.get('operation_mode', 'fixed')
     )
     return jsonify(results)

@@ -229,12 +229,22 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
     duty_in_envelope = h_at_duty_min <= h_duty <= h_at_duty_max
     # Even if duty is above the min curve head, max impeller must cover it (already checked)
 
-    # ── Calculate optimal trim ratio ────────────────────────────────────────
     # Beginners Note: The trim ratio (D/D_max or N/N_max) that would make the pump's
-    # H-Q curve pass exactly through the duty point. Using affinity law: H ∝ D² (or N²)
-    # So: h_duty = h_at_duty_max * r² → r = sqrt(h_duty / h_at_duty_max)
+    # H-Q curve pass exactly through the duty point. Using exact affinity law:
+    # H_duty = H_max(Q_duty / r) * r^2. We solve for r using a simple bisection method.
     if h_at_duty_max > 0:
-        optimal_trim_ratio = min(1.0, (h_duty / h_at_duty_max) ** 0.5)
+        r_low = 0.2
+        r_high = 1.05
+        for _ in range(25):
+            r_mid = (r_low + r_high) / 2.0
+            q_eval = np.array([q_duty / r_mid])
+            h_eval = float(hq_curve(pump, q_eval, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)[0])
+            h_calc = h_eval * (r_mid ** 2)
+            if h_calc < h_duty:
+                r_low = r_mid
+            else:
+                r_high = r_mid
+        optimal_trim_ratio = min(1.0, (r_low + r_high) / 2.0)
     else:
         optimal_trim_ratio = 1.0
 

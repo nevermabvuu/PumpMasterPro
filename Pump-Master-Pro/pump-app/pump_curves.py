@@ -361,7 +361,6 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
                 'power': round(float(pwr_arr[idx_bep]), 2)
             }
 
-        def _make_fitted():
             fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
             is_vs = (fam_type == 'variable_speed')
             c_use_custom = c.get('use_custom_style', False) or (c.get('style_mode') == 'custom')
@@ -868,8 +867,8 @@ def speed_lines(pump, ratios=(0.70, 0.80, 0.90, 1.00), values_str=None, n_points
         }
 
         result.append({
-            'dia': (pump.impeller_dia_mm or 300.0) if not is_var_speed else val,
-            'rpm': val if not is_var_speed else (pump.speed_rpm or 1450.0),
+            'dia': (pump.impeller_dia_mm or 300.0),
+            'rpm': val,
             'speed_rpm': val,
             'speed_ratio': round(float(k), 4),
             'ratio': round(float(k), 4),

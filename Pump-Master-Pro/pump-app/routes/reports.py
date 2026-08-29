@@ -870,26 +870,9 @@ def _build_report_curve_context(pump, report):
 
     palette = ['#1e3a8a', '#0284c7', '#475569', '#d97706']
 
-    report_show_dia = getattr(report, 'show_dia_overlay', None)
-    if report_show_dia is None:
-        report_show_dia = getattr(report, 'show_family', None)
-    if report_show_dia is None:
-        report_show_dia = getattr(pump, 'graph_show_dia_overlay', None)
-        if report_show_dia is None:
-            report_show_dia = getattr(pump, 'graph_show_family', None)
-
-    report_show_rpm = getattr(report, 'show_rpm_overlay', None)
-    if report_show_rpm is None:
-        report_show_rpm = getattr(report, 'show_speed_lines', None)
-    if report_show_rpm is None:
-        report_show_rpm = getattr(pump, 'graph_show_rpm_overlay', None)
-        if report_show_rpm is None:
-            report_show_rpm = getattr(pump, 'graph_show_speed_lines', None)
-            
-    is_vsd_family = getattr(pump, 'family_type', '') == 'variable_speed'
-
-    show_dia = bool(report_show_dia) if report_show_dia is not None else (not is_vsd_family)
-    show_rpm = bool(report_show_rpm) if report_show_rpm is not None else is_vsd_family
+    # Determine if user explicitly forced a specific overlay via report settings
+    explicit_dia = getattr(report, 'show_dia_overlay', None)
+    explicit_rpm = getattr(report, 'show_rpm_overlay', None)
 
     # Check Family Type / Test Basis (auto-detects VSD templates so VSD reports display RPM curves and labels)
     is_variable_speed = (pump.family_type == 'variable_speed') or \
@@ -897,6 +880,40 @@ def _build_report_curve_context(pump, report):
                         ('vsd' in (getattr(report, 'template_name', '') or '').lower()) or \
                         ('vsd' in (getattr(report, 'title', '') or '').lower()) or \
                         ('variable' in (getattr(report, 'report_type', '') or '').lower())
+
+    # Map 'show_family'
+    if explicit_dia is None and not is_variable_speed:
+        report_show_dia = getattr(report, 'show_family', None)
+    else:
+        report_show_dia = explicit_dia
+
+    if report_show_dia is None:
+        report_show_dia = getattr(pump, 'graph_show_dia_overlay', None)
+        if report_show_dia is None and not is_variable_speed:
+            report_show_dia = getattr(pump, 'graph_show_family', None)
+
+    if explicit_rpm is None and is_variable_speed:
+        report_show_rpm = getattr(report, 'show_family', None)
+    else:
+        report_show_rpm = explicit_rpm
+
+    if report_show_rpm is None:
+        report_show_rpm = getattr(report, 'show_speed_lines', None)
+    if report_show_rpm is None:
+        report_show_rpm = getattr(pump, 'graph_show_rpm_overlay', None)
+        if report_show_rpm is None and is_variable_speed:
+            report_show_rpm = getattr(pump, 'graph_show_family', None)
+        if report_show_rpm is None:
+            report_show_rpm = getattr(pump, 'graph_show_speed_lines', None)
+
+    show_dia = bool(report_show_dia) if report_show_dia is not None else (not is_variable_speed)
+    show_rpm = bool(report_show_rpm) if report_show_rpm is not None else is_variable_speed
+
+    # Conflict resolution: if one is explicitly requested by the report, turn the other off (unless both were explicitly requested)
+    if explicit_dia is True and explicit_rpm is None:
+        show_rpm = False
+    elif explicit_rpm is True and explicit_dia is None:
+        show_dia = False
 
     # Determine primary vs secondary display selection
     show_primary = (show_rpm if is_variable_speed else show_dia)
@@ -908,33 +925,35 @@ def _build_report_curve_context(pump, report):
         from pump_curves import speed_lines as calc_speed_lines
         spd_objs = calc_speed_lines(pump, values_str=rpm_str)
 
-        if mode == 'max_only':
-            lines_to_draw = [spd_objs[0]] if spd_objs else []
-        elif mode == 'min_max':
-            lines_to_draw = [spd_objs[0], spd_objs[-1]] if len(spd_objs) >= 2 else (spd_objs if spd_objs else [])
-        else:
-            lines_to_draw = spd_objs if spd_objs else []
+        lines_to_draw = []
+        if show_primary:
+            if mode == 'max_only':
+                lines_to_draw = [spd_objs[0]] if spd_objs else []
+            elif mode == 'min_max':
+                lines_to_draw = [spd_objs[0], spd_objs[-1]] if len(spd_objs) >= 2 else (spd_objs if spd_objs else [])
+            else:
+                lines_to_draw = spd_objs if spd_objs else []
 
-        for c_idx, sl in enumerate(lines_to_draw):
-            is_primary = (c_idx == 0)
-            rpm_val = sl.get('rpm', pump.speed_rpm)
-            s_ratio = sl.get('ratio', 1.0)
-            pct = round(s_ratio * 100) if s_ratio else None
-            lbl = f"{int(round(rpm_val))} RPM (Max)" if is_primary else f"{int(round(rpm_val))} RPM"
+            for c_idx, sl in enumerate(lines_to_draw):
+                is_primary = (c_idx == 0)
+                rpm_val = sl.get('rpm', pump.speed_rpm)
+                s_ratio = sl.get('ratio', 1.0)
+                pct = round(s_ratio * 100) if s_ratio else None
+                lbl = f"{int(round(rpm_val))} RPM (Max)" if is_primary else f"{int(round(rpm_val))} RPM"
 
-            k = s_ratio
-            c_q = [round(v * k, 2) for v in q_pts]
-            c_h = [round(v * (k**2), 2) for v in h_pts]
-            c_eta = [round(max(0.0, v), 2) for v in eta_pts]
-            c_pow = [round(v * (k**3), 2) for v in pow_pts]
-            c_npsh = [round(v * (k**2), 2) for v in npsh_pts]
+                k = s_ratio
+                c_q = [round(v * k, 2) for v in q_pts]
+                c_h = [round(v * (k**2), 2) for v in h_pts]
+                c_eta = [round(max(0.0, v), 2) for v in eta_pts]
+                c_pow = [round(v * (k**3), 2) for v in pow_pts]
+                c_npsh = [round(v * (k**2), 2) for v in npsh_pts]
 
-            cur_color = primary_color if is_primary else palette[min(c_idx, len(palette)-1)]
+                cur_color = primary_color if is_primary else palette[min(c_idx, len(palette)-1)]
 
-            hq_curves_list.append({'label': lbl, 'x': c_q, 'y': c_h, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
-            eta_curves_list.append({'label': lbl, 'x': c_q, 'y': c_eta, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
-            pow_curves_list.append({'label': lbl, 'x': c_q, 'y': c_pow, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
-            npsh_curves_list.append({'label': lbl, 'x': c_q, 'y': c_npsh, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
+                hq_curves_list.append({'label': lbl, 'x': c_q, 'y': c_h, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
+                eta_curves_list.append({'label': lbl, 'x': c_q, 'y': c_eta, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
+                pow_curves_list.append({'label': lbl, 'x': c_q, 'y': c_pow, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
+                npsh_curves_list.append({'label': lbl, 'x': c_q, 'y': c_npsh, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
 
         # Secondary Diameter Overlay curves
         dia_str = (getattr(pump, 'graph_dia_overlay_values', None) or '').strip()
@@ -1123,11 +1142,18 @@ def _build_report_curve_context(pump, report):
     from pump_curves import _compute_iso_override, efficiency_isolines, power_isolines, npsh_isolines
 
     # Compute isoline range (r_min) bounded strictly by the bottom-most curve plotted on the chart
-    if is_variable_speed:
+    if show_rpm:
         iso_r_min = min([sl.get('ratio', 1.0) for sl in lines_to_draw]) if lines_to_draw else 0.70
         iso_trim = 0.0
     else:
-        iso_r_min = min([d / max_d for d in curves_to_draw]) if curves_to_draw else 0.75
+        # We are showing diameter curves (either for fixed speed pump, or VSD overridden to show mm)
+        from pump_curves import family_curves_diameter
+        if 'curves_to_draw' in locals() and curves_to_draw:
+            iso_r_min = min([d / max_d for d in curves_to_draw])
+        elif 'dia_objs' in locals() and dia_objs:
+            iso_r_min = min([dl.get('ratio', 1.0) for dl in dia_objs])
+        else:
+            iso_r_min = 0.75
         iso_trim = 20.0
 
     # 1. Efficiency Isolines

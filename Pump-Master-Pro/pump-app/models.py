@@ -442,12 +442,13 @@ class Pump(db.Model):
             if base_v and base_v > 0:
                 dias = [base_v]
 
-        loaded = self.get_curve_diameters_list()
-        for item in loaded:
-            d_mm = item.get('dia_mm')
-            if d_mm is not None and d_mm <= 2500:
-                if round(d_mm, 2) not in [round(x, 2) for x in dias]:
-                    dias.append(round(d_mm, 2))
+        if fam_t != 'variable_speed':
+            loaded = self.get_curve_diameters_list()
+            for item in loaded:
+                d_mm = item.get('dia_mm')
+                if d_mm is not None and d_mm <= 2500:
+                    if round(d_mm, 2) not in [round(x, 2) for x in dias]:
+                        dias.append(round(d_mm, 2))
 
         if not dias:
             dias = [1000.0 if fam_t == 'variable_speed' else 300.0]

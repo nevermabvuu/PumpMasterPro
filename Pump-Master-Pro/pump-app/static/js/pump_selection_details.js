@@ -86,37 +86,53 @@ function renderAll() {
       let lbl = cfg.IS_VSD ? `${c.rpm || c.val} RPM` : `Ø ${c.dia} mm`;
       let isMax = idx === fam.length - 1; 
       
+      let cdata = c.q.map((q, i) => [
+        c.h[i] != null ? c.h[i].toFixed(1) : 'N/A',
+        c.eta[i] != null ? c.eta[i].toFixed(1) : 'N/A',
+        c.power[i] != null ? c.power[i].toFixed(1) : 'N/A',
+        (c.npsh && c.npsh[i] != null) ? c.npsh[i].toFixed(1) : 'N/A'
+      ]);
+      let hoverTmpl = `<b>${lbl}</b><br>Flow: %{x:.1f} m³/h<br>Head: %{customdata[0]} m<br>Eff: %{customdata[1]} %<br>Power: %{customdata[2]} kW<br>NPSHr: %{customdata[3]} m<extra></extra>`;
+      
       // Head
-      traces.push({x: c.q, y: c.h, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#58a6ff', width: isMax ? 2.5 : 1.5}, yaxis: 'y4', opacity: isMax ? 1 : 0.5, showlegend: false});
+      traces.push({x: c.q, y: c.h, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#58a6ff', width: isMax ? 2.5 : 1.5}, yaxis: 'y4', opacity: isMax ? 1 : 0.5, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
       addLabel(annotations, c.q, c.h, 'y4', lbl, '#58a6ff');
       
       // Eff
-      traces.push({x: c.q, y: c.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#3fb950', width: isMax ? 2.5 : 1.5}, yaxis: 'y3', opacity: isMax ? 1 : 0.5, showlegend: false});
+      traces.push({x: c.q, y: c.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#3fb950', width: isMax ? 2.5 : 1.5}, yaxis: 'y3', opacity: isMax ? 1 : 0.5, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
       addLabel(annotations, c.q, c.eta, 'y3', lbl, '#3fb950');
 
       // Power
-      traces.push({x: c.q, y: c.power, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f0c040', width: isMax ? 2.5 : 1.5}, yaxis: 'y2', opacity: isMax ? 1 : 0.5, showlegend: false});
+      traces.push({x: c.q, y: c.power, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f0c040', width: isMax ? 2.5 : 1.5}, yaxis: 'y2', opacity: isMax ? 1 : 0.5, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
       addLabel(annotations, c.q, c.power, 'y2', lbl, '#f0c040');
 
       // NPSHr
       if (c.npsh && c.npsh.length) {
-        traces.push({x: c.q, y: c.npsh, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#bc8cff', width: isMax ? 2.5 : 1.5}, yaxis: 'y', opacity: isMax ? 1 : 0.5, showlegend: false});
+        traces.push({x: c.q, y: c.npsh, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#bc8cff', width: isMax ? 2.5 : 1.5}, yaxis: 'y', opacity: isMax ? 1 : 0.5, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
         addLabel(annotations, c.q, c.npsh, 'y', lbl, '#bc8cff');
       }
     });
   } else {
-    // Fallback if family data is missing
-    traces.push({x: maxCurve.q, y: maxCurve.h, name: 'Head (Max)', type: 'scatter', mode: 'lines', line: {color: '#58a6ff', width: 2.5}, yaxis: 'y4', showlegend: false});
+    let lbl = 'Max';
+    let cdata = maxCurve.q.map((q, i) => [
+      maxCurve.h[i] != null ? maxCurve.h[i].toFixed(1) : 'N/A',
+      maxCurve.eta[i] != null ? maxCurve.eta[i].toFixed(1) : 'N/A',
+      maxCurve.power[i] != null ? maxCurve.power[i].toFixed(1) : 'N/A',
+      (maxCurve.npsh && maxCurve.npsh[i] != null) ? maxCurve.npsh[i].toFixed(1) : 'N/A'
+    ]);
+    let hoverTmpl = `<b>${lbl}</b><br>Flow: %{x:.1f} m³/h<br>Head: %{customdata[0]} m<br>Eff: %{customdata[1]} %<br>Power: %{customdata[2]} kW<br>NPSHr: %{customdata[3]} m<extra></extra>`;
+
+    traces.push({x: maxCurve.q, y: maxCurve.h, name: 'Head (Max)', type: 'scatter', mode: 'lines', line: {color: '#58a6ff', width: 2.5}, yaxis: 'y4', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
     addLabel(annotations, maxCurve.q, maxCurve.h, 'y4', 'Max', '#58a6ff');
     
-    traces.push({x: maxCurve.q, y: maxCurve.eta, name: 'Eff (Max)', type: 'scatter', mode: 'lines', line: {color: '#3fb950', width: 2.5}, yaxis: 'y3', showlegend: false});
+    traces.push({x: maxCurve.q, y: maxCurve.eta, name: 'Eff (Max)', type: 'scatter', mode: 'lines', line: {color: '#3fb950', width: 2.5}, yaxis: 'y3', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
     addLabel(annotations, maxCurve.q, maxCurve.eta, 'y3', 'Max', '#3fb950');
     
-    traces.push({x: maxCurve.q, y: maxCurve.power, name: 'Power (Max)', type: 'scatter', mode: 'lines', line: {color: '#f0c040', width: 2.5}, yaxis: 'y2', showlegend: false});
+    traces.push({x: maxCurve.q, y: maxCurve.power, name: 'Power (Max)', type: 'scatter', mode: 'lines', line: {color: '#f0c040', width: 2.5}, yaxis: 'y2', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
     addLabel(annotations, maxCurve.q, maxCurve.power, 'y2', 'Max', '#f0c040');
     
     if (maxCurve.npsh) {
-      traces.push({x: maxCurve.q, y: maxCurve.npsh, name: 'NPSHr (Max)', type: 'scatter', mode: 'lines', line: {color: '#bc8cff', width: 2.5}, yaxis: 'y', showlegend: false});
+      traces.push({x: maxCurve.q, y: maxCurve.npsh, name: 'NPSHr (Max)', type: 'scatter', mode: 'lines', line: {color: '#bc8cff', width: 2.5}, yaxis: 'y', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
       addLabel(annotations, maxCurve.q, maxCurve.npsh, 'y', 'Max', '#bc8cff');
     }
   }
@@ -124,18 +140,25 @@ function renderAll() {
   // Add Rated Curves
   if (cfg.TRIM_RATIO < 1.0) {
     let lbl = cfg.IS_VSD ? `Rated (${cfg.RATED_SPEED} RPM)` : `Rated (Ø ${cfg.RATED_TRIM} mm)`;
+    let cdataRated = qDutyCurve.map((q, i) => [
+      hDutyCurve[i] != null ? hDutyCurve[i].toFixed(1) : 'N/A',
+      maxCurve.eta[i] != null ? maxCurve.eta[i].toFixed(1) : 'N/A',
+      pDutyCurve[i] != null ? pDutyCurve[i].toFixed(1) : 'N/A',
+      (npshDutyCurve && npshDutyCurve[i] != null) ? npshDutyCurve[i].toFixed(1) : 'N/A'
+    ]);
+    let hoverTmplRated = `<b>${lbl}</b><br>Flow: %{x:.1f} m³/h<br>Head: %{customdata[0]} m<br>Eff: %{customdata[1]} %<br>Power: %{customdata[2]} kW<br>NPSHr: %{customdata[3]} m<extra></extra>`;
 
-    traces.push({x: qDutyCurve, y: hDutyCurve, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y4', showlegend: false});
+    traces.push({x: qDutyCurve, y: hDutyCurve, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y4', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
     addLabel(annotations, qDutyCurve, hDutyCurve, 'y4', lbl, '#f85149', true);
 
-    traces.push({x: qDutyCurve, y: maxCurve.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y3', showlegend: false});
+    traces.push({x: qDutyCurve, y: maxCurve.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y3', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
     addLabel(annotations, qDutyCurve, maxCurve.eta, 'y3', lbl, '#f85149', true);
     
-    traces.push({x: qDutyCurve, y: pDutyCurve, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y2', showlegend: false});
+    traces.push({x: qDutyCurve, y: pDutyCurve, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y2', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
     addLabel(annotations, qDutyCurve, pDutyCurve, 'y2', lbl, '#f85149', true);
     
     if (maxCurve.npsh && maxCurve.npsh.length) {
-      traces.push({x: qDutyCurve, y: npshDutyCurve, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y', showlegend: false});
+      traces.push({x: qDutyCurve, y: npshDutyCurve, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
       addLabel(annotations, qDutyCurve, npshDutyCurve, 'y', lbl, '#f85149', true);
     }
   }
@@ -163,7 +186,8 @@ function renderAll() {
         sysH.push(cfg.H_DUTY);
     }
 
-    traces.push({x: sysQ, y: sysH, name: 'System Curve', type: 'scatter', mode: 'lines', line: {color: '#8b949e', width: 2.5, dash: 'dot'}, yaxis: 'y4', showlegend: false});
+    let hoverTmplSys = `<b>System Curve</b><br>Flow: %{x:.1f} m³/h<br>Head: %{y:.1f} m<extra></extra>`;
+    traces.push({x: sysQ, y: sysH, name: 'System Curve', type: 'scatter', mode: 'lines', line: {color: '#8b949e', width: 2.5, dash: 'dot'}, yaxis: 'y4', showlegend: false, hovertemplate: hoverTmplSys});
   }
 
   // Custom Clean Legend Items
@@ -181,7 +205,8 @@ function renderAll() {
       type: 'scatter', mode: 'markers',
       marker: { color: '#f85149', size: 12, symbol: 'star' },
       yaxis: 'y4',
-      showlegend: true
+      showlegend: true,
+      hovertemplate: `<b>Duty Point</b><br>Flow: %{x:.1f} m³/h<br>Head: %{y:.1f} m<extra></extra>`
     });
     annotations.push({
       x: cfg.Q_DUTY, y: cfg.H_DUTY,
@@ -199,7 +224,7 @@ function renderAll() {
     plot_bgcolor: 'rgba(0,0,0,0)',
     font: { color: '#8b949e', family: 'Inter, sans-serif' },
     margin: { t: 40, r: 80, l: 60, b: 40 },
-    hovermode: 'x unified',
+    hovermode: 'closest',
     // Shared X axis
     xaxis: { 
       title: 'Flow (m³/h)', 

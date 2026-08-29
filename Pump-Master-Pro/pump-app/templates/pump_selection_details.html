@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% block title %}{{ pump.name }} - Selection Details{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="flex justify-between items-start flex-wrap gap-3 mb-4">
+  <div class="page-header mb-0">
+    <h1 class="page-title"><i class="bi bi-graph-up-arrow text-accent mr-2"></i>{{ pump.name }}</h1>
+    <p class="page-subtitle">
+      {{ pump.manufacturer or '' }} &bull; {{ pump.pump_type }} &bull; {{ pump.speed_rpm|int }} rpm
+      &bull; Ø{{ pump.impeller_dia_mm|int }} mm
+    </p>
+  </div>
+  <div class="flex gap-2 flex-wrap">
+    <a href="{{ url_for('selection.pump_selection') }}" 
+       class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium transition-colors"
+       style="border:1px solid #30363d;color:#8b949e;"
+       onmouseover="this.style.background='#1c2330'" onmouseout="this.style.background='transparent'">
+      <i class="bi bi-arrow-left"></i>Back to Search
+    </a>
+    <a href="{{ url_for('reports.view_report', report_id=default_report_id, pump_id=pump.id) }}"
+       class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium transition-colors btn-primary">
+      <i class="bi bi-file-earmark-pdf"></i>Generate Report
+    </a>
+  </div>
+</div>
+
+<div class="flex flex-col lg:flex-row gap-6">
+  <!-- LEFT SIDEBAR: Shortlisted Pumps -->
+  <div class="lg:w-1/3 xl:w-1/4 flex flex-col gap-3">
+    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">Shortlisted Pumps ({{ results|length }})</h3>
+    <div class="flex flex-col gap-2 max-h-[800px] overflow-y-auto pr-2 custom-scrollbar">
+      {% for r in results %}
+      {% set is_active = (r.pump_id == pump.id) %}
+      <a href="{{ url_for('selection.pump_selection_details', pump_id=r.pump_id) }}" 
+         class="block p-3 rounded border transition-colors {{ 'border-[#58a6ff] bg-[rgba(88,166,255,0.05)]' if is_active else 'border-[#30363d] card-dark hover:border-[#8b949e]' }}">
+        <div class="flex justify-between items-start mb-1">
+          <h4 class="font-bold text-sm {{ 'text-[#58a6ff]' if is_active else 'text-white' }}">{{ r.pump_name }}</h4>
+          <span class="badge {{ 'badge-success' if r.rating >= 80 else ('badge-warning' if r.rating >= 50 else 'badge-danger') }} ml-2 shrink-0">
+            {{ r.rating|int }}%
+          </span>
+        </div>
+        <div class="text-xs text-gray-400 flex flex-wrap gap-x-3 gap-y-1 mt-2">
+          <span><i class="bi bi-gear"></i> {{ r.optimal_speed_rpm|int if r.is_vsd else r.speed_rpm|int }} rpm</span>
+          <span><i class="bi bi-lightning"></i> {{ "%.1f"|format(r.op_eta|float) }}% eff</span>
+          {% if r.operation_mode == 'vsd' %}
+            <span class="text-[#f0c040]"><i class="bi bi-speedometer"></i> VSD</span>
+          {% endif %}
+        </div>
+      </a>
+      {% endfor %}
+      {% if not results %}
+      <div class="text-sm text-gray-500 italic p-3 border border-[#30363d] rounded text-center">
+        No other pumps found for this duty point.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- RIGHT MAIN AREA: Pump Details & Graphs -->
+  <div class="lg:w-2/3 xl:w-3/4 flex flex-col gap-4">
+    <!-- Graph View Toggle -->
+    <div class="flex justify-between items-center bg-[#1c2330] p-2 rounded border border-[#30363d]">
+      <div class="flex gap-1" id="chartToggles">
+        <button class="comp-chart-btn px-3 py-1.5 rounded text-sm font-medium transition-colors comp-active" data-chart="hq" style="background: rgba(88,166,255,0.15); color: #58a6ff;">H-Q</button>
+        <button class="comp-chart-btn px-3 py-1.5 rounded text-sm font-medium transition-colors text-gray-400" data-chart="eff">Efficiency</button>
+        <button class="comp-chart-btn px-3 py-1.5 rounded text-sm font-medium transition-colors text-gray-400" data-chart="power">Power</button>
+        <button class="comp-chart-btn px-3 py-1.5 rounded text-sm font-medium transition-colors text-gray-400" data-chart="npsh">NPSH</button>
+        <button class="comp-chart-btn px-3 py-1.5 rounded text-sm font-medium transition-colors text-gray-400" data-chart="all">All Charts</button>
+      </div>
+      <!-- Loading indicator -->
+      <div id="chartLoading" class="text-accent text-sm" style="display:none;">
+        <i class="bi bi-arrow-repeat spin"></i> Loading charts...
+      </div>
+    </div>
+
+    <!-- Charts Container -->
+    <div class="card-dark border border-[#30363d] rounded p-1">
+      <!-- Single chart view -->
+      <div id="singleChartPanel">
+        <div id="chartComp" class="w-full" style="height: 600px;"></div>
+      </div>
+
+      <!-- All charts view -->
+      <div id="allChartPanel" style="display:none">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 p-2">
+          <div id="chartAll_hq" style="height: 350px;"></div>
+          <div id="chartAll_eff" style="height: 350px;"></div>
+          <div id="chartAll_power" style="height: 350px;"></div>
+          <div id="chartAll_npsh" style="height: 350px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Include Plotly -->
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<script>
+  // Variables required for JS plotting
+  const PUMP_ID = {{ pump.id }};
+  const LIQUID_TYPE = "{{ form_data.liquid or 'water' }}";
+  const Q_DUTY = {{ form_data.q_duty or 'null' }};
+  const H_DUTY = {{ form_data.h_duty or 'null' }};
+  const RHO = {{ (form_data.rho if form_data.liquid != 'slurry' else form_data.rho_l) or 1000 }};
+  const VISCOSITY = {{ form_data.viscosity_cSt or 1.0 }};
+  const SLURRY_CV = {{ form_data.slurry_cv or 0.0 }};
+  const SLURRY_D50 = {{ form_data.slurry_d50 or 0.3 }};
+  const RHO_SOLID = {{ form_data.rho_solid or 2650.0 }};
+  
+  let pumpData = null;
+  let activeChart = 'hq';
+
+  // Toggle active styling
+  document.querySelectorAll('.comp-chart-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.comp-chart-btn').forEach(b => {
+        b.classList.remove('comp-active');
+        b.style.background = 'transparent';
+        b.style.color = '#8b949e';
+      });
+      btn.classList.add('comp-active');
+      btn.style.background = 'rgba(88,166,255,0.15)';
+      btn.style.color = '#58a6ff';
+      activeChart = btn.dataset.chart;
+      renderAll();
+    });
+  });
+
+  async function fetchPumpData() {
+    document.getElementById('chartLoading').style.display = 'block';
+    
+    // Construct params for the compare-pumps API (it returns the full curve data in the format we want)
+    const params = new URLSearchParams({
+      ids: PUMP_ID,
+      liquid: LIQUID_TYPE,
+      rho: RHO,
+      viscosity_cSt: VISCOSITY,
+      slurry_cv: SLURRY_CV,
+      slurry_d50: SLURRY_D50,
+      rho_solid: RHO_SOLID
+    });
+
+    try {
+      const res = await fetch(`/papi/compare-pumps?${params.toString()}`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        pumpData = data[0]; // Since we only requested 1 pump
+        renderAll();
+      }
+    } catch (e) {
+      console.error("Error fetching pump data:", e);
+    } finally {
+      document.getElementById('chartLoading').style.display = 'none';
+    }
+  }
+
+  /* Plotting Functions */
+  const layoutBase = {
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    font: { color: '#8b949e', family: 'Inter, sans-serif' },
+    margin: { t: 30, r: 20, l: 50, b: 40 },
+    hovermode: 'x unified',
+    xaxis: { 
+      title: 'Flow (m³/h)', 
+      gridcolor: '#30363d', 
+      zerolinecolor: '#30363d',
+      rangemode: 'tozero'
+    },
+    yaxis: { 
+      gridcolor: '#30363d', 
+      zerolinecolor: '#30363d',
+      rangemode: 'tozero'
+    },
+    legend: { x: 0, y: 1.1, orientation: 'h' }
+  };
+
+  function buildTrace(x, y, name, type='lines') {
+    return {
+      x: x, y: y, name: name, type: 'scatter', mode: type,
+      line: { color: '#58a6ff', width: 2.5 }
+    };
+  }
+  
+  function buildDutyTrace(q, h, name) {
+    if (!q || !h) return null;
+    return {
+      x: [q], y: [h], name: name,
+      type: 'scatter', mode: 'markers',
+      marker: { color: '#f85149', size: 10, symbol: 'star' }
+    };
+  }
+
+  function renderAll() {
+    if (!pumpData) return;
+    
+    const d = pumpData.curves;
+    if (!d || !d.q) return;
+
+    const singlePanel = document.getElementById('singleChartPanel');
+    const allPanel = document.getElementById('allChartPanel');
+
+    if (activeChart === 'all') {
+      singlePanel.style.display = 'none';
+      allPanel.style.display = 'block';
+
+      // H-Q
+      let hqTraces = [buildTrace(d.q, d.h, 'Head (m)')];
+      if (Q_DUTY && H_DUTY) hqTraces.push(buildDutyTrace(Q_DUTY, H_DUTY, 'Duty Point'));
+      
+      let lHq = JSON.parse(JSON.stringify(layoutBase));
+      lHq.title = 'Head vs Flow';
+      lHq.yaxis.title = 'Head (m)';
+      Plotly.newPlot('chartAll_hq', hqTraces, lHq, {displayModeBar: false});
+
+      // Efficiency
+      let effTraces = [buildTrace(d.q, d.eta, 'Efficiency (%)')];
+      let lEff = JSON.parse(JSON.stringify(layoutBase));
+      lEff.title = 'Efficiency vs Flow';
+      lEff.yaxis.title = 'Eff (%)';
+      Plotly.newPlot('chartAll_eff', effTraces, lEff, {displayModeBar: false});
+
+      // Power
+      let pTraces = [buildTrace(d.q, d.power, 'Power (kW)')];
+      let lPower = JSON.parse(JSON.stringify(layoutBase));
+      lPower.title = 'Power vs Flow';
+      lPower.yaxis.title = 'Power (kW)';
+      Plotly.newPlot('chartAll_power', pTraces, lPower, {displayModeBar: false});
+
+      // NPSHr
+      let npshTraces = d.npsh && d.npsh.length ? [buildTrace(d.q, d.npsh, 'NPSHr (m)')] : [];
+      let lNpsh = JSON.parse(JSON.stringify(layoutBase));
+      lNpsh.title = 'NPSHr vs Flow';
+      lNpsh.yaxis.title = 'NPSHr (m)';
+      Plotly.newPlot('chartAll_npsh', npshTraces, lNpsh, {displayModeBar: false});
+
+    } else {
+      singlePanel.style.display = 'block';
+      allPanel.style.display = 'none';
+
+      let traces = [];
+      let layout = JSON.parse(JSON.stringify(layoutBase));
+
+      if (activeChart === 'hq') {
+        traces.push(buildTrace(d.q, d.h, 'Head (m)'));
+        if (Q_DUTY && H_DUTY) traces.push(buildDutyTrace(Q_DUTY, H_DUTY, 'Duty Point'));
+        layout.yaxis.title = 'Head (m)';
+        layout.title = 'Head vs Flow';
+      } else if (activeChart === 'eff') {
+        traces.push(buildTrace(d.q, d.eta, 'Efficiency (%)'));
+        layout.yaxis.title = 'Efficiency (%)';
+        layout.title = 'Efficiency vs Flow';
+      } else if (activeChart === 'power') {
+        traces.push(buildTrace(d.q, d.power, 'Power (kW)'));
+        layout.yaxis.title = 'Power (kW)';
+        layout.title = 'Power vs Flow';
+      } else if (activeChart === 'npsh') {
+        if (d.npsh && d.npsh.length) traces.push(buildTrace(d.q, d.npsh, 'NPSHr (m)'));
+        layout.yaxis.title = 'NPSHr (m)';
+        layout.title = 'NPSHr vs Flow';
+      }
+
+      Plotly.newPlot('chartComp', traces, layout, {responsive: true});
+    }
+  }
+
+  // Load data on page load
+  document.addEventListener('DOMContentLoaded', fetchPumpData);
+
+</script>
+
+{% endblock %}

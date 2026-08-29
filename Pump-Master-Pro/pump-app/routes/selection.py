@@ -107,6 +107,74 @@ def pump_selection():
                            form_data=form_data,
                             filter_options=filter_options,
                            sort_by=form_data.get('sort_by', 'rating'))
+@selection_bp.route('/pump-selection/details/<int:pump_id>', endpoint='pump_selection_details')
+def pump_selection_details(pump_id):
+    """
+    Detailed view for a specific pump in the selection results.
+    Shows the graphs for the pump and a sidebar with the other shortlisted pumps.
+    """
+    from models import Pump
+    
+    # Load session data
+    f = session.get('selection_form_data', {})
+    
+    # Run the selection engine to get the shortlist
+    results = []
+    all_pumps = get_visible_pumps_query().all()
+    q_duty_str = f.get('q_duty')
+    h_duty_str = f.get('h_duty')
+    
+    if q_duty_str and h_duty_str:
+        q_duty = _get_float(f, 'q_duty', 0.0)
+        h_duty = _get_float(f, 'h_duty', 0.0)
+        npsh_val = f.get('npsh_avail')
+        npsh_avail = _get_float(f, 'npsh_avail', 0.0) if (npsh_val is not None and npsh_val.strip() != '') else None
+
+        liquid = f.get('liquid', 'water')
+        if liquid == 'slurry':
+            rho = _get_float(f, 'rho_l', 1000.0)
+        else:
+            rho = _get_float(f, 'rho', 1000.0)
+            
+        vis = _get_float(f, 'viscosity_cSt', 1.0)
+        cv = _get_float(f, 'slurry_cv', 0.0)
+        d50 = _get_float(f, 'slurry_d50', 0.3)
+        rho_s = _get_float(f, 'rho_solid', 2650.0)
+
+        filters = {}
+        if f.get('filter_manufacturer'): filters['manufacturer'] = f.get('filter_manufacturer')
+        if f.get('filter_pump_type'): filters['pump_type'] = f.get('filter_pump_type')
+        if f.get('filter_speed_min'): filters['speed_min'] = f.get('filter_speed_min')
+        if f.get('filter_speed_max'): filters['speed_max'] = f.get('filter_speed_max')
+        if f.get('filter_size'): filters['size'] = f.get('filter_size')
+        if f.get('filter_application'): filters['application'] = f.get('filter_application')
+
+        results = select_pumps(all_pumps, q_duty, h_duty, npsh_avail,
+                               liquid, rho, vis, cv, d50, rho_s,
+                               filters=filters,
+                               operation_mode=f.get('operation_mode', 'fixed'))
+
+    # Sort results
+    sort_by = f.get('sort_by', 'rating')
+    if sort_by == 'rating':
+        results.sort(key=lambda x: x.get('rating', 0), reverse=True)
+    elif sort_by == 'eff':
+        results.sort(key=lambda x: x.get('op_eta', 0), reverse=True)
+
+    pump = Pump.query.get_or_404(pump_id)
+    
+    # Beginners Note: Find the default_report_id for the selected pump so we can build the Report URL
+    default_report_id = 1 # Fallback
+    for r in results:
+        if r.get('pump_id') == pump_id:
+            default_report_id = r.get('default_report_id', 1)
+            break
+    
+    return render_template('pump_selection_details.html',
+                           pump=pump,
+                           results=results,
+                           form_data=f,
+                           default_report_id=default_report_id)
 
 
 @selection_bp.route('/papi/select-pumps', methods=['POST'])

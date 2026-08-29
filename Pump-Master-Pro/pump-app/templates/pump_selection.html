@@ -129,30 +129,95 @@
 
           <!-- Slurry params -->
           <div id="slurryParams" style="display:none">
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="form-label">C<sub>v</sub> (vol. fraction)</label>
-                <input type="number" name="slurry_cv" class="form-control form-control-dark w-full"
-                       value="{{ form_data.slurry_cv or 0.20 }}" step="0.01" min="0" max="0.6">
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Liquid Properties -->
+              <div class="border border-[#30363d] p-3 rounded">
+                <h6 class="text-xs text-gray-400 font-bold mb-2 uppercase">Liquid Properties</h6>
+                <div class="mb-2">
+                  <label class="flex items-center gap-2 form-label cursor-pointer hover:text-white">
+                    <input type="checkbox" name="cb_L" value="1" class="slurry-cb accent-[#d29922]" data-param="L" {{ 'checked' if form_data.cb_L == '1' or (not form_data and True) else '' }}> 
+                    Density ρ<sub>l</sub> (kg/m³)
+                  </label>
+                  <input type="number" name="rho_l" id="rho_l" class="form-control form-control-dark w-full slurry-input" value="{{ form_data.rho_l or 1000 }}" step="1">
+                </div>
+                <div>
+                  <label class="form-label">SG<sub>liquid</sub></label>
+                  <input type="number" name="sg_l" id="sg_l" class="form-control form-control-dark w-full slurry-input" value="{{ form_data.sg_l or 1.0 }}" step="0.01">
+                </div>
               </div>
-              <div>
-                <label class="form-label">d<sub>50</sub> (mm)</label>
-                <input type="number" name="slurry_d50" class="form-control form-control-dark w-full"
-                       value="{{ form_data.slurry_d50 or 0.3 }}" step="0.05">
+
+              <!-- Solid Properties -->
+              <div class="border border-[#30363d] p-3 rounded">
+                <h6 class="text-xs text-gray-400 font-bold mb-2 uppercase">Solid Properties</h6>
+                <div class="mb-2">
+                  <label class="flex items-center gap-2 form-label cursor-pointer hover:text-white">
+                    <input type="checkbox" name="cb_S" value="1" class="slurry-cb accent-[#d29922]" data-param="S" {{ 'checked' if form_data.cb_S == '1' or (not form_data and True) else '' }}> 
+                    Density ρ<sub>s</sub> (kg/m³)
+                  </label>
+                  <input type="number" name="rho_solid" id="rho_s" class="form-control form-control-dark w-full slurry-input" value="{{ form_data.rho_solid or 2650 }}" step="10">
+                </div>
+                <div>
+                  <label class="form-label">SG<sub>solid</sub></label>
+                  <input type="number" name="sg_s" id="sg_s" class="form-control form-control-dark w-full slurry-input" value="{{ form_data.sg_s or 2.65 }}" step="0.01">
+                </div>
               </div>
-              <div>
-                <label class="form-label">ρ<sub>solid</sub> (kg/m³)</label>
-                <input type="number" name="rho_solid" class="form-control form-control-dark w-full"
-                       value="{{ form_data.rho_solid or 2650 }}" step="10">
+
+              <!-- Concentration -->
+              <div class="border border-[#30363d] p-3 rounded col-span-2">
+                <h6 class="text-xs text-gray-400 font-bold mb-2 uppercase">Concentration / Mixture</h6>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div>
+                    <label class="flex items-center gap-2 form-label cursor-pointer hover:text-white">
+                      <input type="checkbox" name="cb_Cv" value="1" class="slurry-cb accent-[#d29922]" data-param="Cv" {{ 'checked' if form_data.cb_Cv == '1' or (not form_data and True) else '' }}> 
+                      C<sub>v</sub> (vol. frac)
+                    </label>
+                    <input type="number" name="slurry_cv" id="slurry_cv" class="form-control form-control-dark w-full slurry-input" value="{{ form_data.slurry_cv or 0.20 }}" step="0.01" min="0" max="0.6">
+                  </div>
+                  <div>
+                    <label class="flex items-center gap-2 form-label cursor-pointer hover:text-white">
+                      <input type="checkbox" name="cb_Cw" value="1" class="slurry-cb accent-[#d29922]" data-param="Cw" {{ 'checked' if form_data.cb_Cw == '1' else '' }}> 
+                      C<sub>w</sub> (wt. frac)
+                    </label>
+                    <input type="number" name="slurry_cw" id="slurry_cw" class="form-control form-control-dark w-full slurry-input" value="{{ form_data.slurry_cw or '' }}" step="0.01" min="0" max="1.0" readonly>
+                  </div>
+                  <div class="col-span-2">
+                    <label class="flex items-center gap-2 form-label cursor-pointer hover:text-white">
+                      <input type="checkbox" name="cb_M" value="1" class="slurry-cb accent-[#d29922]" data-param="M" {{ 'checked' if form_data.cb_M == '1' else '' }}> 
+                      Mixture Properties
+                    </label>
+                    <div class="grid grid-cols-2 gap-2">
+                      <div>
+                        <label class="text-xs text-gray-400">ρ<sub>m</sub> (kg/m³)</label>
+                        <input type="number" name="rho_m" id="rho_m" class="form-control form-control-dark w-full slurry-input" value="{{ form_data.rho_m or '' }}" step="1" readonly>
+                      </div>
+                      <div>
+                        <label class="text-xs text-gray-400">SG<sub>m</sub></label>
+                        <input type="number" name="sg_m" id="sg_m" class="form-control form-control-dark w-full slurry-input" value="{{ form_data.sg_m or '' }}" step="0.01" readonly>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label class="form-label">ρ<sub>slurry</sub> (kg/m³)</label>
-                <input type="number" id="rhoSlurryCalc" class="form-control form-control-dark w-full"
-                       value="1330" readonly>
+
+              <!-- Particle Properties -->
+              <div class="border border-[#30363d] p-3 rounded col-span-2">
+                <h6 class="text-xs text-gray-400 font-bold mb-2 uppercase">Particle Sizing</h6>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="form-label">d<sub>50</sub> (mm)</label>
+                    <input type="number" name="slurry_d50" class="form-control form-control-dark w-full" value="{{ form_data.slurry_d50 or 0.3 }}" step="0.05">
+                  </div>
+                  <div>
+                    <label class="form-label">d<sub>85</sub> (mm)</label>
+                    <input type="number" name="slurry_d85" class="form-control form-control-dark w-full" value="{{ form_data.slurry_d85 or '' }}" step="0.05">
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="alert-info-dark text-sm mt-2 p-2 rounded">
-              Warman HR, QR, ER derating factors applied per pump. Slurry density calculated automatically.
+            
+            <div class="alert-info-dark text-sm mt-3 p-2 rounded">
+              <i class="bi bi-info-circle mr-1"></i>
+              Check the boxes next to the properties you want to enter manually. The disabled properties will be calculated automatically based on your inputs.
             </div>
           </div>
         </div>

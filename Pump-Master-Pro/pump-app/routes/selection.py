@@ -12,7 +12,7 @@ Routes:
     POST     /papi/select-pumps — AJAX API endpoint returning JSON results
 """
 
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, session
 from models import Pump
 from utils import _get_float, get_visible_pumps_query
 from pump_selection import select_pumps, get_filter_options
@@ -44,9 +44,19 @@ def pump_selection():
     filter_options = get_filter_options(all_pumps)
 
     if request.method == 'POST':
-        f = request.form
-        form_data = f.to_dict()
+        f = request.form.to_dict()
+        session['selection_form_data'] = f
+        form_data = f
+    else:
+        # GET request - load from session
+        f = session.get('selection_form_data', {})
+        form_data = f
 
+    # If we have basic duty point, run the selection
+    q_duty_str = f.get('q_duty')
+    h_duty_str = f.get('h_duty')
+    
+    if q_duty_str and h_duty_str:
         # ── Extract duty point parameters ──────────────────────────────────
         q_duty     = _get_float(f, 'q_duty', 0.0)
         h_duty     = _get_float(f, 'h_duty', 0.0)
@@ -57,7 +67,13 @@ def pump_selection():
 
         # ── Extract liquid parameters ──────────────────────────────────────
         liquid       = f.get('liquid', 'water')
-        rho          = _get_float(f, 'rho', 1000.0)
+        if liquid == 'slurry':
+            rho      = _get_float(f, 'rho_l', 1000.0)
+        else:
+            # We might have multiple 'rho' inputs in the form, to_dict() might grab the last one.
+            # We will just grab the first 'rho' available.
+            rho      = _get_float(f, 'rho', 1000.0)
+            
         vis          = _get_float(f, 'viscosity_cSt', 1.0)
         cv           = _get_float(f, 'slurry_cv', 0.0)
         d50          = _get_float(f, 'slurry_d50', 0.3)
@@ -89,8 +105,8 @@ def pump_selection():
     return render_template('pump_selection.html',
                            results=results,
                            form_data=form_data,
-                           filter_options=filter_options,
-                           sort_by=request.form.get('sort_by', 'rating'))
+                            filter_options=filter_options,
+                           sort_by=form_data.get('sort_by', 'rating'))
 
 
 @selection_bp.route('/papi/select-pumps', methods=['POST'])

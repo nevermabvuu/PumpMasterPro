@@ -18,19 +18,142 @@ document.addEventListener('DOMContentLoaded', () => {
     updateLiquidPanels();
   }
 
-  // ── Auto-calculate slurry density ──────────────────────────────────────────
-  // Beginners Note: Calculates effective slurry density from volume concentration and solid density
-  function calcSlurryDensity() {
-    const cv       = parseFloat(document.querySelector('[name=slurry_cv]')?.value || 0);
-    const rhoSolid = parseFloat(document.querySelector('[name=rho_solid]')?.value || 2650);
-    const rhoSlurry = 1000 * (1 - cv) + rhoSolid * cv;
-    const el = document.getElementById('rhoSlurryCalc');
-    if (el) el.value = rhoSlurry.toFixed(0);
+  // ── Dynamic Slurry Calculator ──────────────────────────────────────────────
+  // Beginners Note: Enforces exactly 3 independent parameters from (L, S, M, Cv, Cw)
+  const slurryCheckboxes = document.querySelectorAll('.slurry-cb');
+  const slurryInputs = document.querySelectorAll('.slurry-input');
+  
+  // Helper to safely parse floats
+  const getVal = (id) => parseFloat(document.getElementById(id).value) || 0;
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (document.activeElement !== el && !isNaN(val) && isFinite(val)) {
+      el.value = (val % 1 !== 0) ? val.toFixed(3) : val;
+    }
+  };
+
+  // 2-way sync for Liquid & Solid density/SG pairs
+  function syncPairs(e) {
+    if (e.target.id === 'rho_l') setVal('sg_l', getVal('rho_l') / 1000);
+    else if (e.target.id === 'sg_l') setVal('rho_l', getVal('sg_l') * 1000);
+    else if (e.target.id === 'rho_s') setVal('sg_s', getVal('rho_s') / 1000);
+    else if (e.target.id === 'sg_s') setVal('rho_s', getVal('sg_s') * 1000);
+    else if (e.target.id === 'rho_m') setVal('sg_m', getVal('rho_m') / 1000);
+    else if (e.target.id === 'sg_m') setVal('rho_m', getVal('sg_m') * 1000);
+    updateSlurryCalculator();
   }
 
-  document.querySelector('[name=slurry_cv]')?.addEventListener('input', calcSlurryDensity);
-  document.querySelector('[name=rho_solid]')?.addEventListener('input', calcSlurryDensity);
-  calcSlurryDensity();
+  slurryInputs.forEach(input => {
+    input.addEventListener('input', syncPairs);
+  });
+
+  function updateSlurryCalculator() {
+    // Collect active (checked) parameters
+    const active = new Set([...slurryCheckboxes].filter(cb => cb.checked).map(cb => cb.dataset.param));
+    
+    // Read raw inputs
+    let L = getVal('sg_l');
+    let S = getVal('sg_s');
+    let M = getVal('sg_m');
+    let Cv = getVal('slurry_cv');
+    let Cw = getVal('slurry_cw');
+
+    if (active.size !== 3) return; // Need exactly 3 knowns
+
+    // Solver logic for all 10 combinations of 3 variables
+    if (active.has('L') && active.has('S') && active.has('M')) {
+      Cv = (S - L !== 0) ? (M - L) / (S - L) : 0;
+      Cw = M !== 0 ? (S * Cv) / M : 0;
+    }
+    else if (active.has('L') && active.has('S') && active.has('Cv')) {
+      M = L * (1 - Cv) + S * Cv;
+      Cw = M !== 0 ? (S * Cv) / M : 0;
+    }
+    else if (active.has('L') && active.has('S') && active.has('Cw')) {
+      const denom = S - Cw * (S - L);
+      Cv = denom !== 0 ? (Cw * L) / denom : 0;
+      M = L * (1 - Cv) + S * Cv;
+    }
+    else if (active.has('L') && active.has('M') && active.has('Cv')) {
+      S = Cv !== 0 ? (M - L * (1 - Cv)) / Cv : 0;
+      Cw = M !== 0 ? (S * Cv) / M : 0;
+    }
+    else if (active.has('L') && active.has('M') && active.has('Cw')) {
+      const denom = L + M * (Cw - 1);
+      S = denom !== 0 ? (Cw * M * L) / denom : 0;
+      Cv = (S - L !== 0) ? (M - L) / (S - L) : 0;
+    }
+    else if (active.has('S') && active.has('M') && active.has('Cv')) {
+      L = (1 - Cv !== 0) ? (M - S * Cv) / (1 - Cv) : 0;
+      Cw = M !== 0 ? (S * Cv) / M : 0;
+    }
+    else if (active.has('S') && active.has('M') && active.has('Cw')) {
+      Cv = S !== 0 ? (Cw * M) / S : 0;
+      L = (1 - Cv !== 0) ? (M - S * Cv) / (1 - Cv) : 0;
+    }
+    else if (active.has('L') && active.has('Cv') && active.has('Cw')) {
+      S = (Cv / Cw - Cv !== 0) ? L * (1 - Cv) / (Cv / Cw - Cv) : 0;
+      M = L * (1 - Cv) + S * Cv;
+    }
+    else if (active.has('S') && active.has('Cv') && active.has('Cw')) {
+      M = Cw !== 0 ? (S * Cv) / Cw : 0;
+      L = (1 - Cv !== 0) ? (M - S * Cv) / (1 - Cv) : 0;
+    }
+    else if (active.has('M') && active.has('Cv') && active.has('Cw')) {
+      S = Cv !== 0 ? (Cw * M) / Cv : 0;
+      L = (1 - Cv !== 0) ? (M - S * Cv) / (1 - Cv) : 0;
+    }
+
+    // Clamp values
+    Cv = Math.max(0, Math.min(Cv, 0.8));
+    Cw = Math.max(0, Math.min(Cw, 0.95));
+
+    // Update the UI for calculated properties
+    if (!active.has('L')) { setVal('sg_l', L); setVal('rho_l', L * 1000); }
+    if (!active.has('S')) { setVal('sg_s', S); setVal('rho_s', S * 1000); }
+    if (!active.has('M')) { setVal('sg_m', M); setVal('rho_m', M * 1000); }
+    if (!active.has('Cv')) setVal('slurry_cv', Cv);
+    if (!active.has('Cw')) setVal('slurry_cw', Cw);
+  }
+
+  // Handle Checkbox Toggles: keep exactly 3 checked
+  let checkedOrder = [...slurryCheckboxes].filter(cb => cb.checked);
+  
+  slurryCheckboxes.forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        checkedOrder.push(e.target);
+        // If we exceed 3, uncheck the oldest checked box
+        if (checkedOrder.length > 3) {
+          const oldest = checkedOrder.shift();
+          oldest.checked = false;
+        }
+      } else {
+        // Prevent unchecking if it brings us below 3
+        e.target.checked = true;
+      }
+      
+      // Update readonly state based on checked param
+      const active = new Set(checkedOrder.map(c => c.dataset.param));
+      
+      document.getElementById('rho_l').readOnly = !active.has('L');
+      document.getElementById('sg_l').readOnly = !active.has('L');
+      document.getElementById('rho_s').readOnly = !active.has('S');
+      document.getElementById('sg_s').readOnly = !active.has('S');
+      document.getElementById('rho_m').readOnly = !active.has('M');
+      document.getElementById('sg_m').readOnly = !active.has('M');
+      document.getElementById('slurry_cv').readOnly = !active.has('Cv');
+      document.getElementById('slurry_cw').readOnly = !active.has('Cw');
+      
+      updateSlurryCalculator();
+    });
+  });
+
+  // Initial update
+  if (slurryCheckboxes.length > 0) {
+    updateSlurryCalculator();
+  }
+
 
   // ── Pump comparison checkbox logic ─────────────────────────────────────────
   // Beginners Note: Builds a comparison URL when multiple pumps are selected via checkboxes

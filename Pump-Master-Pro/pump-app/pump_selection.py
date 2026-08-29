@@ -210,12 +210,18 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
     # ── Check 3: Multi-curve envelope evaluation ────────────────────────────
     # Beginners Note: Get the pump's available impeller diameters (or speeds for VSD pumps)
     # and find the minimum impeller head at duty flow to determine the pump's full envelope
-    diameters = pump.get_diameters()
-    d_max = max(diameters) if diameters else (pump.impeller_dia_mm or 300.0)
-    d_min = min(diameters) if len(diameters) > 1 else d_max
-
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
     is_vsd = (operation_mode == 'vsd')
+
+    if not is_vsd and fam_type == 'variable_speed':
+        # If a VS pump is used in a fixed speed selection, we only consider its physical impeller
+        d_max = pump.impeller_dia_mm or 300.0
+        d_min = d_max
+    else:
+        diameters = pump.get_diameters()
+        d_max = max(diameters) if diameters else (pump.impeller_dia_mm or 300.0)
+        d_min = min(diameters) if len(diameters) > 1 else d_max
+
 
     # Calculate head at duty for minimum impeller/speed using affinity laws
     if d_min != d_max and d_max > 0:

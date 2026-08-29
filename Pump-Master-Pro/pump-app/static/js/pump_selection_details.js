@@ -10,7 +10,8 @@ async function fetchPumpData() {
     viscosity_cSt: window.PumpDetailsConfig.VISCOSITY,
     slurry_cv: window.PumpDetailsConfig.SLURRY_CV,
     slurry_d50: window.PumpDetailsConfig.SLURRY_D50,
-    rho_solid: window.PumpDetailsConfig.RHO_SOLID
+    rho_solid: window.PumpDetailsConfig.RHO_SOLID,
+    operation_mode: window.PumpDetailsConfig.OPERATION_MODE
   });
 
   try {
@@ -142,8 +143,27 @@ function renderAll() {
   // System Curve
   if (cfg.Q_DUTY && cfg.H_DUTY) {
     const k = cfg.H_DUTY / Math.pow(cfg.Q_DUTY, 2);
-    const sysH = maxCurve.q.map(q => k * Math.pow(q, 2));
-    traces.push({x: maxCurve.q, y: sysH, name: 'System Curve', type: 'scatter', mode: 'lines', line: {color: '#8b949e', width: 2.5, dash: 'dot'}, yaxis: 'y4', showlegend: false});
+    const maxPumpH = Math.max(...maxCurve.h);
+    const limitH = maxPumpH * 1.25;
+    
+    const sysQ = [];
+    const sysH = [];
+    for (let i = 0; i < maxCurve.q.length; i++) {
+        const q = maxCurve.q[i];
+        const h = k * Math.pow(q, 2);
+        if (h <= limitH) {
+            sysQ.push(q);
+            sysH.push(h);
+        }
+    }
+    
+    // Ensure it goes at least up to the duty point
+    if (sysQ.length === 0 || sysQ[sysQ.length - 1] < cfg.Q_DUTY) {
+        sysQ.push(cfg.Q_DUTY);
+        sysH.push(cfg.H_DUTY);
+    }
+
+    traces.push({x: sysQ, y: sysH, name: 'System Curve', type: 'scatter', mode: 'lines', line: {color: '#8b949e', width: 2.5, dash: 'dot'}, yaxis: 'y4', showlegend: false});
   }
 
   // Custom Clean Legend Items

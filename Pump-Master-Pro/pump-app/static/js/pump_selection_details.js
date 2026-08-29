@@ -149,17 +149,13 @@ function renderAll() {
     let hoverTmplRated = `<b>${lbl}</b><br>Flow: %{x:.1f} m³/h<br>Head: %{customdata[0]} m<br>Eff: %{customdata[1]} %<br>Power: %{customdata[2]} kW<br>NPSHr: %{customdata[3]} m<extra></extra>`;
 
     traces.push({x: qDutyCurve, y: hDutyCurve, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y4', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
-    addLabel(annotations, qDutyCurve, hDutyCurve, 'y4', lbl, '#f85149', true);
 
     traces.push({x: qDutyCurve, y: maxCurve.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y3', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
-    addLabel(annotations, qDutyCurve, maxCurve.eta, 'y3', lbl, '#f85149', true);
     
     traces.push({x: qDutyCurve, y: pDutyCurve, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y2', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
-    addLabel(annotations, qDutyCurve, pDutyCurve, 'y2', lbl, '#f85149', true);
     
     if (maxCurve.npsh && maxCurve.npsh.length) {
       traces.push({x: qDutyCurve, y: npshDutyCurve, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
-      addLabel(annotations, qDutyCurve, npshDutyCurve, 'y', lbl, '#f85149', true);
     }
   }
 
@@ -195,7 +191,11 @@ function renderAll() {
   traces.push({x: [null], y: [null], name: 'Efficiency', type: 'scatter', mode: 'lines', line: {color: '#3fb950', width: 2.5}, showlegend: true});
   traces.push({x: [null], y: [null], name: 'Power', type: 'scatter', mode: 'lines', line: {color: '#f0c040', width: 2.5}, showlegend: true});
   traces.push({x: [null], y: [null], name: 'NPSHr', type: 'scatter', mode: 'lines', line: {color: '#bc8cff', width: 2.5}, showlegend: true});
-  traces.push({x: [null], y: [null], name: 'Rated Curve', type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, showlegend: true});
+  
+  let ratedLegendName = cfg.TRIM_RATIO < 1.0 
+    ? (cfg.IS_VSD ? `Rated Curve (${cfg.RATED_SPEED} RPM)` : `Rated Curve (Ø ${cfg.RATED_TRIM} mm)`)
+    : 'Rated Curve';
+  traces.push({x: [null], y: [null], name: ratedLegendName, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, showlegend: true});
   traces.push({x: [null], y: [null], name: 'System Curve', type: 'scatter', mode: 'lines', line: {color: '#8b949e', width: 2.5, dash: 'dot'}, showlegend: true});
 
   // Duty Point
@@ -254,7 +254,7 @@ function renderAll() {
       titlefont: {color: '#58a6ff'}, tickfont: {color: '#58a6ff'},
       gridcolor: '#30363d', zerolinecolor: '#30363d', rangemode: 'tozero'
     },
-    legend: { orientation: 'h', y: 1.15, x: 0 },
+    legend: { orientation: 'h', y: 1.05, x: 0 },
     height: 900,
     annotations: annotations
   };

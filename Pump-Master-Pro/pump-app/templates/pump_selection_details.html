@@ -59,14 +59,10 @@
 
   <!-- RIGHT MAIN AREA: Pump Details & Graphs -->
   <div class="lg:w-2/3 xl:w-3/4 flex flex-col gap-4">
-    <!-- Graph View Toggle -->
+    <!-- Graph View Header -->
     <div class="flex justify-between items-center bg-[#1c2330] p-2 rounded border border-[#30363d]">
-      <div class="flex gap-1" id="chartToggles">
-        <button class="comp-chart-btn px-3 py-1.5 rounded text-sm font-medium transition-colors comp-active" data-chart="hq" style="background: rgba(88,166,255,0.15); color: #58a6ff;">H-Q</button>
-        <button class="comp-chart-btn px-3 py-1.5 rounded text-sm font-medium transition-colors text-gray-400" data-chart="eff">Efficiency</button>
-        <button class="comp-chart-btn px-3 py-1.5 rounded text-sm font-medium transition-colors text-gray-400" data-chart="power">Power</button>
-        <button class="comp-chart-btn px-3 py-1.5 rounded text-sm font-medium transition-colors text-gray-400" data-chart="npsh">NPSH</button>
-        <button class="comp-chart-btn px-3 py-1.5 rounded text-sm font-medium transition-colors text-gray-400" data-chart="all">All Charts</button>
+      <div class="flex gap-1">
+        <span class="text-sm font-medium text-gray-300 ml-2">Performance Curves (Click legend to toggle)</span>
       </div>
       <!-- Loading indicator -->
       <div id="chartLoading" class="text-accent text-sm" style="display:none;">
@@ -76,23 +72,20 @@
 
     <!-- Charts Container -->
     <div class="card-dark border border-[#30363d] rounded p-1">
-      <!-- Single chart view -->
       <div id="singleChartPanel">
         <div id="chartComp" class="w-full" style="height: 600px;"></div>
-      </div>
-
-      <!-- All charts view -->
-      <div id="allChartPanel" style="display:none">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 p-2">
-          <div id="chartAll_hq" style="height: 350px;"></div>
-          <div id="chartAll_eff" style="height: 350px;"></div>
-          <div id="chartAll_power" style="height: 350px;"></div>
-          <div id="chartAll_npsh" style="height: 350px;"></div>
-        </div>
       </div>
     </div>
   </div>
 </div>
+
+{% set active_result_ns = namespace(value=none) %}
+{% for r in results %}
+  {% if r.pump_id == pump.id or r['pump_id'] == pump.id %}
+    {% set active_result_ns.value = r %}
+  {% endif %}
+{% endfor %}
+{% set active_result = active_result_ns.value %}
 
 <!-- Include Plotly -->
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -109,29 +102,14 @@
   const SLURRY_D50 = {{ form_data.slurry_d50 or 0.3 }};
   const RHO_SOLID = {{ form_data.rho_solid or 2650.0 }};
   
+  const TRIM_RATIO = {{ active_result.optimal_trim_ratio if active_result else 1.0 }};
+  const IS_VSD = {{ 'true' if active_result and active_result.is_vsd else 'false' }};
+  
   let pumpData = null;
-  let activeChart = 'hq';
-
-  // Toggle active styling
-  document.querySelectorAll('.comp-chart-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.comp-chart-btn').forEach(b => {
-        b.classList.remove('comp-active');
-        b.style.background = 'transparent';
-        b.style.color = '#8b949e';
-      });
-      btn.classList.add('comp-active');
-      btn.style.background = 'rgba(88,166,255,0.15)';
-      btn.style.color = '#58a6ff';
-      activeChart = btn.dataset.chart;
-      renderAll();
-    });
-  });
 
   async function fetchPumpData() {
     document.getElementById('chartLoading').style.display = 'block';
     
-    // Construct params for the compare-pumps API (it returns the full curve data in the format we want)
     const params = new URLSearchParams({
       ids: PUMP_ID,
       liquid: LIQUID_TYPE,
@@ -146,7 +124,7 @@
       const res = await fetch(`/papi/compare-pumps?${params.toString()}`);
       const data = await res.json();
       if (data && data.length > 0) {
-        pumpData = data[0]; // Since we only requested 1 pump
+        pumpData = data[0]; 
         renderAll();
       }
     } catch (e) {
@@ -156,31 +134,11 @@
     }
   }
 
-  /* Plotting Functions */
-  const layoutBase = {
-    paper_bgcolor: 'rgba(0,0,0,0)',
-    plot_bgcolor: 'rgba(0,0,0,0)',
-    font: { color: '#8b949e', family: 'Inter, sans-serif' },
-    margin: { t: 30, r: 20, l: 50, b: 40 },
-    hovermode: 'x unified',
-    xaxis: { 
-      title: 'Flow (m³/h)', 
-      gridcolor: '#30363d', 
-      zerolinecolor: '#30363d',
-      rangemode: 'tozero'
-    },
-    yaxis: { 
-      gridcolor: '#30363d', 
-      zerolinecolor: '#30363d',
-      rangemode: 'tozero'
-    },
-    legend: { x: 0, y: 1.1, orientation: 'h' }
-  };
-
-  function buildTrace(x, y, name, type='lines') {
+  function buildTrace(x, y, name, color, yaxis='y', dash='solid') {
     return {
-      x: x, y: y, name: name, type: 'scatter', mode: type,
-      line: { color: '#58a6ff', width: 2.5 }
+      x: x, y: y, name: name, type: 'scatter', mode: 'lines',
+      line: { color: color, width: 2.5, dash: dash },
+      yaxis: yaxis
     };
   }
   
@@ -189,81 +147,163 @@
     return {
       x: [q], y: [h], name: name,
       type: 'scatter', mode: 'markers',
-      marker: { color: '#f85149', size: 10, symbol: 'star' }
+      marker: { color: '#f85149', size: 12, symbol: 'star' },
+      yaxis: 'y4'
     };
+  }
+
+  function addLabel(annotations, x, y, yref, text, color) {
+    if (x && x.length > 0) {
+      annotations.push({
+        x: x[x.length - 1],
+        y: y[y.length - 1],
+        xref: 'x', yref: yref,
+        text: text,
+        showarrow: false,
+        xanchor: 'left',
+        yanchor: 'middle',
+        font: {color: color, size: 11},
+        xshift: 5
+      });
+    }
   }
 
   function renderAll() {
     if (!pumpData) return;
-    
-    const d = pumpData.curves;
-    if (!d || !d.q) return;
+    const fam = pumpData.family;
+    const maxCurve = pumpData.curves;
+    if (!maxCurve || !maxCurve.q) return;
 
-    const singlePanel = document.getElementById('singleChartPanel');
-    const allPanel = document.getElementById('allChartPanel');
+    let traces = [];
+    let annotations = [];
 
-    if (activeChart === 'all') {
-      singlePanel.style.display = 'none';
-      allPanel.style.display = 'block';
+    // Calculate duty (rated) curves using affinity laws from max curve
+    const qDutyCurve = maxCurve.q.map(q => q * TRIM_RATIO);
+    const hDutyCurve = maxCurve.h.map(h => h * Math.pow(TRIM_RATIO, 2));
+    const pDutyCurve = maxCurve.power.map(p => p * Math.pow(TRIM_RATIO, 3));
+    const npshDutyCurve = maxCurve.npsh ? maxCurve.npsh.map(n => n * Math.pow(TRIM_RATIO, 2)) : [];
 
-      // H-Q
-      let hqTraces = [buildTrace(d.q, d.h, 'Head (m)')];
-      if (Q_DUTY && H_DUTY) hqTraces.push(buildDutyTrace(Q_DUTY, H_DUTY, 'Duty Point'));
-      
-      let lHq = JSON.parse(JSON.stringify(layoutBase));
-      lHq.title = 'Head vs Flow';
-      lHq.yaxis.title = 'Head (m)';
-      Plotly.newPlot('chartAll_hq', hqTraces, lHq, {displayModeBar: false});
+    if (fam && fam.length > 0) {
+      fam.forEach((c, idx) => {
+        let lbl = IS_VSD ? `${c.rpm || c.val} RPM` : `Ø ${c.dia} mm`;
+        let isMax = idx === fam.length - 1; // Assuming sorted min to max
+        
+        // Head
+        traces.push({x: c.q, y: c.h, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#58a6ff', width: isMax ? 2.5 : 1.5}, yaxis: 'y4', opacity: isMax ? 1 : 0.5});
+        addLabel(annotations, c.q, c.h, 'y4', lbl, '#58a6ff');
+        
+        // Eff
+        traces.push({x: c.q, y: c.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#3fb950', width: isMax ? 2.5 : 1.5}, yaxis: 'y3', opacity: isMax ? 1 : 0.5});
+        addLabel(annotations, c.q, c.eta, 'y3', lbl, '#3fb950');
 
-      // Efficiency
-      let effTraces = [buildTrace(d.q, d.eta, 'Efficiency (%)')];
-      let lEff = JSON.parse(JSON.stringify(layoutBase));
-      lEff.title = 'Efficiency vs Flow';
-      lEff.yaxis.title = 'Eff (%)';
-      Plotly.newPlot('chartAll_eff', effTraces, lEff, {displayModeBar: false});
+        // Power
+        traces.push({x: c.q, y: c.power, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f0c040', width: isMax ? 2.5 : 1.5}, yaxis: 'y2', opacity: isMax ? 1 : 0.5});
+        addLabel(annotations, c.q, c.power, 'y2', lbl, '#f0c040');
 
-      // Power
-      let pTraces = [buildTrace(d.q, d.power, 'Power (kW)')];
-      let lPower = JSON.parse(JSON.stringify(layoutBase));
-      lPower.title = 'Power vs Flow';
-      lPower.yaxis.title = 'Power (kW)';
-      Plotly.newPlot('chartAll_power', pTraces, lPower, {displayModeBar: false});
-
-      // NPSHr
-      let npshTraces = d.npsh && d.npsh.length ? [buildTrace(d.q, d.npsh, 'NPSHr (m)')] : [];
-      let lNpsh = JSON.parse(JSON.stringify(layoutBase));
-      lNpsh.title = 'NPSHr vs Flow';
-      lNpsh.yaxis.title = 'NPSHr (m)';
-      Plotly.newPlot('chartAll_npsh', npshTraces, lNpsh, {displayModeBar: false});
-
+        // NPSHr
+        if (c.npsh && c.npsh.length) {
+          traces.push({x: c.q, y: c.npsh, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#bc8cff', width: isMax ? 2.5 : 1.5}, yaxis: 'y', opacity: isMax ? 1 : 0.5});
+          addLabel(annotations, c.q, c.npsh, 'y', lbl, '#bc8cff');
+        }
+      });
     } else {
-      singlePanel.style.display = 'block';
-      allPanel.style.display = 'none';
-
-      let traces = [];
-      let layout = JSON.parse(JSON.stringify(layoutBase));
-
-      if (activeChart === 'hq') {
-        traces.push(buildTrace(d.q, d.h, 'Head (m)'));
-        if (Q_DUTY && H_DUTY) traces.push(buildDutyTrace(Q_DUTY, H_DUTY, 'Duty Point'));
-        layout.yaxis.title = 'Head (m)';
-        layout.title = 'Head vs Flow';
-      } else if (activeChart === 'eff') {
-        traces.push(buildTrace(d.q, d.eta, 'Efficiency (%)'));
-        layout.yaxis.title = 'Efficiency (%)';
-        layout.title = 'Efficiency vs Flow';
-      } else if (activeChart === 'power') {
-        traces.push(buildTrace(d.q, d.power, 'Power (kW)'));
-        layout.yaxis.title = 'Power (kW)';
-        layout.title = 'Power vs Flow';
-      } else if (activeChart === 'npsh') {
-        if (d.npsh && d.npsh.length) traces.push(buildTrace(d.q, d.npsh, 'NPSHr (m)'));
-        layout.yaxis.title = 'NPSHr (m)';
-        layout.title = 'NPSHr vs Flow';
+      // Fallback if family data is missing
+      traces.push({x: maxCurve.q, y: maxCurve.h, name: 'Head (Max)', type: 'scatter', mode: 'lines', line: {color: '#58a6ff', width: 2.5}, yaxis: 'y4'});
+      addLabel(annotations, maxCurve.q, maxCurve.h, 'y4', 'Max', '#58a6ff');
+      
+      traces.push({x: maxCurve.q, y: maxCurve.eta, name: 'Eff (Max)', type: 'scatter', mode: 'lines', line: {color: '#3fb950', width: 2.5}, yaxis: 'y3'});
+      addLabel(annotations, maxCurve.q, maxCurve.eta, 'y3', 'Max', '#3fb950');
+      
+      traces.push({x: maxCurve.q, y: maxCurve.power, name: 'Power (Max)', type: 'scatter', mode: 'lines', line: {color: '#f0c040', width: 2.5}, yaxis: 'y2'});
+      addLabel(annotations, maxCurve.q, maxCurve.power, 'y2', 'Max', '#f0c040');
+      
+      if (maxCurve.npsh) {
+        traces.push({x: maxCurve.q, y: maxCurve.npsh, name: 'NPSHr (Max)', type: 'scatter', mode: 'lines', line: {color: '#bc8cff', width: 2.5}, yaxis: 'y'});
+        addLabel(annotations, maxCurve.q, maxCurve.npsh, 'y', 'Max', '#bc8cff');
       }
-
-      Plotly.newPlot('chartComp', traces, layout, {responsive: true});
     }
+
+    // Add Rated Curves
+    if (TRIM_RATIO < 1.0) {
+      let lbl = IS_VSD ? '(Rated Speed)' : '(Trimmed)';
+      traces.push({x: qDutyCurve, y: hDutyCurve, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y4'});
+      addLabel(annotations, qDutyCurve, hDutyCurve, 'y4', lbl, '#f85149');
+
+      traces.push({x: qDutyCurve, y: maxCurve.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y3'});
+      addLabel(annotations, qDutyCurve, maxCurve.eta, 'y3', lbl, '#f85149');
+      
+      traces.push({x: qDutyCurve, y: pDutyCurve, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y2'});
+      addLabel(annotations, qDutyCurve, pDutyCurve, 'y2', lbl, '#f85149');
+      
+      if (maxCurve.npsh && maxCurve.npsh.length) {
+        traces.push({x: qDutyCurve, y: npshDutyCurve, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y'});
+        addLabel(annotations, qDutyCurve, npshDutyCurve, 'y', lbl, '#f85149');
+      }
+    }
+
+    // Duty Point
+    if (Q_DUTY && H_DUTY) {
+      traces.push({
+        x: [Q_DUTY], y: [H_DUTY], name: 'Duty Point',
+        type: 'scatter', mode: 'markers',
+        marker: { color: '#f85149', size: 12, symbol: 'star' },
+        yaxis: 'y4'
+      });
+      annotations.push({
+        x: Q_DUTY, y: H_DUTY,
+        xref: 'x', yref: 'y4',
+        text: 'Duty',
+        showarrow: true,
+        arrowcolor: '#f85149',
+        ax: 20, ay: -20,
+        font: {color: '#f85149', size: 11}
+      });
+    }
+
+    const layout = {
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      font: { color: '#8b949e', family: 'Inter, sans-serif' },
+      margin: { t: 40, r: 80, l: 60, b: 40 },
+      hovermode: 'x unified',
+      // Shared X axis
+      xaxis: { 
+        title: 'Flow (m³/h)', 
+        gridcolor: '#30363d', zerolinecolor: '#30363d', rangemode: 'tozero'
+      },
+      // NPSHr (Bottom)
+      yaxis: { 
+        title: 'NPSHr (m)', domain: [0.0, 0.20],
+        titlefont: {color: '#bc8cff'}, tickfont: {color: '#bc8cff'},
+        gridcolor: '#30363d', zerolinecolor: '#30363d', rangemode: 'tozero'
+      },
+      // Power
+      yaxis2: {
+        title: 'Power (kW)', domain: [0.25, 0.45],
+        titlefont: {color: '#f0c040'}, tickfont: {color: '#f0c040'},
+        gridcolor: '#30363d', zerolinecolor: '#30363d', rangemode: 'tozero'
+      },
+      // Efficiency
+      yaxis3: {
+        title: 'Eff (%)', domain: [0.50, 0.70],
+        titlefont: {color: '#3fb950'}, tickfont: {color: '#3fb950'},
+        gridcolor: '#30363d', zerolinecolor: '#30363d', rangemode: 'tozero'
+      },
+      // Head (Top)
+      yaxis4: {
+        title: 'Head (m)', domain: [0.75, 1.0],
+        titlefont: {color: '#58a6ff'}, tickfont: {color: '#58a6ff'},
+        gridcolor: '#30363d', zerolinecolor: '#30363d', rangemode: 'tozero'
+      },
+      legend: { orientation: 'h', y: 1.15, x: 0 },
+      height: 900,
+      annotations: annotations
+    };
+
+    // Need to adjust the container height
+    document.getElementById('chartComp').style.height = '900px';
+    document.getElementById('singleChartPanel').style.display = 'block';
+    Plotly.newPlot('chartComp', traces, layout, {responsive: true});
   }
 
   // Load data on page load

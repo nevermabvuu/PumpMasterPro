@@ -41,10 +41,15 @@ def api_compare_pumps():
 
     pumps = Pump.query.filter(Pump.id.in_(pump_ids)).all()
     comparison = []
+    
+    from pump_curves import family_curves_diameter
+    
     for pump in pumps:
         data = full_curve_data(pump, n_points=100, liquid=liquid, rho=rho,
                                viscosity_cSt=vis, slurry_cv=cv,
                                slurry_d50=d50, rho_solid=rho_s)
+        family = family_curves_diameter(pump, n_points=100, liquid=liquid, rho=rho,
+                                        viscosity_cSt=vis, slurry_cv=cv, slurry_d50=d50, rho_solid=rho_s)
         bep  = bep_point(pump, liquid, rho, vis, cv, d50, rho_s)
-        comparison.append({'pump': pump.to_dict(), 'curves': data, 'bep': bep})
+        comparison.append({'pump': pump.to_dict(), 'curves': data, 'family': family, 'bep': bep})
     return jsonify(comparison)

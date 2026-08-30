@@ -235,9 +235,35 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
     duty_in_envelope = h_at_duty_min <= h_duty <= h_at_duty_max
     # Even if duty is above the min curve head, max impeller must cover it (already checked)
 
-    # Beginners Note: The trim ratio (D/D_max or N/N_max) that would make the pump's
-    # H-Q curve pass exactly through the duty point. Using exact affinity law:
-    # H_duty = H_max(Q_duty / r) * r^2. We solve for r using a simple bisection method.
+    # ── Optimal Trim / Speed Ratio Calculation via Bisection Method ───────
+    # Beginners Note on Bisection:
+    # -----------------------------
+    # WHAT IS BISECTION?
+    # Bisection is a robust, guaranteed numerical root-finding algorithm based on the
+    # Intermediate Value Theorem. It solves non-linear equations of the form f(r) = 0.
+    #
+    # THE PHYSICAL PROBLEM:
+    # Under affinity laws, trimming an impeller to diameter ratio r = D/D_max (or reducing speed to r = N/N_max)
+    # transforms the head-flow curve according to:
+    #     Q_scaled = r * Q_base  =>  Q_base = Q_duty / r
+    #     H_scaled = r^2 * H_base
+    # For the scaled curve to pass exactly through the target duty point (Q_duty, H_duty):
+    #     H_duty = r^2 * H_max(Q_duty / r)
+    #
+    # Rearranging into a root-finding equation f(r) = 0:
+    #     f(r) = [ r^2 * H_max(Q_duty / r) ] - H_duty = 0
+    #
+    # HOW THE BISECTION ALGORITHM WORKS HERE:
+    # 1. We define a bracket [r_low, r_high] = [0.20, 1.05] representing realistic physical trim bounds (20% to 105%).
+    # 2. In each iteration:
+    #      a. Compute midpoint r_mid = (r_low + r_high) / 2.
+    #      b. Evaluate the pump's head at equivalent base flow Q_eval = Q_duty / r_mid.
+    #      c. Calculate scaled head h_calc = H_max(Q_eval) * r_mid^2.
+    #      d. If h_calc < H_duty, the pump is under-producing, so we need a larger trim ratio: set r_low = r_mid.
+    #         Else, the pump is over-producing, so we need a smaller trim ratio: set r_high = r_mid.
+    # 3. Repeating this 25 times reduces the uncertainty interval by a factor of 2^25 (~33.5 million),
+    #    yielding an extremely accurate ratio (precision < 0.00000003 or ~0.000003%).
+    # 4. Unlike Newton-Raphson, Bisection requires no derivative (dH/dQ) and cannot diverge or oscillate.
     if h_at_duty_max > 0:
         r_low = 0.2
         r_high = 1.05

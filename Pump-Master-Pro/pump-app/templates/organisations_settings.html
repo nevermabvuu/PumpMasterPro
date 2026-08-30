@@ -179,6 +179,190 @@
         </form>
       </div>
 
+      <!-- CARD: ORGANISATION GRAPH & VISUAL STYLES -->
+      {% set org_styles = current_org.get_graph_styles() if current_org else {} %}
+      <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
+        <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
+            <i class="bi bi-palette text-[#58a6ff]"></i> Graph &amp; Visual Styles (Colors, Lines &amp; Typography)
+          </h2>
+          <span class="text-xs px-2 py-0.5 rounded bg-[#58a6ff]/10 text-[#58a6ff] border border-[#58a6ff]/30">Details View Theme</span>
+        </div>
+
+        <form action="{{ url_for('organisations.save_graph_styles') }}" method="POST" class="p-4 space-y-4" onsubmit="syncOrgGraphStyles()">
+          <input type="hidden" name="graph_styles_json" id="org_graph_styles_json" value="{{ current_org.graph_styles_json if current_org else '{}' }}">
+          <p class="text-xs text-[#8b949e]">
+            Set default curve colors, line widths, dash styles, font family, and grid aesthetics. These styling rules will be respected across the <strong class="text-white">Pump Selection Details</strong> view and graph previews.
+          </p>
+
+          <!-- 1. Per-Graph Curve Styles Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- Head Curve -->
+            <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-[#58a6ff] flex items-center gap-1.5"><i class="bi bi-bezier2"></i> Head (Q-H) Curve</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-[10px] text-[#8b949e] mb-0.5">Color</label>
+                  <input type="color" id="org_style_hq_color" value="{{ org_styles.get('hq_color', '#58a6ff') }}" class="h-7 w-full bg-[#161b22] border border-[#30363d] rounded p-0.5 cursor-pointer">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-[#8b949e] mb-0.5">Width (px)</label>
+                  <input type="number" step="0.1" min="0.5" max="8" id="org_style_hq_width" value="{{ org_styles.get('hq_width', 2.5) }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-[#8b949e] mb-0.5">Style</label>
+                  <select id="org_style_hq_style" class="w-full bg-[#161b22] border border-[#30363d] rounded px-1.5 py-1 text-xs text-white">
+                    <option value="solid" {% if org_styles.get('hq_style') == 'solid' %}selected{% endif %}>Solid</option>
+                    <option value="dash" {% if org_styles.get('hq_style') in ('dash', 'dashed') %}selected{% endif %}>Dashed</option>
+                    <option value="dot" {% if org_styles.get('hq_style') in ('dot', 'dotted') %}selected{% endif %}>Dotted</option>
+                    <option value="dashdot" {% if org_styles.get('hq_style') == 'dashdot' %}selected{% endif %}>Dash-Dot</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Efficiency Curve -->
+            <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-[#3fb950] flex items-center gap-1.5"><i class="bi bi-speedometer"></i> Efficiency (η) Curve</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-[10px] text-[#8b949e] mb-0.5">Color</label>
+                  <input type="color" id="org_style_eta_color" value="{{ org_styles.get('eta_color', '#3fb950') }}" class="h-7 w-full bg-[#161b22] border border-[#30363d] rounded p-0.5 cursor-pointer">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-[#8b949e] mb-0.5">Width (px)</label>
+                  <input type="number" step="0.1" min="0.5" max="8" id="org_style_eta_width" value="{{ org_styles.get('eta_width', 2.5) }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-[#8b949e] mb-0.5">Style</label>
+                  <select id="org_style_eta_style" class="w-full bg-[#161b22] border border-[#30363d] rounded px-1.5 py-1 text-xs text-white">
+                    <option value="solid" {% if org_styles.get('eta_style') == 'solid' %}selected{% endif %}>Solid</option>
+                    <option value="dash" {% if org_styles.get('eta_style') in ('dash', 'dashed') %}selected{% endif %}>Dashed</option>
+                    <option value="dot" {% if org_styles.get('eta_style') in ('dot', 'dotted') %}selected{% endif %}>Dotted</option>
+                    <option value="dashdot" {% if org_styles.get('eta_style') == 'dashdot' %}selected{% endif %}>Dash-Dot</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Power Curve -->
+            <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-[#f0c040] flex items-center gap-1.5"><i class="bi bi-lightning-charge"></i> Power (P) Curve</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-[10px] text-[#8b949e] mb-0.5">Color</label>
+                  <input type="color" id="org_style_pow_color" value="{{ org_styles.get('pow_color', '#f0c040') }}" class="h-7 w-full bg-[#161b22] border border-[#30363d] rounded p-0.5 cursor-pointer">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-[#8b949e] mb-0.5">Width (px)</label>
+                  <input type="number" step="0.1" min="0.5" max="8" id="org_style_pow_width" value="{{ org_styles.get('pow_width', 2.5) }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-[#8b949e] mb-0.5">Style</label>
+                  <select id="org_style_pow_style" class="w-full bg-[#161b22] border border-[#30363d] rounded px-1.5 py-1 text-xs text-white">
+                    <option value="solid" {% if org_styles.get('pow_style') == 'solid' %}selected{% endif %}>Solid</option>
+                    <option value="dash" {% if org_styles.get('pow_style') in ('dash', 'dashed') %}selected{% endif %}>Dashed</option>
+                    <option value="dot" {% if org_styles.get('pow_style') in ('dot', 'dotted') %}selected{% endif %}>Dotted</option>
+                    <option value="dashdot" {% if org_styles.get('pow_style') == 'dashdot' %}selected{% endif %}>Dash-Dot</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- NPSHr Curve -->
+            <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-[#bc8cff] flex items-center gap-1.5"><i class="bi bi-water"></i> NPSHr Curve</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-[10px] text-[#8b949e] mb-0.5">Color</label>
+                  <input type="color" id="org_style_npsh_color" value="{{ org_styles.get('npsh_color', '#bc8cff') }}" class="h-7 w-full bg-[#161b22] border border-[#30363d] rounded p-0.5 cursor-pointer">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-[#8b949e] mb-0.5">Width (px)</label>
+                  <input type="number" step="0.1" min="0.5" max="8" id="org_style_npsh_width" value="{{ org_styles.get('npsh_width', 2.5) }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-[#8b949e] mb-0.5">Style</label>
+                  <select id="org_style_npsh_style" class="w-full bg-[#161b22] border border-[#30363d] rounded px-1.5 py-1 text-xs text-white">
+                    <option value="solid" {% if org_styles.get('npsh_style') == 'solid' %}selected{% endif %}>Solid</option>
+                    <option value="dash" {% if org_styles.get('npsh_style') in ('dash', 'dashed') %}selected{% endif %}>Dashed</option>
+                    <option value="dot" {% if org_styles.get('npsh_style') in ('dot', 'dotted') %}selected{% endif %}>Dotted</option>
+                    <option value="dashdot" {% if org_styles.get('npsh_style') == 'dashdot' %}selected{% endif %}>Dash-Dot</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Rated Trim, Typography & Grid Settings -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <!-- Rated / Trimmed Curve -->
+            <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
+              <span class="text-xs font-bold text-[#f85149] block"><i class="bi bi-disc"></i> Rated / Trim Curve</span>
+              <div>
+                <label class="block text-[10px] text-[#8b949e] mb-0.5">Marker / Line Color</label>
+                <input type="color" id="org_style_rated_color" value="{{ org_styles.get('rated_marker_color', '#f85149') }}" class="h-7 w-full bg-[#161b22] border border-[#30363d] rounded p-0.5 cursor-pointer">
+              </div>
+              <div>
+                <label class="block text-[10px] text-[#8b949e] mb-0.5">Dash Style</label>
+                <select id="org_style_trim_style" class="w-full bg-[#161b22] border border-[#30363d] rounded px-1.5 py-1 text-xs text-white">
+                  <option value="dash" {% if org_styles.get('trim_curve_style') in ('dash', 'dashed') %}selected{% endif %}>Dashed</option>
+                  <option value="dot" {% if org_styles.get('trim_curve_style') in ('dot', 'dotted') %}selected{% endif %}>Dotted</option>
+                  <option value="dashdot" {% if org_styles.get('trim_curve_style') == 'dashdot' %}selected{% endif %}>Dash-Dot</option>
+                  <option value="solid" {% if org_styles.get('trim_curve_style') == 'solid' %}selected{% endif %}>Solid</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Typography / Font -->
+            <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
+              <span class="text-xs font-bold text-[#c9d1d9] block"><i class="bi bi-type"></i> Chart Typography</span>
+              <div>
+                <label class="block text-[10px] text-[#8b949e] mb-0.5">Font Family</label>
+                <select id="org_style_font_family" class="w-full bg-[#161b22] border border-[#30363d] rounded px-1.5 py-1 text-xs text-white">
+                  <option value="Inter, sans-serif" {% if 'Inter' in org_styles.get('font_family', '') %}selected{% endif %}>Inter (Modern Sans)</option>
+                  <option value="Segoe UI, sans-serif" {% if 'Segoe UI' in org_styles.get('font_family', '') %}selected{% endif %}>Segoe UI</option>
+                  <option value="Roboto, sans-serif" {% if 'Roboto' in org_styles.get('font_family', '') %}selected{% endif %}>Roboto</option>
+                  <option value="Arial, sans-serif" {% if 'Arial' in org_styles.get('font_family', '') %}selected{% endif %}>Arial</option>
+                  <option value="monospace" {% if 'monospace' in org_styles.get('font_family', '') %}selected{% endif %}>Monospace / Technical</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] text-[#8b949e] mb-0.5">System Curve Color</label>
+                <input type="color" id="org_style_sys_color" value="{{ org_styles.get('system_curve_color', '#8b949e') }}" class="h-7 w-full bg-[#161b22] border border-[#30363d] rounded p-0.5 cursor-pointer">
+              </div>
+            </div>
+
+            <!-- Grid & Axes -->
+            <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
+              <span class="text-xs font-bold text-[#c9d1d9] block"><i class="bi bi-grid-3x3"></i> Grid &amp; Axes Lines</span>
+              <div>
+                <label class="block text-[10px] text-[#8b949e] mb-0.5">Major Grid Color</label>
+                <input type="color" id="org_style_grid_color" value="{{ org_styles.get('major_grid_color', '#30363d') }}" class="h-7 w-full bg-[#161b22] border border-[#30363d] rounded p-0.5 cursor-pointer">
+              </div>
+              <div>
+                <label class="block text-[10px] text-[#8b949e] mb-0.5">Axis Border Color</label>
+                <input type="color" id="org_style_axis_color" value="{{ org_styles.get('axis_line_color', '#30363d') }}" class="h-7 w-full bg-[#161b22] border border-[#30363d] rounded p-0.5 cursor-pointer">
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-2 flex justify-end">
+            <button type="submit" class="px-4 py-2 bg-[#58a6ff] hover:bg-[#79c0ff] text-xs font-bold text-[#0d1117] rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
+              <i class="bi bi-palette-fill"></i> Save Graph Visual Styles
+            </button>
+          </div>
+        </form>
+      </div>
+
     </div>
 
     <!-- ── RIGHT COLUMN: MULTI-ORGANISATION PUMP VISIBILITY RULES (5 cols) ── -->
@@ -446,6 +630,35 @@
 </div>
 
 <script>
+  function syncOrgGraphStyles() {
+    const styles = {
+      hq_color: document.getElementById('org_style_hq_color')?.value || '#58a6ff',
+      hq_width: parseFloat(document.getElementById('org_style_hq_width')?.value) || 2.5,
+      hq_style: document.getElementById('org_style_hq_style')?.value || 'solid',
+
+      eta_color: document.getElementById('org_style_eta_color')?.value || '#3fb950',
+      eta_width: parseFloat(document.getElementById('org_style_eta_width')?.value) || 2.5,
+      eta_style: document.getElementById('org_style_eta_style')?.value || 'solid',
+
+      pow_color: document.getElementById('org_style_pow_color')?.value || '#f0c040',
+      pow_width: parseFloat(document.getElementById('org_style_pow_width')?.value) || 2.5,
+      pow_style: document.getElementById('org_style_pow_style')?.value || 'solid',
+
+      npsh_color: document.getElementById('org_style_npsh_color')?.value || '#bc8cff',
+      npsh_width: parseFloat(document.getElementById('org_style_npsh_width')?.value) || 2.5,
+      npsh_style: document.getElementById('org_style_npsh_style')?.value || 'solid',
+
+      rated_marker_color: document.getElementById('org_style_rated_color')?.value || '#f85149',
+      trim_curve_style: document.getElementById('org_style_trim_style')?.value || 'dash',
+      font_family: document.getElementById('org_style_font_family')?.value || 'Inter, sans-serif',
+      system_curve_color: document.getElementById('org_style_sys_color')?.value || '#8b949e',
+      major_grid_color: document.getElementById('org_style_grid_color')?.value || '#30363d',
+      axis_line_color: document.getElementById('org_style_axis_color')?.value || '#30363d'
+    };
+    const jsonEl = document.getElementById('org_graph_styles_json');
+    if (jsonEl) jsonEl.value = JSON.stringify(styles);
+  }
+
   function toggleOrgCheckboxes(enable) {
     const container = document.getElementById('org_checkboxes_container');
     if (enable) {

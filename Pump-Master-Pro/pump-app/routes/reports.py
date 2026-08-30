@@ -7,6 +7,13 @@ pump-data axis scale matching (min, max, major, minor), NPSH auto-detection, mul
 and 100% pixel-perfect PDF file generation via Headless Chromium.
 """
 
+import os
+import sys
+
+_app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if _app_dir not in sys.path:
+    sys.path.insert(0, _app_dir)
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, Response, make_response
 from models import db, Pump, Supplier, ReportConfig
 
@@ -539,8 +546,12 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                             try:
                                 c_x = float(pos['x'])
                                 c_y = float(pos['y'])
-                                m_px = padding_left + ((c_x - x_min) / (x_max - x_min)) * plot_w
-                                m_py = padding_top + plot_h - ((c_y - y_min) / (y_max - y_min)) * plot_h
+                                if x_min <= c_x <= x_max and y_min <= c_y <= y_max:
+                                    m_px = padding_left + ((c_x - x_min) / (x_max - x_min)) * plot_w
+                                    m_py = padding_top + plot_h - ((c_y - y_min) / (y_max - y_min)) * plot_h
+                                else:
+                                    m_idx = int(len(pts) / 2)
+                                    m_px, m_py = pts[m_idx]
                             except Exception:
                                 m_idx = int(len(pts) / 2)
                                 m_px, m_py = pts[m_idx]
@@ -721,8 +732,12 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                 try:
                     c_x = float(pos['x'])
                     c_y = float(pos['y'])
-                    lx = padding_left + ((c_x - x_min) / (x_max - x_min)) * plot_w
-                    ly = padding_top + plot_h - ((c_y - y_min) / (y_max - y_min)) * plot_h
+                    if x_min <= c_x <= x_max and y_min <= c_y <= y_max:
+                        lx = padding_left + ((c_x - x_min) / (x_max - x_min)) * plot_w
+                        ly = padding_top + plot_h - ((c_y - y_min) / (y_max - y_min)) * plot_h
+                    else:
+                        idx = int(len(pts) * 0.85)
+                        lx, ly = pts[idx]
                 except Exception:
                     idx = int(len(pts) * 0.85)
                     lx, ly = pts[idx]
@@ -1248,12 +1263,6 @@ def _build_report_curve_context(pump, report):
     base_unit_pow = p_opts.get('graph_unit_pow') or pump.unit_pow or 'kw'
     base_unit_npsh = p_opts.get('graph_unit_npsh') or pump.unit_npsh or 'm'
 
-    # Compute scaling factors for labels (from pump graph base units to report display units)
-    fQ_raw = CURVE_CONVERSIONS['q'].get(rep_unit_q.lower().replace('/', ''), 1.0) / CURVE_CONVERSIONS['q'].get(base_unit_q.lower().replace('/', ''), 1.0)
-    fH_raw = CURVE_CONVERSIONS['h'].get(rep_unit_h.lower(), 1.0) / CURVE_CONVERSIONS['h'].get(base_unit_h.lower(), 1.0)
-    fPow_raw = CURVE_CONVERSIONS['pow'].get(rep_unit_pow.lower(), 1.0) / CURVE_CONVERSIONS['pow'].get(base_unit_pow.lower(), 1.0)
-    fNpsh_raw = CURVE_CONVERSIONS['npsh'].get(rep_unit_npsh.lower(), 1.0) / CURVE_CONVERSIONS['npsh'].get(base_unit_npsh.lower(), 1.0)
-
     raw_custom_pos = pump.get_custom_label_pos() if hasattr(pump, 'get_custom_label_pos') else {}
     rep_label_fmt = getattr(report, 'label_format', 'auto') or 'auto'
     if rep_label_fmt == 'pump_default':
@@ -1261,7 +1270,7 @@ def _build_report_curve_context(pump, report):
     else:
         label_fmt = rep_label_fmt
 
-    # Scale custom label positions cleanly per chart type
+    # Scale custom label positions cleanly per chart type from standard SI to report display units
     custom_pos_hq = {}
     custom_pos_eff = {}
     custom_pos_pow = {}
@@ -1274,10 +1283,10 @@ def _build_report_curve_context(pump, report):
                     vx = float(v['x'])
                     vy = float(v['y'])
                     # On H-Q chart, all curves and isolines (efficiency, power, npsh) are located on Head Y axis!
-                    custom_pos_hq[k] = {'x': vx * fQ_raw, 'y': vy * fH_raw}
-                    custom_pos_eff[k] = {'x': vx * fQ_raw, 'y': vy * 1.0}
-                    custom_pos_pow[k] = {'x': vx * fQ_raw, 'y': vy * fPow_raw}
-                    custom_pos_npsh[k] = {'x': vx * fQ_raw, 'y': vy * fNpsh_raw}
+                    custom_pos_hq[k] = {'x': vx * fQ_curve, 'y': vy * fH_curve}
+                    custom_pos_eff[k] = {'x': vx * fQ_curve, 'y': vy * 1.0}
+                    custom_pos_pow[k] = {'x': vx * fQ_curve, 'y': vy * fPow_curve}
+                    custom_pos_npsh[k] = {'x': vx * fQ_curve, 'y': vy * fNpsh_curve}
                 except (TypeError, ValueError):
                     pass
 
@@ -1688,3 +1697,10 @@ def download_pdf(report_id, pump_id):
     response = make_response(rendered_html)
     response.headers['Content-Type'] = 'text/html'
     return response
+
+
+if __name__ == '__main__':
+    from app import app
+    port = int(os.environ.get('PORT', 8000))
+    app.run(host='0.0.0.0', port=port, debug=True)
+

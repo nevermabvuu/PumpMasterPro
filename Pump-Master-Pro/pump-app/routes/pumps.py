@@ -5,6 +5,13 @@ Beginners Note: Handles pump database listing, adding new pumps, editing existin
 Filters pumps based on the active organisation's multi-organisation viewing rules.
 """
 
+import os
+import sys
+
+_app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if _app_dir not in sys.path:
+    sys.path.insert(0, _app_dir)
+
 from flask import Blueprint, render_template, request, redirect, url_for
 from models import db, Pump, Organisation, ReportConfig
 from utils import _pump_from_form, get_visible_pumps_query, get_current_organisation, CURRENT_ORGANISATION_ID
@@ -81,3 +88,10 @@ def pump_delete(pump_id):
     db.session.delete(pump)
     db.session.commit()
     return redirect(url_for('pump_data'))
+
+
+if __name__ == '__main__':
+    from app import app
+    port = int(os.environ.get('PORT', 8000))
+    app.run(host='0.0.0.0', port=port, debug=True)
+

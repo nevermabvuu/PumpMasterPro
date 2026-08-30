@@ -4,8 +4,15 @@ routes/curves.py — Pump curve viewer, polynomial fitting, and chart preview AP
 Beginners Note: Handles chart rendering, polynomial fitting, live preview endpoints, and label drag positions.
 """
 
+import os
+import sys
 import json
 import numpy as np
+
+_app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if _app_dir not in sys.path:
+    sys.path.insert(0, _app_dir)
+
 from flask import Blueprint, render_template, request, jsonify
 from models import db, Pump
 from utils import _get_float, _get_nullable_float, _get_nullable_int
@@ -340,3 +347,10 @@ def api_save_label_pos(pump_id):
     db.session.commit()
     saved = pump.get_custom_label_pos()
     return jsonify({'status': 'ok', 'label_pos': saved})
+
+
+if __name__ == '__main__':
+    from app import app
+    port = int(os.environ.get('PORT', 8000))
+    app.run(host='0.0.0.0', port=port, debug=True)
+

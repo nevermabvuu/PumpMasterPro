@@ -1392,10 +1392,10 @@ function renderPreviewChartsData(warmanData, curveData) {
   }
   Plotly.react('chartWarman', wc.traces, wc.layout, PLOTLY_CONFIG);
   Plotly.Plots.resize('chartWarman');
-  if (wc.layout.annotations && wc.layout.annotations.length > 0) {
-    const _pumpId = parseInt(document.getElementById('pump-init-data')?.dataset?.pumpId) || 0;
-    makeAnnotationsDraggable('chartWarman', wc.layout.annotations, _pumpId);
-  }
+  // Always call makeAnnotationsDraggable so old stale event handlers are cleaned up
+  // even when switching to a mode with no annotations
+  const _pumpId = parseInt(document.getElementById('pump-init-data')?.dataset?.pumpId) || 0;
+  makeAnnotationsDraggable('chartWarman', wc.layout.annotations || [], _pumpId);
 
   const showOther = document.getElementById('chkShowOther')?.checked || false;
   setVis(document.getElementById('standalonePanels'), showOther);
@@ -1426,9 +1426,7 @@ function renderPreviewChartsData(warmanData, curveData) {
       Plotly.react('chartEffPower', effPow.traces, effPow.layout, PLOTLY_CONFIG);
       Plotly.Plots.resize('chartEffPower');
 
-      if (effPow.layout.annotations && effPow.layout.annotations.length > 0) {
-        makeAnnotationsDraggable('chartEffPower', effPow.layout.annotations, currentPumpId);
-      }
+      makeAnnotationsDraggable('chartEffPower', effPow.layout.annotations || [], currentPumpId);
     } else {
       if (showEff) {
         const eff = buildEffChart(warmanData, curveData, showClean, chartOpts);
@@ -1437,9 +1435,7 @@ function renderPreviewChartsData(warmanData, curveData) {
         Plotly.react('chartEff', eff.traces, eff.layout, PLOTLY_CONFIG);
         Plotly.Plots.resize('chartEff');
 
-        if (eff.layout.annotations && eff.layout.annotations.length > 0) {
-          makeAnnotationsDraggable('chartEff', eff.layout.annotations, currentPumpId);
-        }
+        makeAnnotationsDraggable('chartEff', eff.layout.annotations || [], currentPumpId);
       }
       if (showPower) {
         const power = buildPowerChart(warmanData, curveData, showClean, chartOpts);
@@ -1448,9 +1444,7 @@ function renderPreviewChartsData(warmanData, curveData) {
         Plotly.react('chartPower', power.traces, power.layout, PLOTLY_CONFIG);
         Plotly.Plots.resize('chartPower');
 
-        if (power.layout.annotations && power.layout.annotations.length > 0) {
-          makeAnnotationsDraggable('chartPower', power.layout.annotations, currentPumpId);
-        }
+        makeAnnotationsDraggable('chartPower', power.layout.annotations || [], currentPumpId);
       }
     }
 
@@ -1461,9 +1455,7 @@ function renderPreviewChartsData(warmanData, curveData) {
       Plotly.react('chartNpsh', npsh.traces, npsh.layout, PLOTLY_CONFIG);
       Plotly.Plots.resize('chartNpsh');
 
-      if (npsh.layout.annotations && npsh.layout.annotations.length > 0) {
-        makeAnnotationsDraggable('chartNpsh', npsh.layout.annotations, currentPumpId);
-      }
+      makeAnnotationsDraggable('chartNpsh', npsh.layout.annotations || [], currentPumpId);
     }
   }
 }

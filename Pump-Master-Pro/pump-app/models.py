@@ -917,8 +917,66 @@ class Organisation(db.Model):
     default_report_fixed_speed_id = db.Column(db.Integer, db.ForeignKey('reports.id'), nullable=True)
     default_report_vsd_id = db.Column(db.Integer, db.ForeignKey('reports.id'), nullable=True)
 
+    # Organisation-level Graph & Chart Visual Styles (Colors, Line Styles, Font Family, Grids)
+    graph_styles_json = db.Column(db.Text, default='{}')
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+    def get_graph_styles(self):
+        """
+        Beginners Note: Returns graph visual styles dictionary for this organisation.
+        Controls line colors, widths, dash styles, font family, and grid aesthetics
+        in the Pump Selection Details chart and across the suite.
+        """
+        import json
+        default_styles = {
+            # 1. Per-Graph Curve Styles
+            'hq_color': '#58a6ff',
+            'hq_width': 2.5,
+            'hq_style': 'solid',  # solid, dashed, dot, dashdot
+            'eta_color': '#3fb950',
+            'eta_width': 2.5,
+            'eta_style': 'solid',
+            'pow_color': '#f0c040',
+            'pow_width': 2.5,
+            'pow_style': 'solid',
+            'npsh_color': '#bc8cff',
+            'npsh_width': 2.5,
+            'npsh_style': 'solid',
+            
+            # 2. Curve Type Hierarchy Styles
+            'max_curve_width': 2.5,
+            'min_curve_width': 1.8,
+            'trim_curve_width': 2.5,
+            'trim_curve_style': 'dash',  # dash, dot, dashdot, solid
+            'rated_marker_color': '#f85149',
+            'rated_marker_size': 12.0,
+            'system_curve_color': '#8b949e',
+            'system_curve_style': 'dot',
+
+            # 3. Typography & Font Settings
+            'font_family': 'Inter, sans-serif',  # Inter, Segoe UI, Roboto, Arial, monospace
+            'font_weight': '600',
+
+            # 4. Axes, Grid & Canvas Styles
+            'major_grid_color': '#30363d',
+            'minor_grid_color': '#21262d',
+            'axis_line_color': '#30363d',
+            'chart_bg_color': 'rgba(0,0,0,0)'
+        }
+
+        raw = getattr(self, 'graph_styles_json', '')
+        if raw and str(raw).strip():
+            try:
+                data = json.loads(raw)
+                if isinstance(data, dict):
+                    merged = dict(default_styles)
+                    merged.update(data)
+                    return merged
+            except Exception:
+                pass
+        return default_styles
 
     def get_allowed_org_ids(self):
         """
@@ -981,6 +1039,8 @@ class Organisation(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else '',
             'default_report_fixed_speed_id': getattr(self, 'default_report_fixed_speed_id', None),
             'default_report_vsd_id': getattr(self, 'default_report_vsd_id', None),
+            'graph_styles': self.get_graph_styles(),
+            'graph_styles_json': getattr(self, 'graph_styles_json', '') or '{}',
         }
 
 

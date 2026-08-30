@@ -5,6 +5,13 @@ Beginners Note: Handles Organisation management, profile settings, engineering u
 and SQL filtering rules for controlling which organisations' pumps the active company can view.
 """
 
+import os
+import sys
+
+_app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if _app_dir not in sys.path:
+    sys.path.insert(0, _app_dir)
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from models import db, Organisation, Pump, ReportConfig
 from utils import CURRENT_ORGANISATION_ID, get_current_organisation, get_visible_pumps_query
@@ -146,6 +153,23 @@ def save_visibility():
     return redirect(url_for('organisations.settings'))
 
 
+@organisations_bp.route('/graph-styles/save', methods=['POST'], endpoint='save_graph_styles')
+def save_graph_styles():
+    """
+    Beginners Note: Saves default graph line colors, widths, dash styles, font family,
+    and grid aesthetics for the active organisation.
+    """
+    current_org = get_current_organisation()
+    if not current_org:
+        flash('Active organisation not found.', 'error')
+        return redirect(url_for('organisations.settings'))
+
+    current_org.graph_styles_json = request.form.get('graph_styles_json', '').strip() or '{}'
+    db.session.commit()
+    flash('Organisation default graph styles saved successfully.', 'success')
+    return redirect(url_for('organisations.settings'))
+
+
 @organisations_bp.route('/save', methods=['POST'], endpoint='save_organisation')
 def save_organisation():
     """Add a new organisation or update an existing one."""
@@ -187,3 +211,10 @@ def delete_organisation(id):
     db.session.commit()
     flash(f'Organisation "{name}" removed.', 'info')
     return redirect(url_for('organisations.settings'))
+
+
+if __name__ == '__main__':
+    from app import app
+    port = int(os.environ.get('PORT', 8000))
+    app.run(host='0.0.0.0', port=port, debug=True)
+

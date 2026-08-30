@@ -62,11 +62,115 @@ function isoColor(eta, etaMin, etaMax) {
 }
 
 /* ── Generic layout builder ──────────────────────────────────────────────── */
+function getUnitScaleRatio(axisName, pumpObj = {}) {
+  if (axisName === 'eff') return 1.0;
+
+  const convMap = {
+    q: { m3h: 1.0, ls: 0.2777777777777778, gpm: 4.402917396, lmin: 16.6666666667 },
+    h: { m: 1.0, ft: 3.280839895 },
+    npsh: { m: 1.0, ft: 3.280839895 },
+    pow: { kw: 1.0, hp: 1.34102209 }
+  };
+
+  const previewQ = document.getElementById('preview-unit-q')?.value;
+  const previewH = document.getElementById('preview-unit-h')?.value;
+  const previewNpsh = document.getElementById('preview-unit-npsh')?.value;
+  const previewPow = document.getElementById('preview-unit-pow')?.value;
+
+  let typeKey = 'q';
+  let targetDisplayUnit = previewQ || 'm3h';
+  let baseUnit = pumpObj.unit_q || document.getElementById('unit_q_field')?.value || 'm3h';
+
+  if (axisName === 'head') {
+    typeKey = 'h';
+    targetDisplayUnit = previewH || 'm';
+    baseUnit = pumpObj.unit_h || document.getElementById('unit_h_field')?.value || 'm';
+  } else if (axisName === 'npsh') {
+    typeKey = 'npsh';
+    targetDisplayUnit = previewNpsh || 'm';
+    baseUnit = pumpObj.unit_npsh || document.getElementById('unit_npsh_field')?.value || 'm';
+  } else if (axisName === 'power') {
+    typeKey = 'pow';
+    targetDisplayUnit = previewPow || 'kw';
+    baseUnit = pumpObj.unit_pow || pumpObj.unit_power || document.getElementById('unit_pow_field')?.value || 'kw';
+  }
+
+  const factorBase = convMap[typeKey]?.[baseUnit] || 1.0;
+  const factorDisplay = convMap[typeKey]?.[targetDisplayUnit] || 1.0;
+
+  return factorDisplay / factorBase;
+}
+
 /**
- * Beginners Note: Applies custom scale settings (Min, Max, Major Intervals, Minor Intervals)
- * to a Plotly layout axis object (e.g. layout.xaxis or layout.yaxis).
+ * Normalizes axis bounds and major step intervals to standard clean engineering round numbers
+ * (multiples of 1, 1.5, 2, 2.5, 5, 10 * 10^k), ensuring axes end on clean fives/tens (e.g. 110, 120)
+ * rather than awkward converted numbers (e.g. 108, 116).
+ */
+function getCleanAxisScale(rawMin, rawMax, majorDivisions, minorSubticks, isConverted = false) {
+  if (rawMax === null || rawMax === undefined) {
+    return { min: rawMin, max: rawMax, dtick: null, minor: minorSubticks };
+  }
+
+  const minVal = (rawMin !== null && rawMin !== undefined) ? Number(rawMin) : 0;
+  const maxVal = Number(rawMax);
+  const span = maxVal - minVal;
+
+  if (span <= 0) {
+    return { min: minVal, max: maxVal, dtick: null, minor: minorSubticks };
+  }
+
+  // Calculate target step from major divisions
+  let targetStep;
+  if (majorDivisions !== null && majorDivisions !== undefined && Number(majorDivisions) > 0) {
+    targetStep = span / Number(majorDivisions);
+  } else {
+    targetStep = span / 5.0;
+  }
+
+  // Standard clean multipliers across decades: 1, 1.5, 2, 2.5, 5, 10
+  const multipliers = [1.0, 1.5, 2.0, 2.5, 5.0, 10.0];
+  const mag = Math.pow(10, Math.floor(Math.log10(targetStep > 0 ? targetStep : 1.0)));
+
+  let candidates = [];
+  [0.1, 1.0, 10.0].forEach(decade => {
+    multipliers.forEach(m => {
+      const c = m * mag * decade;
+      if (c > 0) candidates.push(Math.round(c * 1000000) / 1000000);
+    });
+  });
+
+  candidates = Array.from(new Set(candidates)).sort((a, b) => a - b);
+  let reasonable = candidates.filter(c => (span / c) >= 2.5 && (span / c) <= 12.0);
+  if (reasonable.length === 0) reasonable = candidates;
+
+  // Pick candidate step with MINIMAL change from targetStep
+  let cleanStep = reasonable[0];
+  let minDiff = Math.abs(cleanStep - targetStep);
+  for (let i = 1; i < reasonable.length; i++) {
+    const diff = Math.abs(reasonable[i] - targetStep);
+    if (diff < minDiff) {
+      minDiff = diff;
+      cleanStep = reasonable[i];
+    }
+  }
+
+  // Clean max: ceil to nearest multiple of cleanStep so all data fits and ends on clean round number (e.g. 110, 120, 150)
+  const numSteps = Math.ceil((maxVal - minVal) / cleanStep - 1e-5);
+  const cleanMax = minVal + numSteps * cleanStep;
+
+  return {
+    min: minVal,
+    max: cleanMax,
+    dtick: cleanStep,
+    minor: minorSubticks
+  };
+}
+
+/**
+ * Applies custom axis scaling settings (min, max, major ticks, minor ticks) to a Plotly axis layout object.
+ * Automatically accounts for active unit conversions and standard clean round numbers (matching reports).
  *
- * @param {Object} axisObj - The Plotly axis object to configure (e.g. layout.xaxis)
+ * @param {Object} axisObj - Plotly axis configuration object (e.g., layout.xaxis, layout.yaxis)
  * @param {string} axisName - The axis name identifier ('flow', 'head', 'eff', 'power', 'npsh')
  * @param {Object} [pumpObj] - Optional pump data dictionary containing axis scale values
  */
@@ -88,30 +192,37 @@ function applyAxisScaleSettings(axisObj, axisName, pumpObj = {}) {
     return null;
   };
 
-  const minVal = getScaleVal('min');
-  const maxVal = getScaleVal('max');
+  const rawMin = getScaleVal('min');
+  const rawMax = getScaleVal('max');
   const majorVal = getScaleVal('major');
   const minorVal = getScaleVal('minor', true);
 
-  // 1. Min & Max Range Bounds
+  const unitRatio = getUnitScaleRatio(axisName, pumpObj);
+  const isConverted = Math.abs(unitRatio - 1.0) > 1e-4;
+
+  const minVal = rawMin !== null ? rawMin * unitRatio : null;
+  const maxVal = rawMax !== null ? rawMax * unitRatio : null;
+
+  // 1. Clean Min & Max Range Bounds and Step Intervals
   if (minVal !== null || maxVal !== null) {
     const currentMin = minVal !== null ? minVal : (axisObj.range ? axisObj.range[0] : 0);
     const currentMax = maxVal !== null ? maxVal : (axisObj.range ? axisObj.range[1] : 100);
-    axisObj.range = [currentMin, currentMax];
+
+    const clean = getCleanAxisScale(currentMin, currentMax, majorVal, minorVal, isConverted);
+
+    axisObj.range = [clean.min, clean.max];
     axisObj.autorange = false;
-  }
+    delete axisObj.rangemode;
 
-  // 2. Major Division Intervals / Ticks
-  if (majorVal !== null && majorVal > 0) {
-    if (minVal !== null && maxVal !== null && maxVal > minVal) {
-      axisObj.dtick = (maxVal - minVal) / majorVal;
+    if (clean.dtick !== null && clean.dtick > 0) {
+      axisObj.dtick = clean.dtick;
       axisObj.tickmode = 'linear';
-    } else {
-      axisObj.nticks = Math.round(majorVal) + 1;
     }
+  } else if (majorVal !== null && majorVal > 0) {
+    axisObj.nticks = Math.round(majorVal) + 1;
   }
 
-  // 3. Minor Subticks
+  // 2. Minor Subticks
   if (minorVal !== null && minorVal > 0) {
     axisObj.minor = {
       nticks: minorVal + 1,
@@ -162,6 +273,44 @@ function dutyTrace(q, h) {
 }
 
 let customLabelPositions = {};
+
+function getLabelUnitScaleFactors() {
+  const convMap = {
+    q: { m3h: 1.0, ls: 0.2777777777777778, gpm: 4.402917396, lmin: 16.6666666667 },
+    h: { m: 1.0, ft: 3.280839895 },
+    npsh: { m: 1.0, ft: 3.280839895 },
+    pow: { kw: 1.0, hp: 1.34102209 }
+  };
+
+  const previewQ = document.getElementById('preview-unit-q')?.value || 'm3h';
+  const previewH = document.getElementById('preview-unit-h')?.value || 'm';
+  const previewNpsh = document.getElementById('preview-unit-npsh')?.value || 'm';
+  const previewPow = document.getElementById('preview-unit-pow')?.value || 'kw';
+
+  return {
+    fQ: convMap.q[previewQ] || 1.0,
+    fH: convMap.h[previewH] || 1.0,
+    fNpsh: convMap.npsh[previewNpsh] || 1.0,
+    fPow: convMap.pow[previewPow] || 1.0
+  };
+}
+
+function getCustomLabelPosition(key, pumpObj = {}, yAxisType = 'h') {
+  if (!customLabelPositions || !customLabelPositions[key]) return null;
+  const raw = customLabelPositions[key];
+  if (raw.x === undefined || raw.y === undefined) return null;
+
+  const scales = getLabelUnitScaleFactors();
+  let scaleY = scales.fH;
+  if (yAxisType === 'npsh') scaleY = scales.fNpsh;
+  else if (yAxisType === 'pow' || yAxisType === 'power') scaleY = scales.fPow;
+  else if (yAxisType === 'eff' || yAxisType === 'eta') scaleY = 1.0;
+
+  return {
+    x: raw.x * scales.fQ,
+    y: raw.y * scaleY
+  };
+}
 
 function _parseStyleField(fieldId, fallbackColor, fallbackWeight, fallbackStyle) {
   const val = document.getElementById(fieldId)?.value;
@@ -244,7 +393,8 @@ if (!window._globalLabelSelectionManager) {
       try {
         st.showToast('');
         st.container.style.cursor = '';
-        Plotly.relayout(st.container, { annotations: st.annotations }).then(() => {
+        const cleanAnnotations = (st.annotations || []).map(a => Object.assign({}, a));
+        Plotly.relayout(st.container, { annotations: cleanAnnotations }).then(() => {
           if (typeof st.setupSvgEvents === 'function') {
             st.setupSvgEvents();
           }
@@ -319,6 +469,13 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
   }
   container._annCleanups = [];
 
+  // Clear _dragBound flags so fresh event handlers can be bound with the new annotations closure
+  const oldAnnotEls = container.querySelectorAll('.annotation-text, [class*="annotation"]');
+  oldAnnotEls.forEach(el => {
+    let g = el.closest('g.annotation') || el.closest('g');
+    if (g) g._dragBound = false;
+  });
+
   function screenToDataCoords(e) {
     const fullLayout = container._fullLayout;
     if (!fullLayout || !fullLayout.xaxis || !fullLayout.yaxis) return null;
@@ -356,9 +513,18 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
 
   let saveTimer = null;
   function savePosition(annName, xVal, yVal) {
+    const scales = getLabelUnitScaleFactors(typeof window.pumpObj !== 'undefined' ? window.pumpObj : {});
+    let scaleY = scales.fH;
+    if (annName && (annName.startsWith('npsh') || annName.includes('npsh'))) scaleY = scales.fNpsh;
+    else if (annName && (annName.startsWith('pow') || annName.includes('pow'))) scaleY = scales.fPow;
+    else if (annName && (annName.startsWith('eta') || annName.startsWith('eff'))) scaleY = 1.0;
+
+    const baseSavedX = Math.round((xVal / (scales.fQ || 1.0)) * 100) / 100;
+    const baseSavedY = Math.round((yVal / (scaleY || 1.0)) * 100) / 100;
+
     if (!customLabelPositions[annName]) customLabelPositions[annName] = {};
-    customLabelPositions[annName].x = xVal;
-    customLabelPositions[annName].y = yVal;
+    customLabelPositions[annName].x = baseSavedX;
+    customLabelPositions[annName].y = baseSavedY;
 
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
@@ -366,7 +532,7 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
       fetch(`/papi/pump/${pumpId}/label-pos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [annName]: { x: xVal, y: yVal } })
+        body: JSON.stringify({ [annName]: { x: baseSavedX, y: baseSavedY } })
       }).catch(() => {});
     }, 150);
   }
@@ -380,10 +546,18 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
 
     const idx = annotations.indexOf(ann);
     if (idx >= 0) {
-      Plotly.relayout(container, {
-        [`annotations[${idx}].bgcolor`]: 'rgba(88,166,255,0.45)',
-        [`annotations[${idx}].bordercolor`]: '#58a6ff',
-        [`annotations[${idx}].borderwidth`]: 2
+      const updated = annotations.map((a, i) => {
+        if (i === idx) {
+          return Object.assign({}, a, {
+            bgcolor: 'rgba(88,166,255,0.45)',
+            bordercolor: '#58a6ff',
+            borderwidth: 2
+          });
+        }
+        return Object.assign({}, a);
+      });
+      Plotly.relayout(container, { annotations: updated }).then(() => {
+        setupSvgEvents();
       });
     }
   }
@@ -504,7 +678,12 @@ function makeAnnotationsDraggable(chartId, annotations, pumpId) {
 
   if (container.on) {
     try {
-      container.removeListener?.('plotly_afterplot', setupSvgEvents);
+      // Remove the PREVIOUS afterplot handler if it exists (stored on container)
+      if (container._annAfterplotHandler) {
+        container.removeListener?.('plotly_afterplot', container._annAfterplotHandler);
+      }
+      // Store the new handler reference so we can remove it next time
+      container._annAfterplotHandler = setupSvgEvents;
       container.on('plotly_afterplot', setupSvgEvents);
     } catch (e) {}
   }
@@ -706,9 +885,13 @@ function buildWarmanChart(data, opts = {}) {
       let targetQ = 0, targetH = 0;
       let xanchor = 'left', yanchor = 'bottom', xshift = 4, yshift = 4;
 
-      if (customLabelPositions && customLabelPositions[curveKey]) {
-        targetQ = customLabelPositions[curveKey].x;
-        targetH = customLabelPositions[curveKey].y;
+      const idxKey = isMainDia ? `dia_lbl_${i}` : `spd_lbl_${i}`;
+      const pos = getCustomLabelPosition(curveKey, data.pump, 'h') ||
+                  getCustomLabelPosition(lblText, data.pump, 'h') ||
+                  getCustomLabelPosition(idxKey, data.pump, 'h');
+      if (pos) {
+        targetQ = pos.x;
+        targetH = pos.y;
         xanchor = 'center'; yanchor = 'middle'; xshift = 0; yshift = 0;
       } else {
         const lastIdx = d.q.length - 1;
@@ -766,15 +949,22 @@ function buildWarmanChart(data, opts = {}) {
       /* Direct label badge on each overlay curve */
       if (ol.q && ol.q.length > 0 && ol.h && ol.h.length > 0) {
         const lastIdx = Math.floor(ol.q.length * 0.90);
+        const curveKey = isOverlayDia ? `dia_lbl_${i}` : `spd_lbl_${i}`;
+        const pos = getCustomLabelPosition(curveKey, data.pump, 'h') ||
+                    getCustomLabelPosition(lineLabel, data.pump, 'h') ||
+                    getCustomLabelPosition(`ol_lbl_${i}`, data.pump, 'h');
+        const targetQ = pos ? pos.x : ol.q[lastIdx];
+        const targetH = pos ? pos.y : ol.h[lastIdx];
+
         annotations.push({
-          x: ol.q[lastIdx], y: ol.h[lastIdx],
+          x: targetQ, y: targetH,
           text: `<b>${lineLabel}</b>`,
           showarrow: false, captureevents: true,
           font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
           bgcolor: 'rgba(15, 23, 42, 0.90)',
           bordercolor: col, borderwidth: 1, borderpad: 2,
           xanchor: 'center', yanchor: 'middle',
-          name: `ol_lbl_${i}`
+          name: curveKey
         });
       }
     });
@@ -802,16 +992,9 @@ function buildWarmanChart(data, opts = {}) {
         const key = `eta_${iso.eta}${branchKey}`;
         const legacyKey = `eta_${iso.eta}`;
 
-        let targetQ = iso.label_q;
-        let targetH = iso.label_h;
-
-        if (customLabelPositions && customLabelPositions[key]) {
-          targetQ = customLabelPositions[key].x;
-          targetH = customLabelPositions[key].y;
-        } else if (idx === 0 && customLabelPositions && customLabelPositions[legacyKey]) {
-          targetQ = customLabelPositions[legacyKey].x;
-          targetH = customLabelPositions[legacyKey].y;
-        }
+        const pos = getCustomLabelPosition(key, data.pump, 'h') || (idx === 0 ? getCustomLabelPosition(legacyKey, data.pump, 'h') : null);
+        const targetQ = pos ? pos.x : iso.label_q;
+        const targetH = pos ? pos.y : iso.label_h;
 
         annotations.push({
           x: targetQ, y: targetH,
@@ -848,16 +1031,11 @@ function buildWarmanChart(data, opts = {}) {
       if (pl.q.length > 0) {
         const branchKey = pl.branch ? `_${pl.branch}` : `_${idx}`;
         const key = `pow_${pl.power}${branchKey}`;
-        let targetQ = 0;
-        let targetH = 0;
-        if (customLabelPositions && customLabelPositions[key]) {
-          targetQ = customLabelPositions[key].x;
-          targetH = customLabelPositions[key].y;
-        } else {
-          const mi = Math.floor(pl.q.length / 2);
-          targetQ = pl.q[mi];
-          targetH = pl.h[mi];
-        }
+        const mi = Math.floor(pl.q.length / 2);
+        const pos = getCustomLabelPosition(key, data.pump, 'h');
+        const targetQ = pos ? pos.x : pl.q[mi];
+        const targetH = pos ? pos.y : pl.h[mi];
+
         annotations.push({
           x: targetQ, y: targetH,
           text: `<b>${pl.power}${lblPow}</b>`,
@@ -893,16 +1071,11 @@ function buildWarmanChart(data, opts = {}) {
       if (nl.q.length > 0) {
         const branchKey = nl.branch ? `_${nl.branch}` : `_${idx}`;
         const key = `npsh_${nl.npsh}${branchKey}`;
-        let targetQ = 0;
-        let targetH = 0;
-        if (customLabelPositions && customLabelPositions[key]) {
-          targetQ = customLabelPositions[key].x;
-          targetH = customLabelPositions[key].y;
-        } else {
-          const mi = Math.floor(nl.q.length / 2);
-          targetQ = nl.q[mi];
-          targetH = nl.h[mi];
-        }
+        const mi = Math.floor(nl.q.length / 2);
+        const pos = getCustomLabelPosition(key, data.pump, 'h');
+        const targetQ = pos ? pos.x : nl.q[mi];
+        const targetH = pos ? pos.y : nl.h[mi];
+
         annotations.push({
           x: targetQ, y: targetH,
           text: `<b>${nl.npsh}${lblNpsh}</b>`,
@@ -1219,10 +1392,14 @@ function buildEffChart(familyData, singleData, showClean, opts = {}) {
     const lblText = formatLineLabel(fam, isMainDia);
     const curveKey = `eff_${lblText}`;
     const altKey = lblText;
+    const idxKey = isMainDia ? `dia_lbl_${idx}` : `spd_lbl_${idx}`;
 
     let targetQ = 0, targetEta = 0, xanchor = 'left', yanchor = 'bottom', xshift = 4, yshift = 4;
-    if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
-      const pos = customLabelPositions[curveKey] || customLabelPositions[altKey];
+    const pos = getCustomLabelPosition(curveKey, familyData?.pump, 'eff') ||
+                getCustomLabelPosition(altKey, familyData?.pump, 'eff') ||
+                getCustomLabelPosition(`eff_${idxKey}`, familyData?.pump, 'eff') ||
+                getCustomLabelPosition(idxKey, familyData?.pump, 'eff');
+    if (pos) {
       targetQ = pos.x;
       targetEta = pos.y;
       xanchor = 'center'; yanchor = 'middle'; xshift = 0; yshift = 0;
@@ -1250,16 +1427,15 @@ function buildEffChart(familyData, singleData, showClean, opts = {}) {
       if (!sl.q || sl.q.length === 0 || !sl.eta) return;
       const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
       const lineLabel = formatLineLabel(sl, isOverlayDia);
-      const curveKey = `eff_spd_${i}`;
+      const curveKey = isOverlayDia ? `eff_dia_${i}` : `eff_spd_${i}`;
 
-      let targetQ = 0, targetEta = 0;
-      if (customLabelPositions && customLabelPositions[curveKey]) {
-        const pos = customLabelPositions[curveKey];
-        targetQ = pos.x; targetEta = pos.y;
-      } else {
-        const lastIdx = Math.floor(sl.q.length * 0.90);
-        targetQ = sl.q[lastIdx]; targetEta = sl.eta[lastIdx];
-      }
+      const pos = getCustomLabelPosition(curveKey, familyData?.pump, 'eff') ||
+                  getCustomLabelPosition(`eff_${lineLabel}`, familyData?.pump, 'eff') ||
+                  getCustomLabelPosition(lineLabel, familyData?.pump, 'eff') ||
+                  getCustomLabelPosition(`eff_spd_${i}`, familyData?.pump, 'eff');
+      const lastIdx = Math.floor(sl.q.length * 0.90);
+      const targetQ = pos ? pos.x : sl.q[lastIdx];
+      const targetEta = pos ? pos.y : sl.eta[lastIdx];
 
       layout.annotations.push({
         x: targetQ, y: targetEta,
@@ -1456,8 +1632,8 @@ function buildEffPowerChart(familyData, singleData, showClean, opts = {}) {
     const altKey = lblText;
 
     let targetQ = 0, targetEta = 0, xanchor = 'left', yanchor = 'bottom', xshift = 4, yshift = 4;
-    if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
-      const pos = customLabelPositions[curveKey] || customLabelPositions[altKey];
+    const pos = getCustomLabelPosition(curveKey, familyData?.pump, 'eff') || getCustomLabelPosition(altKey, familyData?.pump, 'eff');
+    if (pos) {
       targetQ = pos.x;
       targetEta = pos.y;
       xanchor = 'center'; yanchor = 'middle'; xshift = 0; yshift = 0;
@@ -1487,14 +1663,10 @@ function buildEffPowerChart(familyData, singleData, showClean, opts = {}) {
       const lineLabel = formatLineLabel(sl, isOverlayDia);
       const curveKey = `eff_spd_${i}`;
 
-      let targetQ = 0, targetEta = 0;
-      if (customLabelPositions && customLabelPositions[curveKey]) {
-        const pos = customLabelPositions[curveKey];
-        targetQ = pos.x; targetEta = pos.y;
-      } else {
-        const lastIdx = Math.floor(sl.q.length * 0.90);
-        targetQ = sl.q[lastIdx]; targetEta = sl.eta[lastIdx];
-      }
+      const pos = getCustomLabelPosition(curveKey, familyData?.pump, 'eff');
+      const lastIdx = Math.floor(sl.q.length * 0.90);
+      const targetQ = pos ? pos.x : sl.q[lastIdx];
+      const targetEta = pos ? pos.y : sl.eta[lastIdx];
 
       layout.annotations.push({
         x: targetQ, y: targetEta,
@@ -1627,10 +1799,14 @@ function buildPowerChart(familyData, singleData, showClean, opts = {}) {
     const lblText = formatLineLabel(fam, isMainDia);
     const curveKey = `pow_${lblText}`;
     const altKey = lblText;
+    const idxKey = isMainDia ? `dia_lbl_${idx}` : `spd_lbl_${idx}`;
 
     let targetQ = 0, targetPow = 0, xanchor = 'left', yanchor = 'bottom', xshift = 4, yshift = 4;
-    if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
-      const pos = customLabelPositions[curveKey] || customLabelPositions[altKey];
+    const pos = getCustomLabelPosition(curveKey, familyData?.pump, 'pow') ||
+                getCustomLabelPosition(altKey, familyData?.pump, 'pow') ||
+                getCustomLabelPosition(`pow_${idxKey}`, familyData?.pump, 'pow') ||
+                getCustomLabelPosition(idxKey, familyData?.pump, 'pow');
+    if (pos) {
       targetQ = pos.x;
       targetPow = pos.y;
       xanchor = 'center'; yanchor = 'middle'; xshift = 0; yshift = 0;
@@ -1659,16 +1835,15 @@ function buildPowerChart(familyData, singleData, showClean, opts = {}) {
       if (!sl.q || sl.q.length === 0 || !pwrArr) return;
       const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
       const lineLabel = formatLineLabel(sl, isOverlayDia);
-      const curveKey = `pow_spd_${i}`;
+      const curveKey = isOverlayDia ? `pow_dia_${i}` : `pow_spd_${i}`;
 
-      let targetQ = 0, targetPow = 0;
-      if (customLabelPositions && customLabelPositions[curveKey]) {
-        const pos = customLabelPositions[curveKey];
-        targetQ = pos.x; targetPow = pos.y;
-      } else {
-        const lastIdx = Math.floor(sl.q.length * 0.90);
-        targetQ = sl.q[lastIdx]; targetPow = pwrArr[lastIdx];
-      }
+      const pos = getCustomLabelPosition(curveKey, familyData?.pump, 'pow') ||
+                  getCustomLabelPosition(`pow_${lineLabel}`, familyData?.pump, 'pow') ||
+                  getCustomLabelPosition(lineLabel, familyData?.pump, 'pow') ||
+                  getCustomLabelPosition(`pow_spd_${i}`, familyData?.pump, 'pow');
+      const lastIdx = Math.floor(sl.q.length * 0.90);
+      const targetQ = pos ? pos.x : sl.q[lastIdx];
+      const targetPow = pos ? pos.y : pwrArr[lastIdx];
 
       layout.annotations.push({
         x: targetQ, y: targetPow,
@@ -1789,11 +1964,15 @@ function buildNpshChart(familyData, singleData, opts = {}) {
       const lblText = formatLineLabel(fam, isMainDia);
       const curveKey = `npsh_${lblText}`;
       const altKey = lblText;
+      const idxKey = isMainDia ? `dia_lbl_${idx}` : `spd_lbl_${idx}`;
 
       let targetQ = 0, targetNpsh = 0;
       let xanchor = 'left', yanchor = 'bottom', xshift = 4, yshift = 4;
-      if (customLabelPositions && (customLabelPositions[curveKey] || customLabelPositions[altKey])) {
-        const pos = customLabelPositions[curveKey] || customLabelPositions[altKey];
+      const pos = getCustomLabelPosition(curveKey, familyData?.pump, 'npsh') ||
+                  getCustomLabelPosition(altKey, familyData?.pump, 'npsh') ||
+                  getCustomLabelPosition(`npsh_${idxKey}`, familyData?.pump, 'npsh') ||
+                  getCustomLabelPosition(idxKey, familyData?.pump, 'npsh');
+      if (pos) {
         targetQ = pos.x;
         targetNpsh = pos.y;
         xanchor = 'center'; yanchor = 'middle'; xshift = 0; yshift = 0;

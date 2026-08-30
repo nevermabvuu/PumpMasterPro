@@ -4,5 +4,8 @@
   ],
   "python.autoComplete.extraPaths": [
     "./Pump-Master-Pro/pump-app"
-  ]
+  ],
+  "terminal.integrated.env.windows": {
+    "PYTHONPATH": "${workspaceFolder}/Pump-Master-Pro/pump-app"
+  }
 }

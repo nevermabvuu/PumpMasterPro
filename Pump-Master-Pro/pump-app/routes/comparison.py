@@ -4,6 +4,13 @@ routes/comparison.py — Pump comparison blueprint.
 Beginners Note: Compares performance curves and metrics across multiple selected pump models.
 """
 
+import os
+import sys
+
+_app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if _app_dir not in sys.path:
+    sys.path.insert(0, _app_dir)
+
 from flask import Blueprint, render_template, request, jsonify
 from models import Pump
 from utils import _get_float, get_visible_pumps_query
@@ -83,3 +90,10 @@ def api_compare_pumps():
         
         comparison.append({'pump': pump.to_dict(), 'curves': data, 'family': family, 'bep': bep})
     return jsonify(comparison)
+
+
+if __name__ == '__main__':
+    from app import app
+    port = int(os.environ.get('PORT', 8000))
+    app.run(host='0.0.0.0', port=port, debug=True)
+

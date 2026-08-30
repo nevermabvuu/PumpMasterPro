@@ -104,7 +104,8 @@
     OPERATION_MODE: "{{ form_data.operation_mode or 'fixed' }}",
     IS_VSD: {{ 'true' if (form_data.operation_mode == 'vsd') else 'false' }},
     RATED_SPEED: {{ active_result.optimal_speed_rpm | round(1) if active_result and active_result.optimal_speed_rpm else 'null' }},
-    RATED_TRIM: {{ active_result.optimal_trim_dia_mm | round(1) if active_result and active_result.optimal_trim_dia_mm else 'null' }}
+    RATED_TRIM: {{ active_result.optimal_trim_dia_mm | round(1) if active_result and active_result.optimal_trim_dia_mm else 'null' }},
+    ORG_STYLES: {{ (org_styles if org_styles else {}) | tojson }}
   };
 </script>
 <script src="{{ url_for('static', filename='js/pump_selection_details.js') }}"></script>

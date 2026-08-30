@@ -28,22 +28,152 @@ async function fetchPumpData() {
   }
 }
 
-function buildTrace(x, y, name, color, yaxis='y', dash='solid') {
+function normalizeDashStyle(styleStr, fallback = 'solid') {
+  if (!styleStr) return fallback;
+  const s = String(styleStr).toLowerCase().trim();
+  if (s === 'dashed' || s === 'dash') return 'dash';
+  if (s === 'dotted' || s === 'dot') return 'dot';
+  if (s === 'dashdot') return 'dashdot';
+  if (s === 'longdash') return 'longdash';
+  if (s === 'solid') return 'solid';
+  return fallback;
+}
+
+function getDetailsUnitScaleRatio(axisName, pumpObj = {}) {
+  if (axisName === 'eff') return 1.0;
+
+  const convMap = {
+    q: { m3h: 1.0, ls: 0.2777777777777778, gpm: 4.402917396, lmin: 16.6666666667 },
+    h: { m: 1.0, ft: 3.280839895 },
+    npsh: { m: 1.0, ft: 3.280839895 },
+    pow: { kw: 1.0, hp: 1.34102209 }
+  };
+
+  let typeKey = 'q';
+  let baseUnit = pumpObj.unit_q || 'm3h';
+
+  if (axisName === 'head') {
+    typeKey = 'h';
+    baseUnit = pumpObj.unit_h || 'm';
+  } else if (axisName === 'npsh') {
+    typeKey = 'npsh';
+    baseUnit = pumpObj.unit_npsh || 'm';
+  } else if (axisName === 'power') {
+    typeKey = 'pow';
+    baseUnit = pumpObj.unit_pow || pumpObj.unit_power || 'kw';
+  }
+
+  const factorBase = convMap[typeKey]?.[baseUnit] || 1.0;
+  // Details view renders in standard SI units (m3h, m, kw)
+  const factorDisplay = 1.0;
+
+  return factorDisplay / factorBase;
+}
+
+function getCleanAxisScale(rawMin, rawMax, majorDivisions, minorSubticks) {
+  if (rawMax === null || rawMax === undefined) {
+    return { min: rawMin, max: rawMax, dtick: null, minor: minorSubticks };
+  }
+
+  const minVal = (rawMin !== null && rawMin !== undefined) ? Number(rawMin) : 0;
+  const maxVal = Number(rawMax);
+  const span = maxVal - minVal;
+
+  if (span <= 0) {
+    return { min: minVal, max: maxVal, dtick: null, minor: minorSubticks };
+  }
+
+  // Calculate target step from major divisions
+  let targetStep;
+  if (majorDivisions !== null && majorDivisions !== undefined && Number(majorDivisions) > 0) {
+    targetStep = span / Number(majorDivisions);
+  } else {
+    targetStep = span / 5.0;
+  }
+
+  // Standard clean multipliers across decades: 1, 1.5, 2, 2.5, 5, 10
+  const multipliers = [1.0, 1.5, 2.0, 2.5, 5.0, 10.0];
+  const mag = Math.pow(10, Math.floor(Math.log10(targetStep > 0 ? targetStep : 1.0)));
+
+  let candidates = [];
+  [0.1, 1.0, 10.0].forEach(decade => {
+    multipliers.forEach(m => {
+      const c = m * mag * decade;
+      if (c > 0) candidates.push(Math.round(c * 1000000) / 1000000);
+    });
+  });
+
+  candidates = Array.from(new Set(candidates)).sort((a, b) => a - b);
+  let reasonable = candidates.filter(c => (span / c) >= 2.5 && (span / c) <= 12.0);
+  if (reasonable.length === 0) reasonable = candidates;
+
+  // Pick candidate step with MINIMAL change from targetStep
+  let cleanStep = reasonable[0];
+  let minDiff = Math.abs(cleanStep - targetStep);
+  for (let i = 1; i < reasonable.length; i++) {
+    const diff = Math.abs(reasonable[i] - targetStep);
+    if (diff < minDiff) {
+      minDiff = diff;
+      cleanStep = reasonable[i];
+    }
+  }
+
+  // Clean max: ceil to nearest multiple of cleanStep so all data fits and ends on clean round number (e.g. 110, 120, 150)
+  const numSteps = Math.ceil((maxVal - minVal) / cleanStep - 1e-5);
+  const cleanMax = minVal + numSteps * cleanStep;
+
   return {
-    x: x, y: y, name: name, type: 'scatter', mode: 'lines',
-    line: { color: color, width: 2.5, dash: dash },
-    yaxis: yaxis
+    min: minVal,
+    max: cleanMax,
+    dtick: cleanStep,
+    minor: minorSubticks
   };
 }
 
-function buildDutyTrace(q, h, name) {
-  if (!q || !h) return null;
-  return {
-    x: [q], y: [h], name: name,
-    type: 'scatter', mode: 'markers',
-    marker: { color: '#f85149', size: 12, symbol: 'star' },
-    yaxis: 'y4'
-  };
+function applyAxisScale(axisObj, axisName, pumpObj, minorGridColor, axisLineColor) {
+  if (!pumpObj) return;
+
+  const rawMin = pumpObj[`axis_${axisName}_min`];
+  const rawMax = pumpObj[`axis_${axisName}_max`];
+  const majorVal = pumpObj[`axis_${axisName}_major`];
+  const minorVal = pumpObj[`axis_${axisName}_minor`];
+
+  const unitRatio = getDetailsUnitScaleRatio(axisName, pumpObj);
+
+  // 1. Custom Min & Max Range Bounds
+  const hasMin = rawMin !== null && rawMin !== undefined && rawMin !== '';
+  const hasMax = rawMax !== null && rawMax !== undefined && rawMax !== '';
+
+  if (hasMin || hasMax) {
+    const currentMin = hasMin ? parseFloat(rawMin) * unitRatio : 0;
+    const currentMax = hasMax ? parseFloat(rawMax) * unitRatio : 100;
+
+    const clean = getCleanAxisScale(currentMin, currentMax, majorVal, minorVal);
+
+    axisObj.range = [clean.min, clean.max];
+    axisObj.autorange = false;
+    delete axisObj.rangemode;
+
+    if (clean.dtick !== null && clean.dtick > 0) {
+      axisObj.dtick = clean.dtick;
+      axisObj.tickmode = 'linear';
+    }
+  } else if (majorVal !== null && majorVal > 0) {
+    axisObj.nticks = Math.round(majorVal) + 1;
+  }
+
+  // 3. Minor Subticks
+  if (minorVal !== null && minorVal !== undefined && minorVal !== '' && parseInt(minorVal, 10) > 0) {
+    axisObj.minor = {
+      nticks: parseInt(minorVal, 10) + 1,
+      showgrid: true,
+      gridcolor: minorGridColor || '#21262d',
+      gridwidth: 1,
+      ticks: 'inside',
+      ticklen: 4,
+      tickcolor: axisLineColor || '#30363d'
+    };
+  }
 }
 
 function addLabel(annotations, x, y, yref, text, color, isMid=false) {
@@ -68,9 +198,40 @@ function renderAll() {
   if (!pumpData) return;
   const fam = pumpData.family;
   const maxCurve = pumpData.curves;
+  const pumpObj = pumpData.pump || {};
   if (!maxCurve || !maxCurve.q) return;
 
   const cfg = window.PumpDetailsConfig;
+  const org = cfg.ORG_STYLES || {};
+
+  // Theme & Styles from Organisation Defaults
+  const hqColor = org.hq_color || '#58a6ff';
+  const hqWidth = parseFloat(org.hq_width) || 2.5;
+  const hqStyle = normalizeDashStyle(org.hq_style, 'solid');
+
+  const etaColor = org.eta_color || '#3fb950';
+  const etaWidth = parseFloat(org.eta_width) || 2.5;
+  const etaStyle = normalizeDashStyle(org.eta_style, 'solid');
+
+  const powColor = org.pow_color || '#f0c040';
+  const powWidth = parseFloat(org.pow_width) || 2.5;
+  const powStyle = normalizeDashStyle(org.pow_style, 'solid');
+
+  const npshColor = org.npsh_color || '#bc8cff';
+  const npshWidth = parseFloat(org.npsh_width) || 2.5;
+  const npshStyle = normalizeDashStyle(org.npsh_style, 'solid');
+
+  const ratedColor = org.rated_marker_color || '#f85149';
+  const trimWidth = parseFloat(org.trim_curve_width) || 2.5;
+  const trimStyle = normalizeDashStyle(org.trim_curve_style, 'dash');
+
+  const sysColor = org.system_curve_color || '#8b949e';
+  const sysStyle = normalizeDashStyle(org.system_curve_style, 'dot');
+
+  const fontFamily = org.font_family || 'Inter, sans-serif';
+  const majorGridColor = org.major_grid_color || '#30363d';
+  const minorGridColor = org.minor_grid_color || '#21262d';
+  const axisLineColor = org.axis_line_color || '#30363d';
 
   let traces = [];
   let annotations = [];
@@ -85,6 +246,7 @@ function renderAll() {
     fam.forEach((c, idx) => {
       let lbl = cfg.IS_VSD ? `${c.rpm || c.val} RPM` : `Ø ${c.dia} mm`;
       let isMax = idx === fam.length - 1; 
+      let curveWidth = isMax ? hqWidth : Math.max(1.2, hqWidth * 0.7);
       
       let cdata = c.q.map((q, i) => [
         c.h[i] != null ? c.h[i].toFixed(1) : 'N/A',
@@ -95,21 +257,21 @@ function renderAll() {
       let hoverTmpl = `<b>${lbl}</b><br>Flow: %{x:.1f} m³/h<br>Head: %{customdata[0]} m<br>Eff: %{customdata[1]} %<br>Power: %{customdata[2]} kW<br>NPSHr: %{customdata[3]} m<extra></extra>`;
       
       // Head
-      traces.push({x: c.q, y: c.h, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#58a6ff', width: isMax ? 2.5 : 1.5}, yaxis: 'y4', opacity: isMax ? 1 : 0.5, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
-      addLabel(annotations, c.q, c.h, 'y4', lbl, '#58a6ff');
+      traces.push({x: c.q, y: c.h, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: hqColor, width: curveWidth, dash: hqStyle}, yaxis: 'y4', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
+      addLabel(annotations, c.q, c.h, 'y4', lbl, hqColor);
       
       // Eff
-      traces.push({x: c.q, y: c.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#3fb950', width: isMax ? 2.5 : 1.5}, yaxis: 'y3', opacity: isMax ? 1 : 0.5, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
-      addLabel(annotations, c.q, c.eta, 'y3', lbl, '#3fb950');
+      traces.push({x: c.q, y: c.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: etaColor, width: isMax ? etaWidth : Math.max(1.2, etaWidth * 0.7), dash: etaStyle}, yaxis: 'y3', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
+      addLabel(annotations, c.q, c.eta, 'y3', lbl, etaColor);
 
       // Power
-      traces.push({x: c.q, y: c.power, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f0c040', width: isMax ? 2.5 : 1.5}, yaxis: 'y2', opacity: isMax ? 1 : 0.5, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
-      addLabel(annotations, c.q, c.power, 'y2', lbl, '#f0c040');
+      traces.push({x: c.q, y: c.power, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: powColor, width: isMax ? powWidth : Math.max(1.2, powWidth * 0.7), dash: powStyle}, yaxis: 'y2', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
+      addLabel(annotations, c.q, c.power, 'y2', lbl, powColor);
 
       // NPSHr
       if (c.npsh && c.npsh.length) {
-        traces.push({x: c.q, y: c.npsh, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#bc8cff', width: isMax ? 2.5 : 1.5}, yaxis: 'y', opacity: isMax ? 1 : 0.5, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
-        addLabel(annotations, c.q, c.npsh, 'y', lbl, '#bc8cff');
+        traces.push({x: c.q, y: c.npsh, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: npshColor, width: isMax ? npshWidth : Math.max(1.2, npshWidth * 0.7), dash: npshStyle}, yaxis: 'y', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
+        addLabel(annotations, c.q, c.npsh, 'y', lbl, npshColor);
       }
     });
   } else {
@@ -122,18 +284,18 @@ function renderAll() {
     ]);
     let hoverTmpl = `<b>${lbl}</b><br>Flow: %{x:.1f} m³/h<br>Head: %{customdata[0]} m<br>Eff: %{customdata[1]} %<br>Power: %{customdata[2]} kW<br>NPSHr: %{customdata[3]} m<extra></extra>`;
 
-    traces.push({x: maxCurve.q, y: maxCurve.h, name: 'Head (Max)', type: 'scatter', mode: 'lines', line: {color: '#58a6ff', width: 2.5}, yaxis: 'y4', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
-    addLabel(annotations, maxCurve.q, maxCurve.h, 'y4', 'Max', '#58a6ff');
+    traces.push({x: maxCurve.q, y: maxCurve.h, name: 'Head (Max)', type: 'scatter', mode: 'lines', line: {color: hqColor, width: hqWidth, dash: hqStyle}, yaxis: 'y4', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
+    addLabel(annotations, maxCurve.q, maxCurve.h, 'y4', 'Max', hqColor);
     
-    traces.push({x: maxCurve.q, y: maxCurve.eta, name: 'Eff (Max)', type: 'scatter', mode: 'lines', line: {color: '#3fb950', width: 2.5}, yaxis: 'y3', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
-    addLabel(annotations, maxCurve.q, maxCurve.eta, 'y3', 'Max', '#3fb950');
+    traces.push({x: maxCurve.q, y: maxCurve.eta, name: 'Eff (Max)', type: 'scatter', mode: 'lines', line: {color: etaColor, width: etaWidth, dash: etaStyle}, yaxis: 'y3', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
+    addLabel(annotations, maxCurve.q, maxCurve.eta, 'y3', 'Max', etaColor);
     
-    traces.push({x: maxCurve.q, y: maxCurve.power, name: 'Power (Max)', type: 'scatter', mode: 'lines', line: {color: '#f0c040', width: 2.5}, yaxis: 'y2', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
-    addLabel(annotations, maxCurve.q, maxCurve.power, 'y2', 'Max', '#f0c040');
+    traces.push({x: maxCurve.q, y: maxCurve.power, name: 'Power (Max)', type: 'scatter', mode: 'lines', line: {color: powColor, width: powWidth, dash: powStyle}, yaxis: 'y2', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
+    addLabel(annotations, maxCurve.q, maxCurve.power, 'y2', 'Max', powColor);
     
     if (maxCurve.npsh) {
-      traces.push({x: maxCurve.q, y: maxCurve.npsh, name: 'NPSHr (Max)', type: 'scatter', mode: 'lines', line: {color: '#bc8cff', width: 2.5}, yaxis: 'y', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
-      addLabel(annotations, maxCurve.q, maxCurve.npsh, 'y', 'Max', '#bc8cff');
+      traces.push({x: maxCurve.q, y: maxCurve.npsh, name: 'NPSHr (Max)', type: 'scatter', mode: 'lines', line: {color: npshColor, width: npshWidth, dash: npshStyle}, yaxis: 'y', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
+      addLabel(annotations, maxCurve.q, maxCurve.npsh, 'y', 'Max', npshColor);
     }
   }
 
@@ -148,14 +310,14 @@ function renderAll() {
     ]);
     let hoverTmplRated = `<b>${lbl}</b><br>Flow: %{x:.1f} m³/h<br>Head: %{customdata[0]} m<br>Eff: %{customdata[1]} %<br>Power: %{customdata[2]} kW<br>NPSHr: %{customdata[3]} m<extra></extra>`;
 
-    traces.push({x: qDutyCurve, y: hDutyCurve, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y4', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
+    traces.push({x: qDutyCurve, y: hDutyCurve, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y4', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
 
-    traces.push({x: qDutyCurve, y: maxCurve.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y3', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
+    traces.push({x: qDutyCurve, y: maxCurve.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y3', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
     
-    traces.push({x: qDutyCurve, y: pDutyCurve, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y2', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
+    traces.push({x: qDutyCurve, y: pDutyCurve, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y2', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
     
     if (maxCurve.npsh && maxCurve.npsh.length) {
-      traces.push({x: qDutyCurve, y: npshDutyCurve, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, yaxis: 'y', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
+      traces.push({x: qDutyCurve, y: npshDutyCurve, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
     }
   }
 
@@ -183,27 +345,27 @@ function renderAll() {
     }
 
     let hoverTmplSys = `<b>System Curve</b><br>Flow: %{x:.1f} m³/h<br>Head: %{y:.1f} m<extra></extra>`;
-    traces.push({x: sysQ, y: sysH, name: 'System Curve', type: 'scatter', mode: 'lines', line: {color: '#8b949e', width: 2.5, dash: 'dot'}, yaxis: 'y4', showlegend: false, hovertemplate: hoverTmplSys});
+    traces.push({x: sysQ, y: sysH, name: 'System Curve', type: 'scatter', mode: 'lines', line: {color: sysColor, width: 2.2, dash: sysStyle}, yaxis: 'y4', showlegend: false, hovertemplate: hoverTmplSys});
   }
 
   // Custom Clean Legend Items
-  traces.push({x: [null], y: [null], name: 'Head', type: 'scatter', mode: 'lines', line: {color: '#58a6ff', width: 2.5}, showlegend: true});
-  traces.push({x: [null], y: [null], name: 'Efficiency', type: 'scatter', mode: 'lines', line: {color: '#3fb950', width: 2.5}, showlegend: true});
-  traces.push({x: [null], y: [null], name: 'Power', type: 'scatter', mode: 'lines', line: {color: '#f0c040', width: 2.5}, showlegend: true});
-  traces.push({x: [null], y: [null], name: 'NPSHr', type: 'scatter', mode: 'lines', line: {color: '#bc8cff', width: 2.5}, showlegend: true});
+  traces.push({x: [null], y: [null], name: 'Head', type: 'scatter', mode: 'lines', line: {color: hqColor, width: hqWidth, dash: hqStyle}, showlegend: true});
+  traces.push({x: [null], y: [null], name: 'Efficiency', type: 'scatter', mode: 'lines', line: {color: etaColor, width: etaWidth, dash: etaStyle}, showlegend: true});
+  traces.push({x: [null], y: [null], name: 'Power', type: 'scatter', mode: 'lines', line: {color: powColor, width: powWidth, dash: powStyle}, showlegend: true});
+  traces.push({x: [null], y: [null], name: 'NPSHr', type: 'scatter', mode: 'lines', line: {color: npshColor, width: npshWidth, dash: npshStyle}, showlegend: true});
   
   let ratedLegendName = cfg.TRIM_RATIO < 1.0 
     ? (cfg.IS_VSD ? `Rated Curve (${cfg.RATED_SPEED} RPM)` : `Rated Curve (Ø ${cfg.RATED_TRIM} mm)`)
     : 'Rated Curve';
-  traces.push({x: [null], y: [null], name: ratedLegendName, type: 'scatter', mode: 'lines', line: {color: '#f85149', width: 2.5, dash: 'dash'}, showlegend: true});
-  traces.push({x: [null], y: [null], name: 'System Curve', type: 'scatter', mode: 'lines', line: {color: '#8b949e', width: 2.5, dash: 'dot'}, showlegend: true});
+  traces.push({x: [null], y: [null], name: ratedLegendName, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, showlegend: true});
+  traces.push({x: [null], y: [null], name: 'System Curve', type: 'scatter', mode: 'lines', line: {color: sysColor, width: 2.2, dash: sysStyle}, showlegend: true});
 
   // Duty Point
   if (cfg.Q_DUTY && cfg.H_DUTY) {
     traces.push({
       x: [cfg.Q_DUTY], y: [cfg.H_DUTY], name: 'Duty Point',
       type: 'scatter', mode: 'markers',
-      marker: { color: '#f85149', size: 12, symbol: 'star' },
+      marker: { color: ratedColor, size: 12, symbol: 'star' },
       yaxis: 'y4',
       showlegend: true,
       hovertemplate: `<b>Duty Point</b><br>Flow: %{x:.1f} m³/h<br>Head: %{y:.1f} m<extra></extra>`
@@ -213,53 +375,61 @@ function renderAll() {
       xref: 'x', yref: 'y4',
       text: 'Duty',
       showarrow: true,
-      arrowcolor: '#f85149',
+      arrowcolor: ratedColor,
       ax: 20, ay: -20,
-      font: {color: '#f85149', size: 11}
+      font: {color: ratedColor, size: 11}
     });
   }
 
+  // Base Layout Structure
   const layout = {
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
-    font: { color: '#8b949e', family: 'Inter, sans-serif' },
+    font: { color: '#8b949e', family: fontFamily },
     margin: { t: 40, r: 80, l: 60, b: 40 },
     hovermode: 'closest',
-    // Shared X axis
+    // Shared X axis (Flow)
     xaxis: { 
       title: 'Flow (m³/h)', 
-      gridcolor: '#30363d', zerolinecolor: '#30363d', rangemode: 'tozero'
+      gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
     },
-    // NPSHr (Bottom)
+    // NPSHr (Bottom: 0% - 20%)
     yaxis: { 
       title: 'NPSHr (m)', domain: [0.0, 0.20],
-      titlefont: {color: '#bc8cff'}, tickfont: {color: '#bc8cff'},
-      gridcolor: '#30363d', zerolinecolor: '#30363d', rangemode: 'tozero'
+      titlefont: {color: npshColor}, tickfont: {color: npshColor},
+      gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
     },
-    // Power
-    yaxis2: {
+    // Power (25% - 45%)
+    yaxis2: { 
       title: 'Power (kW)', domain: [0.25, 0.45],
-      titlefont: {color: '#f0c040'}, tickfont: {color: '#f0c040'},
-      gridcolor: '#30363d', zerolinecolor: '#30363d', rangemode: 'tozero'
+      titlefont: {color: powColor}, tickfont: {color: powColor},
+      gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
     },
-    // Efficiency
-    yaxis3: {
+    // Efficiency (50% - 70%)
+    yaxis3: { 
       title: 'Eff (%)', domain: [0.50, 0.70],
-      titlefont: {color: '#3fb950'}, tickfont: {color: '#3fb950'},
-      gridcolor: '#30363d', zerolinecolor: '#30363d', rangemode: 'tozero'
+      titlefont: {color: etaColor}, tickfont: {color: etaColor},
+      gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
     },
-    // Head (Top)
-    yaxis4: {
+    // Head (Top: 75% - 100%)
+    yaxis4: { 
       title: 'Head (m)', domain: [0.75, 1.0],
-      titlefont: {color: '#58a6ff'}, tickfont: {color: '#58a6ff'},
-      gridcolor: '#30363d', zerolinecolor: '#30363d', rangemode: 'tozero'
+      titlefont: {color: hqColor}, tickfont: {color: hqColor},
+      gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
     },
     legend: { orientation: 'h', y: 1.05, x: 0 },
     height: 900,
     annotations: annotations
   };
 
-  // Need to adjust the container height
+  // ── Apply Custom Axis Scaling and Bounds from Pump-Data ──────────────────
+  applyAxisScale(layout.xaxis, 'flow', pumpObj, minorGridColor, axisLineColor);
+  applyAxisScale(layout.yaxis4, 'head', pumpObj, minorGridColor, axisLineColor);
+  applyAxisScale(layout.yaxis3, 'eff', pumpObj, minorGridColor, axisLineColor);
+  applyAxisScale(layout.yaxis2, 'power', pumpObj, minorGridColor, axisLineColor);
+  applyAxisScale(layout.yaxis, 'npsh', pumpObj, minorGridColor, axisLineColor);
+
+  // Render Chart
   document.getElementById('chartComp').style.height = '900px';
   document.getElementById('singleChartPanel').style.display = 'block';
   Plotly.newPlot('chartComp', traces, layout, {responsive: true});

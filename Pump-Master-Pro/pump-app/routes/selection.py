@@ -12,9 +12,16 @@ Routes:
     POST     /papi/select-pumps — AJAX API endpoint returning JSON results
 """
 
+import os
+import sys
+
+_app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if _app_dir not in sys.path:
+    sys.path.insert(0, _app_dir)
+
 from flask import Blueprint, render_template, request, jsonify, session
 from models import Pump
-from utils import _get_float, get_visible_pumps_query
+from utils import _get_float, get_visible_pumps_query, get_current_organisation
 from pump_selection import select_pumps, get_filter_options
 
 selection_bp = Blueprint('selection', __name__)
@@ -162,6 +169,8 @@ def pump_selection_details(pump_id):
         results.sort(key=lambda x: x.get('op_eta', 0), reverse=True)
 
     pump = Pump.query.get_or_404(pump_id)
+    current_org = get_current_organisation()
+    org_styles = current_org.get_graph_styles() if current_org else {}
     
     # Beginners Note: Find the default_report_id for the selected pump so we can build the Report URL
     default_report_id = 1 # Fallback
@@ -174,6 +183,8 @@ def pump_selection_details(pump_id):
                            pump=pump,
                            results=results,
                            form_data=f,
+                           current_org=current_org,
+                           org_styles=org_styles,
                            default_report_id=default_report_id)
 
 
@@ -223,3 +234,10 @@ def api_select_pumps():
         operation_mode=data.get('operation_mode', 'fixed')
     )
     return jsonify(results)
+
+
+if __name__ == '__main__':
+    from app import app
+    port = int(os.environ.get('PORT', 8000))
+    app.run(host='0.0.0.0', port=port, debug=True)
+

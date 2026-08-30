@@ -61,6 +61,8 @@ with app.app_context():
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN primary_color VARCHAR(20) DEFAULT '#1e3a8a'"))
             if 'notes' not in org_cols:
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN notes TEXT DEFAULT ''"))
+            if 'graph_styles_json' not in org_cols:
+                conn.execute(text("ALTER TABLE organisations ADD COLUMN graph_styles_json TEXT DEFAULT '{}'"))
 
             # 1. Reports table schema migrations
             rep_res = conn.execute(text("PRAGMA table_info(reports)"))

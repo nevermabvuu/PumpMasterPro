@@ -299,6 +299,26 @@
     <div style="margin-top: {{ report.graph_area_top or '4px' }}; margin-left: {{ report.graph_area_left or '0px' }}; width: {{ report.graph_area_width or '100%' }}; {% if report.graph_area_height and report.graph_area_height != 'auto' %}height: {{ report.graph_area_height }};{% endif %}">
       <div class="section-header">📈 Exact Performance Curves (Evaluated for {{ pump.name }})</div>
 
+      <!-- Proposal Master Legend (Matching Details Page Exactly) -->
+      {% if curves and curves.is_proposal and curves.proposal_legend_items %}
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 16px; padding: 6px 12px; margin-bottom: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 8pt; font-family: sans-serif;">
+        {% for leg in curves.proposal_legend_items %}
+        <div style="display: inline-flex; align-items: center; gap: 6px;">
+          {% if leg.type == 'marker' %}
+          <span style="color: {{ leg.color }}; font-size: 10pt; line-height: 1;">★</span>
+          {% elif leg.style == 'dashed' %}
+          <svg width="22" height="6" style="display: inline-block; vertical-align: middle;"><line x1="0" y1="3" x2="22" y2="3" stroke="{{ leg.color }}" stroke-width="2.5" stroke-dasharray="5,3" stroke-linecap="round" /></svg>
+          {% elif leg.style == 'dotted' %}
+          <svg width="22" height="6" style="display: inline-block; vertical-align: middle;"><line x1="0" y1="3" x2="22" y2="3" stroke="{{ leg.color }}" stroke-width="2.2" stroke-dasharray="2,3" stroke-linecap="round" /></svg>
+          {% else %}
+          <svg width="22" height="6" style="display: inline-block; vertical-align: middle;"><line x1="0" y1="3" x2="22" y2="3" stroke="{{ leg.color }}" stroke-width="2.5" stroke-linecap="round" /></svg>
+          {% endif %}
+          <span style="color: #334155; font-weight: 600;">{{ leg.name }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
       {% if curves and curves.ordered_graphs %}
       <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
         {% for g in curves.ordered_graphs %}

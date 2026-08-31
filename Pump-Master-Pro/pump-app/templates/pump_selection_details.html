@@ -28,7 +28,7 @@
     </a>
     
     <!-- Primary Default Generate Report Button (Unchanged) -->
-    <a href="{{ url_for('reports.view_report', report_id=default_report_id, pump_id=pump.id, q_duty=form_data.q_duty, h_duty=form_data.h_duty, dia=active_result.optimal_trim_dia_mm if active_result else None, rpm=active_result.optimal_speed_rpm if active_result else None) }}"
+    <a href="{{ url_for('reports.view_report', report_id=default_report_id, pump_id=pump.id, q_duty=form_data.q_duty, h_duty=form_data.h_duty, dia=active_result.optimal_trim_dia_mm if active_result else None, rpm=active_result.optimal_speed_rpm if active_result else None, operation_mode=form_data.operation_mode) }}"
        target="_blank"
        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors btn-primary"
        title="Generate default datasheet report">
@@ -60,7 +60,7 @@
         <div class="py-1 max-h-64 overflow-y-auto divide-y divide-[#30363d]/50 custom-scrollbar">
           {% for rep in available_reports %}
           {% set is_def = (rep.id == default_report_id) %}
-          <a href="{{ url_for('reports.view_report', report_id=rep.id, pump_id=pump.id, q_duty=form_data.q_duty, h_duty=form_data.h_duty, dia=active_result.optimal_trim_dia_mm if active_result else None, rpm=active_result.optimal_speed_rpm if active_result else None) }}"
+          <a href="{{ url_for('reports.view_report', report_id=rep.id, pump_id=pump.id, q_duty=form_data.q_duty, h_duty=form_data.h_duty, dia=active_result.optimal_trim_dia_mm if active_result else None, rpm=active_result.optimal_speed_rpm if active_result else None, operation_mode=form_data.operation_mode) }}"
              target="_blank"
              class="flex items-center justify-between px-3.5 py-2.5 text-xs text-[#e6edf3] hover:bg-[#1c2330] hover:text-[#58a6ff] transition-colors group">
             <div class="truncate pe-2 text-left">

@@ -1010,8 +1010,14 @@ def _build_report_curve_context(pump, report):
     explicit_dia = getattr(report, 'show_dia_overlay', None)
     explicit_rpm = getattr(report, 'show_rpm_overlay', None)
 
-    # Check Family Type / Test Basis (auto-detects VSD templates so VSD reports display RPM curves and labels)
+    # Check Family Type / Test Basis (auto-detects VSD templates and URL operation_mode so reports display RPM curves and labels)
+    from flask import request, session
+    op_mode = (request.args.get('operation_mode') or '').strip().lower() if request else ''
+    if not op_mode and request and session:
+        op_mode = (session.get('selection_form_data', {}).get('operation_mode') or '').strip().lower()
+
     is_variable_speed = (pump.family_type == 'variable_speed') or \
+                        (op_mode == 'vsd') or \
                         ('vsd' in (getattr(report, 'report_name', '') or '').lower()) or \
                         ('variable' in (getattr(report, 'report_name', '') or '').lower()) or \
                         (explicit_rpm is True and explicit_dia is False)
@@ -1745,6 +1751,68 @@ def _build_report_curve_context(pump, report):
     final_rated_dia = rated_d if ('rated_d' in locals() and rated_d) else None
     final_rated_rpm = rated_rpm if ('rated_rpm' in locals() and rated_rpm) else None
 
+    # ── Proposal Master Legend Items (Matching Details Page Exactly) ──
+    # Beginners Note: Generate horizontal legend items matching the interactive Details view chart:
+    # Head, Efficiency, Power, NPSHr, Rated Curve (with calculated RPM or Trim Ø), System Curve, Duty Point.
+    proposal_legend_items = []
+    if hq_active:
+        proposal_legend_items.append({
+            'name': 'Head',
+            'color': graph_styles.get('hq_color', '#1e3a8a') or '#1e3a8a',
+            'style': 'solid',
+            'type': 'line'
+        })
+    if eta_active:
+        proposal_legend_items.append({
+            'name': 'Efficiency',
+            'color': graph_styles.get('eta_color', '#059669') or '#059669',
+            'style': 'solid',
+            'type': 'line'
+        })
+    if pow_active:
+        proposal_legend_items.append({
+            'name': 'Power',
+            'color': graph_styles.get('pow_color', '#dc2626') or '#dc2626',
+            'style': 'solid',
+            'type': 'line'
+        })
+    if npsh_active:
+        proposal_legend_items.append({
+            'name': 'NPSHr',
+            'color': graph_styles.get('npsh_color', '#0284c7') or '#0284c7',
+            'style': 'solid',
+            'type': 'line'
+        })
+    if show_rated_effective and (final_rated_dia or final_rated_rpm):
+        if is_variable_speed and final_rated_rpm:
+            rated_lbl = f"Rated Curve ({int(round(final_rated_rpm))} RPM)"
+        elif final_rated_dia:
+            rated_lbl = f"Rated Curve (Ø {round(final_rated_dia, 1)} mm)"
+        elif final_rated_rpm:
+            rated_lbl = f"Rated Curve ({int(round(final_rated_rpm))} RPM)"
+        else:
+            rated_lbl = "Rated Curve"
+        proposal_legend_items.append({
+            'name': rated_lbl,
+            'color': graph_styles.get('rated_curve_color', '#d97706') or '#d97706',
+            'style': 'dashed',
+            'type': 'line'
+        })
+    if (is_proposal or (request and request.args.get('show_sys') == '1')) and show_sys_effective and q_duty_val and h_duty_val:
+        proposal_legend_items.append({
+            'name': 'System Curve',
+            'color': graph_styles.get('system_curve_color', '#8b949e') or '#8b949e',
+            'style': 'dotted',
+            'type': 'line'
+        })
+    if show_duty_effective and q_duty_val and h_duty_val:
+        proposal_legend_items.append({
+            'name': 'Duty Point',
+            'color': '#ef4444',
+            'style': 'solid',
+            'type': 'marker'
+        })
+
     return {
         'q_max': q_max,
         'has_npsh': has_npsh,
@@ -1760,6 +1828,8 @@ def _build_report_curve_context(pump, report):
         'rated_rpm': int(round(final_rated_rpm)) if final_rated_rpm else None,
         'rep_unit_q': _unit_label('q', rep_unit_q),
         'rep_unit_h': _unit_label('h', rep_unit_h),
+        'is_proposal': is_proposal,
+        'proposal_legend_items': proposal_legend_items,
     }
 
 

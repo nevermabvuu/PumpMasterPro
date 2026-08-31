@@ -261,12 +261,18 @@
       <div class="section-header">⏱ Technical Summary &amp; Duty Point</div>
       <div class="grid-4">
         <div class="metric-card">
-          <span class="metric-lbl">Speed (rpm)</span>
+          <span class="metric-lbl">Base Speed (rpm)</span>
           <span class="metric-val">{{ pump.speed_rpm|round|int }} rpm</span>
+          {% if curves and curves.rated_rpm %}
+          <span style="font-size: 7.5pt; color: #d97706; font-weight: 700; display: block; margin-top: 1px;">Rated: {{ curves.rated_rpm }} rpm</span>
+          {% endif %}
         </div>
         <div class="metric-card">
           <span class="metric-lbl">Impeller Diameter</span>
           <span class="metric-val">{{ pump.impeller_dia_mm|round(1) }} mm</span>
+          {% if curves and curves.rated_dia %}
+          <span style="font-size: 7.5pt; color: #d97706; font-weight: 700; display: block; margin-top: 1px;">Rated: Ø{{ curves.rated_dia }} mm</span>
+          {% endif %}
         </div>
         <div class="metric-card">
           <span class="metric-lbl">Test Basis</span>
@@ -275,9 +281,15 @@
           </span>
         </div>
         <div class="metric-card-blue">
-          <span class="metric-lbl" style="color: #1e40af;">BEP Flow / Duty</span>
-          <span class="metric-val" style="color: #1e3a8a;">
-            {{ curves.bep_info.q if curves and curves.bep_info else 0.0 }} {{ pump.unit_op_q or 'm³/h' }}
+          <span class="metric-lbl" style="color: #1e40af;">
+            {% if curves and curves.duty_point %}🎯 Operating Duty Point{% else %}BEP Flow / Duty{% endif %}
+          </span>
+          <span class="metric-val" style="color: #1e3a8a; font-size: 10pt;">
+            {% if curves and curves.duty_point %}
+              {{ curves.duty_point.q|round(1) }} {{ curves.rep_unit_q }} @ {{ curves.duty_point.h|round(1) }} {{ curves.rep_unit_h }}
+            {% else %}
+              {{ curves.bep_info.q if curves and curves.bep_info else 0.0 }} {{ pump.unit_op_q or 'm³/h' }}
+            {% endif %}
           </span>
         </div>
       </div>

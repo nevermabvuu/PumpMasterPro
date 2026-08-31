@@ -40,7 +40,7 @@
       <button onclick="window.print()" class="px-3.5 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg flex items-center gap-2 shadow-sm transition-colors">
         <i class="bi bi-printer"></i> Print / Save PDF
       </button>
-      <a href="{{ url_for('reports.download_pdf', report_id=report.id, pump_id=pump.id) }}" class="px-3.5 py-1.5 bg-[#1f6feb] hover:bg-[#388bfd] text-xs font-bold text-white rounded-lg flex items-center gap-2 shadow-sm transition-colors">
+      <a href="{{ url_for('reports.download_pdf', report_id=report.id, pump_id=pump.id, **request.args) }}" class="px-3.5 py-1.5 bg-[#1f6feb] hover:bg-[#388bfd] text-xs font-bold text-white rounded-lg flex items-center gap-2 shadow-sm transition-colors">
         <i class="bi bi-download"></i> Download PDF
       </a>
     </div>

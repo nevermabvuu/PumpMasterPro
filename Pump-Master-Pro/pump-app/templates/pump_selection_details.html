@@ -2,6 +2,14 @@
 {% block title %}{{ pump.name }} - Selection Details{% endblock %}
 
 {% block content %}
+{% set active_result_ns = namespace(value=none) %}
+{% for r in results %}
+  {% if r.pump_id == pump.id or r['pump_id'] == pump.id %}
+    {% set active_result_ns.value = r %}
+  {% endif %}
+{% endfor %}
+{% set active_result = active_result_ns.value %}
+
 <!-- Page Header -->
 <div class="flex justify-between items-start flex-wrap gap-3 mb-4">
   <div class="page-header mb-0">
@@ -11,17 +19,70 @@
       &bull; Ø{{ pump.impeller_dia_mm|int }} mm
     </p>
   </div>
-  <div class="flex gap-2 flex-wrap">
+  <div class="flex gap-2 flex-wrap items-center">
     <a href="{{ url_for('selection.pump_selection') }}" 
        class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium transition-colors"
        style="border:1px solid #30363d;color:#8b949e;"
        onmouseover="this.style.background='#1c2330'" onmouseout="this.style.background='transparent'">
       <i class="bi bi-arrow-left"></i>Back to Search
     </a>
-    <a href="{{ url_for('reports.view_report', report_id=default_report_id, pump_id=pump.id) }}"
-       class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium transition-colors btn-primary">
+    
+    <!-- Primary Default Generate Report Button (Unchanged) -->
+    <a href="{{ url_for('reports.view_report', report_id=default_report_id, pump_id=pump.id, q_duty=form_data.q_duty, h_duty=form_data.h_duty, dia=active_result.optimal_trim_dia_mm if active_result else None, rpm=active_result.optimal_speed_rpm if active_result else None) }}"
+       target="_blank"
+       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors btn-primary"
+       title="Generate default datasheet report">
       <i class="bi bi-file-earmark-pdf"></i>Generate Report
     </a>
+
+    <!-- Report Template Selector Dropdown -->
+    {% if available_reports and available_reports|length > 0 %}
+    <div class="relative inline-block text-left">
+      <button type="button"
+              onclick="toggleSelectionReportDropdown(event)"
+              id="reportDropdownBtn"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-sm font-medium transition-colors"
+              style="border:1px solid #30363d;background:#21262d;color:#c9d1d9;"
+              onmouseover="this.style.background='#30363d';this.style.color='#ffffff'"
+              onmouseout="this.style.background='#21262d';this.style.color='#c9d1d9'"
+              title="Select a specific report to generate">
+        <i class="bi bi-file-earmark-text text-[#58a6ff]"></i>
+        <span>Select Report</span>
+        <i class="bi bi-chevron-down text-xs text-gray-400"></i>
+      </button>
+
+      <div id="selection-report-dropdown"
+           class="hidden absolute right-0 top-full mt-1.5 w-72 bg-[#161b22] border border-[#30363d] rounded-xl shadow-2xl py-1 z-50">
+        <div class="px-3.5 py-2 text-[11px] font-bold uppercase tracking-wider text-[#8b949e] border-b border-[#30363d] flex items-center justify-between">
+          <span class="flex items-center gap-1.5"><i class="bi bi-file-earmark-pdf text-[#58a6ff]"></i>Available Reports</span>
+          <span class="bg-[#21262d] text-[#58a6ff] px-1.5 py-0.5 rounded text-[10px] font-mono">{{ available_reports|length }} active</span>
+        </div>
+        <div class="py-1 max-h-64 overflow-y-auto divide-y divide-[#30363d]/50 custom-scrollbar">
+          {% for rep in available_reports %}
+          {% set is_def = (rep.id == default_report_id) %}
+          <a href="{{ url_for('reports.view_report', report_id=rep.id, pump_id=pump.id, q_duty=form_data.q_duty, h_duty=form_data.h_duty, dia=active_result.optimal_trim_dia_mm if active_result else None, rpm=active_result.optimal_speed_rpm if active_result else None) }}"
+             target="_blank"
+             class="flex items-center justify-between px-3.5 py-2.5 text-xs text-[#e6edf3] hover:bg-[#1c2330] hover:text-[#58a6ff] transition-colors group">
+            <div class="truncate pe-2 text-left">
+              <div class="font-semibold text-xs text-[#e6edf3] group-hover:text-[#58a6ff] flex items-center gap-1.5 truncate">
+                <span>{{ rep.title }}</span>
+                {% if is_def %}
+                <span class="px-1.5 py-0.5 bg-[#238636]/20 border border-[#238636]/50 text-[#3fb950] text-[9px] rounded font-medium">Default</span>
+                {% endif %}
+              </div>
+              <div class="text-[10px] text-[#8b949e] font-mono flex items-center gap-1.5 mt-0.5">
+                <span class="text-[#c084fc]">#{{ rep.report_name or rep.id }}</span>
+                <span>·</span>
+                <span class="truncate text-gray-400">{{ rep.report_type or 'Technical Datasheet' }}</span>
+              </div>
+            </div>
+            <i class="bi bi-box-arrow-up-right text-[11px] text-[#8b949e] group-hover:text-[#58a6ff] shrink-0"></i>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
   </div>
 </div>
 
@@ -109,5 +170,24 @@
   };
 </script>
 <script src="{{ url_for('static', filename='js/pump_selection_details.js') }}"></script>
+<script>
+  function toggleSelectionReportDropdown(e) {
+    if (e) e.stopPropagation();
+    const drop = document.getElementById('selection-report-dropdown');
+    if (drop) {
+      drop.classList.toggle('hidden');
+    }
+  }
+
+  document.addEventListener('click', function(e) {
+    const drop = document.getElementById('selection-report-dropdown');
+    const btn = document.getElementById('reportDropdownBtn');
+    if (drop && !drop.classList.contains('hidden')) {
+      if (!drop.contains(e.target) && (!btn || !btn.contains(e.target))) {
+        drop.classList.add('hidden');
+      }
+    }
+  });
+</script>
 
 {% endblock %}

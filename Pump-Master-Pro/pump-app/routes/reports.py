@@ -165,16 +165,13 @@ def _clean_axis_scale(min_v, max_v, maj_v, minr_v, conv_factor=1.0, default_min=
     else:
         raw_minr_step = None
 
-    if not is_conv or raw_max is None:
+    if not is_conv or raw_max is None or span is None or span <= 0:
         return {
             'min': raw_min,
             'max': raw_max,
             'major': raw_maj_step,
             'minor': raw_minr_step
         }
-
-    if span <= 0:
-        return {'min': raw_min, 'max': raw_max, 'major': raw_maj_step, 'minor': raw_minr_step}
 
     target_step = raw_maj_step if (raw_maj_step and raw_maj_step > 0) else (span / 5.0)
 
@@ -334,13 +331,21 @@ def _dash_style_to_svg(style_name, default=''):
     return default
 
 
-def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", custom_range=None, width=720, height=240, isolines_list=None, show_legend=True, legend_position='top_right', legend_mode='each', custom_label_pos=None, label_format='auto', chart_type='hq', graph_styles=None):
+def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", custom_range=None, width=720, height=240, isolines_list=None, show_legend=True, legend_position='top_right', legend_mode='each', custom_label_pos=None, label_format='auto', chart_type='hq', graph_styles=None, duty_point=None):
     """
     Beginners Note: Generates pure inline SVG XML vector markup for single or multi-curve pump charts in Ultra-HD resolution.
     Applies custom visual styles (per-chart colors, max/min/trim curve thickness & styles, custom typography, and axes/grid styles).
     """
     if not curves_list and not isolines_list:
         return ""
+
+    def find_custom_pos(custom_pos_dict, keys_to_try):
+        if not custom_pos_dict or not isinstance(custom_pos_dict, dict):
+            return None
+        for k in keys_to_try:
+            if k in custom_pos_dict:
+                return custom_pos_dict[k]
+        return None
 
     styles = graph_styles or {}
 
@@ -566,20 +571,27 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
 
     # Chart primary color lookup for 'chart_custom' mode
     chart_key = 'eta' if chart_type == 'eff' else chart_type
-    chart_specific_color = styles.get(f"{chart_key}_color")
+    chart_specific_color = None
+    chart_key = chart_type.lower()
+    if chart_key == 'hq':
+        chart_specific_color = styles.get('hq_color')
+    elif chart_key == 'eta':
+        chart_specific_color = styles.get('eta_color')
+    elif chart_key == 'pow':
+        chart_specific_color = styles.get('pow_color')
+    elif chart_key == 'npsh':
+        chart_specific_color = styles.get('npsh_color')
 
-    # Render Primary & Trim Pump Curve Paths
     sec_count = 0
-    num_curves = len(curves_list or [])
     for c_idx, c in enumerate(curves_list or []):
         x_pts = c.get('x', [])
         y_pts = c.get('y', [])
+        label = c.get('label', '')
         color = c.get('color', '#1e3a8a')
-        label = c.get('label', f'Curve {c_idx+1}')
         is_sec = c.get('is_secondary', False)
-
-        is_max = (c_idx == 0)
-        is_min = (c_idx == num_curves - 1 and num_curves > 1)
+        is_rated = bool(c.get('is_rated')) or ('(rated)' in label.lower())
+        is_max = (c_idx == 0 and not is_sec and not is_rated)
+        is_min = (c_idx == len(curves_list) - 1 and len(curves_list) > 1 and not is_sec and not is_rated)
 
         if is_sec:
             sec_idx = sec_count
@@ -591,7 +603,9 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             continue
 
         # Custom Curve Colors
-        if is_max and styles.get('max_curve_color'):
+        if is_rated:
+            color = styles.get('rated_curve_color') or '#d97706'
+        elif is_max and styles.get('max_curve_color'):
             color = styles['max_curve_color']
         elif is_min and styles.get('min_curve_color'):
             color = styles['min_curve_color']
@@ -600,23 +614,25 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                 color = chart_specific_color
 
         # Custom Curve Thickness & Dash Patterns
-        if is_max:
-            stroke_w = float(styles.get('max_curve_width', styles.get(f"{chart_key}_width", 2.6)))
-            dash_style = _dash_style_to_svg(styles.get('max_curve_style', styles.get(f"{chart_key}_style", 'solid')))
+        if is_rated:
+            stroke_w = float(styles.get('rated_curve_width') or 2.8)
+            dash_style = _dash_style_to_svg(styles.get('rated_curve_style') or 'dashed', 'stroke-dasharray="6,4"')
+        elif is_max:
+            stroke_w = float(styles.get('max_curve_width') or styles.get(f"{chart_key}_width") or 2.4)
+            dash_style = _dash_style_to_svg(styles.get('max_curve_style') or styles.get(f"{chart_key}_style") or 'solid', '')
         elif is_min:
-            stroke_w = float(styles.get('min_curve_width', 2.0))
-            dash_style = _dash_style_to_svg(styles.get('min_curve_style', 'dashed'))
+            stroke_w = float(styles.get('min_curve_width') or 1.6)
+            dash_style = _dash_style_to_svg(styles.get('min_curve_style') or 'solid', '')
         else:
-            stroke_w = float(styles.get('trim_curve_width', 1.8))
-            dash_style = _dash_style_to_svg(styles.get('trim_curve_style', 'dashed'))
+            stroke_w = float(styles.get('trim_curve_width') or 1.6)
+            dash_style = _dash_style_to_svg(styles.get('trim_curve_style') or 'solid', '')
 
         pts = []
         for x, y in zip(x_pts, y_pts):
-            raw_px = padding_left + ((x - x_min) / (x_max - x_min)) * plot_w
-            raw_py = padding_top + plot_h - ((y - y_min) / (y_max - y_min)) * plot_h
-            px = min(max(float(padding_left), float(raw_px)), float(VIEW_W - padding_right))
-            py = min(max(float(padding_top), float(raw_py)), float(padding_top + plot_h))
-            pts.append((px, py))
+            if x_min <= x <= x_max and y_min <= y <= y_max:
+                px = padding_left + ((x - x_min) / (x_max - x_min)) * plot_w
+                py = padding_top + plot_h - ((y - y_min) / (y_max - y_min)) * plot_h
+                pts.append((px, py))
 
         if not pts:
             continue
@@ -627,12 +643,12 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
 
         paths_svg.append(f'<path d="{path_d}" fill="none" stroke="{color}" stroke-width="{stroke_w}" {dash_style} stroke-linecap="round" stroke-linejoin="round" />')
         pct_val = c.get('pct')
-        legend_items.append({'label': label, 'color': color, 'pct': pct_val, 'val': c.get('val'), 'width': stroke_w, 'dash': dash_style})
+        legend_items.append({'label': label, 'color': color, 'pct': pct_val, 'val': c.get('val'), 'width': stroke_w, 'dash': dash_style, 'is_rated': is_rated})
 
         # Option 4: Direct labels on each impeller curve
         if legend_mode == 'curve_labels' and len(pts) > 1:
             raw_label = label
-            clean_lbl = raw_label.replace(' (Max)', '').replace(' (Fitted)', '').replace(' (Affinity)', '').strip()
+            clean_lbl = raw_label.replace(' (Max)', '').replace(' (Rated)', '').replace(' (Fitted)', '').replace(' (Affinity)', '').strip()
 
             dedup_key = f"{c_idx}_{clean_lbl}"
             if dedup_key in drawn_label_keys:
@@ -644,8 +660,13 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             is_rpm_lbl = ('rpm' in clean_lbl.lower()) or ('rpm' in raw_label.lower())
             chart_prefix = f"{chart_type}_" if chart_type != 'hq' else ""
 
-            # Format text badge according to user label_format choice
-            if label_format == 'percent':
+            # Format text badge according to user label_format choice & is_rated status
+            if is_rated:
+                if is_rpm_lbl:
+                    display_text = f"{val_key} RPM (Rated)"
+                else:
+                    display_text = f"Ø{val_key} mm (Rated)"
+            elif label_format == 'percent':
                 if pct_val is not None:
                     display_text = f"{pct_val}%"
                 elif is_rpm_lbl:
@@ -666,6 +687,7 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             candidate_keys = []
             if is_rpm_lbl:
                 simple_rpm_keys = [
+                    f"{chart_prefix}{val_key} RPM (Rated)",
                     f"{chart_prefix}{val_key} RPM (Max)",
                     f"{chart_prefix}{val_key} RPM",
                     f"{chart_prefix}{raw_label}",
@@ -690,6 +712,7 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                 candidate_keys.extend(idx_rpm_keys)
             else:
                 simple_dia_keys = [
+                    f"{chart_prefix}Ø{val_key} mm (Rated)",
                     f"{chart_prefix}Ø{val_key} mm (Max)",
                     f"{chart_prefix}Ø{val_key} mm",
                     f"{chart_prefix}Ø{raw_label}",
@@ -749,7 +772,11 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             ly = min(max(float(padding_top + 12), float(ly)), float(VIEW_H - padding_bottom - 6))
 
             tw = len(display_text) * 5.8 + 10
-            if badge_style == 'pill_tinted':
+            if is_rated:
+                # Highlighted Amber badge for rated curve
+                labels.append(f'<rect x="{lx - tw/2:.1f}" y="{ly - 11:.1f}" width="{tw:.1f}" height="14" fill="#fffbeb" fill-opacity="0.95" stroke="#d97706" stroke-width="1.2" rx="3.5" />')
+                labels.append(f'<text x="{lx:.1f}" y="{ly - 1.5:.1f}" font-size="{9 * f_scale:.1f}" font-weight="700" font-family="{font_family}" fill="#b45309" text-anchor="middle">{display_text}</text>')
+            elif badge_style == 'pill_tinted':
                 labels.append(f'<rect x="{lx - tw/2:.1f}" y="{ly - 11:.1f}" width="{tw:.1f}" height="14" fill="{color}" fill-opacity="0.12" stroke="{color}" stroke-width="1.0" rx="3.5" />')
                 labels.append(f'<text x="{lx:.1f}" y="{ly - 1.5:.1f}" font-size="{9 * f_scale:.1f}" font-weight="700" font-family="{font_family}" fill="{color}" text-anchor="middle">{display_text}</text>')
             elif badge_style == 'subtle_glow':
@@ -764,7 +791,7 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
     legend_svg = ""
     if show_legend and legend_mode != 'curve_labels' and legend_mode != 'none' and len(legend_items) >= 1:
         leg_box = []
-        b_w = 135
+        b_w = 145
         b_h = 16 + len(legend_items) * 14
 
         if legend_position == 'top_left':
@@ -787,8 +814,11 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             l_pct = leg.get("pct")
             l_dash = leg.get("dash", "")
             l_w = min(2.5, leg.get("width", 2.0))
+            is_leg_rated = leg.get("is_rated", False)
 
-            if label_format == 'percent' and l_pct is not None:
+            if is_leg_rated:
+                l_text = leg["label"]
+            elif label_format == 'percent' and l_pct is not None:
                 l_text = f"{leg['label']} ({l_pct}%)" if '%' not in leg['label'] else leg['label']
             elif label_format == 'auto' and l_pct is not None and '%' not in leg['label']:
                 l_text = f"{leg['label']} ({l_pct}%)"
@@ -796,27 +826,106 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                 l_text = re.sub(r'\s*\(\d+%\)', '', leg['label'])
 
             leg_box.append(f'<line x1="{box_x + 8}" y1="{ly - 3}" x2="{box_x + 24}" y2="{ly - 3}" stroke="{leg["color"]}" stroke-width="{l_w}" {l_dash} stroke-linecap="round" />')
-            leg_box.append(f'<text x="{box_x + 28}" y="{ly}" font-size="{9 * f_scale:.1f}" font-weight="{f_weight}" font-family="{font_family}" fill="#334155">{l_text}</text>')
+            text_color = '#b45309' if is_leg_rated else '#334155'
+            text_weight = '700' if is_leg_rated else f_weight
+            leg_box.append(f'<text x="{box_x + 28}" y="{ly}" font-size="{9 * f_scale:.1f}" font-weight="{text_weight}" font-family="{font_family}" fill="{text_color}">{l_text}</text>')
         legend_svg = "".join(leg_box)
+
+    # ── Render Operating Duty Point Marker (Target icon + crosshairs) on H-Q chart ──
+    duty_svg = ""
+    if duty_point and isinstance(duty_point, dict) and chart_type == 'hq':
+        try:
+            dq = float(duty_point.get('q', 0))
+            dh = float(duty_point.get('h', 0))
+            if x_min <= dq <= x_max and y_min <= dh <= y_max:
+                d_px = padding_left + ((dq - x_min) / (x_max - x_min)) * plot_w
+                d_py = padding_top + plot_h - ((dh - y_min) / (y_max - y_min)) * plot_h
+
+                # Crosshairs
+                ch_lines = f'<line x1="{padding_left}" y1="{d_py:.1f}" x2="{d_px:.1f}" y2="{d_py:.1f}" stroke="#ef4444" stroke-width="1.2" stroke-dasharray="3,3" />' \
+                           f'<line x1="{d_px:.1f}" y1="{d_py:.1f}" x2="{d_px:.1f}" y2="{padding_top + plot_h}" stroke="#ef4444" stroke-width="1.2" stroke-dasharray="3,3" />'
+
+                # Bullseye Target Icon
+                target_dot = f'<circle cx="{d_px:.1f}" cy="{d_py:.1f}" r="6.5" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="1.5" />' \
+                             f'<circle cx="{d_px:.1f}" cy="{d_py:.1f}" r="2.5" fill="#dc2626" />'
+
+                # Duty Coordinate Badge
+                d_lbl = duty_point.get('label') or f"Duty: {round(dq, 1)} @ {round(dh, 1)}"
+                tw_d = len(d_lbl) * 5.6 + 10
+                badge_x = min(max(float(padding_left + tw_d/2 + 2), float(d_px)), float(VIEW_W - padding_right - tw_d/2 - 2))
+                badge_y = max(float(padding_top + 14), float(d_py - 10))
+                duty_badge = f'<rect x="{badge_x - tw_d/2:.1f}" y="{badge_y - 10:.1f}" width="{tw_d:.1f}" height="13" fill="#ffffff" fill-opacity="0.95" stroke="#ef4444" stroke-width="1.0" rx="3" />' \
+                             f'<text x="{badge_x:.1f}" y="{badge_y - 1.0:.1f}" font-size="8.5" font-weight="700" font-family="{font_family}" fill="#b91c1c" text-anchor="middle">🎯 {d_lbl}</text>'
+
+                duty_svg = ch_lines + target_dot + duty_badge
+        except Exception as e:
+            print("Duty point render notice:", e)
 
     svg_code = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {VIEW_W} {VIEW_H}" preserveAspectRatio="none" width="100%" height="100%" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" style="background:{chart_bg}; border-radius:4px; display:block; width:100%; height:100%; max-height:{height}px;">
   {''.join(grid_lines)}
-  <line x1="{padding_left}" y1="{padding_top + plot_h}" x2="{VIEW_W - padding_right}" y2="{padding_top + plot_h}" stroke="{axis_col}" stroke-width="{axis_w}" />
-  <line x1="{padding_left}" y1="{padding_top}" x2="{padding_left}" y2="{padding_top + plot_h}" stroke="{axis_col}" stroke-width="{axis_w}" />
-  {''.join(labels)}
-  <text x="{(padding_left + VIEW_W - padding_right) / 2}" y="{VIEW_H - 3}" font-size="{10.5 * f_scale:.1f}" font-weight="700" font-family="{font_family}" fill="#1e293b" text-anchor="middle">{x_label}</text>
-  <text x="12" y="{(padding_top + padding_top + plot_h) / 2}" font-size="{10.5 * f_scale:.1f}" font-weight="700" font-family="{font_family}" fill="#1e293b" text-anchor="middle" transform="rotate(-90 12 {(padding_top + padding_top + plot_h) / 2})">{y_label}</text>
   {''.join(paths_svg)}
+  {duty_svg}
+  {''.join(labels)}
   {legend_svg}
-</svg>'''
+  <!-- X-Axis Line -->
+  <line x1="{padding_left}" y1="{padding_top + plot_h}" x2="{VIEW_W - padding_right}" y2="{padding_top + plot_h}" stroke="{axis_col}" stroke-width="{axis_w}" />
+  <!-- Y-Axis Line -->
+  <line x1="{padding_left}" y1="{padding_top}" x2="{padding_left}" y2="{padding_top + plot_h}" stroke="{axis_col}" stroke-width="{axis_w}" />
+  <!-- X-Axis Ticks & Values -->
+'''
+    for val in x_ticks:
+        px = padding_left + ((val - x_min) / (x_max - x_min)) * plot_w
+        svg_code += f'  <line x1="{px:.1f}" y1="{padding_top + plot_h}" x2="{px:.1f}" y2="{padding_top + plot_h + 4}" stroke="{axis_col}" stroke-width="1.0" />\n'
+        val_fmt = f"{int(round(val))}" if abs(val - round(val)) < 1e-4 else f"{val:.1f}"
+        svg_code += f'  <text x="{px:.1f}" y="{padding_top + plot_h + 15}" font-size="{9 * f_scale:.1f}" font-family="{font_family}" font-weight="{f_weight}" fill="#475569" text-anchor="middle">{val_fmt}</text>\n'
+
+    for val in y_ticks:
+        py = padding_top + plot_h - ((val - y_min) / (y_max - y_min)) * plot_h
+        svg_code += f'  <line x1="{padding_left - 4}" y1="{py:.1f}" x2="{padding_left}" y2="{py:.1f}" stroke="{axis_col}" stroke-width="1.0" />\n'
+        val_fmt = f"{int(round(val))}" if abs(val - round(val)) < 1e-4 else f"{val:.1f}"
+        svg_code += f'  <text x="{padding_left - 6}" y="{py + 3:.1f}" font-size="{9 * f_scale:.1f}" font-family="{font_family}" font-weight="{f_weight}" fill="#475569" text-anchor="end">{val_fmt}</text>\n'
+
+    # Axis Labels
+    svg_code += f'  <text x="{padding_left + plot_w / 2:.1f}" y="{VIEW_H - 4}" font-size="{10 * f_scale:.1f}" font-weight="700" font-family="{font_family}" fill="#1e293b" text-anchor="middle">{x_label}</text>\n'
+    svg_code += f'  <text x="14" y="{padding_top + plot_h / 2:.1f}" font-size="{10 * f_scale:.1f}" font-weight="700" font-family="{font_family}" fill="#1e293b" text-anchor="middle" transform="rotate(-90 14 {padding_top + plot_h / 2:.1f})">{y_label}</text>\n'
+    svg_code += '</svg>'
+
     return svg_code
+
+
+def _calc_optimal_trim_ratio(pump, q_duty, h_duty):
+    """
+    Calculate optimal trim ratio r in [0.2, 1.15] using bisection root-finding
+    such that H(q_duty / r) * r^2 = h_duty.
+    """
+    try:
+        q_val = float(q_duty)
+        h_val = float(h_duty)
+        if q_val <= 0 or h_val <= 0:
+            return 1.0
+
+        r_low = 0.2
+        r_high = 1.15
+        for _ in range(30):
+            r_mid = (r_low + r_high) / 2.0
+            q_eval = np.array([q_val / r_mid])
+            h_eval = float(hq_curve(pump, q_eval)[0])
+            h_calc = h_eval * (r_mid ** 2)
+            if h_calc < h_val:
+                r_low = r_mid
+            else:
+                r_high = r_mid
+        r_opt = (r_low + r_high) / 2.0
+        return max(0.2, min(1.15, r_opt))
+    except Exception:
+        return 1.0
 
 
 def _build_report_curve_context(pump, report):
     """
     Beginners Note: Evaluates exact mathematical pump curves using pump_curves.py polynomial math,
     applies exact pump-data axis scale settings (min, max, major, minor), auto-detects NPSHr availability,
-    and supports Curve Display Modes (all, max_only, min_max).
+    and supports Curve Display Modes (all, max_only, min_max, rated_only).
     """
     rep_unit_q = getattr(report, 'unit_flow', None) or pump.unit_q or 'm3h'
     rep_unit_h = getattr(report, 'unit_head', None) or pump.unit_h or 'm'
@@ -851,6 +960,9 @@ def _build_report_curve_context(pump, report):
 
     primary_color = report.primary_color if report and report.primary_color else '#1e3a8a'
     mode = report.curve_display_mode if report and report.curve_display_mode else 'all'
+    show_rated = getattr(report, 'show_rated_curve', True)
+    if show_rated is None:
+        show_rated = True
 
     # Check NPSH Availability (e.g. pumps without NPSH data have max NPSH = 0)
     has_npsh = max(npsh_pts) > 0.05 and (pump.has_npsh_poly() if hasattr(pump, 'has_npsh_poly') else any(abs(getattr(pump, f'npsh_c{i}', 0.0) or 0.0) > 1e-6 for i in range(6)))
@@ -882,8 +994,11 @@ def _build_report_curve_context(pump, report):
     eta_curves_list = []
     pow_curves_list = []
     npsh_curves_list = []
+    lines_to_draw = []
+    curves_to_draw = []
+    dia_objs = []
 
-    palette = ['#1e3a8a', '#0284c7', '#475569', '#d97706']
+    palette = ['#1e3a8a', '#2563eb', '#3b82f6', '#64748b', '#94a3b8']
 
     # Determine if user explicitly forced a specific overlay via report settings
     explicit_dia = getattr(report, 'show_dia_overlay', None)
@@ -892,43 +1007,39 @@ def _build_report_curve_context(pump, report):
     # Check Family Type / Test Basis (auto-detects VSD templates so VSD reports display RPM curves and labels)
     is_variable_speed = (pump.family_type == 'variable_speed') or \
                         ('vsd' in (getattr(report, 'report_name', '') or '').lower()) or \
-                        ('vsd' in (getattr(report, 'template_name', '') or '').lower()) or \
-                        ('vsd' in (getattr(report, 'title', '') or '').lower()) or \
-                        ('variable' in (getattr(report, 'report_type', '') or '').lower())
+                        ('variable' in (getattr(report, 'report_name', '') or '').lower()) or \
+                        (explicit_rpm is True and explicit_dia is False)
 
-    # Map 'show_family'
-    if explicit_dia is None and not is_variable_speed:
-        report_show_dia = getattr(report, 'show_family', None)
-    else:
-        report_show_dia = explicit_dia
-
-    if report_show_dia is None:
-        report_show_dia = getattr(pump, 'graph_show_dia_overlay', None)
-        if report_show_dia is None and not is_variable_speed:
-            report_show_dia = getattr(pump, 'graph_show_family', None)
-
-    if explicit_rpm is None and is_variable_speed:
-        report_show_rpm = getattr(report, 'show_family', None)
-    else:
-        report_show_rpm = explicit_rpm
-
-    if report_show_rpm is None:
-        report_show_rpm = getattr(report, 'show_speed_lines', None)
-    if report_show_rpm is None:
-        report_show_rpm = getattr(pump, 'graph_show_rpm_overlay', None)
-        if report_show_rpm is None and is_variable_speed:
-            report_show_rpm = getattr(pump, 'graph_show_family', None)
-        if report_show_rpm is None:
-            report_show_rpm = getattr(pump, 'graph_show_speed_lines', None)
-
-    show_dia = bool(report_show_dia) if report_show_dia is not None else (not is_variable_speed)
-    show_rpm = bool(report_show_rpm) if report_show_rpm is not None else is_variable_speed
+    show_dia = (explicit_dia if explicit_dia is not None else getattr(pump, 'graph_show_dia_overlay', True))
+    show_rpm = (explicit_rpm if explicit_rpm is not None else getattr(pump, 'graph_show_rpm_overlay', True))
 
     # Conflict resolution: if one is explicitly requested by the report, turn the other off (unless both were explicitly requested)
     if explicit_dia is True and explicit_rpm is None:
         show_rpm = False
     elif explicit_rpm is True and explicit_dia is None:
         show_dia = False
+
+    # ── Resolve Operating Duty Point & Optimal Trim / Speed Ratio ──
+    q_duty_val = None
+    h_duty_val = None
+    r_opt = None
+    try:
+        from flask import request, session
+        if request:
+            q_d = _safe_float(request.args.get('q_duty') or request.args.get('q') or request.args.get('flow'))
+            h_d = _safe_float(request.args.get('h_duty') or request.args.get('h') or request.args.get('head'))
+            if (not q_d or not h_d) and session:
+                s_data = session.get('selection_form_data', {})
+                q_d = q_d or _safe_float(s_data.get('q_duty') or s_data.get('q'))
+                h_d = h_d or _safe_float(s_data.get('h_duty') or s_data.get('h'))
+            if q_d and h_d and q_d > 0 and h_d > 0:
+                q_duty_val = q_d
+                h_duty_val = h_d
+                q_m3h = q_duty_val / fQ_curve
+                h_m = h_duty_val / fH_curve
+                r_opt = _calc_optimal_trim_ratio(pump, q_m3h, h_m)
+    except Exception:
+        pass
 
     # Determine primary vs secondary display selection
     show_primary = (show_rpm if is_variable_speed else show_dia)
@@ -946,17 +1057,19 @@ def _build_report_curve_context(pump, report):
                 lines_to_draw = [spd_objs[0]] if spd_objs else []
             elif mode == 'min_max':
                 lines_to_draw = [spd_objs[0], spd_objs[-1]] if len(spd_objs) >= 2 else (spd_objs if spd_objs else [])
+            elif mode == 'rated_only':
+                lines_to_draw = []
             else:
                 lines_to_draw = spd_objs if spd_objs else []
 
             for c_idx, sl in enumerate(lines_to_draw):
                 is_primary = (c_idx == 0)
-                rpm_val = sl.get('rpm', pump.speed_rpm)
-                s_ratio = sl.get('ratio', 1.0)
+                rpm_val = _safe_float(sl.get('rpm', pump.speed_rpm)) or 1450.0
+                s_ratio = _safe_float(sl.get('ratio', 1.0)) or 1.0
                 pct = round(s_ratio * 100) if s_ratio else None
                 lbl = f"{int(round(rpm_val))} RPM (Max)" if is_primary else f"{int(round(rpm_val))} RPM"
 
-                k = s_ratio
+                k = float(s_ratio)
                 c_q = [round(v * k, 2) for v in q_pts]
                 c_h = [round(v * (k**2), 2) for v in h_pts]
                 c_eta = [round(max(0.0, v), 2) for v in eta_pts]
@@ -970,9 +1083,52 @@ def _build_report_curve_context(pump, report):
                 pow_curves_list.append({'label': lbl, 'x': c_q, 'y': c_pow, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
                 npsh_curves_list.append({'label': lbl, 'x': c_q, 'y': c_npsh, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
 
+        # ── Overlay Rated Speed Curve (if show_rated is enabled or mode == 'rated_only') ──
+        if show_rated or mode == 'rated_only':
+            rated_rpm = None
+            try:
+                if request:
+                    rpm_arg = request.args.get('rpm') or request.args.get('speed') or request.args.get('rated_speed') or request.args.get('optimal_speed_rpm')
+                    if rpm_arg:
+                        rated_rpm = _safe_float(rpm_arg)
+            except Exception:
+                pass
+            if not rated_rpm and r_opt:
+                base_spd = spd_objs[0].get('rpm', pump.speed_rpm) if spd_objs else (pump.speed_rpm or 1450.0)
+                rated_rpm = round(base_spd * r_opt)
+            if not rated_rpm:
+                if mode == 'rated_only':
+                    rated_rpm = pump.speed_rpm or (spd_objs[0].get('rpm') if spd_objs else 1450.0)
+
+            if rated_rpm and rated_rpm > 0:
+                base_spd = spd_objs[0].get('rpm', pump.speed_rpm) if spd_objs else (pump.speed_rpm or 1450.0)
+                s_ratio = (rated_rpm / base_spd) if base_spd else 1.0
+                k = float(s_ratio)
+                pct = round(s_ratio * 100) if s_ratio else None
+                lbl = f"{int(round(rated_rpm))} RPM (Rated)"
+                c_q = [round(v * k, 2) for v in q_pts]
+                c_h = [round(v * (k**2), 2) for v in h_pts]
+                c_eta = [round(max(0.0, v), 2) for v in eta_pts]
+                c_pow = [round(v * (k**3), 2) for v in pow_pts]
+                c_npsh = [round(v * (k**2), 2) for v in npsh_pts]
+                rated_color = '#d97706'
+
+                if mode == 'rated_only':
+                    hq_curves_list = [{'label': lbl, 'x': c_q, 'y': c_h, 'color': rated_color, 'is_secondary': False, 'is_rated': True, 'pct': pct, 'val': rated_rpm, 'rpm': rated_rpm}]
+                    eta_curves_list = [{'label': lbl, 'x': c_q, 'y': c_eta, 'color': rated_color, 'is_secondary': False, 'is_rated': True, 'pct': pct, 'val': rated_rpm, 'rpm': rated_rpm}]
+                    pow_curves_list = [{'label': lbl, 'x': c_q, 'y': c_pow, 'color': rated_color, 'is_secondary': False, 'is_rated': True, 'pct': pct, 'val': rated_rpm, 'rpm': rated_rpm}]
+                    npsh_curves_list = [{'label': lbl, 'x': c_q, 'y': c_npsh, 'color': rated_color, 'is_secondary': False, 'is_rated': True, 'pct': pct, 'val': rated_rpm, 'rpm': rated_rpm}]
+                else:
+                    exists = any(abs(c.get('val', 0) - rated_rpm) < 1.0 for c in hq_curves_list)
+                    if not exists:
+                        hq_curves_list.append({'label': lbl, 'x': c_q, 'y': c_h, 'color': rated_color, 'is_secondary': True, 'is_rated': True, 'pct': pct, 'val': rated_rpm, 'rpm': rated_rpm})
+                        eta_curves_list.append({'label': lbl, 'x': c_q, 'y': c_eta, 'color': rated_color, 'is_secondary': True, 'is_rated': True, 'pct': pct, 'val': rated_rpm, 'rpm': rated_rpm})
+                        pow_curves_list.append({'label': lbl, 'x': c_q, 'y': c_pow, 'color': rated_color, 'is_secondary': True, 'is_rated': True, 'pct': pct, 'val': rated_rpm, 'rpm': rated_rpm})
+                        npsh_curves_list.append({'label': lbl, 'x': c_q, 'y': c_npsh, 'color': rated_color, 'is_secondary': True, 'is_rated': True, 'pct': pct, 'val': rated_rpm, 'rpm': rated_rpm})
+
         # Secondary Diameter Overlay curves
         dia_str = (getattr(pump, 'graph_dia_overlay_values', None) or '').strip()
-        if show_secondary and dia_str:
+        if show_secondary and dia_str and mode != 'rated_only':
             try:
                 from pump_curves import _dia_overlay_lines
                 dia_objs = _dia_overlay_lines(pump, values_str=dia_str)
@@ -1005,6 +1161,8 @@ def _build_report_curve_context(pump, report):
                 d_curves = [max_d, custom_d_list[-1]]
             else:
                 d_curves = [max_d, round(max_d * 0.8, 1)]
+        elif mode == 'rated_only':
+            d_curves = []
         else:  # mode == 'all'
             if len(custom_d_list) >= 3:
                 d_curves = custom_d_list
@@ -1014,7 +1172,7 @@ def _build_report_curve_context(pump, report):
             else:
                 d_curves = [max_d, float(round(max_d * 0.93)), float(round(max_d * 0.86)), float(round(max_d * 0.8))]
 
-        # Primary Diameter trim curves (respects mode: all, min_max, max_only)
+        # Primary Diameter trim curves
         curves_to_draw = d_curves
         for c_idx, d_val in enumerate(curves_to_draw):
                 is_primary = (c_idx == 0)
@@ -1036,9 +1194,50 @@ def _build_report_curve_context(pump, report):
                 pow_curves_list.append({'label': lbl, 'x': c_q, 'y': c_pow, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': d_val, 'dia': d_val})
                 npsh_curves_list.append({'label': lbl, 'x': c_q, 'y': c_npsh, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': d_val, 'dia': d_val})
 
+        # ── Overlay Rated Impeller Diameter Curve (if show_rated is enabled or mode == 'rated_only') ──
+        if show_rated or mode == 'rated_only':
+            rated_d = None
+            try:
+                if request:
+                    dia_arg = request.args.get('dia') or request.args.get('trim_dia') or request.args.get('rated_dia') or request.args.get('impeller_dia') or request.args.get('optimal_trim_dia_mm')
+                    if dia_arg:
+                        rated_d = _safe_float(dia_arg)
+            except Exception:
+                pass
+            if not rated_d and r_opt:
+                rated_d = round(max_d * r_opt, 1)
+            if not rated_d:
+                if mode == 'rated_only':
+                    rated_d = pump.impeller_dia_mm if (pump.impeller_dia_mm and pump.impeller_dia_mm > 0) else max_d
+
+            if rated_d and rated_d > 0:
+                d_ratio = rated_d / max_d
+                pct = round(d_ratio * 100)
+                d_fmt = f"{round(rated_d)}" if abs(rated_d - round(rated_d)) < 1e-4 else f"{round(rated_d, 1)}"
+                lbl = f"Ø{d_fmt} mm (Rated)"
+                c_q = [round(v * d_ratio, 2) for v in q_pts]
+                c_h = [round(v * (d_ratio**2), 2) for v in h_pts]
+                c_eta = [round(max(0.0, v), 2) for v in eta_pts]
+                c_pow = [round(v * (d_ratio**3), 2) for v in pow_pts]
+                c_npsh = [round(v * (d_ratio**2), 2) for v in npsh_pts]
+                rated_color = '#d97706'
+
+                if mode == 'rated_only':
+                    hq_curves_list = [{'label': lbl, 'x': c_q, 'y': c_h, 'color': rated_color, 'is_secondary': False, 'is_rated': True, 'pct': pct, 'val': rated_d, 'dia': rated_d}]
+                    eta_curves_list = [{'label': lbl, 'x': c_q, 'y': c_eta, 'color': rated_color, 'is_secondary': False, 'is_rated': True, 'pct': pct, 'val': rated_d, 'dia': rated_d}]
+                    pow_curves_list = [{'label': lbl, 'x': c_q, 'y': c_pow, 'color': rated_color, 'is_secondary': False, 'is_rated': True, 'pct': pct, 'val': rated_d, 'dia': rated_d}]
+                    npsh_curves_list = [{'label': lbl, 'x': c_q, 'y': c_npsh, 'color': rated_color, 'is_secondary': False, 'is_rated': True, 'pct': pct, 'val': rated_d, 'dia': rated_d}]
+                else:
+                    exists = any(abs(c.get('val', 0) - rated_d) < 0.5 for c in hq_curves_list)
+                    if not exists:
+                        hq_curves_list.append({'label': lbl, 'x': c_q, 'y': c_h, 'color': rated_color, 'is_secondary': True, 'is_rated': True, 'pct': pct, 'val': rated_d, 'dia': rated_d})
+                        eta_curves_list.append({'label': lbl, 'x': c_q, 'y': c_eta, 'color': rated_color, 'is_secondary': True, 'is_rated': True, 'pct': pct, 'val': rated_d, 'dia': rated_d})
+                        pow_curves_list.append({'label': lbl, 'x': c_q, 'y': c_pow, 'color': rated_color, 'is_secondary': True, 'is_rated': True, 'pct': pct, 'val': rated_d, 'dia': rated_d})
+                        npsh_curves_list.append({'label': lbl, 'x': c_q, 'y': c_npsh, 'color': rated_color, 'is_secondary': True, 'is_rated': True, 'pct': pct, 'val': rated_d, 'dia': rated_d})
+
         # Secondary RPM Speed Overlay curves
         rpm_str = (getattr(pump, 'graph_rpm_overlay_values', None) or '').strip()
-        if show_secondary and rpm_str:
+        if show_secondary and rpm_str and mode != 'rated_only':
             try:
                 from pump_curves import speed_lines as calc_speed_lines
                 spd_objs = calc_speed_lines(pump, values_str=rpm_str)
@@ -1335,6 +1534,14 @@ def _build_report_curve_context(pump, report):
 
     graph_styles = report.get_graph_styles() if (report and hasattr(report, 'get_graph_styles')) else {}
 
+    duty_pt_dict = None
+    if q_duty_val and h_duty_val and getattr(report, 'show_duty_point', True):
+        duty_pt_dict = {
+            'q': q_duty_val,
+            'h': h_duty_val,
+            'label': f"Duty: {round(q_duty_val, 1)} {rep_unit_q} @ {round(h_duty_val, 1)} {rep_unit_h}"
+        }
+
     graph_defs = {
         'hq': {
             'title': 'Head vs Flow (H-Q)',
@@ -1345,7 +1552,8 @@ def _build_report_curve_context(pump, report):
                 hq_curves_list, f"Flow ({lbl_q})", f"Head ({lbl_h})",
                 custom_range=h_custom_range, height=h, isolines_list=hq_isolines_list,
                 show_legend=show_leg_hq, legend_position=leg_pos, legend_mode=effective_legend_mode,
-                custom_label_pos=custom_pos_hq, label_format=label_fmt, chart_type='hq', graph_styles=graph_styles
+                custom_label_pos=custom_pos_hq, label_format=label_fmt, chart_type='hq', graph_styles=graph_styles,
+                duty_point=duty_pt_dict
             )
         },
         'eta': {
@@ -1440,6 +1648,9 @@ def _build_report_curve_context(pump, report):
     except Exception:
         pass
 
+    final_rated_dia = rated_d if ('rated_d' in locals() and rated_d) else None
+    final_rated_rpm = rated_rpm if ('rated_rpm' in locals() and rated_rpm) else None
+
     return {
         'q_max': q_max,
         'has_npsh': has_npsh,
@@ -1449,7 +1660,12 @@ def _build_report_curve_context(pump, report):
         'svg_npsh': svg_npsh,
         'ordered_graphs': ordered_graphs,
         'active_graph_count': active_count,
-        'bep_info': bep_info
+        'bep_info': bep_info,
+        'duty_point': duty_pt_dict,
+        'rated_dia': round(final_rated_dia, 1) if final_rated_dia else None,
+        'rated_rpm': int(round(final_rated_rpm)) if final_rated_rpm else None,
+        'rep_unit_q': _unit_label('q', rep_unit_q),
+        'rep_unit_h': _unit_label('h', rep_unit_h),
     }
 
 
@@ -1576,6 +1792,7 @@ def save_report():
     report.footer_text = request.form.get('footer_text', 'Generated by Pump Master Pro Engineering Suite').strip()
     report.primary_color = request.form.get('primary_color', '#1e3a8a').strip()
     report.curve_display_mode = request.form.get('curve_display_mode', 'all').strip()
+    report.show_rated_curve = 'show_rated_curve' in request.form
     report.show_duty_point = 'show_duty_point' in request.form
     report.show_materials_table = 'show_materials_table' in request.form
     report.show_extended_specs = 'show_extended_specs' in request.form
@@ -1702,5 +1919,5 @@ def download_pdf(report_id, pump_id):
 if __name__ == '__main__':
     from app import app
     port = int(os.environ.get('PORT', 8000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=True, use_reloader=False)
 

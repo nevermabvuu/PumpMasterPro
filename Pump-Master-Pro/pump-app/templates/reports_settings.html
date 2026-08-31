@@ -86,6 +86,7 @@
             <th class="py-2.5 px-4">Type</th>
             <th class="py-2.5 px-4">Linked Organisation</th>
             <th class="py-2.5 px-4">HTML Template</th>
+            <th class="py-2.5 px-4">Curve Mode</th>
             <th class="py-2.5 px-4">Active Graphs</th>
             <th class="py-2.5 px-4">Branding Theme</th>
             <th class="py-2.5 px-4 text-right">Actions</th>
@@ -114,6 +115,28 @@
             </td>
             <td class="py-3 px-4 font-mono text-xs text-[#8b949e]">
               {{ r.template_name }}
+            </td>
+            <td class="py-3 px-4">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                {% if r.curve_display_mode == 'max_only' %}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-purple-950/70 text-purple-300 border border-purple-800">
+                    <i class="bi bi-arrow-up-right"></i> Max Only
+                  </span>
+                {% elif r.curve_display_mode == 'min_max' %}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-cyan-950/70 text-cyan-300 border border-cyan-800">
+                    <i class="bi bi-arrows-vertical"></i> Min &amp; Max
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-blue-950/70 text-blue-300 border border-blue-800">
+                    <i class="bi bi-graph-up"></i> All Curves
+                  </span>
+                {% endif %}
+                {% if r.show_rated_curve %}
+                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-950/80 text-amber-300 border border-amber-600/60" title="Includes Rated Operating Curve">
+                    <i class="bi bi-bullseye text-[10px]"></i> +Rated
+                  </span>
+                {% endif %}
+              </div>
             </td>
             <td class="py-3 px-4">
               <div class="flex flex-wrap gap-1">
@@ -532,10 +555,44 @@
             </div>
 
             <!-- Pump-Data Advanced Plotting & Overlay Settings -->
-            <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
-              <span class="block text-xs font-bold text-[#38bdf8] uppercase tracking-wider">
-                <i class="bi bi-sliders me-1"></i> Pump-Data Plotting &amp; Overlay Settings
-              </span>
+            <div class="p-3.5 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="block text-xs font-bold text-[#38bdf8] uppercase tracking-wider flex items-center gap-1.5">
+                  <i class="bi bi-bezier2"></i> Performance Curves &amp; Plotting Modes
+                </span>
+                <span class="text-[10px] text-[#8b949e]">H-Q Curve Family Options</span>
+              </div>
+
+              <!-- Primary Curve Display Mode Selector & Rated Curve Toggle -->
+              <div class="p-3 bg-[#161b22] border border-[#38bdf8]/40 rounded-lg space-y-2.5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div class="flex-1">
+                    <label class="block text-xs font-bold text-white mb-0.5 flex items-center gap-1.5">
+                      <i class="bi bi-graph-up-arrow text-[#38bdf8]"></i> Base Curve Family Mode:
+                    </label>
+                    <p class="text-[11px] text-[#8b949e] leading-tight">Controls which standard family curves are drawn on the datasheet.</p>
+                  </div>
+                  <div class="w-full sm:w-60 shrink-0">
+                    <select name="curve_display_mode" id="rep_curve_display_mode" class="w-full bg-[#0d1117] border border-[#38bdf8]/60 rounded px-3 py-1.5 text-xs font-semibold text-[#58a6ff] focus:outline-none focus:border-[#58a6ff]">
+                      <option value="all">📊 All Curves (Full Family / Speeds)</option>
+                      <option value="min_max">📐 Min &amp; Max Curves Only</option>
+                      <option value="max_only">🔝 Max Curve Only (Factory Base)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="pt-2 border-t border-[#21262d] flex items-center justify-between">
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="show_rated_curve" id="rep_show_rated_curve" class="accent-[#f59e0b] w-4 h-4 rounded cursor-pointer" checked>
+                    <span class="text-xs font-bold text-[#f59e0b] flex items-center gap-1.5">
+                      <i class="bi bi-bullseye text-[#f59e0b]"></i> Show Rated / Selected Operating Curve (Trim Ø / Speed RPM)
+                    </span>
+                  </label>
+                  <span class="text-[10px] text-[#8b949e]">Overlays rated operating curve on top</span>
+                </div>
+              </div>
+
+              <!-- Overlay & Isoline Checkboxes -->
               <div class="grid grid-cols-2 gap-2 text-xs text-[#c9d1d9]">
                 <label class="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" name="show_dia_overlay" id="rep_show_dia_overlay" class="accent-[#38bdf8] rounded" checked>
@@ -562,10 +619,12 @@
                   <span>Show Graph Legend / Badges</span>
                 </label>
               </div>
+
               <div class="grid grid-cols-3 gap-2 text-xs pt-2 border-t border-[#21262d]">
                 <div>
                   <label class="block text-[11px] text-[#8b949e] mb-1">Legend Mode:</label>
-                  <select name="legend_mode" id="rep_legend_mode" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 t                    <option value="pump_default">Pump Default (From Pump-Data)</option>
+                  <select name="legend_mode" id="rep_legend_mode" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white">
+                    <option value="pump_default">Pump Default (From Pump-Data)</option>
                     <option value="each">Each Chart (Legend Box)</option>
                     <option value="chart_custom">Per-Chart Custom Graph Colors &amp; Styles</option>
                     <option value="hq_only">H-Q Only (Legend Box)</option>
@@ -639,19 +698,11 @@
               </div>
             </div>
 
-            <!-- Theme & Layout Details -->
-            <div class="grid grid-cols-3 gap-3">
+            <!-- Theme & Branding Details -->
+            <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Header Banner Text</label>
                 <input type="text" name="header_text" id="rep_header_text" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="PUMP MASTER PRO - TECHNICAL DATASHEET">
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Curve Display Mode</label>
-                <select name="curve_display_mode" id="rep_curve_display_mode" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]">
-                  <option value="all">All Curves</option>
-                  <option value="min_max">Min &amp; Max Curves Only</option>
-                  <option value="max_only">Max Curve Only</option>
-                </select>
               </div>
               <div>
                 <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Primary Theme Color</label>
@@ -1451,6 +1502,7 @@
     document.getElementById('rep_primary_color').value = '#1e3a8a';
     document.getElementById('rep_color_hex').value = '#1e3a8a';
     document.getElementById('rep_curve_display_mode').value = 'all';
+    if (document.getElementById('rep_show_rated_curve')) document.getElementById('rep_show_rated_curve').checked = true;
     document.getElementById('rep_show_hq').checked = true;
     document.getElementById('rep_show_additional_graphs').checked = true;
     document.getElementById('rep_show_eta').checked = true;
@@ -1509,6 +1561,7 @@
     document.getElementById('rep_primary_color').value = r.primary_color || '#1e3a8a';
     document.getElementById('rep_color_hex').value = r.primary_color || '#1e3a8a';
     document.getElementById('rep_curve_display_mode').value = r.curve_display_mode || 'all';
+    if (document.getElementById('rep_show_rated_curve')) document.getElementById('rep_show_rated_curve').checked = r.show_rated_curve !== undefined ? r.show_rated_curve : true;
     document.getElementById('rep_show_hq').checked = r.show_head_flow_graph;
     document.getElementById('rep_show_additional_graphs').checked = r.show_additional_graphs !== undefined ? r.show_additional_graphs : true;
     document.getElementById('rep_show_eta').checked = r.show_efficiency_graph;

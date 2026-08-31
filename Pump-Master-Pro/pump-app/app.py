@@ -6,6 +6,7 @@ runs auto-migrations, registers modular Flask Blueprints, and launches the serve
 """
 
 import os
+import sys
 import re
 import json
 from flask import Flask
@@ -77,6 +78,8 @@ with app.app_context():
                 conn.execute(text("ALTER TABLE reports ADD COLUMN report_name VARCHAR(100) DEFAULT 'standard'"))
             if 'curve_display_mode' not in rep_cols:
                 conn.execute(text("ALTER TABLE reports ADD COLUMN curve_display_mode VARCHAR(20) DEFAULT 'all'"))
+            if 'show_rated_curve' not in rep_cols:
+                conn.execute(text("ALTER TABLE reports ADD COLUMN show_rated_curve INTEGER DEFAULT 1"))
             if 'report_type' not in rep_cols:
                 conn.execute(text("ALTER TABLE reports ADD COLUMN report_type VARCHAR(100) DEFAULT 'Technical Datasheet'"))
             if 'show_eff_isolines' not in rep_cols:
@@ -324,4 +327,6 @@ app.url_build_error_handlers.append(handle_url_build_error)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    # Beginners Note: Werkzeug's reloader restarts via sys.exit(3), which debugpy / VS Code intercepts
+    # as an unhandled SystemExit: 3 exception. We set use_reloader=False so the debugger runs cleanly.
+    app.run(host='0.0.0.0', port=port, debug=True, use_reloader=False)

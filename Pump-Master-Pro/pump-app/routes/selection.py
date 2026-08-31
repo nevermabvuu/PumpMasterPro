@@ -172,20 +172,32 @@ def pump_selection_details(pump_id):
     current_org = get_current_organisation()
     org_styles = current_org.get_graph_styles() if current_org else {}
     
-    # Beginners Note: Find the default_report_id for the selected pump so we can build the Report URL
+    # Beginners Note: Find the active_result, default_report_id, and available_reports for the selected pump so we can build the Report URLs
+    active_result = None
     default_report_id = 1 # Fallback
     for r in results:
         if r.get('pump_id') == pump_id:
+            active_result = r
             default_report_id = r.get('default_report_id', 1)
             break
+
+    # Get all available reports for the organisation / pump
+    available_reports = pump.get_effective_catalogue_reports(current_org)
+    if not available_reports and current_org:
+        available_reports = current_org.get_catalogue_reports()
+    if not available_reports:
+        from models import ReportConfig
+        available_reports = ReportConfig.query.all()
     
     return render_template('pump_selection_details.html',
                            pump=pump,
                            results=results,
+                           active_result=active_result,
                            form_data=f,
                            current_org=current_org,
                            org_styles=org_styles,
-                           default_report_id=default_report_id)
+                           default_report_id=default_report_id,
+                           available_reports=available_reports)
 
 
 @selection_bp.route('/papi/select-pumps', methods=['POST'])
@@ -239,5 +251,5 @@ def api_select_pumps():
 if __name__ == '__main__':
     from app import app
     port = int(os.environ.get('PORT', 8000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=True, use_reloader=False)
 

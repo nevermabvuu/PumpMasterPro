@@ -181,13 +181,10 @@ def pump_selection_details(pump_id):
             default_report_id = r.get('default_report_id', 1)
             break
 
-    # Get all available reports for the organisation / pump
-    available_reports = pump.get_effective_catalogue_reports(current_org)
-    if not available_reports and current_org:
-        available_reports = current_org.get_catalogue_reports()
-    if not available_reports:
-        from models import ReportConfig
-        available_reports = ReportConfig.query.all()
+    # Beginners Note: Fetch all available report configurations so the user can select and generate
+    # any report template (standard, VSD, proposal, compact, etc.) directly from the details view.
+    from models import ReportConfig
+    available_reports = ReportConfig.query.order_by(ReportConfig.id.asc()).all()
     
     return render_template('pump_selection_details.html',
                            pump=pump,

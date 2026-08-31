@@ -590,8 +590,9 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
         color = c.get('color', '#1e3a8a')
         is_sec = c.get('is_secondary', False)
         is_rated = bool(c.get('is_rated')) or ('(rated)' in label.lower())
-        is_max = (c_idx == 0 and not is_sec and not is_rated)
-        is_min = (c_idx == len(curves_list) - 1 and len(curves_list) > 1 and not is_sec and not is_rated)
+        is_system = bool(c.get('is_system')) or ('system' in label.lower())
+        is_max = (c_idx == 0 and not is_sec and not is_rated and not is_system)
+        is_min = (c_idx == len(curves_list) - 1 and len(curves_list) > 1 and not is_sec and not is_rated and not is_system)
 
         if is_sec:
             sec_idx = sec_count
@@ -605,6 +606,8 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
         # Custom Curve Colors
         if is_rated:
             color = styles.get('rated_curve_color') or '#d97706'
+        elif is_system:
+            color = styles.get('system_curve_color') or '#8b949e'
         elif is_max and styles.get('max_curve_color'):
             color = styles['max_curve_color']
         elif is_min and styles.get('min_curve_color'):
@@ -617,6 +620,9 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
         if is_rated:
             stroke_w = float(styles.get('rated_curve_width') or 2.8)
             dash_style = _dash_style_to_svg(styles.get('rated_curve_style') or 'dashed', 'stroke-dasharray="6,4"')
+        elif is_system:
+            stroke_w = float(styles.get('system_curve_width') or 2.0)
+            dash_style = _dash_style_to_svg(styles.get('system_curve_style') or 'dotted', 'stroke-dasharray="2.5,3"')
         elif is_max:
             stroke_w = float(styles.get('max_curve_width') or styles.get(f"{chart_key}_width") or 2.4)
             dash_style = _dash_style_to_svg(styles.get('max_curve_style') or styles.get(f"{chart_key}_style") or 'solid', '')
@@ -1526,16 +1532,104 @@ def _build_report_curve_context(pump, report):
     lbl_pow = _unit_label('pow', rep_unit_pow)
     lbl_npsh = _unit_label('npsh', rep_unit_npsh)
 
-    # ── Dynamic Graph Ordering & Height Split Assignment ──
+    # ── Proposal Report & Details View Exact Curve Synchronization ──
+    # Beginners Note: If the selected report type is 'Proposal' (or if the user passed curve visibility flags from details view),
+    # the graphs and curves plotted in the report must match EXACTLY what was active in the details view.
+    # For example, if the user toggled off Power, NPSHr, Efficiency, Rated curve, Duty point, or System curve in details view,
+    # those specific curves/graphs will NOT be shown on the report.
+    rep_type = (getattr(report, 'report_type', '') or '').strip().lower()
+    rep_name = (getattr(report, 'report_name', '') or '').strip().lower()
+    rep_title = (getattr(report, 'title', '') or '').strip().lower()
+    is_proposal = ('proposal' in rep_type) or ('proposal' in rep_name) or ('proposal' in rep_title)
+
+    # Read visibility query arguments passed from details view
+    from flask import request
+    arg_show_hq = request.args.get('show_hq') if request else None
+    arg_show_eta = request.args.get('show_eta') if request else None
+    arg_show_pow = request.args.get('show_pow') if request else None
+    arg_show_npsh = request.args.get('show_npsh') if request else None
+    arg_show_rated = request.args.get('show_rated') if request else None
+    arg_show_duty = request.args.get('show_duty') if request else None
+    arg_show_sys = request.args.get('show_sys') if request else None
+    hidden_curves_raw = (request.args.get('hidden_curves', '') if request else '') or ''
+    hidden_set = {x.strip().lower() for x in hidden_curves_raw.split(',') if x.strip()}
+
     hq_active = bool(getattr(report, 'show_head_flow_graph', True))
     eta_active = bool(getattr(report, 'show_additional_graphs', True) and getattr(report, 'show_efficiency_graph', True))
     pow_active = bool(getattr(report, 'show_additional_graphs', True) and getattr(report, 'show_power_graph', True))
     npsh_active = bool(getattr(report, 'show_additional_graphs', True) and getattr(report, 'show_npsh_graph', True) and has_npsh)
 
+    # Apply details view visibility overrides (especially for Proposal reports)
+    if is_proposal or arg_show_hq is not None or arg_show_eta is not None or arg_show_pow is not None or arg_show_npsh is not None or hidden_set:
+        if arg_show_hq is not None:
+            hq_active = (arg_show_hq in ('1', 'true', 'True'))
+        elif 'hq' in hidden_set or 'head' in hidden_set:
+            hq_active = False
+
+        if arg_show_eta is not None:
+            eta_active = (arg_show_eta in ('1', 'true', 'True'))
+        elif 'eta' in hidden_set or 'eff' in hidden_set or 'efficiency' in hidden_set:
+            eta_active = False
+
+        if arg_show_pow is not None:
+            pow_active = (arg_show_pow in ('1', 'true', 'True'))
+        elif 'pow' in hidden_set or 'power' in hidden_set:
+            pow_active = False
+
+        if arg_show_npsh is not None:
+            npsh_active = (arg_show_npsh in ('1', 'true', 'True')) and has_npsh
+        elif 'npsh' in hidden_set or 'npshr' in hidden_set:
+            npsh_active = False
+
+    # Duty point visibility override
+    show_duty_effective = getattr(report, 'show_duty_point', True)
+    if is_proposal or arg_show_duty is not None or 'duty' in hidden_set or 'duty_point' in hidden_set:
+        if arg_show_duty is not None:
+            show_duty_effective = (arg_show_duty in ('1', 'true', 'True'))
+        elif 'duty' in hidden_set or 'duty_point' in hidden_set:
+            show_duty_effective = False
+
+    # Rated curve visibility override
+    show_rated_effective = True
+    if is_proposal or arg_show_rated is not None or 'rated' in hidden_set:
+        if arg_show_rated is not None:
+            show_rated_effective = (arg_show_rated in ('1', 'true', 'True'))
+        elif 'rated' in hidden_set:
+            show_rated_effective = False
+
+    if not show_rated_effective:
+        hq_curves_list = [c for c in hq_curves_list if not c.get('is_rated') and '(rated)' not in c.get('label', '').lower()]
+        eta_curves_list = [c for c in eta_curves_list if not c.get('is_rated') and '(rated)' not in c.get('label', '').lower()]
+        pow_curves_list = [c for c in pow_curves_list if not c.get('is_rated') and '(rated)' not in c.get('label', '').lower()]
+        npsh_curves_list = [c for c in npsh_curves_list if not c.get('is_rated') and '(rated)' not in c.get('label', '').lower()]
+
     graph_styles = report.get_graph_styles() if (report and hasattr(report, 'get_graph_styles')) else {}
 
+    # System curve for Proposal report (matching details view)
+    show_sys_effective = True
+    if arg_show_sys is not None:
+        show_sys_effective = (arg_show_sys in ('1', 'true', 'True'))
+    elif 'system' in hidden_set or 'sys' in hidden_set:
+        show_sys_effective = False
+
+    if (is_proposal or arg_show_sys == '1') and show_sys_effective and q_duty_val and h_duty_val:
+        try:
+            k_sys = h_duty_val / (q_duty_val ** 2)
+            sys_q = list(np.linspace(0, max(q_duty_val * 1.3, q_max * fQ_curve), 30))
+            sys_h = [round(k_sys * (qv ** 2), 2) for qv in sys_q]
+            hq_curves_list.append({
+                'label': 'System Curve',
+                'x': sys_q,
+                'y': sys_h,
+                'color': graph_styles.get('system_curve_color', '#8b949e') or '#8b949e',
+                'is_secondary': True,
+                'is_system': True
+            })
+        except Exception as e:
+            print("System curve render notice:", e)
+
     duty_pt_dict = None
-    if q_duty_val and h_duty_val and getattr(report, 'show_duty_point', True):
+    if q_duty_val and h_duty_val and show_duty_effective:
         duty_pt_dict = {
             'q': q_duty_val,
             'h': h_duty_val,

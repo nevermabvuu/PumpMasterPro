@@ -175,6 +175,9 @@
     if (e) e.stopPropagation();
     const drop = document.getElementById('selection-report-dropdown');
     if (drop) {
+      if (typeof updateReportLinks === 'function') {
+        updateReportLinks();
+      }
       drop.classList.toggle('hidden');
     }
   }

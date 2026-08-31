@@ -257,20 +257,20 @@ function renderAll() {
       let hoverTmpl = `<b>${lbl}</b><br>Flow: %{x:.1f} m³/h<br>Head: %{customdata[0]} m<br>Eff: %{customdata[1]} %<br>Power: %{customdata[2]} kW<br>NPSHr: %{customdata[3]} m<extra></extra>`;
       
       // Head
-      traces.push({x: c.q, y: c.h, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: hqColor, width: curveWidth, dash: hqStyle}, yaxis: 'y4', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
+      traces.push({x: c.q, y: c.h, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: hqColor, width: curveWidth, dash: hqStyle}, yaxis: 'y4', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'hq'});
       addLabel(annotations, c.q, c.h, 'y4', lbl, hqColor);
       
       // Eff
-      traces.push({x: c.q, y: c.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: etaColor, width: isMax ? etaWidth : Math.max(1.2, etaWidth * 0.7), dash: etaStyle}, yaxis: 'y3', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
+      traces.push({x: c.q, y: c.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: etaColor, width: isMax ? etaWidth : Math.max(1.2, etaWidth * 0.7), dash: etaStyle}, yaxis: 'y3', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'eta'});
       addLabel(annotations, c.q, c.eta, 'y3', lbl, etaColor);
 
       // Power
-      traces.push({x: c.q, y: c.power, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: powColor, width: isMax ? powWidth : Math.max(1.2, powWidth * 0.7), dash: powStyle}, yaxis: 'y2', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
+      traces.push({x: c.q, y: c.power, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: powColor, width: isMax ? powWidth : Math.max(1.2, powWidth * 0.7), dash: powStyle}, yaxis: 'y2', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'pow'});
       addLabel(annotations, c.q, c.power, 'y2', lbl, powColor);
 
       // NPSHr
       if (c.npsh && c.npsh.length) {
-        traces.push({x: c.q, y: c.npsh, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: npshColor, width: isMax ? npshWidth : Math.max(1.2, npshWidth * 0.7), dash: npshStyle}, yaxis: 'y', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
+        traces.push({x: c.q, y: c.npsh, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: npshColor, width: isMax ? npshWidth : Math.max(1.2, npshWidth * 0.7), dash: npshStyle}, yaxis: 'y', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'npsh'});
         addLabel(annotations, c.q, c.npsh, 'y', lbl, npshColor);
       }
     });
@@ -284,17 +284,17 @@ function renderAll() {
     ]);
     let hoverTmpl = `<b>${lbl}</b><br>Flow: %{x:.1f} m³/h<br>Head: %{customdata[0]} m<br>Eff: %{customdata[1]} %<br>Power: %{customdata[2]} kW<br>NPSHr: %{customdata[3]} m<extra></extra>`;
 
-    traces.push({x: maxCurve.q, y: maxCurve.h, name: 'Head (Max)', type: 'scatter', mode: 'lines', line: {color: hqColor, width: hqWidth, dash: hqStyle}, yaxis: 'y4', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
+    traces.push({x: maxCurve.q, y: maxCurve.h, name: 'Head (Max)', type: 'scatter', mode: 'lines', line: {color: hqColor, width: hqWidth, dash: hqStyle}, yaxis: 'y4', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'hq'});
     addLabel(annotations, maxCurve.q, maxCurve.h, 'y4', 'Max', hqColor);
     
-    traces.push({x: maxCurve.q, y: maxCurve.eta, name: 'Eff (Max)', type: 'scatter', mode: 'lines', line: {color: etaColor, width: etaWidth, dash: etaStyle}, yaxis: 'y3', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
+    traces.push({x: maxCurve.q, y: maxCurve.eta, name: 'Eff (Max)', type: 'scatter', mode: 'lines', line: {color: etaColor, width: etaWidth, dash: etaStyle}, yaxis: 'y3', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'eta'});
     addLabel(annotations, maxCurve.q, maxCurve.eta, 'y3', 'Max', etaColor);
     
-    traces.push({x: maxCurve.q, y: maxCurve.power, name: 'Power (Max)', type: 'scatter', mode: 'lines', line: {color: powColor, width: powWidth, dash: powStyle}, yaxis: 'y2', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
+    traces.push({x: maxCurve.q, y: maxCurve.power, name: 'Power (Max)', type: 'scatter', mode: 'lines', line: {color: powColor, width: powWidth, dash: powStyle}, yaxis: 'y2', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'pow'});
     addLabel(annotations, maxCurve.q, maxCurve.power, 'y2', 'Max', powColor);
     
     if (maxCurve.npsh) {
-      traces.push({x: maxCurve.q, y: maxCurve.npsh, name: 'NPSHr (Max)', type: 'scatter', mode: 'lines', line: {color: npshColor, width: npshWidth, dash: npshStyle}, yaxis: 'y', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl});
+      traces.push({x: maxCurve.q, y: maxCurve.npsh, name: 'NPSHr (Max)', type: 'scatter', mode: 'lines', line: {color: npshColor, width: npshWidth, dash: npshStyle}, yaxis: 'y', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'npsh'});
       addLabel(annotations, maxCurve.q, maxCurve.npsh, 'y', 'Max', npshColor);
     }
   }
@@ -310,14 +310,14 @@ function renderAll() {
     ]);
     let hoverTmplRated = `<b>${lbl}</b><br>Flow: %{x:.1f} m³/h<br>Head: %{customdata[0]} m<br>Eff: %{customdata[1]} %<br>Power: %{customdata[2]} kW<br>NPSHr: %{customdata[3]} m<extra></extra>`;
 
-    traces.push({x: qDutyCurve, y: hDutyCurve, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y4', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
+    traces.push({x: qDutyCurve, y: hDutyCurve, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y4', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated'});
 
-    traces.push({x: qDutyCurve, y: maxCurve.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y3', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
+    traces.push({x: qDutyCurve, y: maxCurve.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y3', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated'});
     
-    traces.push({x: qDutyCurve, y: pDutyCurve, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y2', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
+    traces.push({x: qDutyCurve, y: pDutyCurve, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y2', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated'});
     
-    if (maxCurve.npsh && maxCurve.npsh.length) {
-      traces.push({x: qDutyCurve, y: npshDutyCurve, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated});
+    if (npshDutyCurve && npshDutyCurve.length) {
+      traces.push({x: qDutyCurve, y: npshDutyCurve, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated'});
     }
   }
 
@@ -345,20 +345,20 @@ function renderAll() {
     }
 
     let hoverTmplSys = `<b>System Curve</b><br>Flow: %{x:.1f} m³/h<br>Head: %{y:.1f} m<extra></extra>`;
-    traces.push({x: sysQ, y: sysH, name: 'System Curve', type: 'scatter', mode: 'lines', line: {color: sysColor, width: 2.2, dash: sysStyle}, yaxis: 'y4', showlegend: false, hovertemplate: hoverTmplSys});
+    traces.push({x: sysQ, y: sysH, name: 'System Curve', type: 'scatter', mode: 'lines', line: {color: sysColor, width: 2.2, dash: sysStyle}, yaxis: 'y4', showlegend: false, hovertemplate: hoverTmplSys, curveGroup: 'system'});
   }
 
-  // Custom Clean Legend Items
-  traces.push({x: [null], y: [null], name: 'Head', type: 'scatter', mode: 'lines', line: {color: hqColor, width: hqWidth, dash: hqStyle}, showlegend: true});
-  traces.push({x: [null], y: [null], name: 'Efficiency', type: 'scatter', mode: 'lines', line: {color: etaColor, width: etaWidth, dash: etaStyle}, showlegend: true});
-  traces.push({x: [null], y: [null], name: 'Power', type: 'scatter', mode: 'lines', line: {color: powColor, width: powWidth, dash: powStyle}, showlegend: true});
-  traces.push({x: [null], y: [null], name: 'NPSHr', type: 'scatter', mode: 'lines', line: {color: npshColor, width: npshWidth, dash: npshStyle}, showlegend: true});
+  // Custom Clean Legend Items (Interactive Group Headers)
+  traces.push({x: [null], y: [null], name: 'Head', type: 'scatter', mode: 'lines', line: {color: hqColor, width: hqWidth, dash: hqStyle}, showlegend: true, curveGroup: 'hq'});
+  traces.push({x: [null], y: [null], name: 'Efficiency', type: 'scatter', mode: 'lines', line: {color: etaColor, width: etaWidth, dash: etaStyle}, showlegend: true, curveGroup: 'eta'});
+  traces.push({x: [null], y: [null], name: 'Power', type: 'scatter', mode: 'lines', line: {color: powColor, width: powWidth, dash: powStyle}, showlegend: true, curveGroup: 'pow'});
+  traces.push({x: [null], y: [null], name: 'NPSHr', type: 'scatter', mode: 'lines', line: {color: npshColor, width: npshWidth, dash: npshStyle}, showlegend: true, curveGroup: 'npsh'});
   
   let ratedLegendName = cfg.TRIM_RATIO < 1.0 
     ? (cfg.IS_VSD ? `Rated Curve (${cfg.RATED_SPEED} RPM)` : `Rated Curve (Ø ${cfg.RATED_TRIM} mm)`)
     : 'Rated Curve';
-  traces.push({x: [null], y: [null], name: ratedLegendName, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, showlegend: true});
-  traces.push({x: [null], y: [null], name: 'System Curve', type: 'scatter', mode: 'lines', line: {color: sysColor, width: 2.2, dash: sysStyle}, showlegend: true});
+  traces.push({x: [null], y: [null], name: ratedLegendName, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, showlegend: true, curveGroup: 'rated'});
+  traces.push({x: [null], y: [null], name: 'System Curve', type: 'scatter', mode: 'lines', line: {color: sysColor, width: 2.2, dash: sysStyle}, showlegend: true, curveGroup: 'system'});
 
   // Duty Point
   if (cfg.Q_DUTY && cfg.H_DUTY) {
@@ -368,6 +368,7 @@ function renderAll() {
       marker: { color: ratedColor, size: 12, symbol: 'star' },
       yaxis: 'y4',
       showlegend: true,
+      curveGroup: 'duty',
       hovertemplate: `<b>Duty Point</b><br>Flow: %{x:.1f} m³/h<br>Head: %{y:.1f} m<extra></extra>`
     });
     annotations.push({
@@ -433,6 +434,90 @@ function renderAll() {
   document.getElementById('chartComp').style.height = '900px';
   document.getElementById('singleChartPanel').style.display = 'block';
   Plotly.newPlot('chartComp', traces, layout, {responsive: true});
+
+  // ── Interactive Legend & Curve Visibility Synchronization ──
+  // Beginners Note: Global visibility state object reflecting which curves are currently toggled on/off.
+  window.curveVisibility = {
+    hq: true,
+    eta: true,
+    pow: true,
+    npsh: true,
+    rated: true,
+    system: true,
+    duty: true
+  };
+
+  const chartEl = document.getElementById('chartComp');
+
+  // Beginners Note: When clicking a category on the Plotly legend, toggle all matching curve traces
+  // and update report URLs so that Proposal reports generated will exactly mirror the visible curves on screen.
+  chartEl.on('plotly_legendclick', function(data) {
+    const clickedTrace = data.data[data.curveNumber];
+    const group = clickedTrace ? clickedTrace.curveGroup : null;
+    if (!group) return true;
+
+    // Invert the visibility state of the chosen curve group
+    const isVisible = (window.curveVisibility[group] !== false);
+    const newVis = !isVisible;
+    window.curveVisibility[group] = newVis;
+
+    // Find all trace indices belonging to this group
+    const targetIndices = [];
+    data.data.forEach((t, idx) => {
+      if (t.curveGroup === group) {
+        targetIndices.push(idx);
+      }
+    });
+
+    // Update Plotly trace visibility (true for visible, 'legendonly' to hide trace while keeping legend item)
+    const targetVal = newVis ? true : 'legendonly';
+    Plotly.restyle(chartEl, { visible: targetVal }, targetIndices);
+
+    // Sync all report links on the page immediately
+    updateReportLinks();
+
+    return false; // Prevent default single-trace toggle behavior
+  });
+
+  // Initial report links synchronization
+  updateReportLinks();
+}
+
+// Beginners Note: Updates all report links on the page with query parameters reflecting active curves.
+// Proposal reports will read these flags (e.g. show_eta=0, show_pow=0) and omit any curve switched off by the user.
+function updateReportLinks() {
+  const vis = window.curveVisibility || {};
+  const hidden = [];
+  if (vis.hq === false) hidden.push('hq');
+  if (vis.eta === false) hidden.push('eta');
+  if (vis.pow === false) hidden.push('pow');
+  if (vis.npsh === false) hidden.push('npsh');
+  if (vis.rated === false) hidden.push('rated');
+  if (vis.system === false) hidden.push('system');
+  if (vis.duty === false) hidden.push('duty');
+
+  const hiddenStr = hidden.join(',');
+
+  document.querySelectorAll('a[href*="/reports/view/"]').forEach(a => {
+    try {
+      const url = new URL(a.href, window.location.origin);
+      url.searchParams.set('show_hq', (vis.hq !== false) ? '1' : '0');
+      url.searchParams.set('show_eta', (vis.eta !== false) ? '1' : '0');
+      url.searchParams.set('show_pow', (vis.pow !== false) ? '1' : '0');
+      url.searchParams.set('show_npsh', (vis.npsh !== false) ? '1' : '0');
+      url.searchParams.set('show_rated', (vis.rated !== false) ? '1' : '0');
+      url.searchParams.set('show_sys', (vis.system !== false) ? '1' : '0');
+      url.searchParams.set('show_duty', (vis.duty !== false) ? '1' : '0');
+      if (hiddenStr) {
+        url.searchParams.set('hidden_curves', hiddenStr);
+      } else {
+        url.searchParams.delete('hidden_curves');
+      }
+      a.href = url.pathname + url.search;
+    } catch(err) {
+      console.warn("Could not update report URL:", err);
+    }
+  });
 }
 
 // Load data on page load

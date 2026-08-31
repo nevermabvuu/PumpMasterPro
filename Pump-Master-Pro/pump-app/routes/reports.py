@@ -14,7 +14,7 @@ _app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if _app_dir not in sys.path:
     sys.path.insert(0, _app_dir)
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, Response, make_response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, Response, make_response, session, abort
 from models import db, Pump, Supplier, ReportConfig
 
 CURVE_CONVERSIONS = {
@@ -927,12 +927,22 @@ def _calc_optimal_trim_ratio(pump, q_duty, h_duty):
         return 1.0
 
 
-def _build_report_curve_context(pump, report):
+def _build_report_curve_context(pump, report, params_override=None):
     """
     Beginners Note: Evaluates exact mathematical pump curves using pump_curves.py polynomial math,
     applies exact pump-data axis scale settings (min, max, major, minor), auto-detects NPSHr availability,
     and supports Curve Display Modes (all, max_only, min_max, rated_only).
+    Also supports encrypted/signed params_override from security tokens.
     """
+    from flask import request, session
+
+    def _param(k, default=None):
+        if params_override and isinstance(params_override, dict) and k in params_override:
+            return params_override[k]
+        if request and request.args and k in request.args:
+            return request.args.get(k)
+        return default
+
     rep_unit_q = getattr(report, 'unit_flow', None) or pump.unit_q or 'm3h'
     rep_unit_h = getattr(report, 'unit_head', None) or pump.unit_h or 'm'
     rep_unit_pow = getattr(report, 'unit_power', None) or pump.unit_pow or 'kw'
@@ -1011,9 +1021,8 @@ def _build_report_curve_context(pump, report):
     explicit_rpm = getattr(report, 'show_rpm_overlay', None)
 
     # Check Family Type / Test Basis (auto-detects VSD templates and URL operation_mode so reports display RPM curves and labels)
-    from flask import request, session
-    op_mode = (request.args.get('operation_mode') or '').strip().lower() if request else ''
-    if not op_mode and request and session:
+    op_mode = (_param('operation_mode') or '').strip().lower()
+    if not op_mode and session:
         op_mode = (session.get('selection_form_data', {}).get('operation_mode') or '').strip().lower()
 
     is_variable_speed = (pump.family_type == 'variable_speed') or \
@@ -1036,20 +1045,18 @@ def _build_report_curve_context(pump, report):
     h_duty_val = None
     r_opt = None
     try:
-        from flask import request, session
-        if request:
-            q_d = _safe_float(request.args.get('q_duty') or request.args.get('q') or request.args.get('flow'))
-            h_d = _safe_float(request.args.get('h_duty') or request.args.get('h') or request.args.get('head'))
-            if (not q_d or not h_d) and session:
-                s_data = session.get('selection_form_data', {})
-                q_d = q_d or _safe_float(s_data.get('q_duty') or s_data.get('q'))
-                h_d = h_d or _safe_float(s_data.get('h_duty') or s_data.get('h'))
-            if q_d and h_d and q_d > 0 and h_d > 0:
-                q_duty_val = q_d
-                h_duty_val = h_d
-                q_m3h = q_duty_val / fQ_curve
-                h_m = h_duty_val / fH_curve
-                r_opt = _calc_optimal_trim_ratio(pump, q_m3h, h_m)
+        q_d = _safe_float(_param('q_duty') or _param('q') or _param('flow'))
+        h_d = _safe_float(_param('h_duty') or _param('h') or _param('head'))
+        if (not q_d or not h_d) and session:
+            s_data = session.get('selection_form_data', {})
+            q_d = q_d or _safe_float(s_data.get('q_duty') or s_data.get('q'))
+            h_d = h_d or _safe_float(s_data.get('h_duty') or s_data.get('h'))
+        if q_d and h_d and q_d > 0 and h_d > 0:
+            q_duty_val = q_d
+            h_duty_val = h_d
+            q_m3h = q_duty_val / fQ_curve
+            h_m = h_duty_val / fH_curve
+            r_opt = _calc_optimal_trim_ratio(pump, q_m3h, h_m)
     except Exception:
         pass
 
@@ -1099,10 +1106,9 @@ def _build_report_curve_context(pump, report):
         if show_rated or mode == 'rated_only':
             rated_rpm = None
             try:
-                if request:
-                    rpm_arg = request.args.get('rpm') or request.args.get('speed') or request.args.get('rated_speed') or request.args.get('optimal_speed_rpm')
-                    if rpm_arg:
-                        rated_rpm = _safe_float(rpm_arg)
+                rpm_arg = _param('rpm') or _param('speed') or _param('rated_speed') or _param('optimal_speed_rpm')
+                if rpm_arg:
+                    rated_rpm = _safe_float(rpm_arg)
             except Exception:
                 pass
             if not rated_rpm and r_opt:
@@ -1206,14 +1212,13 @@ def _build_report_curve_context(pump, report):
                 pow_curves_list.append({'label': lbl, 'x': c_q, 'y': c_pow, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': d_val, 'dia': d_val})
                 npsh_curves_list.append({'label': lbl, 'x': c_q, 'y': c_npsh, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': d_val, 'dia': d_val})
 
-        # ── Overlay Rated Impeller Diameter Curve (if show_rated is enabled or mode == 'rated_only') ──
+        # ── Overlay Rated Trim Curve (if show_rated is enabled or mode == 'rated_only') ──
         if show_rated or mode == 'rated_only':
             rated_d = None
             try:
-                if request:
-                    dia_arg = request.args.get('dia') or request.args.get('trim_dia') or request.args.get('rated_dia') or request.args.get('impeller_dia') or request.args.get('optimal_trim_dia_mm')
-                    if dia_arg:
-                        rated_d = _safe_float(dia_arg)
+                dia_arg = _param('dia') or _param('trim_dia') or _param('rated_dia') or _param('impeller_dia') or _param('optimal_trim_dia_mm')
+                if dia_arg:
+                    rated_d = _safe_float(dia_arg)
             except Exception:
                 pass
             if not rated_d and r_opt:
@@ -1548,17 +1553,16 @@ def _build_report_curve_context(pump, report):
     rep_title = (getattr(report, 'title', '') or '').strip().lower()
     is_proposal = ('proposal' in rep_type) or ('proposal' in rep_name) or ('proposal' in rep_title)
 
-    # Read visibility query arguments passed from details view
-    from flask import request
-    arg_show_hq = request.args.get('show_hq') if request else None
-    arg_show_eta = request.args.get('show_eta') if request else None
-    arg_show_pow = request.args.get('show_pow') if request else None
-    arg_show_npsh = request.args.get('show_npsh') if request else None
-    arg_show_rated = request.args.get('show_rated') if request else None
-    arg_show_duty = request.args.get('show_duty') if request else None
-    arg_show_sys = request.args.get('show_sys') if request else None
-    hidden_curves_raw = (request.args.get('hidden_curves', '') if request else '') or ''
-    hidden_set = {x.strip().lower() for x in hidden_curves_raw.split(',') if x.strip()}
+    # Read visibility query arguments passed from details view or security token
+    arg_show_hq = _param('show_hq')
+    arg_show_eta = _param('show_eta')
+    arg_show_pow = _param('show_pow')
+    arg_show_npsh = _param('show_npsh')
+    arg_show_rated = _param('show_rated')
+    arg_show_duty = _param('show_duty')
+    arg_show_sys = _param('show_sys')
+    hidden_curves_raw = _param('hidden_curves', '') or ''
+    hidden_set = {x.strip().lower() for x in str(hidden_curves_raw).split(',') if x.strip()}
 
     hq_active = bool(getattr(report, 'show_head_flow_graph', True))
     eta_active = bool(getattr(report, 'show_additional_graphs', True) and getattr(report, 'show_efficiency_graph', True))
@@ -1978,10 +1982,237 @@ def delete_report(id):
     return redirect(url_for('reports.settings'))
 
 
-@reports_bp.route('/view/<int:report_id>/pump/<int:pump_id>')
-def view_report(report_id, pump_id):
+# ─────────────────────────────────────────────────────────────────────────────
+# CRYPTOGRAPHIC REPORT TOKEN UTILITIES & SECURITY ACCESS CONTROL
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _verify_pump_organisation_access(pump):
+    """
+    Beginners Note: Multi-Tenancy Authorization & Access Control.
+    Enforces strict organization boundary checks. Verifies that the active organization
+    is permitted to view this specific pump based on multi-organization visibility rules.
+    If unauthorized, immediately raises an HTTP 403 Forbidden error to prevent URL tampering.
+    """
+    from utils import get_visible_pumps_query, get_current_organisation
+    from flask import abort
+    current_org = get_current_organisation()
+    if current_org and pump:
+        allowed = get_visible_pumps_query().filter(Pump.id == pump.id).first()
+        if not allowed:
+            abort(403, description=f"Access Denied: You do not have permission to view pump '{pump.name}' (ID: {pump.id}) from this organisation.")
+
+
+def generate_report_token(report_id, pump_id, params=None):
+    """
+    Beginners Note: Generates a cryptographically signed, tamper-proof URL token
+    containing the report ID, pump ID, duty parameters, and curve visibility states.
+    Uses Flask's secret key and HMAC signing (itsdangerous) so users cannot modify or tamper with URL parameters.
+    """
+    from itsdangerous import URLSafeTimedSerializer
+    from flask import current_app
+    secret = current_app.secret_key or 'pump-master-pro-secret-key-salt-2026'
+    serializer = URLSafeTimedSerializer(secret, salt='report-secure-token')
+    payload = {
+        'r': int(report_id),
+        'p': int(pump_id),
+        'params': params or {}
+    }
+    return serializer.dumps(payload)
+
+
+def decode_report_token(token, max_age=86400 * 30):
+    """
+    Beginners Note: Decodes and cryptographically verifies a signed report token.
+    Raises BadSignature / SignatureExpired if the token has been altered or tampered with.
+    """
+    from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+    from flask import current_app
+    secret = current_app.secret_key or 'pump-master-pro-secret-key-salt-2026'
+    serializer = URLSafeTimedSerializer(secret, salt='report-secure-token')
+    return serializer.loads(token, max_age=max_age)
+
+
+@reports_bp.route('/api/set-active-report', methods=['POST'])
+def api_set_active_report():
+    """
+    Beginners Note: AJAX endpoint that stores the active report template, pump, duty points,
+    and curve visibility into server session['active_selection'].
+    Enables opening the report at a 100% clean URL (/reports/view) with zero parameters in address bar.
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    report_id = data.get('report_id')
+    pump_id = data.get('pump_id')
+    params = data.get('params', {})
+
+    state = session.get('active_selection') or {}
+    if pump_id:
+        state['pump_id'] = int(pump_id)
+    if report_id:
+        state['report_id'] = int(report_id)
+    if params and isinstance(params, dict):
+        for k, v in params.items():
+            state[k] = v
+
+    session['active_selection'] = state
+    session.modified = True
+    return jsonify({'status': 'ok', 'url': url_for('reports.view_report_clean')})
+
+
+@reports_bp.route('/api/sign-report-url', methods=['POST'])
+def api_sign_report_url():
+    """
+    Beginners Note: AJAX API endpoint that converts report parameters into a cryptographically signed token.
+    Called dynamically by the frontend to keep URLs short, clean, and tamper-proof.
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    report_id = data.get('report_id')
+    pump_id = data.get('pump_id')
+    params = data.get('params', {})
+    
+    if not report_id or not pump_id:
+        return jsonify({'error': 'report_id and pump_id are required'}), 400
+        
+    token = generate_report_token(report_id, pump_id, params)
+    secure_url = url_for('reports.view_report_token', token=token)
+    return jsonify({'status': 'ok', 'token': token, 'url': secure_url})
+
+
+@reports_bp.route('/view')
+def view_report_clean():
+    """
+    Beginners Note: Zero-Parameter Clean Report Route.
+    Renders the report using state stored strictly on the server (session['active_selection']).
+    No pump IDs, report IDs, or query parameters are exposed in the browser URL.
+    """
+    # Check if a signed token was passed (for tokenized link support)
+    if request.args.get('t'):
+        return view_report_token(request.args.get('t'))
+
+    state = session.get('active_selection')
+    if not state or not state.get('pump_id'):
+        fallback_pump = Pump.query.first()
+        if not fallback_pump:
+            flash("No pump available to display.", "warning")
+            return redirect(url_for('main.index'))
+        report = ReportConfig.query.first()
+        pump = fallback_pump
+        state = {'pump_id': pump.id, 'report_id': report.id if report else 1}
+    else:
+        pump_id = state.get('pump_id')
+        report_id = state.get('report_id') or 1
+        pump = Pump.query.get_or_404(pump_id)
+        report = ReportConfig.query.get_or_404(report_id)
+
+    # Enforce multi-tenancy access control
+    _verify_pump_organisation_access(pump)
+
+    template_file = f"reports/{report.template_name}" if report.template_name else "reports/standard_datasheet.html"
+    current_date = datetime.now().strftime("%B %d, %Y")
+
+    curves_ctx = _build_report_curve_context(pump, report, params_override=state)
+
+    report_content = render_template(
+        template_file,
+        report=report,
+        pump=pump,
+        supplier=report.supplier,
+        current_date=current_date,
+        curves=curves_ctx,
+        is_pdf_export=False
+    )
+
+    return render_template(
+        'reports/report_wrapper.html',
+        report=report,
+        pump=pump,
+        supplier=report.supplier,
+        report_content=report_content,
+        is_clean_session=True
+    )
+
+
+@reports_bp.route('/view/t/<token>')
+def view_report_token(token=None):
+    """
+    Beginners Note: Renders a report using a cryptographically signed token.
+    Hides all pump parameters from the URL and prevents unauthorized tampering.
+    """
+    from itsdangerous import BadSignature, SignatureExpired
+    from flask import abort
+    
+    if not token:
+        token = request.args.get('t')
+        
+    if not token:
+        abort(400, description="Missing report security token.")
+        
+    try:
+        payload = decode_report_token(token)
+    except (BadSignature, SignatureExpired) as e:
+        abort(403, description="Invalid or expired report link. The URL may have been altered.")
+        
+    report_id = payload.get('r')
+    pump_id = payload.get('p')
+    token_params = payload.get('params', {})
+    
     report = ReportConfig.query.get_or_404(report_id)
     pump = Pump.query.get_or_404(pump_id)
+    
+    # Enforce multi-tenancy access control
+    _verify_pump_organisation_access(pump)
+    
+    template_file = f"reports/{report.template_name}" if report.template_name else "reports/standard_datasheet.html"
+    current_date = datetime.now().strftime("%B %d, %Y")
+    
+    # Merge token parameters into request context
+    curves_ctx = _build_report_curve_context(pump, report, params_override=token_params)
+    
+    report_content = render_template(
+        template_file,
+        report=report,
+        pump=pump,
+        supplier=report.supplier,
+        current_date=current_date,
+        curves=curves_ctx,
+        is_pdf_export=False
+    )
+    
+    return render_template(
+        'reports/report_wrapper.html',
+        report=report,
+        pump=pump,
+        supplier=report.supplier,
+        report_content=report_content,
+        report_token=token
+    )
+
+
+@reports_bp.route('/download')
+def download_pdf_clean():
+    """
+    Beginners Note: PDF download handler using server-side session state with zero parameters.
+    """
+    state = session.get('active_selection') or {}
+    pump_id = state.get('pump_id')
+    report_id = state.get('report_id') or 1
+    if not pump_id:
+        return redirect(url_for('reports.view_report_clean'))
+    pump = Pump.query.get_or_404(pump_id)
+    report = ReportConfig.query.get_or_404(report_id)
+    _verify_pump_organisation_access(pump)
+    return _generate_pdf_response(report, pump, params_override=state)
+
+
+@reports_bp.route('/view/<int:report_id>/pump/<int:pump_id>')
+def view_report(report_id, pump_id):
+    """
+    Beginners Note: Direct report route with multi-tenant access control enforcement.
+    """
+    report = ReportConfig.query.get_or_404(report_id)
+    pump = Pump.query.get_or_404(pump_id)
+    
+    # Enforce multi-tenancy access control
+    _verify_pump_organisation_access(pump)
     
     template_file = f"reports/{report.template_name}" if report.template_name else "reports/standard_datasheet.html"
     current_date = datetime.now().strftime("%B %d, %Y")
@@ -2007,21 +2238,45 @@ def view_report(report_id, pump_id):
     )
 
 
-@reports_bp.route('/download/<int:report_id>/pump/<int:pump_id>')
-def download_pdf(report_id, pump_id):
+@reports_bp.route('/download/t/<token>')
+def download_pdf_token(token):
     """
-    Beginners Note: Converts the report template into a downloadable PDF stream attachment.
-    Does NOT save a copy into the repository pdf/ folder.
-    Renders 100% pixel-perfect PDF file using Headless Chromium or xhtml2pdf fallback,
-    and returns the byte stream directly to the browser.
+    Beginners Note: PDF download handler using signed token.
     """
+    from itsdangerous import BadSignature, SignatureExpired
+    from flask import abort
+    try:
+        payload = decode_report_token(token)
+    except (BadSignature, SignatureExpired):
+        abort(403, description="Invalid or expired download link.")
+        
+    report_id = payload.get('r')
+    pump_id = payload.get('p')
+    token_params = payload.get('params', {})
+    
     report = ReportConfig.query.get_or_404(report_id)
     pump = Pump.query.get_or_404(pump_id)
     
+    _verify_pump_organisation_access(pump)
+    return _generate_pdf_response(report, pump, params_override=token_params)
+
+
+@reports_bp.route('/download/<int:report_id>/pump/<int:pump_id>')
+def download_pdf(report_id, pump_id):
+    report = ReportConfig.query.get_or_404(report_id)
+    pump = Pump.query.get_or_404(pump_id)
+    _verify_pump_organisation_access(pump)
+    return _generate_pdf_response(report, pump)
+
+
+def _generate_pdf_response(report, pump, params_override=None):
+    """
+    Beginners Note: Internal PDF generator used by both direct and tokenized routes.
+    """
     template_file = f"reports/{report.template_name}" if report.template_name else "reports/standard_datasheet.html"
     current_date = datetime.now().strftime("%B %d, %Y")
     
-    curves_ctx = _build_report_curve_context(pump, report)
+    curves_ctx = _build_report_curve_context(pump, report, params_override=params_override)
 
     rendered_html = render_template(
         template_file,
@@ -2036,7 +2291,6 @@ def download_pdf(report_id, pump_id):
     clean_name = re.sub(r'[^\w\-]', '_', pump.name or 'Pump').strip('_')
     filename = f"Report_{clean_name}.pdf"
 
-    # Temporary output path for Headless browser PDF generation
     temp_pdf = None
     try:
         with tempfile.NamedTemporaryFile('w', suffix='.pdf', delete=False) as f:
@@ -2075,9 +2329,8 @@ def download_pdf(report_id, pump_id):
     except Exception as e:
         print("xhtml2pdf fallback notice:", e)
 
-    response = make_response(rendered_html)
-    response.headers['Content-Type'] = 'text/html'
-    return response
+    flash('Error creating PDF document.', 'error')
+    return redirect(url_for('reports.view_report', report_id=report.id, pump_id=pump.id))
 
 
 if __name__ == '__main__':

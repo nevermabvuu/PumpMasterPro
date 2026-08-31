@@ -185,6 +185,28 @@ def pump_selection_details(pump_id):
     # any report template (standard, VSD, proposal, compact, etc.) directly from the details view.
     from models import ReportConfig
     available_reports = ReportConfig.query.order_by(ReportConfig.id.asc()).all()
+
+    # ── Store Selection State into Server-Side Session ──
+    # Beginners Note: Save full engineering parameters, active duty point, calculated trim/RPM,
+    # and default report ID into session['active_selection'].
+    # Enables ultra-clean zero-parameter report URLs (/reports/view) without exposing IDs or numbers in the browser address bar.
+    session['active_selection'] = {
+        'pump_id': pump.id,
+        'report_id': default_report_id,
+        'q_duty': f.get('q_duty'),
+        'h_duty': f.get('h_duty'),
+        'dia': active_result.get('optimal_trim_dia_mm') if active_result else None,
+        'rpm': active_result.get('optimal_speed_rpm') if active_result else None,
+        'operation_mode': f.get('operation_mode', 'fixed'),
+        'show_hq': '1',
+        'show_eta': '1',
+        'show_pow': '1',
+        'show_npsh': '1',
+        'show_rated': '1',
+        'show_sys': '1',
+        'show_duty': '1',
+        'hidden_curves': ''
+    }
     
     return render_template('pump_selection_details.html',
                            pump=pump,

@@ -483,9 +483,11 @@ function renderAll() {
   updateReportLinks();
 }
 
-// Beginners Note: Updates all report links on the page with query parameters reflecting active curves.
-// Proposal reports will read these flags (e.g. show_eta=0, show_pow=0) and omit any curve switched off by the user.
-function updateReportLinks() {
+// Beginners Note: Opens the report with a 100% clean URL (/reports/view) with zero parameters.
+// Stores the active report ID and curve visibility toggles into server session['active_selection'].
+window.openSessionReport = function(event, reportId) {
+  if (event) event.preventDefault();
+
   const vis = window.curveVisibility || {};
   const hidden = [];
   if (vis.hq === false) hidden.push('hq');
@@ -496,28 +498,59 @@ function updateReportLinks() {
   if (vis.system === false) hidden.push('system');
   if (vis.duty === false) hidden.push('duty');
 
-  const hiddenStr = hidden.join(',');
+  const params = {
+    show_hq: (vis.hq !== false) ? '1' : '0',
+    show_eta: (vis.eta !== false) ? '1' : '0',
+    show_pow: (vis.pow !== false) ? '1' : '0',
+    show_npsh: (vis.npsh !== false) ? '1' : '0',
+    show_rated: (vis.rated !== false) ? '1' : '0',
+    show_sys: (vis.system !== false) ? '1' : '0',
+    show_duty: (vis.duty !== false) ? '1' : '0',
+    hidden_curves: hidden.join(',')
+  };
 
-  document.querySelectorAll('a[href*="/reports/view/"]').forEach(a => {
-    try {
-      const url = new URL(a.href, window.location.origin);
-      url.searchParams.set('show_hq', (vis.hq !== false) ? '1' : '0');
-      url.searchParams.set('show_eta', (vis.eta !== false) ? '1' : '0');
-      url.searchParams.set('show_pow', (vis.pow !== false) ? '1' : '0');
-      url.searchParams.set('show_npsh', (vis.npsh !== false) ? '1' : '0');
-      url.searchParams.set('show_rated', (vis.rated !== false) ? '1' : '0');
-      url.searchParams.set('show_sys', (vis.system !== false) ? '1' : '0');
-      url.searchParams.set('show_duty', (vis.duty !== false) ? '1' : '0');
-      if (hiddenStr) {
-        url.searchParams.set('hidden_curves', hiddenStr);
-      } else {
-        url.searchParams.delete('hidden_curves');
-      }
-      a.href = url.pathname + url.search;
-    } catch(err) {
-      console.warn("Could not update report URL:", err);
-    }
+  fetch('/reports/api/set-active-report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ report_id: reportId, params: params })
+  }).then(res => res.json()).then(data => {
+    window.open('/reports/view', '_blank');
+  }).catch(err => {
+    console.error("Error setting active report:", err);
+    window.open('/reports/view', '_blank');
   });
+
+  return false;
+};
+
+function updateReportLinks() {
+  // Sync state whenever legend items are toggled
+  const vis = window.curveVisibility || {};
+  const hidden = [];
+  if (vis.hq === false) hidden.push('hq');
+  if (vis.eta === false) hidden.push('eta');
+  if (vis.pow === false) hidden.push('pow');
+  if (vis.npsh === false) hidden.push('npsh');
+  if (vis.rated === false) hidden.push('rated');
+  if (vis.system === false) hidden.push('system');
+  if (vis.duty === false) hidden.push('duty');
+
+  const params = {
+    show_hq: (vis.hq !== false) ? '1' : '0',
+    show_eta: (vis.eta !== false) ? '1' : '0',
+    show_pow: (vis.pow !== false) ? '1' : '0',
+    show_npsh: (vis.npsh !== false) ? '1' : '0',
+    show_rated: (vis.rated !== false) ? '1' : '0',
+    show_sys: (vis.system !== false) ? '1' : '0',
+    show_duty: (vis.duty !== false) ? '1' : '0',
+    hidden_curves: hidden.join(',')
+  };
+
+  fetch('/reports/api/set-active-report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ params: params })
+  }).catch(() => {});
 }
 
 // Load data on page load

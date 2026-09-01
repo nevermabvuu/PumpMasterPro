@@ -1,0 +1,502 @@
+{% extends "base.html" %}
+
+{% block title %}Session & State Inspector — Pump Master Pro{% endblock %}
+
+{% block content %}
+<!-- ─────────────────────────────────────────────────────────────────────────────
+     DEBUG INSPECTOR VIEW: templates/debug_session.html
+     Beginners Note: This developer console visualizes the entire server-side state:
+     session variables, active pump object properties, report template configurations,
+     organisation settings, and evaluated mathematical curve summaries.
+     ───────────────────────────────────────────────────────────────────────────── -->
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- ── 1. Page Header & Live Status Bar ──────────────────────────────────── -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 mb-6 border-b border-[#30363d]">
+    <div>
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#1f6feb] to-[#8957e5] flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <i class="bi bi-bug-fill text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-white flex items-center gap-2">
+            Session & State Inspector
+            <span class="px-2 py-0.5 text-[11px] font-mono rounded-full bg-[#238636]/20 border border-[#238636]/50 text-[#3fb950]">Live Developer Console</span>
+          </h1>
+          <p class="text-xs text-[#8b949e] mt-0.5">Real-time inspection of active session variables, database objects, and curve contexts.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Action Buttons -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Copy JSON Button -->
+      <button type="button"
+              onclick="copyDebugJSON()"
+              id="copyBtn"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] hover:text-white border border-[#30363d] transition-all shadow-sm">
+        <i class="bi bi-clipboard"></i>
+        <span id="copyBtnText">Copy Full JSON</span>
+      </button>
+
+      <!-- Refresh Page -->
+      <a href="{{ url_for('debug.session_debug_view') }}"
+         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] hover:text-white border border-[#30363d] transition-all">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+      </a>
+
+      <!-- Jump to Report View -->
+      <a href="{{ url_for('reports.view_report_clean') }}"
+         target="_blank"
+         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#1f6feb] hover:bg-[#388bfd] text-white shadow-sm transition-all">
+        <i class="bi bi-file-earmark-pdf"></i> View Report
+      </a>
+
+      <!-- Clear Session Form -->
+      <form action="{{ url_for('debug.clear_session') }}" method="POST" class="inline m-0">
+        <button type="submit"
+                onclick="return confirm('Are you sure you want to clear all active session variables?')"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#da3633]/20 hover:bg-[#da3633]/30 text-[#f85149] border border-[#da3633]/50 transition-all"
+                title="Clear all session variables">
+          <i class="bi bi-trash3"></i> Clear Session
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── 2. Top Summary KPI Cards ─────────────────────────────────────────── -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    
+    <!-- Active Pump KPI -->
+    <div class="p-4 rounded-xl bg-[#161b22] border border-[#30363d] flex items-center justify-between">
+      <div>
+        <div class="text-[11px] font-bold uppercase tracking-wider text-[#8b949e]">Active Pump</div>
+        <div class="text-sm font-bold text-white mt-1 truncate max-w-[180px]">
+          {{ pump.name if pump else 'None Selected' }}
+        </div>
+        <div class="text-[11px] font-mono text-[#58a6ff] mt-0.5">
+          {% if pump %}ID: #{{ pump.id }} &middot; {{ pump.model_number or pump.size }}{% else %}No pump in session{% endif %}
+        </div>
+      </div>
+      <div class="w-10 h-10 rounded-lg bg-[#1f6feb]/10 border border-[#1f6feb]/30 flex items-center justify-center text-[#58a6ff]">
+        <i class="bi bi-water text-lg"></i>
+      </div>
+    </div>
+
+    <!-- Active Report Config KPI -->
+    <div class="p-4 rounded-xl bg-[#161b22] border border-[#30363d] flex items-center justify-between">
+      <div>
+        <div class="text-[11px] font-bold uppercase tracking-wider text-[#8b949e]">Report Template</div>
+        <div class="text-sm font-bold text-white mt-1 truncate max-w-[180px]">
+          {{ report.title if report else 'Default Datasheet' }}
+        </div>
+        <div class="text-[11px] font-mono text-[#c084fc] mt-0.5">
+          {% if report %}ID: #{{ report.id }} &middot; {{ report.report_type or 'Datasheet' }}{% else %}ID: #1{% endif %}
+        </div>
+      </div>
+      <div class="w-10 h-10 rounded-lg bg-[#8957e5]/10 border border-[#8957e5]/30 flex items-center justify-center text-[#c084fc]">
+        <i class="bi bi-file-earmark-text text-lg"></i>
+      </div>
+    </div>
+
+    <!-- Operating Duty Point KPI -->
+    <div class="p-4 rounded-xl bg-[#161b22] border border-[#30363d] flex items-center justify-between">
+      <div>
+        <div class="text-[11px] font-bold uppercase tracking-wider text-[#8b949e]">Operating Duty</div>
+        <div class="text-sm font-bold text-white mt-1">
+          {% if active_selection.q_duty and active_selection.h_duty %}
+            {{ active_selection.q_duty }} m³/h @ {{ active_selection.h_duty }} m
+          {% else %}
+            <span class="text-[#8b949e]">Not Set</span>
+          {% endif %}
+        </div>
+        <div class="text-[11px] font-mono text-[#3fb950] mt-0.5">
+          {% if active_selection.rpm %}
+            Rated: {{ active_selection.rpm|round|int }} RPM
+          {% elif active_selection.dia %}
+            Rated: Ø {{ active_selection.dia|round(1) }} mm
+          {% else %}
+            Full Speed / Max Dia
+          {% endif %}
+        </div>
+      </div>
+      <div class="w-10 h-10 rounded-lg bg-[#238636]/10 border border-[#238636]/30 flex items-center justify-center text-[#3fb950]">
+        <i class="bi bi-crosshair text-lg"></i>
+      </div>
+    </div>
+
+    <!-- Active Organisation KPI -->
+    <div class="p-4 rounded-xl bg-[#161b22] border border-[#30363d] flex items-center justify-between">
+      <div>
+        <div class="text-[11px] font-bold uppercase tracking-wider text-[#8b949e]">Active Organisation</div>
+        <div class="text-sm font-bold text-white mt-1 truncate max-w-[180px]">
+          {{ current_org.name if current_org else 'Default Org' }}
+        </div>
+        <div class="text-[11px] font-mono text-[#e3b341] mt-0.5">
+          {% if current_org %}ID: #{{ current_org.id }} &middot; {{ current_org.code }}{% else %}ID: #2{% endif %}
+        </div>
+      </div>
+      <div class="w-10 h-10 rounded-lg bg-[#e3b341]/10 border border-[#e3b341]/30 flex items-center justify-center text-[#e3b341]">
+        <i class="bi bi-buildings text-lg"></i>
+      </div>
+    </div>
+
+  </div>
+
+  {% if not active_selection or not active_selection.pump_id %}
+  <!-- Empty State Alert with Quick Seed Action -->
+  <div class="mb-6 p-4 rounded-xl bg-[#1c2330] border border-[#388bfd]/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div class="flex items-start gap-3">
+      <i class="bi bi-info-circle-fill text-[#58a6ff] text-xl mt-0.5"></i>
+      <div>
+        <div class="text-sm font-bold text-white">No active pump selection in session</div>
+        <div class="text-xs text-[#8b949e] mt-0.5">The session does not currently hold an evaluated pump duty point. You can seed a realistic sample session for quick debugging.</div>
+      </div>
+    </div>
+    <form action="{{ url_for('debug.seed_sample_session') }}" method="POST" class="m-0">
+      <button type="submit" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#238636] hover:bg-[#2ea043] text-white shadow-sm transition-all whitespace-nowrap">
+        <i class="bi bi-magic"></i> Seed Sample Session
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- ── 3. Tabbed Content Container ──────────────────────────────────────── -->
+  <div class="bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl overflow-hidden mb-8">
+    
+    <!-- Tab Navigation Bar -->
+    <div class="flex items-center gap-1 p-2 bg-[#0d1117] border-b border-[#30363d] overflow-x-auto custom-scrollbar">
+      <button onclick="switchTab('tab-selection')" id="btn-tab-selection" class="tab-btn active-tab flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all">
+        <i class="bi bi-sliders"></i> Active Selection State
+      </button>
+      <button onclick="switchTab('tab-pump')" id="btn-tab-pump" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold text-[#8b949e] hover:text-white hover:bg-[#21262d] transition-all">
+        <i class="bi bi-water"></i> Pump Object (#{{ pump.id if pump else 'N/A' }})
+      </button>
+      <button onclick="switchTab('tab-report')" id="btn-tab-report" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold text-[#8b949e] hover:text-white hover:bg-[#21262d] transition-all">
+        <i class="bi bi-file-earmark-text"></i> Report Config (#{{ report.id if report else 'N/A' }})
+      </button>
+      <button onclick="switchTab('tab-org')" id="btn-tab-org" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold text-[#8b949e] hover:text-white hover:bg-[#21262d] transition-all">
+        <i class="bi bi-buildings"></i> Organisation (#{{ current_org.id if current_org else 'N/A' }})
+      </button>
+      <button onclick="switchTab('tab-raw-session')" id="btn-tab-raw-session" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold text-[#8b949e] hover:text-white hover:bg-[#21262d] transition-all">
+        <i class="bi bi-database"></i> All Session Keys
+      </button>
+      <button onclick="switchTab('tab-json')" id="btn-tab-json" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold text-[#8b949e] hover:text-white hover:bg-[#21262d] transition-all">
+        <i class="bi bi-code-square"></i> Full JSON Tree
+      </button>
+    </div>
+
+    <!-- ── Tab 1: Active Selection State ───────────────────────────────────── -->
+    <div id="tab-selection" class="tab-content p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="bi bi-sliders text-[#58a6ff]"></i>
+          Selection Variables in <code class="text-xs text-[#58a6ff] bg-[#1f6feb]/10 px-1.5 py-0.5 rounded font-mono">session['active_selection']</code>
+        </h2>
+        <span class="text-xs text-[#8b949e] font-mono">{{ active_selection|length }} variables defined</span>
+      </div>
+
+      {% if active_selection %}
+      <div class="overflow-x-auto rounded-xl border border-[#30363d]">
+        <table class="w-full text-xs text-left">
+          <thead class="bg-[#0d1117] text-[#8b949e] uppercase font-mono text-[10px] border-b border-[#30363d]">
+            <tr>
+              <th class="px-4 py-2.5">Variable Key</th>
+              <th class="px-4 py-2.5">Value</th>
+              <th class="px-4 py-2.5">Type</th>
+              <th class="px-4 py-2.5">Description</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#30363d]/60 font-mono">
+            {% for k, v in active_selection.items() %}
+            <tr class="hover:bg-[#1c2330]/50 transition-colors">
+              <td class="px-4 py-2.5 text-[#58a6ff] font-semibold">{{ k }}</td>
+              <td class="px-4 py-2.5 text-white">
+                {% if k.startswith('show_') %}
+                  {% if v in (1, '1', True, 'true') %}
+                    <span class="px-2 py-0.5 rounded bg-[#238636]/20 text-[#3fb950] border border-[#238636]/50">Enabled (1)</span>
+                  {% else %}
+                    <span class="px-2 py-0.5 rounded bg-[#da3633]/20 text-[#f85149] border border-[#da3633]/50">Disabled (0)</span>
+                  {% endif %}
+                {% elif v is none %}
+                  <span class="text-[#6e7681] italic">null</span>
+                {% elif v is mapping %}
+                  <pre class="m-0 text-[11px] text-[#e3b341]">{{ v | tojson(indent=2) }}</pre>
+                {% else %}
+                  <span class="text-[#3fb950]">{{ v }}</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-2.5 text-[#8b949e]">{{ v.__class__.__name__ }}</td>
+              <td class="px-4 py-2.5 text-[#8b949e] font-sans">
+                {% if k == 'pump_id' %}ID of the selected pump in database
+                {% elif k == 'report_id' %}Selected report template configuration ID
+                {% elif k == 'q_duty' %}Target operating flow rate
+                {% elif k == 'h_duty' %}Target operating head
+                {% elif k == 'dia' %}Calculated impeller trim diameter (mm)
+                {% elif k == 'rpm' %}Calculated VSD operating speed (RPM)
+                {% elif k == 'operation_mode' %}Operation mode ('fixed' speed vs 'vsd')
+                {% elif k.startswith('show_') %}Dynamic curve visibility toggle on report
+                {% elif k == 'hidden_curves' %}Comma-separated list of toggled off curve groups
+                {% else %}Active parameter
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-8 text-[#8b949e]">
+        <i class="bi bi-inbox text-3xl block mb-2 opacity-50"></i>
+        No active selection state in session.
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ── Tab 2: Active Pump Object Details ────────────────────────────────── -->
+    <div id="tab-pump" class="tab-content hidden p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="bi bi-water text-[#58a6ff]"></i>
+          Active Pump Model Instance: <span class="text-[#58a6ff]">{{ pump.name if pump else 'None' }}</span>
+        </h2>
+        {% if pump %}
+        <a href="{{ url_for('pumps.pump_edit', pump_id=pump.id) }}" target="_blank" class="text-xs text-[#58a6ff] hover:underline flex items-center gap-1">
+          <i class="bi bi-pencil-square"></i> Edit in Catalogue
+        </a>
+        {% endif %}
+      </div>
+
+      {% if pump %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Pump Parameters Column -->
+        <div class="space-y-4">
+          <div class="text-xs font-bold uppercase tracking-wider text-[#8b949e] border-b border-[#30363d] pb-1">
+            General Hydraulics
+          </div>
+          <div class="rounded-xl border border-[#30363d] overflow-hidden">
+            <table class="w-full text-xs font-mono">
+              <tbody class="divide-y divide-[#30363d]/60">
+                <tr class="bg-[#0d1117]"><td class="px-3 py-2 text-[#8b949e]">ID</td><td class="px-3 py-2 text-white font-bold">{{ pump.id }}</td></tr>
+                <tr><td class="px-3 py-2 text-[#8b949e]">Name</td><td class="px-3 py-2 text-white">{{ pump.name }}</td></tr>
+                <tr class="bg-[#0d1117]"><td class="px-3 py-2 text-[#8b949e]">Manufacturer</td><td class="px-3 py-2 text-white">{{ pump.manufacturer or 'N/A' }}</td></tr>
+                <tr><td class="px-3 py-2 text-[#8b949e]">Model / Size</td><td class="px-3 py-2 text-white">{{ pump.model_number or 'N/A' }} / {{ pump.size or 'N/A' }}</td></tr>
+                <tr class="bg-[#0d1117]"><td class="px-3 py-2 text-[#8b949e]">Family Type</td><td class="px-3 py-2 text-[#58a6ff]">{{ pump.family_type }}</td></tr>
+                <tr><td class="px-3 py-2 text-[#8b949e]">Base Speed</td><td class="px-3 py-2 text-[#3fb950]">{{ pump.speed_rpm }} RPM</td></tr>
+                <tr class="bg-[#0d1117]"><td class="px-3 py-2 text-[#8b949e]">Max Impeller Dia</td><td class="px-3 py-2 text-[#3fb950]">Ø {{ pump.impeller_dia_mm }} mm</td></tr>
+                <tr><td class="px-3 py-2 text-[#8b949e]">Flow Range</td><td class="px-3 py-2 text-white">{{ pump.q_min or 0 }} &rarr; {{ pump.q_max or 0 }} {{ pump.unit_q or 'm3h' }}</td></tr>
+                <tr class="bg-[#0d1117]"><td class="px-3 py-2 text-[#8b949e]">Max Head</td><td class="px-3 py-2 text-white">{{ pump.h_max or 'Auto' }} {{ pump.unit_h or 'm' }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Polynomial Coefficients Column -->
+        <div class="space-y-4">
+          <div class="text-xs font-bold uppercase tracking-wider text-[#8b949e] border-b border-[#30363d] pb-1">
+            Polynomial Coefficients (5th Order)
+          </div>
+          <div class="rounded-xl border border-[#30363d] overflow-hidden">
+            <table class="w-full text-xs font-mono">
+              <thead class="bg-[#0d1117] text-[#8b949e] text-[10px]">
+                <tr><th class="px-3 py-2">Curve</th><th class="px-3 py-2">a0</th><th class="px-3 py-2">a1</th><th class="px-3 py-2">a2</th><th class="px-3 py-2">a3</th><th class="px-3 py-2">a4</th><th class="px-3 py-2">a5</th></tr>
+              </thead>
+              <tbody class="divide-y divide-[#30363d]/60 text-center">
+                <tr><td class="px-3 py-2 font-bold text-[#58a6ff] text-left">H-Q</td><td>{{ (pump.hq_a0 or 0)|round(4) }}</td><td>{{ (pump.hq_a1 or 0)|round(4) }}</td><td>{{ (pump.hq_a2 or 0)|round(4) }}</td><td>{{ (pump.hq_a3 or 0)|round(4) }}</td><td>{{ (pump.hq_a4 or 0)|round(4) }}</td><td>{{ (pump.hq_a5 or 0)|round(4) }}</td></tr>
+                <tr class="bg-[#0d1117]"><td class="px-3 py-2 font-bold text-[#3fb950] text-left">&eta;-Q</td><td>{{ (pump.eff_b0 or 0)|round(4) }}</td><td>{{ (pump.eff_b1 or 0)|round(4) }}</td><td>{{ (pump.eff_b2 or 0)|round(4) }}</td><td>{{ (pump.eff_b3 or 0)|round(4) }}</td><td>{{ (pump.eff_b4 or 0)|round(4) }}</td><td>{{ (pump.eff_b5 or 0)|round(4) }}</td></tr>
+                <tr><td class="px-3 py-2 font-bold text-[#dc2626] text-left">P-Q</td><td>{{ (pump.pow_p0 or 0)|round(4) }}</td><td>{{ (pump.pow_p1 or 0)|round(4) }}</td><td>{{ (pump.pow_p2 or 0)|round(4) }}</td><td>{{ (pump.pow_p3 or 0)|round(4) }}</td><td>{{ (pump.pow_p4 or 0)|round(4) }}</td><td>{{ (pump.pow_p5 or 0)|round(4) }}</td></tr>
+                <tr class="bg-[#0d1117]"><td class="px-3 py-2 font-bold text-[#0284c7] text-left">NPSH-Q</td><td>{{ (pump.npsh_c0 or 0)|round(4) }}</td><td>{{ (pump.npsh_c1 or 0)|round(4) }}</td><td>{{ (pump.npsh_c2 or 0)|round(4) }}</td><td>{{ (pump.npsh_c3 or 0)|round(4) }}</td><td>{{ (pump.npsh_c4 or 0)|round(4) }}</td><td>{{ (pump.npsh_c5 or 0)|round(4) }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="text-center py-8 text-[#8b949e]">
+        No active pump record loaded.
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ── Tab 3: Active Report Config ──────────────────────────────────────── -->
+    <div id="tab-report" class="tab-content hidden p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="bi bi-file-earmark-text text-[#c084fc]"></i>
+          Active Report Configuration: <span class="text-[#c084fc]">{{ report.title if report else 'None' }}</span>
+        </h2>
+        {% if report %}
+        <a href="{{ url_for('reports.settings') }}" target="_blank" class="text-xs text-[#58a6ff] hover:underline flex items-center gap-1">
+          <i class="bi bi-gear"></i> Manage in Settings
+        </a>
+        {% endif %}
+      </div>
+
+      {% if report %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="rounded-xl border border-[#30363d] overflow-hidden">
+          <table class="w-full text-xs font-mono">
+            <tbody class="divide-y divide-[#30363d]/60">
+              <tr class="bg-[#0d1117]"><td class="px-3 py-2 text-[#8b949e]">Report ID</td><td class="px-3 py-2 text-white font-bold">{{ report.id }}</td></tr>
+              <tr><td class="px-3 py-2 text-[#8b949e]">Report Name (Code)</td><td class="px-3 py-2 text-[#c084fc]">{{ report.report_name }}</td></tr>
+              <tr class="bg-[#0d1117]"><td class="px-3 py-2 text-[#8b949e]">Display Title</td><td class="px-3 py-2 text-white font-bold">{{ report.title }}</td></tr>
+              <tr><td class="px-3 py-2 text-[#8b949e]">Template File</td><td class="px-3 py-2 text-white">{{ report.template_name or 'standard_datasheet.html' }}</td></tr>
+              <tr class="bg-[#0d1117]"><td class="px-3 py-2 text-[#8b949e]">Report Type</td><td class="px-3 py-2 text-[#58a6ff]">{{ report.report_type }}</td></tr>
+              <tr><td class="px-3 py-2 text-[#8b949e]">Primary Brand Color</td><td class="px-3 py-2 flex items-center gap-2"><span class="w-3.5 h-3.5 rounded border border-white/20 inline-block" style="background:{{ report.primary_color }};"></span>{{ report.primary_color }}</td></tr>
+              <tr class="bg-[#0d1117]"><td class="px-3 py-2 text-[#8b949e]">Curve Display Mode</td><td class="px-3 py-2 text-white">{{ report.curve_display_mode }}</td></tr>
+              <tr><td class="px-3 py-2 text-[#8b949e]">Show Rated Curve</td><td class="px-3 py-2 text-white">{{ report.show_rated_curve }}</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="rounded-xl border border-[#30363d] overflow-hidden">
+          <table class="w-full text-xs font-mono">
+            <tbody class="divide-y divide-[#30363d]/60">
+              <tr class="bg-[#0d1117]"><td class="px-3 py-2 text-[#8b949e]">Show H-Q Graph</td><td class="px-3 py-2 text-white">{{ report.show_head_flow_graph }}</td></tr>
+              <tr><td class="px-3 py-2 text-[#8b949e]">Show Efficiency Graph</td><td class="px-3 py-2 text-white">{{ report.show_efficiency_graph }}</td></tr>
+              <tr class="bg-[#0d1117]"><td class="px-3 py-2 text-[#8b949e]">Show Power Graph</td><td class="px-3 py-2 text-white">{{ report.show_power_graph }}</td></tr>
+              <tr><td class="px-3 py-2 text-[#8b949e]">Show NPSHr Graph</td><td class="px-3 py-2 text-white">{{ report.show_npsh_graph }}</td></tr>
+              <tr class="bg-[#0d1117]"><td class="px-3 py-2 text-[#8b949e]">Show Eff Isolines</td><td class="px-3 py-2 text-white">{{ report.show_eff_isolines }}</td></tr>
+              <tr><td class="px-3 py-2 text-[#8b949e]">Show Power Isolines</td><td class="px-3 py-2 text-white">{{ report.show_power_isolines }}</td></tr>
+              <tr class="bg-[#0d1117]"><td class="px-3 py-2 text-[#8b949e]">Graph Area Top / Left</td><td class="px-3 py-2 text-white">{{ report.graph_area_top or '0px' }} / {{ report.graph_area_left or '0px' }}</td></tr>
+              <tr><td class="px-3 py-2 text-[#8b949e]">Graph Area Width / Height</td><td class="px-3 py-2 text-white">{{ report.graph_area_width or '100%' }} / {{ report.graph_area_height or 'auto' }}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% else %}
+      <div class="text-center py-8 text-[#8b949e]">
+        No active report configuration loaded.
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ── Tab 4: Active Organisation ──────────────────────────────────────── -->
+    <div id="tab-org" class="tab-content hidden p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="bi bi-buildings text-[#e3b341]"></i>
+          Active Organisation: <span class="text-[#e3b341]">{{ current_org.name if current_org else 'None' }}</span>
+        </h2>
+        {% if current_org %}
+        <a href="{{ url_for('organisations.settings') }}" target="_blank" class="text-xs text-[#58a6ff] hover:underline flex items-center gap-1">
+          <i class="bi bi-gear"></i> Organisation Settings
+        </a>
+        {% endif %}
+      </div>
+
+      {% if current_org %}
+      <div class="rounded-xl border border-[#30363d] overflow-hidden">
+        <table class="w-full text-xs font-mono">
+          <tbody class="divide-y divide-[#30363d]/60">
+            <tr class="bg-[#0d1117]"><td class="px-4 py-2.5 text-[#8b949e] w-48">Organisation ID</td><td class="px-4 py-2.5 text-white font-bold">{{ current_org.id }}</td></tr>
+            <tr><td class="px-4 py-2.5 text-[#8b949e]">Name / Code</td><td class="px-4 py-2.5 text-white">{{ current_org.name }} ({{ current_org.code }})</td></tr>
+            <tr class="bg-[#0d1117]"><td class="px-4 py-2.5 text-[#8b949e]">Email / Phone</td><td class="px-4 py-2.5 text-white">{{ current_org.email or 'N/A' }} / {{ current_org.phone or 'N/A' }}</td></tr>
+            <tr><td class="px-4 py-2.5 text-[#8b949e]">Website / Address</td><td class="px-4 py-2.5 text-white">{{ current_org.website or 'N/A' }} / {{ current_org.address or 'N/A' }}</td></tr>
+            <tr class="bg-[#0d1117]"><td class="px-4 py-2.5 text-[#8b949e]">Allowed View Org IDs</td><td class="px-4 py-2.5 text-[#58a6ff]">{{ current_org.allowed_view_org_ids or 'All' }}</td></tr>
+            <tr><td class="px-4 py-2.5 text-[#8b949e]">Catalogue Report IDs</td><td class="px-4 py-2.5 text-[#c084fc]">{{ current_org.catalogue_report_ids or 'All' }}</td></tr>
+            <tr class="bg-[#0d1117]"><td class="px-4 py-2.5 text-[#8b949e]">Custom Graph Styles</td><td class="px-4 py-2.5 text-[#3fb950]"><pre class="m-0 text-[11px]">{{ current_org.graph_styles_json or '{}' }}</pre></td></tr>
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-8 text-[#8b949e]">
+        No active organisation loaded.
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ── Tab 5: All Raw Session Keys ─────────────────────────────────────── -->
+    <div id="tab-raw-session" class="tab-content hidden p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="bi bi-database text-[#58a6ff]"></i>
+          Complete Flask Session Dictionary (<code class="text-xs text-[#58a6ff] bg-[#1f6feb]/10 px-1.5 py-0.5 rounded font-mono">session</code>)
+        </h2>
+        <span class="text-xs text-[#8b949e] font-mono">{{ bundle.session_raw|length }} root keys</span>
+      </div>
+
+      <div class="space-y-4">
+        {% for k, v in bundle.session_raw.items() %}
+        <div class="rounded-xl border border-[#30363d] overflow-hidden bg-[#0d1117]">
+          <div class="px-4 py-2.5 bg-[#161b22] border-b border-[#30363d] flex items-center justify-between">
+            <span class="text-xs font-mono font-bold text-[#58a6ff]">{{ k }}</span>
+            <span class="text-[10px] font-mono text-[#8b949e]">{{ v.__class__.__name__ }}</span>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <pre class="m-0 text-xs font-mono text-[#e6edf3]">{{ v | tojson(indent=2) }}</pre>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-[#8b949e]">
+          The Flask session is completely empty.
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ── Tab 6: Full Aggregated JSON Tree ────────────────────────────────── -->
+    <div id="tab-json" class="tab-content hidden p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="bi bi-code-square text-[#58a6ff]"></i>
+          Aggregated State Tree (JSON)
+        </h2>
+        <button type="button"
+                onclick="copyDebugJSON()"
+                class="px-2.5 py-1 text-xs font-semibold text-[#58a6ff] hover:bg-[#1f6feb]/10 rounded border border-[#58a6ff]/30 transition-colors">
+          <i class="bi bi-clipboard"></i> Copy JSON
+        </button>
+      </div>
+
+      <div class="relative rounded-xl border border-[#30363d] bg-[#0d1117] p-4 max-h-[550px] overflow-y-auto custom-scrollbar font-mono text-xs text-[#e6edf3]">
+        <pre id="jsonDebugOutput" class="m-0">{{ formatted_json }}</pre>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Interactive Tab Switcher and JSON Copy Script -->
+<script>
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.remove('active-tab');
+      btn.classList.add('text-[#8b949e]');
+    });
+
+    const activeEl = document.getElementById(tabId);
+    if (activeEl) activeEl.classList.remove('hidden');
+
+    const activeBtn = document.getElementById('btn-' + tabId);
+    if (activeBtn) {
+      activeBtn.classList.add('active-tab');
+      activeBtn.classList.remove('text-[#8b949e]');
+    }
+  }
+
+  function copyDebugJSON() {
+    const raw = document.getElementById('jsonDebugOutput').innerText;
+    navigator.clipboard.writeText(raw).then(() => {
+      const btnText = document.getElementById('copyBtnText');
+      const old = btnText.innerText;
+      btnText.innerText = 'Copied to Clipboard!';
+      setTimeout(() => { btnText.innerText = old; }, 2000);
+    }).catch(err => {
+      console.error('Could not copy JSON:', err);
+    });
+  }
+</script>
+
+<style>
+  .tab-btn.active-tab {
+    background: #21262d;
+    color: #58a6ff;
+    border: 1px solid #30363d;
+  }
+</style>
+
+{% endblock %}

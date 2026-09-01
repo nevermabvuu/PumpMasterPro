@@ -12,7 +12,7 @@ import json
 from flask import Flask
 from models import db, Organisation, Supplier, ReportConfig
 from seed_data import seed_pumps
-from routes import main_bp, pumps_bp, curves_bp, selection_bp, comparison_bp, reports_bp, organisations_bp
+from routes import main_bp, pumps_bp, curves_bp, selection_bp, comparison_bp, reports_bp, organisations_bp, debug_bp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH  = os.path.join(BASE_DIR, 'pumps.db')
@@ -306,6 +306,7 @@ app.register_blueprint(selection_bp)
 app.register_blueprint(comparison_bp)
 app.register_blueprint(reports_bp)
 app.register_blueprint(organisations_bp)
+app.register_blueprint(debug_bp)
 
 
 # Beginners Note: Register url_for alias resolver so templates calling url_for('pump_data')
@@ -313,7 +314,7 @@ app.register_blueprint(organisations_bp)
 def handle_url_build_error(error, endpoint, values):
     if '.' not in endpoint:
         from flask import url_for as flask_url_for
-        for bp in ['main', 'pumps', 'curves', 'selection', 'comparison', 'reports', 'organisations']:
+        for bp in ['main', 'pumps', 'curves', 'selection', 'comparison', 'reports', 'organisations', 'debug']:
             target = f"{bp}.{endpoint}"
             if target in app.view_functions:
                 return flask_url_for(target, **values)

@@ -253,8 +253,15 @@
         </a>
       </div>
 
-      <!-- Right Nav / Active Org Badge & Mobile Hamburger -->
+      <!-- Right Nav / Active Org Badge, Debug Console & Mobile Hamburger -->
       <div class="flex items-center gap-2">
+        <a href="{{ url_for('debug.session_debug_view') }}"
+           class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-[#58a6ff] border border-[#30363d] transition-colors"
+           title="Debug Console: Inspect active session state, pump, and report objects">
+          <i class="bi bi-bug-fill text-[#58a6ff]"></i>
+          <span>Debug</span>
+        </a>
+
         <a href="{{ url_for('organisations.settings') }}"
            class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-[#e6edf3] border border-[#30363d] transition-colors"
            title="Active Organisation: Lytrose Engineering (Click to manage settings)">

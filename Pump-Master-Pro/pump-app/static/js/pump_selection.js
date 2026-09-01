@@ -1,8 +1,170 @@
+// ── Universal Unit Conversion System ─────────────────────────────────────────
+// Beginners Note: Exact multipliers to convert 1.0 unit TO the SI base unit
+const UNIT_FACTORS = {
+  flow: {
+    m3h: 1.0,
+    ls: 3.6,
+    lmin: 0.06,
+    gpm: 0.227124707,
+    ukgpm: 0.2727654,
+    cfs: 101.9406,
+    mgd: 157.7255
+  },
+  head: {
+    m: 1.0,
+    ft: 0.3048,
+    kpa: 0.1019716,
+    bar: 10.19716,
+    psi: 0.70307
+  },
+  power: {
+    kw: 1.0,
+    hp: 0.745699872,
+    w: 0.001,
+    mw: 1000.0
+  },
+  density: {
+    kgm3: 1.0,
+    sg: 1000.0,
+    lbft3: 16.018463
+  },
+  size: {
+    mm: 1.0,
+    um: 0.001,
+    in: 25.4
+  }
+};
+
 /**
- * pump_selection.js — Liquid parameter switching, pump comparison logic, and inline SVG sparklines
+ * Converts a numerical value from one unit to another within the same category.
  */
+function convertValue(val, fromUnit, toUnit, cat) {
+  if (val === null || val === undefined || val === '' || isNaN(Number(val))) return '';
+  const num = Number(val);
+  if (fromUnit === toUnit) return num;
+  const table = UNIT_FACTORS[cat] || {};
+  const fFrom = table[fromUnit] !== undefined ? table[fromUnit] : 1.0;
+  const fTo = table[toUnit] !== undefined ? table[toUnit] : 1.0;
+  const base = num * fFrom;
+  const converted = fTo !== 0 ? (base / fTo) : base;
+  
+  if (Math.abs(converted) >= 100) return Number(converted.toFixed(1));
+  if (Math.abs(converted) >= 10) return Number(converted.toFixed(2));
+  if (Math.abs(converted) >= 1) return Number(converted.toFixed(3));
+  return Number(converted.toFixed(4));
+}
+
+/**
+ * Batch applies a complete Metric (SI) or Imperial (US) preset to all input fields.
+ */
+function applyUnitPreset(preset) {
+  const isImperial = preset === 'imperial';
+  const targets = {
+    select_unit_q: isImperial ? 'gpm' : 'm3h',
+    select_unit_h: isImperial ? 'ft' : 'm',
+    select_unit_npsh: isImperial ? 'ft' : 'm',
+    select_unit_static_head: isImperial ? 'ft' : 'm',
+    select_unit_rho: isImperial ? 'lbft3' : 'kgm3',
+    select_unit_d50: isImperial ? 'in' : 'mm'
+  };
+
+  // Convert every input field and update dropdown
+  Object.keys(targets).forEach(selectId => {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const targetUnit = targets[selectId];
+    const prevUnit = sel.dataset.prev || sel.value;
+    const cat = sel.dataset.unitCat || 'flow';
+    const targetInputId = sel.dataset.target;
+    const inputEl = document.getElementById(targetInputId);
+
+    if (inputEl && inputEl.value !== '') {
+      inputEl.value = convertValue(inputEl.value, prevUnit, targetUnit, cat);
+    }
+
+    sel.value = targetUnit;
+    sel.dataset.prev = targetUnit;
+  });
+
+  // Update hidden field & badge
+  const sysInput = document.getElementById('unitSystemInput');
+  if (sysInput) sysInput.value = preset;
+
+  const badge = document.getElementById('unitSystemBadge');
+  if (badge) {
+    badge.textContent = isImperial ? 'Imperial (US)' : 'Metric (SI)';
+  }
+
+  // Update preset button styles
+  const btnMetric = document.getElementById('btnPresetMetric');
+  const btnImp = document.getElementById('btnPresetImperial');
+  if (btnMetric && btnImp) {
+    if (isImperial) {
+      btnImp.className = 'px-2.5 py-1 text-xs font-semibold rounded-md transition-all bg-[#21262d] text-[#58a6ff] shadow-sm';
+      btnMetric.className = 'px-2.5 py-1 text-xs font-semibold rounded-md transition-all text-[#8b949e] hover:text-white';
+    } else {
+      btnMetric.className = 'px-2.5 py-1 text-xs font-semibold rounded-md transition-all bg-[#21262d] text-[#58a6ff] shadow-sm';
+      btnImp.className = 'px-2.5 py-1 text-xs font-semibold rounded-md transition-all text-[#8b949e] hover:text-white';
+    }
+  }
+}
+
+/**
+ * Evaluates current dropdown states to update system badge (Metric / Imperial / Custom Mixed)
+ */
+function updateSystemBadge() {
+  const unitQ = document.getElementById('select_unit_q')?.value;
+  const unitH = document.getElementById('select_unit_h')?.value;
+  const badge = document.getElementById('unitSystemBadge');
+  const btnMetric = document.getElementById('btnPresetMetric');
+  const btnImp = document.getElementById('btnPresetImperial');
+  const sysInput = document.getElementById('unitSystemInput');
+
+  const isMetric = (unitQ === 'm3h' || unitQ === 'ls' || unitQ === 'lmin') && (unitH === 'm' || unitH === 'kpa' || unitH === 'bar');
+  const isImperial = (unitQ === 'gpm' || unitQ === 'ukgpm' || unitQ === 'cfs' || unitQ === 'mgd') && (unitH === 'ft' || unitH === 'psi');
+
+  if (isImperial && !isMetric) {
+    if (badge) badge.textContent = 'Imperial (US)';
+    if (sysInput) sysInput.value = 'imperial';
+    if (btnImp) btnImp.className = 'px-2.5 py-1 text-xs font-semibold rounded-md transition-all bg-[#21262d] text-[#58a6ff] shadow-sm';
+    if (btnMetric) btnMetric.className = 'px-2.5 py-1 text-xs font-semibold rounded-md transition-all text-[#8b949e] hover:text-white';
+  } else if (isMetric && !isImperial) {
+    if (badge) badge.textContent = 'Metric (SI)';
+    if (sysInput) sysInput.value = 'metric';
+    if (btnMetric) btnMetric.className = 'px-2.5 py-1 text-xs font-semibold rounded-md transition-all bg-[#21262d] text-[#58a6ff] shadow-sm';
+    if (btnImp) btnImp.className = 'px-2.5 py-1 text-xs font-semibold rounded-md transition-all text-[#8b949e] hover:text-white';
+  } else {
+    if (badge) badge.textContent = 'Custom (Mixed)';
+    if (sysInput) sysInput.value = 'custom';
+    if (btnMetric) btnMetric.className = 'px-2.5 py-1 text-xs font-semibold rounded-md transition-all text-[#8b949e] hover:text-white';
+    if (btnImp) btnImp.className = 'px-2.5 py-1 text-xs font-semibold rounded-md transition-all text-[#8b949e] hover:text-white';
+  }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
+
+  // ── Individual Unit Selector Dropdown Event Listeners ────────────────────────
+  // Beginners Note: Auto-converts the value in the input field when the unit changes
+  const unitSelects = document.querySelectorAll('.unit-select');
+  unitSelects.forEach(sel => {
+    // Initialize data-prev if not set
+    if (!sel.dataset.prev) sel.dataset.prev = sel.value;
+
+    sel.addEventListener('change', () => {
+      const prevUnit = sel.dataset.prev || sel.value;
+      const newUnit = sel.value;
+      const cat = sel.dataset.unitCat || 'flow';
+      const targetInputId = sel.dataset.target;
+      const inputEl = document.getElementById(targetInputId);
+
+      if (inputEl && inputEl.value !== '') {
+        inputEl.value = convertValue(inputEl.value, prevUnit, newUnit, cat);
+      }
+
+      sel.dataset.prev = newUnit;
+      updateSystemBadge();
+    });
+  });
 
   // ── Liquid parameter switching ─────────────────────────────────────────────
   // Beginners Note: Shows/hides the appropriate input fields based on selected liquid type

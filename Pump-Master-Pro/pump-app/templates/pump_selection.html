@@ -30,33 +30,92 @@
     <form method="post" id="selectionForm">
 
       <!-- Duty point card -->
-      <!-- Beginners Note: Core inputs for the target operating point (Flow Q, Head H, NPSHa) -->
+      <!-- Beginners Note: Core inputs for the target operating point (Flow Q, Head H, NPSHa) with full unit switching -->
       <div class="card-dark mb-3">
-        <div class="card-header-dark">
-          <i class="bi bi-crosshair mr-2"></i>Duty Point
+        <div class="card-header-dark flex items-center justify-between">
+          <span><i class="bi bi-crosshair mr-2"></i>Duty Point</span>
+          <span id="unitSystemBadge" class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#1f6feb]/15 border border-[#1f6feb]/30 text-[#58a6ff]">
+            {{ 'Metric (SI)' if unit_system != 'imperial' else 'Imperial (US)' }}
+          </span>
         </div>
         <div class="p-4">
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="form-label">Flow Q (m³/h) *</label>
-              <input type="number" name="q_duty" class="form-control form-control-dark w-full"
-                     value="{{ form_data.q_duty or '' }}" step="0.1" required placeholder="e.g. 150">
+
+          <!-- Unit System Preset Switcher -->
+          <div class="flex items-center justify-between pb-3 mb-3 border-b border-[#30363d]">
+            <span class="text-xs font-semibold text-[#8b949e] flex items-center gap-1.5">
+              <i class="bi bi-sliders"></i> Unit Preset:
+            </span>
+            <div class="inline-flex rounded-lg p-0.5 bg-[#0d1117] border border-[#30363d]">
+              <button type="button" id="btnPresetMetric"
+                      onclick="applyUnitPreset('metric')"
+                      class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all {{ 'bg-[#21262d] text-[#58a6ff] shadow-sm' if unit_system != 'imperial' else 'text-[#8b949e] hover:text-white' }}">
+                🌐 Metric (SI)
+              </button>
+              <button type="button" id="btnPresetImperial"
+                      onclick="applyUnitPreset('imperial')"
+                      class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all {{ 'bg-[#21262d] text-[#58a6ff] shadow-sm' if unit_system == 'imperial' else 'text-[#8b949e] hover:text-white' }}">
+                🇺🇸 Imperial (US)
+              </button>
             </div>
+            <input type="hidden" name="unit_system" id="unitSystemInput" value="{{ unit_system or 'metric' }}">
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- Flow Q Input + Unit Selector -->
             <div>
-              <label class="form-label">Head H (m) *</label>
-              <input type="number" name="h_duty" class="form-control form-control-dark w-full"
-                     value="{{ form_data.h_duty or '' }}" step="0.1" required placeholder="e.g. 35">
+              <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Flow Rate Q *</label>
+              <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
+                <input type="number" name="q_duty" id="input_q_duty" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-2 text-sm text-white"
+                       value="{{ form_data.q_duty or '' }}" step="0.1" required placeholder="e.g. 150" data-unit-cat="flow">
+                <select name="unit_q" id="select_unit_q" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_q_duty" data-unit-cat="flow" data-prev="{{ unit_q or 'm3h' }}">
+                  {% for k, u in units_tables.flow.items() %}
+                    <option value="{{ k }}" {{ 'selected' if unit_q == k else '' }}>{{ u.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
             </div>
+
+            <!-- Head H Input + Unit Selector -->
             <div>
-              <label class="form-label">NPSHa (m)</label>
-              <input type="number" name="npsh_avail" class="form-control form-control-dark w-full"
-                     value="{{ form_data.npsh_avail or '' }}" step="0.1" placeholder="Optional">
-              <div class="form-text">Available NPSH at pump inlet</div>
+              <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Total Head H *</label>
+              <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
+                <input type="number" name="h_duty" id="input_h_duty" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-2 text-sm text-white"
+                       value="{{ form_data.h_duty or '' }}" step="0.1" required placeholder="e.g. 35" data-unit-cat="head">
+                <select name="unit_h" id="select_unit_h" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_h_duty" data-unit-cat="head" data-prev="{{ unit_h or 'm' }}">
+                  {% for k, u in units_tables.head.items() %}
+                    <option value="{{ k }}" {{ 'selected' if unit_h == k else '' }}>{{ u.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
             </div>
+
+            <!-- NPSHa Input + Unit Selector -->
             <div>
-              <label class="form-label">Static Head H<sub>s</sub> (m)</label>
-              <input type="number" name="static_head" class="form-control form-control-dark w-full"
-                     value="{{ form_data.static_head or '' }}" step="0.1" placeholder="0">
+              <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">NPSH Available (NPSHa)</label>
+              <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
+                <input type="number" name="npsh_avail" id="input_npsh_avail" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-2 text-sm text-white"
+                       value="{{ form_data.npsh_avail or '' }}" step="0.1" placeholder="Optional" data-unit-cat="head">
+                <select name="unit_npsh" id="select_unit_npsh" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_npsh_avail" data-unit-cat="head" data-prev="{{ unit_npsh or 'm' }}">
+                  {% for k, u in units_tables.head.items() %}
+                    <option value="{{ k }}" {{ 'selected' if unit_npsh == k else '' }}>{{ u.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="form-text text-[11px] text-[#8b949e] mt-1">Available NPSH at pump suction</div>
+            </div>
+
+            <!-- Static Head Hs Input + Unit Selector -->
+            <div>
+              <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Static Head H<sub>s</sub></label>
+              <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
+                <input type="number" name="static_head" id="input_static_head" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-2 text-sm text-white"
+                       value="{{ form_data.static_head or '' }}" step="0.1" placeholder="0" data-unit-cat="head">
+                <select name="unit_static_head" id="select_unit_static_head" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_static_head" data-unit-cat="head" data-prev="{{ unit_static_head or 'm' }}">
+                  {% for k, u in units_tables.head.items() %}
+                    <option value="{{ k }}" {{ 'selected' if unit_static_head == k else '' }}>{{ u.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -91,7 +150,7 @@
         </div>
         <div class="p-4">
           <div class="mb-3">
-            <label class="form-label">Liquid Type</label>
+            <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Liquid Type</label>
             <select name="liquid" id="liquidSel" class="form-select form-control-dark w-full">
               <option value="water" {{ 'selected' if form_data.get('liquid','water') == 'water' }}>Clean Water</option>
               <option value="viscous" {{ 'selected' if form_data.get('liquid') == 'viscous' }}>Viscous Fluid</option>
@@ -102,9 +161,16 @@
           <!-- Water params -->
           <div id="waterParams">
             <div>
-              <label class="form-label">Liquid Density ρ (kg/m³)</label>
-              <input type="number" name="rho" class="form-control form-control-dark w-full"
-                     value="{{ form_data.rho or 1000 }}" step="1">
+              <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Liquid Density ρ</label>
+              <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
+                <input type="number" name="rho" id="input_rho_water" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-2 text-sm text-white"
+                       value="{{ form_data.rho or 1000 }}" step="1" data-unit-cat="density">
+                <select name="unit_rho" id="select_unit_rho" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_rho_water" data-unit-cat="density" data-prev="{{ unit_rho or 'kgm3' }}">
+                  {% for k, u in units_tables.density.items() %}
+                    <option value="{{ k }}" {{ 'selected' if unit_rho == k else '' }}>{{ u.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -204,12 +270,19 @@
                 <h6 class="text-xs text-gray-400 font-bold mb-2 uppercase">Particle Sizing</h6>
                 <div class="grid grid-cols-2 gap-2">
                   <div>
-                    <label class="form-label">d<sub>50</sub> (mm)</label>
-                    <input type="number" name="slurry_d50" class="form-control form-control-dark w-full" value="{{ form_data.slurry_d50 or 0.3 }}" step="0.05">
+                    <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">d<sub>50</sub> (Median Size)</label>
+                    <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
+                      <input type="number" name="slurry_d50" id="input_slurry_d50" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-1.5 text-xs text-white" value="{{ form_data.slurry_d50 or 0.3 }}" step="0.01" data-unit-cat="size">
+                      <select name="unit_d50" id="select_unit_d50" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_slurry_d50" data-unit-cat="size" data-prev="{{ unit_d50 or 'mm' }}">
+                        {% for k, u in units_tables.size.items() %}
+                          <option value="{{ k }}" {{ 'selected' if unit_d50 == k else '' }}>{{ u.name }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
                   </div>
                   <div>
-                    <label class="form-label">d<sub>85</sub> (mm)</label>
-                    <input type="number" name="slurry_d85" class="form-control form-control-dark w-full" value="{{ form_data.slurry_d85 or '' }}" step="0.05">
+                    <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">d<sub>85</sub> (Top Size)</label>
+                    <input type="number" name="slurry_d85" class="form-control form-control-dark w-full" value="{{ form_data.slurry_d85 or '' }}" step="0.05" placeholder="Optional">
                   </div>
                 </div>
               </div>
@@ -300,7 +373,7 @@
     {% if results is not none %}
       {% if results %}
         <!-- Results header with count and duty summary -->
-        <!-- Beginners Note: Shows how many pumps matched and repeats the duty point for reference -->
+        <!-- Beginners Note: Shows how many pumps matched and repeats the duty point for reference with active units -->
         <div class="flex items-center mb-3 gap-3 flex-wrap justify-between">
           <div class="flex items-center gap-3">
             <h5 class="mb-0 flex items-center gap-2" style="color:#e6edf3;font-size:1rem;font-weight:700;">
@@ -308,7 +381,7 @@
               {{ results|length }} pump{{ 's' if results|length != 1 else '' }} found
             </h5>
             <span class="text-muted text-sm">
-              Duty: Q = {{ form_data.q_duty }} m³/h &bull; H = {{ form_data.h_duty }} m
+              Duty: Q = {{ form_data.q_duty }} {{ units_tables.flow[unit_q].name }} &bull; H = {{ form_data.h_duty }} {{ units_tables.head[unit_h].name }}
               {% if form_data.liquid != 'water' %}&bull; {{ form_data.liquid|capitalize }}{% endif %}
             </span>
           </div>
@@ -332,7 +405,7 @@
         <!-- Beginners Note: Each matching pump is displayed as an interactive card with:
              - Pump identity (name, model, manufacturer, size, speed)
              - Suitability rating badge
-             - Key performance metrics at duty point
+             - Key performance metrics at duty point in user units
              - Mini H-Q sparkline SVG showing the pump's envelope with duty point
              - Trim/speed information
              - BEP proximity bar
@@ -380,7 +453,7 @@
                   <!-- Head at duty -->
                   <div class="perf-metric">
                     <div class="perf-label">Head at Duty</div>
-                    <div class="perf-value">{{ r.op_h }} <span class="perf-unit">m</span></div>
+                    <div class="perf-value">{{ r.disp_h_duty }} <span class="perf-unit">{{ r.disp_unit_h }}</span></div>
                     <div class="text-xs" style="color:{% if r.head_surplus_pct > 15 %}#d29922{% else %}#8b949e{% endif %}">
                       +{{ r.head_surplus_pct }}% surplus
                     </div>
@@ -396,14 +469,14 @@
                   <!-- Power -->
                   <div class="perf-metric">
                     <div class="perf-label">Power</div>
-                    <div class="perf-value">{{ r.op_power }} <span class="perf-unit">kW</span></div>
+                    <div class="perf-value">{{ (r.disp_power|round(1)) if r.disp_power is not none else r.op_power }} <span class="perf-unit">{{ r.disp_unit_pow }}</span></div>
                     <div class="text-xs text-muted">BEP: {{ r.bep_power }} kW</div>
                   </div>
                   <!-- NPSHr -->
                   <div class="perf-metric">
                     <div class="perf-label">NPSHr</div>
                     <div class="perf-value" style="{% if not r.npsh_ok %}color:#f85149;{% endif %}">
-                      {{ r.op_npsh }} <span class="perf-unit">m</span>
+                      {{ (r.disp_npshr|round(1)) if r.disp_npshr is not none else r.op_npsh }} <span class="perf-unit">{{ r.disp_unit_npsh }}</span>
                     </div>
                     {% if r.npsh_margin is not none %}
                       <div class="text-xs" style="color:{% if r.npsh_margin > 0 %}#3fb950{% else %}#f85149{% endif %}">

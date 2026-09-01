@@ -21,7 +21,10 @@ if _app_dir not in sys.path:
 
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, flash, abort
 from models import Pump
-from utils import _get_float, get_visible_pumps_query, get_current_organisation
+from utils import (
+    _get_float, get_visible_pumps_query, get_current_organisation,
+    UNITS_FLOW, UNITS_HEAD, UNITS_POWER, UNITS_DENSITY, UNITS_SIZE, convert_unit
+)
 from pump_selection import select_pumps, get_filter_options
 
 selection_bp = Blueprint('selection', __name__)
@@ -33,20 +36,14 @@ def pump_selection():
     Render pump selection search page and display matching pumps filtered by allowed organisations.
 
     Beginners Note:
-        GET  → Shows empty form with filter dropdowns populated from the database
-        POST → Processes the duty point + filters, runs selection engine, displays shortlist results
-
-    Template context:
-        - results: List of matching pump dicts (None if GET, empty list if no matches on POST)
-        - form_data: Dict of submitted form values (for re-populating the form)
-        - filter_options: Dict of unique values for dropdown filters (manufacturers, types, etc.)
-        - sort_by: Current sort field (default 'rating')
+        Supports comprehensive multi-unit engineering conversions (Metric SI vs Imperial US and custom mixed units).
+        User inputs are normalized to base SI units (m³/h, m, kg/m³) for hydraulic evaluation,
+        and results are dynamically presented in the user's selected display units.
     """
     results   = None
     form_data = {}
 
     # ── Populate filter options from all visible pumps ─────────────────────
-    # Beginners Note: We always need filter options to populate the dropdowns, even on GET
     all_pumps = get_visible_pumps_query().all()
     filter_options = get_filter_options(all_pumps)
 
@@ -59,48 +56,59 @@ def pump_selection():
         f = session.get('selection_form_data', {})
         form_data = f
 
+    # ── Unit System & Individual Dropdown Selections ─────────────────────────
+    # Beginners Note: Default to Metric SI if not explicitly specified by user
+    unit_system      = f.get('unit_system', 'metric')
+    unit_q           = f.get('unit_q', 'm3h')
+    unit_h           = f.get('unit_h', 'm')
+    unit_npsh        = f.get('unit_npsh', 'm')
+    unit_static_head = f.get('unit_static_head', 'm')
+    unit_rho         = f.get('unit_rho', 'kgm3')
+    unit_d50         = f.get('unit_d50', 'mm')
+    unit_pow         = f.get('unit_pow', 'hp' if unit_system == 'imperial' else 'kw')
+
     # If we have basic duty point, run the selection
     q_duty_str = f.get('q_duty')
     h_duty_str = f.get('h_duty')
     
     if q_duty_str and h_duty_str:
-        # ── Extract duty point parameters ──────────────────────────────────
-        q_duty     = _get_float(f, 'q_duty', 0.0)
-        h_duty     = _get_float(f, 'h_duty', 0.0)
+        # ── Extract raw user-entered numbers ─────────────────────────────────
+        raw_q_duty     = _get_float(f, 'q_duty', 0.0)
+        raw_h_duty     = _get_float(f, 'h_duty', 0.0)
 
-        # Beginners Note: NPSH is optional — None means "don't check NPSH margin"
-        npsh_val   = f.get('npsh_avail')
-        npsh_avail = _get_float(f, 'npsh_avail', 0.0) if (npsh_val is not None and npsh_val.strip() != '') else None
+        npsh_val       = f.get('npsh_avail')
+        raw_npsh_avail = _get_float(f, 'npsh_avail', 0.0) if (npsh_val is not None and str(npsh_val).strip() != '') else None
+
+        # ── Normalize inputs into Base SI Metric for the Selection Engine ─────
+        # Base units: Q in m³/h, H in m, NPSHa in m, Static Head in m
+        q_duty     = convert_unit(raw_q_duty, unit_q, 'm3h', 'flow')
+        h_duty     = convert_unit(raw_h_duty, unit_h, 'm', 'head')
+        npsh_avail = convert_unit(raw_npsh_avail, unit_npsh, 'm', 'head') if raw_npsh_avail is not None else None
 
         # ── Extract liquid parameters ──────────────────────────────────────
         liquid       = f.get('liquid', 'water')
         if liquid == 'slurry':
-            rho      = _get_float(f, 'rho_l', 1000.0)
+            raw_rho_l = _get_float(f, 'rho_l', 1000.0)
+            rho       = convert_unit(raw_rho_l, unit_rho, 'kgm3', 'density')
         else:
-            # We might have multiple 'rho' inputs in the form, to_dict() might grab the last one.
-            # We will just grab the first 'rho' available.
-            rho      = _get_float(f, 'rho', 1000.0)
+            raw_rho   = _get_float(f, 'rho', 1000.0)
+            rho       = convert_unit(raw_rho, unit_rho, 'kgm3', 'density')
             
         vis          = _get_float(f, 'viscosity_cSt', 1.0)
         cv           = _get_float(f, 'slurry_cv', 0.0)
-        d50          = _get_float(f, 'slurry_d50', 0.3)
-        rho_s        = _get_float(f, 'rho_solid', 2650.0)
+        raw_d50      = _get_float(f, 'slurry_d50', 0.3)
+        d50          = convert_unit(raw_d50, unit_d50, 'mm', 'size')
+        raw_rho_s    = _get_float(f, 'rho_solid', 2650.0)
+        rho_s        = convert_unit(raw_rho_s, unit_rho, 'kgm3', 'density')
 
         # ── Extract filter criteria ────────────────────────────────────────
-        # Beginners Note: Build a filters dict from the form. Empty strings mean "no filter".
         filters = {}
-        if f.get('filter_manufacturer'):
-            filters['manufacturer'] = f.get('filter_manufacturer')
-        if f.get('filter_pump_type'):
-            filters['pump_type'] = f.get('filter_pump_type')
-        if f.get('filter_speed_min'):
-            filters['speed_min'] = f.get('filter_speed_min')
-        if f.get('filter_speed_max'):
-            filters['speed_max'] = f.get('filter_speed_max')
-        if f.get('filter_size'):
-            filters['size'] = f.get('filter_size')
-        if f.get('filter_application'):
-            filters['application'] = f.get('filter_application')
+        if f.get('filter_manufacturer'): filters['manufacturer'] = f.get('filter_manufacturer')
+        if f.get('filter_pump_type'):     filters['pump_type'] = f.get('filter_pump_type')
+        if f.get('filter_speed_min'):    filters['speed_min'] = f.get('filter_speed_min')
+        if f.get('filter_speed_max'):    filters['speed_max'] = f.get('filter_speed_max')
+        if f.get('filter_size'):         filters['size'] = f.get('filter_size')
+        if f.get('filter_application'):  filters['application'] = f.get('filter_application')
 
         # ── Run selection engine ───────────────────────────────────────────
         results = select_pumps(all_pumps, q_duty, h_duty, npsh_avail,
@@ -108,12 +116,50 @@ def pump_selection():
                                filters=filters,
                                operation_mode=f.get('operation_mode', 'fixed'))
 
+        # ── Convert result performance metrics into user-selected display units ─
+        # Beginners Note: Attach display values so cards & result tables show native user units
+        for r in results:
+            r['disp_q_duty']   = raw_q_duty
+            r['disp_h_duty']   = raw_h_duty
+            r['disp_unit_q']   = UNITS_FLOW.get(unit_q, {}).get('name', unit_q)
+            r['disp_unit_h']   = UNITS_HEAD.get(unit_h, {}).get('name', unit_h)
+            r['disp_unit_pow'] = UNITS_POWER.get(unit_pow, {}).get('name', unit_pow)
+            r['disp_unit_npsh']= UNITS_HEAD.get(unit_npsh, {}).get('name', unit_npsh)
+            
+            # Power in user's unit (kW or hp)
+            raw_p = r.get('op_power')
+            r['disp_power']    = convert_unit(raw_p, 'kw', unit_pow, 'power') if raw_p is not None else None
+            
+            # NPSHr in user's unit (m or ft)
+            raw_np = r.get('op_npsh')
+            r['disp_npshr']    = convert_unit(raw_np, 'm', unit_npsh, 'head') if raw_np is not None else None
+
+    # ── Unit dictionary bundles for template dropdown rendering ─────────────
+    units_tables = {
+        'flow':    UNITS_FLOW,
+        'head':    UNITS_HEAD,
+        'power':   UNITS_POWER,
+        'density': UNITS_DENSITY,
+        'size':    UNITS_SIZE
+    }
+
     # ── Render template with results and filter options ─────────────────────
     return render_template('pump_selection.html',
                            results=results,
                            form_data=form_data,
-                            filter_options=filter_options,
+                           filter_options=filter_options,
+                           units_tables=units_tables,
+                           unit_system=unit_system,
+                           unit_q=unit_q,
+                           unit_h=unit_h,
+                           unit_npsh=unit_npsh,
+                           unit_static_head=unit_static_head,
+                           unit_rho=unit_rho,
+                           unit_d50=unit_d50,
+                           unit_pow=unit_pow,
                            sort_by=form_data.get('sort_by', 'rating'))
+
+
 @selection_bp.route('/pump-selection/details/<int:pump_id>', endpoint='pump_selection_details')
 def pump_selection_details(pump_id):
     """
@@ -125,6 +171,15 @@ def pump_selection_details(pump_id):
     # Load session data
     f = session.get('selection_form_data', {})
     
+    unit_system      = f.get('unit_system', 'metric')
+    unit_q           = f.get('unit_q', 'm3h')
+    unit_h           = f.get('unit_h', 'm')
+    unit_npsh        = f.get('unit_npsh', 'm')
+    unit_static_head = f.get('unit_static_head', 'm')
+    unit_rho         = f.get('unit_rho', 'kgm3')
+    unit_d50         = f.get('unit_d50', 'mm')
+    unit_pow         = f.get('unit_pow', 'hp' if unit_system == 'imperial' else 'kw')
+
     # Run the selection engine to get the shortlist
     results = []
     all_pumps = get_visible_pumps_query().all()
@@ -132,34 +187,55 @@ def pump_selection_details(pump_id):
     h_duty_str = f.get('h_duty')
     
     if q_duty_str and h_duty_str:
-        q_duty = _get_float(f, 'q_duty', 0.0)
-        h_duty = _get_float(f, 'h_duty', 0.0)
+        raw_q_duty = _get_float(f, 'q_duty', 0.0)
+        raw_h_duty = _get_float(f, 'h_duty', 0.0)
         npsh_val = f.get('npsh_avail')
-        npsh_avail = _get_float(f, 'npsh_avail', 0.0) if (npsh_val is not None and npsh_val.strip() != '') else None
+        raw_npsh_avail = _get_float(f, 'npsh_avail', 0.0) if (npsh_val is not None and str(npsh_val).strip() != '') else None
+
+        # Normalize to SI base
+        q_duty     = convert_unit(raw_q_duty, unit_q, 'm3h', 'flow')
+        h_duty     = convert_unit(raw_h_duty, unit_h, 'm', 'head')
+        npsh_avail = convert_unit(raw_npsh_avail, unit_npsh, 'm', 'head') if raw_npsh_avail is not None else None
 
         liquid = f.get('liquid', 'water')
         if liquid == 'slurry':
-            rho = _get_float(f, 'rho_l', 1000.0)
+            raw_rho_l = _get_float(f, 'rho_l', 1000.0)
+            rho       = convert_unit(raw_rho_l, unit_rho, 'kgm3', 'density')
         else:
-            rho = _get_float(f, 'rho', 1000.0)
+            raw_rho   = _get_float(f, 'rho', 1000.0)
+            rho       = convert_unit(raw_rho, unit_rho, 'kgm3', 'density')
             
         vis = _get_float(f, 'viscosity_cSt', 1.0)
         cv = _get_float(f, 'slurry_cv', 0.0)
-        d50 = _get_float(f, 'slurry_d50', 0.3)
-        rho_s = _get_float(f, 'rho_solid', 2650.0)
+        raw_d50 = _get_float(f, 'slurry_d50', 0.3)
+        d50 = convert_unit(raw_d50, unit_d50, 'mm', 'size')
+        raw_rho_s = _get_float(f, 'rho_solid', 2650.0)
+        rho_s = convert_unit(raw_rho_s, unit_rho, 'kgm3', 'density')
 
         filters = {}
         if f.get('filter_manufacturer'): filters['manufacturer'] = f.get('filter_manufacturer')
-        if f.get('filter_pump_type'): filters['pump_type'] = f.get('filter_pump_type')
-        if f.get('filter_speed_min'): filters['speed_min'] = f.get('filter_speed_min')
-        if f.get('filter_speed_max'): filters['speed_max'] = f.get('filter_speed_max')
-        if f.get('filter_size'): filters['size'] = f.get('filter_size')
-        if f.get('filter_application'): filters['application'] = f.get('filter_application')
+        if f.get('filter_pump_type'):     filters['pump_type'] = f.get('filter_pump_type')
+        if f.get('filter_speed_min'):    filters['speed_min'] = f.get('filter_speed_min')
+        if f.get('filter_speed_max'):    filters['speed_max'] = f.get('filter_speed_max')
+        if f.get('filter_size'):         filters['size'] = f.get('filter_size')
+        if f.get('filter_application'):  filters['application'] = f.get('filter_application')
 
         results = select_pumps(all_pumps, q_duty, h_duty, npsh_avail,
                                liquid, rho, vis, cv, d50, rho_s,
                                filters=filters,
                                operation_mode=f.get('operation_mode', 'fixed'))
+
+        for r in results:
+            r['disp_q_duty']   = raw_q_duty
+            r['disp_h_duty']   = raw_h_duty
+            r['disp_unit_q']   = UNITS_FLOW.get(unit_q, {}).get('name', unit_q)
+            r['disp_unit_h']   = UNITS_HEAD.get(unit_h, {}).get('name', unit_h)
+            r['disp_unit_pow'] = UNITS_POWER.get(unit_pow, {}).get('name', unit_pow)
+            r['disp_unit_npsh']= UNITS_HEAD.get(unit_npsh, {}).get('name', unit_npsh)
+            raw_p = r.get('op_power')
+            r['disp_power']    = convert_unit(raw_p, 'kw', unit_pow, 'power') if raw_p is not None else None
+            raw_np = r.get('op_npsh')
+            r['disp_npshr']    = convert_unit(raw_np, 'm', unit_npsh, 'head') if raw_np is not None else None
 
     # Sort results
     sort_by = f.get('sort_by', 'rating')
@@ -169,31 +245,19 @@ def pump_selection_details(pump_id):
         results.sort(key=lambda x: x.get('op_eta', 0), reverse=True)
 
     # ── Security & Shortlist Authorization Check ──────────────────────────────
-    # Beginners Note: Extract all valid pump IDs from the active selection engine results.
     shortlisted_ids = [r['pump_id'] for r in results if 'pump_id' in r]
 
-    # 1. If no search has been executed or zero pumps matched, redirect to search page
     if not results or not shortlisted_ids:
         flash("No active pump selection found. Please specify your operating duty point to find matching pumps.", "warning")
         return redirect(url_for('selection.pump_selection'))
 
-    # 2. If the user changed the URL to an unshortlisted pump ID, block access and remain on currently selected pump
     if pump_id not in shortlisted_ids:
-        # Beginners Note: URL Tampering Protection
-        # Prevents users from arbitrarily altering the ID in the browser URL (/pump-selection/details/<id>)
-        # to view pumps that did not pass the engineering selection criteria.
-        # Instead of falling back to the highest-rated pump, we keep the user on their currently selected pump.
         flash(f"Access Denied: Pump #{pump_id} is not in your current selection shortlist. You can only view shortlisted pumps.", "warning")
-        
-        # Check if the user already had an active pump selected in this session
         active_sel = session.get('active_selection', {})
         current_active_id = active_sel.get('pump_id')
-        
-        # Remain on currently selected pump if valid and shortlisted, otherwise fallback to first shortlisted
         fallback_id = current_active_id if (current_active_id and current_active_id in shortlisted_ids) else shortlisted_ids[0]
         return redirect(url_for('selection.pump_selection_details', pump_id=fallback_id))
 
-    # 3. Ensure the pump belongs to the user's visible organisation scope
     pump = get_visible_pumps_query().filter(Pump.id == pump_id).first()
     if not pump:
         abort(403)
@@ -201,29 +265,37 @@ def pump_selection_details(pump_id):
     current_org = get_current_organisation()
     org_styles = current_org.get_graph_styles() if current_org else {}
     
-    # Beginners Note: Find the active_result, default_report_id, and available_reports for the selected pump so we can build the Report URLs
     active_result = None
-    default_report_id = 1 # Fallback
+    default_report_id = 1
     for r in results:
         if r.get('pump_id') == pump_id:
             active_result = r
             default_report_id = r.get('default_report_id', 1)
             break
 
-    # Beginners Note: Fetch all available report configurations so the user can select and generate
-    # any report template (standard, VSD, proposal, compact, etc.) directly from the details view.
     from models import ReportConfig
     available_reports = ReportConfig.query.order_by(ReportConfig.id.asc()).all()
 
     # ── Store Selection State into Server-Side Session ──
-    # Beginners Note: Save full engineering parameters, active duty point, calculated trim/RPM,
+    # Beginners Note: Save full engineering parameters, active duty point, unit settings,
     # and default report ID into session['active_selection'].
-    # Enables ultra-clean zero-parameter report URLs (/reports/view) without exposing IDs or numbers in the browser address bar.
     session['active_selection'] = {
         'pump_id': pump.id,
         'report_id': default_report_id,
         'q_duty': f.get('q_duty'),
         'h_duty': f.get('h_duty'),
+        'unit_system': unit_system,
+        'unit_q': unit_q,
+        'unit_h': unit_h,
+        'unit_pow': unit_pow,
+        'unit_npsh': unit_npsh,
+        'unit_static_head': unit_static_head,
+        'unit_rho': unit_rho,
+        'unit_d50': unit_d50,
+        'disp_q_duty': active_result.get('disp_q_duty') if active_result else f.get('q_duty'),
+        'disp_h_duty': active_result.get('disp_h_duty') if active_result else f.get('h_duty'),
+        'disp_unit_q': UNITS_FLOW.get(unit_q, {}).get('name', unit_q),
+        'disp_unit_h': UNITS_HEAD.get(unit_h, {}).get('name', unit_h),
         'dia': active_result.get('optimal_trim_dia_mm') if active_result else None,
         'rpm': active_result.get('optimal_speed_rpm') if active_result else None,
         'operation_mode': f.get('operation_mode', 'fixed'),
@@ -237,6 +309,14 @@ def pump_selection_details(pump_id):
         'hidden_curves': ''
     }
     
+    units_tables = {
+        'flow':    UNITS_FLOW,
+        'head':    UNITS_HEAD,
+        'power':   UNITS_POWER,
+        'density': UNITS_DENSITY,
+        'size':    UNITS_SIZE
+    }
+
     return render_template('pump_selection_details.html',
                            pump=pump,
                            results=results,
@@ -245,7 +325,13 @@ def pump_selection_details(pump_id):
                            current_org=current_org,
                            org_styles=org_styles,
                            default_report_id=default_report_id,
-                           available_reports=available_reports)
+                           available_reports=available_reports,
+                           units_tables=units_tables,
+                           unit_system=unit_system,
+                           unit_q=unit_q,
+                           unit_h=unit_h,
+                           unit_npsh=unit_npsh,
+                           unit_pow=unit_pow)
 
 
 @selection_bp.route('/papi/select-pumps', methods=['POST'])

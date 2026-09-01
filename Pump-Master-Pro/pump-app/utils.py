@@ -13,6 +13,102 @@ from pump_curves import (
 # Beginners Note: Active organization ID (fixed to 2: Lytrose Engineering until auth module is implemented)
 CURRENT_ORGANISATION_ID = 2
 
+# ── Engineering Unit Conversion Tables & Helpers ──────────────────────────────
+# Beginners Note: Complete conversion tables for Flow, Head, Power, Density, and Particle Size.
+# All factors specify the multiplier to convert 1.0 unit TO the base SI unit.
+UNITS_FLOW = {
+    'm3h':   {'name': 'm³/h',   'label': 'm³/h (Metric)',       'factor_to_base': 1.0,         'system': 'metric'},
+    'ls':    {'name': 'l/s',    'label': 'l/s (Litres/sec)',    'factor_to_base': 3.6,         'system': 'metric'},
+    'lmin':  {'name': 'l/min',  'label': 'l/min (Litres/min)',  'factor_to_base': 0.06,        'system': 'metric'},
+    'gpm':   {'name': 'US gpm', 'label': 'US gpm (Gallons/min)','factor_to_base': 0.227124707, 'system': 'imperial'},
+    'ukgpm': {'name': 'UK gpm', 'label': 'UK gpm (Imp Gallons)','factor_to_base': 0.2727654,   'system': 'imperial'},
+    'cfs':   {'name': 'ft³/s',  'label': 'ft³/s (Cubic ft/sec)','factor_to_base': 101.9406,    'system': 'imperial'},
+    'mgd':   {'name': 'MGD',    'label': 'MGD (Million Gals/d)','factor_to_base': 157.7255,    'system': 'imperial'},
+}
+
+UNITS_HEAD = {
+    'm':   {'name': 'm',   'label': 'm (Metres)',       'factor_to_base': 1.0,       'system': 'metric'},
+    'ft':  {'name': 'ft',  'label': 'ft (Feet)',        'factor_to_base': 0.3048,    'system': 'imperial'},
+    'kpa': {'name': 'kPa', 'label': 'kPa (Kilopascals)','factor_to_base': 0.1019716, 'system': 'metric'},
+    'bar': {'name': 'bar', 'label': 'bar (Pressure)',   'factor_to_base': 10.19716,  'system': 'metric'},
+    'psi': {'name': 'psi', 'label': 'psi (Pounds/sq in)','factor_to_base': 0.70307,   'system': 'imperial'},
+}
+
+UNITS_POWER = {
+    'kw': {'name': 'kW', 'label': 'kW (Kilowatts)', 'factor_to_base': 1.0,         'system': 'metric'},
+    'hp': {'name': 'hp', 'label': 'hp (Horsepower)', 'factor_to_base': 0.745699872, 'system': 'imperial'},
+    'w':  {'name': 'W',  'label': 'W (Watts)',       'factor_to_base': 0.001,       'system': 'metric'},
+    'mw': {'name': 'MW', 'label': 'MW (Megawatts)',  'factor_to_base': 1000.0,      'system': 'metric'},
+}
+
+UNITS_DENSITY = {
+    'kgm3':  {'name': 'kg/m³', 'label': 'kg/m³ (Metric)',   'factor_to_base': 1.0,       'system': 'metric'},
+    'sg':    {'name': 'SG',    'label': 'SG (Specific Grav)','factor_to_base': 1000.0,    'system': 'metric'},
+    'lbft3': {'name': 'lb/ft³','label': 'lb/ft³ (Imperial)', 'factor_to_base': 16.018463, 'system': 'imperial'},
+}
+
+UNITS_SIZE = {
+    'mm': {'name': 'mm', 'label': 'mm (Millimetres)', 'factor_to_base': 1.0,   'system': 'metric'},
+    'um': {'name': 'µm', 'label': 'µm (Microns)',     'factor_to_base': 0.001, 'system': 'metric'},
+    'in': {'name': 'in', 'label': 'in (Inches)',      'factor_to_base': 25.4,  'system': 'imperial'},
+}
+
+
+def convert_unit(val, from_unit, to_unit, unit_category='flow'):
+    """
+    Convert any numerical value between engineering units in the same category.
+    Supports categories: 'flow', 'head', 'power', 'density', 'size'.
+    """
+    if val is None or val == '':
+        return None
+    try:
+        num = float(val)
+    except (ValueError, TypeError):
+        return val
+
+    cat_map = {
+        'flow': UNITS_FLOW,
+        'head': UNITS_HEAD,
+        'power': UNITS_POWER,
+        'density': UNITS_DENSITY,
+        'size': UNITS_SIZE
+    }
+    table = cat_map.get(unit_category, UNITS_FLOW)
+    from_k = str(from_unit or '').lower().replace('/', '').replace('^', '').replace('³', '3').replace(' ', '')
+    to_k = str(to_unit or '').lower().replace('/', '').replace('^', '').replace('³', '3').replace(' ', '')
+
+    # Standardize common aliases
+    alias_map = {
+        'usgpm': 'gpm',
+        'uk_gpm': 'ukgpm',
+        'm3/h': 'm3h',
+        'l/s': 'ls',
+        'l/min': 'lmin',
+        'ft3/s': 'cfs',
+        'kg/m3': 'kgm3',
+        'lb/ft3': 'lbft3',
+        'micron': 'um',
+        'microns': 'um',
+        'inch': 'in',
+        'inches': 'in',
+        'feet': 'ft',
+        'meter': 'm',
+        'meters': 'm',
+        'metre': 'm',
+        'metres': 'm'
+    }
+    from_k = alias_map.get(from_k, from_k)
+    to_k = alias_map.get(to_k, to_k)
+
+    factor_from = table.get(from_k, {}).get('factor_to_base', 1.0)
+    factor_to = table.get(to_k, {}).get('factor_to_base', 1.0)
+
+    # Base SI value = value * factor_from
+    base_val = num * factor_from
+    # Target value = base_val / factor_to
+    return (base_val / factor_to) if factor_to != 0 else base_val
+
+
 
 def get_current_organisation():
     """Return the active organisation (defaults to ID 2: Lytrose Engineering until auth module is added)."""

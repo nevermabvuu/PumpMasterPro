@@ -920,8 +920,26 @@ class Organisation(db.Model):
     # Organisation-level Graph & Chart Visual Styles (Colors, Line Styles, Font Family, Grids)
     graph_styles_json = db.Column(db.Text, default='{}')
 
+    # Custom Pump Details Jinja2 Template Path (served from templates/ directory)
+    # e.g., 'details/default_pump_details.html' or 'details/lytrose_pump_details.html'
+    pump_details_template = db.Column(db.String(255), default='details/default_pump_details.html')
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+    def get_pump_details_template(self):
+        """
+        Beginners Note: Returns the Jinja2 template path for the organisation's pump details view.
+        Defaults to 'details/default_pump_details.html' if not specified or empty.
+        """
+        if self.pump_details_template and self.pump_details_template.strip():
+            tmpl = self.pump_details_template.strip().replace('\\', '/')
+            if not tmpl.endswith('.html'):
+                tmpl += '.html'
+            if not tmpl.startswith('details/') and '/' not in tmpl:
+                tmpl = f'details/{tmpl}'
+            return tmpl
+        return 'details/default_pump_details.html'
 
     def get_graph_styles(self):
         """

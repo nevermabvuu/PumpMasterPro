@@ -119,6 +119,7 @@ def save_profile():
     current_org.default_unit_head = request.form.get('default_unit_head', 'm').strip()
     current_org.default_unit_power = request.form.get('default_unit_power', 'kw').strip()
     current_org.default_unit_npsh = request.form.get('default_unit_npsh', 'm').strip()
+    current_org.pump_details_template = request.form.get('pump_details_template', 'details/default_pump_details.html').strip()
     current_org.notes = request.form.get('notes', '').strip()
 
     db.session.commit()
@@ -181,9 +182,12 @@ def save_organisation():
         return redirect(url_for('organisations.settings'))
 
     if org_id and org_id.isdigit():
-        org = Organisation.query.get_or_404(int(org_id))
+        org = Organisation.query.get(int(org_id))
+        if not org:
+            flash('Organisation not found.', 'error')
+            return redirect(url_for('organisations.settings'))
     else:
-        org = Organisation()
+        org = Organisation(name=name)
         db.session.add(org)
 
     org.name = name
@@ -192,6 +196,12 @@ def save_organisation():
     org.website = request.form.get('website', '').strip()
     org.address = request.form.get('address', '').strip()
     org.primary_color = request.form.get('primary_color', '#1e3a8a').strip()
+    org.default_unit_flow = request.form.get('default_unit_flow', 'm3h').strip()
+    org.default_unit_head = request.form.get('default_unit_head', 'm').strip()
+    org.default_unit_power = request.form.get('default_unit_power', 'kw').strip()
+    org.default_unit_npsh = request.form.get('default_unit_npsh', 'm').strip()
+    org.pump_details_template = request.form.get('pump_details_template', 'details/default_pump_details.html').strip()
+    org.notes = request.form.get('notes', '').strip()
 
     db.session.commit()
     flash(f'Organisation "{org.name}" saved successfully.', 'success')

@@ -166,9 +166,17 @@
               </div>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Internal Notes</label>
-              <input type="text" name="notes" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" value="{{ current_org.notes if current_org else '' }}" placeholder="e.g. Head office division">
+              <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">
+                <i class="bi bi-file-earmark-code text-[#58a6ff] mr-1"></i>Pump Details Template
+              </label>
+              <input type="text" name="pump_details_template" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#58a6ff]" value="{{ current_org.pump_details_template if current_org and current_org.pump_details_template else 'details/default_pump_details.html' }}" placeholder="details/default_pump_details.html">
+              <span class="text-[10px] text-[#8b949e]">Jinja2 template inside <code>templates/</code> (e.g. <code>details/default_pump_details.html</code>).</span>
             </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Internal Notes</label>
+            <input type="text" name="notes" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" value="{{ current_org.notes if current_org else '' }}" placeholder="e.g. Head office division">
           </div>
 
           <div class="pt-2 flex justify-end">
@@ -616,9 +624,15 @@
         <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Address</label>
         <textarea name="address" id="modal_org_address" rows="2" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="Corporate or division address..."></textarea>
       </div>
-      <div>
-        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Branding Color</label>
-        <input type="color" name="primary_color" id="modal_org_color" class="h-8 w-12 bg-[#0d1117] border border-[#30363d] rounded p-0.5 cursor-pointer" value="#1e3a8a">
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Branding Color</label>
+          <input type="color" name="primary_color" id="modal_org_color" class="h-8 w-12 bg-[#0d1117] border border-[#30363d] rounded p-0.5 cursor-pointer" value="#1e3a8a">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Details Template</label>
+          <input type="text" name="pump_details_template" id="modal_org_template" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#58a6ff]" placeholder="details/default_pump_details.html">
+        </div>
       </div>
 
       <div class="pt-2 flex justify-end gap-2">

@@ -121,23 +121,36 @@
   </div>
 
   <!-- RIGHT MAIN AREA: Pump Details & Graphs -->
-  <div class="lg:w-2/3 xl:w-3/4 flex flex-col gap-4">
+  <div class="lg:w-2/3 xl:w-3/4 flex flex-col gap-5">
     <!-- Graph View Header -->
-    <div class="flex justify-between items-center bg-[#1c2330] p-2 rounded border border-[#30363d]">
-      <div class="flex gap-1">
-        <span class="text-sm font-medium text-gray-300 ml-2">Performance Curves (Click legend to toggle)</span>
+    <div class="flex justify-between items-center bg-[#1c2330] p-2.5 rounded-xl border border-[#30363d] shadow-sm">
+      <div class="flex items-center gap-2">
+        <span class="p-1 bg-[rgba(88,166,255,0.1)] text-[#58a6ff] rounded">
+          <i class="bi bi-graph-up text-sm"></i>
+        </span>
+        <span class="text-xs font-bold text-white uppercase tracking-wider">Performance Curve Family</span>
+        <span class="text-[11px] text-[#8b949e] ml-1">(Click legend items to isolate or toggle curves)</span>
       </div>
       <!-- Loading indicator -->
-      <div id="chartLoading" class="text-accent text-sm" style="display:none;">
-        <i class="bi bi-arrow-repeat spin"></i> Loading charts...
+      <div id="chartLoading" class="text-accent text-xs font-medium flex items-center gap-1.5" style="display:none;">
+        <i class="bi bi-arrow-repeat spin text-sm"></i> <span>Rendering interactive curves...</span>
       </div>
     </div>
 
     <!-- Charts Container -->
-    <div class="card-dark border border-[#30363d] rounded p-1">
+    <div class="card-dark border border-[#30363d] rounded-xl p-1.5 shadow-md">
       <div id="singleChartPanel">
         <div id="chartComp" class="w-full" style="height: 600px;"></div>
       </div>
+    </div>
+
+    <!-- Dynamic Organisation-Specific Pump Details Specification Sheet -->
+    <div class="w-full">
+      {% if details_template %}
+        {% include details_template ignore missing %}
+      {% else %}
+        {% include 'details/default_pump_details.html' ignore missing %}
+      {% endif %}
     </div>
   </div>
 </div>

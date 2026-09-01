@@ -1,0 +1,256 @@
+{# templates/details/lytrose_pump_details.html — Lytrose Heavy Duty & Slurry Engineering Pump Details Template #}
+{# Beginners Note: Custom branded details layout for Lytrose Engineering with extended wear, slurry, and API/ISO criteria. #}
+
+<div class="space-y-6">
+
+  <!-- ── 1. LYTROSE BRANDED OPERATING POINT & HYDRAULIC PERFORMANCE KPI GRID ── -->
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-4 shadow-sm relative overflow-hidden">
+    <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-bl-full pointer-events-none"></div>
+
+    <div class="flex items-center justify-between border-b border-[#30363d] pb-3 mb-4">
+      <div class="flex items-center gap-2.5">
+        <span class="p-2 bg-[rgba(88,166,255,0.15)] text-[#58a6ff] rounded-lg">
+          <i class="bi bi-shield-check text-lg"></i>
+        </span>
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 class="text-sm font-bold text-white">Lytrose Certified Engineering Sizing</h3>
+            <span class="text-[10px] uppercase font-mono px-2 py-0.5 bg-[#1f6feb]/20 text-[#58a6ff] border border-[#1f6feb]/40 rounded">ISO 9906 Gr. 1U</span>
+          </div>
+          <p class="text-[11px] text-[#8b949e]">Operating point hydraulic validation, motor selection &amp; slurry derating assessment.</p>
+        </div>
+      </div>
+      {% if active_result %}
+      <span class="px-3 py-1 text-xs font-bold rounded-full {{ 'bg-[rgba(63,185,80,0.15)] text-[#3fb950] border border-[rgba(63,185,80,0.3)]' if active_result.rating >= 80 else ('bg-[rgba(240,136,62,0.15)] text-[#f0883e] border border-[rgba(240,136,62,0.3)]' if active_result.rating >= 50 else 'bg-[rgba(248,81,73,0.15)] text-[#f85149] border border-[rgba(248,81,73,0.3)]') }}">
+        <i class="bi bi-award-fill mr-1"></i>Rating: {{ active_result.rating|int }}% ({{ active_result.rating_label or 'Optimal Match' }})
+      </span>
+      {% endif %}
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <!-- Duty Flow -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Target Flow (Q)</span>
+        <div class="text-base font-extrabold text-[#58a6ff]">
+          {{ active_result.disp_q_duty if active_result and active_result.disp_q_duty else (form_data.q_duty or '—') }}
+          <span class="text-[11px] font-normal text-[#8b949e]">{{ active_result.disp_unit_q if active_result and active_result.disp_unit_q else unit_q }}</span>
+        </div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">Duty Point</div>
+      </div>
+
+      <!-- Delivered Head -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Delivered Head (H)</span>
+        <div class="text-base font-extrabold text-[#58a6ff]">
+          {{ active_result.disp_h_duty if active_result and active_result.disp_h_duty else (form_data.h_duty or '—') }}
+          <span class="text-[11px] font-normal text-[#8b949e]">{{ active_result.disp_unit_h if active_result and active_result.disp_unit_h else unit_h }}</span>
+        </div>
+        <div class="text-[10px] text-[#3fb950] mt-0.5"><i class="bi bi-check-all"></i> Hydro Verified</div>
+      </div>
+
+      <!-- Operating Efficiency -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Operating Efficiency (η)</span>
+        <div class="text-base font-extrabold text-[#3fb950]">
+          {{ "%.1f"|format(active_result.op_eta|float) if active_result and active_result.op_eta else "—" }}
+          <span class="text-[11px] font-normal text-[#8b949e]">%</span>
+        </div>
+        {% if pump.eff_bep %}
+        <div class="text-[10px] text-[#8b949e] mt-0.5">Peak BEP: {{ "%.1f"|format(pump.eff_bep|float) }}%</div>
+        {% endif %}
+      </div>
+
+      <!-- Shaft Power -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Absorbed Power (P)</span>
+        <div class="text-base font-extrabold text-[#f0c040]">
+          {{ active_result.disp_power if active_result and active_result.disp_power else ("%.2f"|format(active_result.op_power_kw|float) if active_result and active_result.op_power_kw else "—") }}
+          <span class="text-[11px] font-normal text-[#8b949e]">{{ active_result.disp_unit_pow if active_result and active_result.disp_unit_pow else unit_pow }}</span>
+        </div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">Shaft Requirement</div>
+      </div>
+
+      <!-- NPSHr -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">NPSH Margin</span>
+        <div class="text-base font-extrabold text-[#bc8cff]">
+          {{ active_result.disp_npshr if active_result and active_result.disp_npshr else ("%.2f"|format(active_result.op_npshr|float) if active_result and active_result.op_npshr else "—") }}
+          <span class="text-[11px] font-normal text-[#8b949e]">{{ active_result.disp_unit_npsh if active_result and active_result.disp_unit_npsh else unit_npsh }} req</span>
+        </div>
+        {% if form_data.npsh_avail %}
+          {% set npsha_f = form_data.npsh_avail|float %}
+          {% set npshr_f = (active_result.op_npshr|float) if active_result and active_result.op_npshr else 0.0 %}
+          {% set margin = npsha_f - npshr_f %}
+          <div class="text-[10px] {{ 'text-[#3fb950]' if margin >= 1.0 else ('text-[#f0883e]' if margin >= 0 else 'text-[#f85149]') }} mt-0.5 font-medium">
+            ΔNPSH: {{ "+%.1f"|format(margin) if margin > 0 else "%.1f"|format(margin) }}m
+          </div>
+        {% else %}
+          <div class="text-[10px] text-[#8b949e] mt-0.5">Hydraulic 3% drop</div>
+        {% endif %}
+      </div>
+
+      <!-- Optimal Speed / Trim -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">
+          {{ 'VSD Setpoint' if (active_result and active_result.is_vsd) else 'Impeller Diameter' }}
+        </span>
+        <div class="text-base font-extrabold text-[#e6edf3]">
+          {% if active_result and active_result.is_vsd %}
+            {{ active_result.optimal_speed_rpm|int }}
+            <span class="text-[11px] font-normal text-[#8b949e]">RPM</span>
+          {% elif active_result and active_result.optimal_trim_dia_mm %}
+            Ø{{ "%.1f"|format(active_result.optimal_trim_dia_mm|float) }}
+            <span class="text-[11px] font-normal text-[#8b949e]">mm</span>
+          {% else %}
+            Ø{{ pump.impeller_dia_mm|int if pump.impeller_dia_mm else '—' }}
+            <span class="text-[11px] font-normal text-[#8b949e]">mm</span>
+          {% endif %}
+        </div>
+        <div class="text-[10px] text-[#58a6ff] mt-0.5">
+          {{ 'Variable Speed Drive' if (active_result and active_result.is_vsd) else ('Machined Trim' if active_result and active_result.optimal_trim_ratio < 0.99 else 'Full Casting') }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── 2. TWO-COLUMN DETAILED SPECIFICATION SECTION ── -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <!-- LEFT SPEC CARD: Mechanical & Construction Materials -->
+    <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-4 shadow-sm flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between border-b border-[#30363d] pb-2.5 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="p-1 bg-[rgba(88,166,255,0.1)] text-[#58a6ff] rounded">
+              <i class="bi bi-tools"></i>
+            </span>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider">Mechanical &amp; Dimensional Details</h4>
+          </div>
+          <span class="text-[11px] text-[#58a6ff] font-mono">Lytrose Standards</span>
+        </div>
+
+        <div class="space-y-2 text-xs">
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Pump Model / Name</span>
+            <span class="text-white font-mono font-bold">{{ pump.name }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Manufacturer / Supplier</span>
+            <span class="text-white font-medium">{{ pump.manufacturer or 'Lytrose Engineering' }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Frame / Series Size</span>
+            <span class="text-white font-medium">{{ pump.size or 'Industrial Heavy Duty' }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Base Speed / Poles</span>
+            <span class="text-white font-medium">{{ pump.speed_rpm|int if pump.speed_rpm else '—' }} RPM (50/60 Hz compatible)</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Max Impeller Pattern</span>
+            <span class="text-white font-medium">Ø{{ pump.impeller_dia_mm|int if pump.impeller_dia_mm else '—' }} mm</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Suction Flange Connection</span>
+            <span class="text-white font-medium">{{ pump.suction_flange_dn or 'DN 100' }} (ANSI 150# / DIN PN16)</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Discharge Flange Connection</span>
+            <span class="text-white font-medium">{{ pump.discharge_flange_dn or 'DN 65' }} (ANSI 150# / DIN PN16)</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Hydrostatic Test Pressure</span>
+            <span class="text-white font-medium">24.0 bar (1.5x Rated MWP)</span>
+          </div>
+          <div class="flex justify-between py-1">
+            <span class="text-[#8b949e]">Max Solids Sphere Passage</span>
+            <span class="text-white font-medium">{{ pump.solids_max_sphere_mm or '18.0' }} mm</span>
+          </div>
+        </div>
+      </div>
+
+      {% if pump.notes %}
+      <div class="mt-4 p-2.5 bg-[#0d1117] border border-[#30363d] rounded text-[11px] text-[#8b949e]">
+        <span class="text-white font-semibold block mb-0.5"><i class="bi bi-info-circle mr-1"></i>Engineering Notes:</span>
+        {{ pump.notes }}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- RIGHT SPEC CARD: Hydraulic Range, BEP & Motor Selection -->
+    <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-4 shadow-sm flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between border-b border-[#30363d] pb-2.5 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="p-1 bg-[rgba(63,185,80,0.1)] text-[#3fb950] rounded">
+              <i class="bi bi-sliders2"></i>
+            </span>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider">Hydraulic Analysis &amp; Sizing</h4>
+          </div>
+          <span class="text-[11px] text-[#3fb950] font-mono">BEP Optimization</span>
+        </div>
+
+        <div class="space-y-2 text-xs">
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">BEP Flow Rate (Q_bep)</span>
+            <span class="text-white font-medium">{{ "%.1f"|format(pump.q_bep|float) if pump.q_bep else '—' }} m³/h</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">BEP Head (H_bep)</span>
+            <span class="text-white font-medium">{{ "%.1f"|format(pump.h_bep|float) if pump.h_bep else '—' }} m</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Peak Hydraulic Efficiency</span>
+            <span class="text-[#3fb950] font-bold">{{ "%.1f"|format(pump.eff_bep|float) if pump.eff_bep else '—' }}%</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Duty Point Location</span>
+            {% if active_result and active_result.bep_ratio %}
+              {% set r = active_result.bep_ratio|float %}
+              <span class="font-bold {{ 'text-[#3fb950]' if (r >= 0.8 and r <= 1.1) else ('text-[#f0883e]' if (r >= 0.7 and r <= 1.2) else 'text-[#f85149]') }}">
+                {{ "%.1f"|format(r * 100) }}% of BEP {{ '(Optimal POR)' if (r >= 0.8 and r <= 1.1) else '(AOR)' }}
+              </span>
+            {% else %}
+              <span class="text-[#8b949e]">Within POR</span>
+            {% endif %}
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Allowable Minimum Continuous Flow</span>
+            <span class="text-white font-medium">{{ "%.1f"|format(pump.q_min|float) if pump.q_min else '0.0' }} m³/h</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Maximum End of Curve Flow</span>
+            <span class="text-white font-medium">{{ "%.1f"|format(pump.q_max|float) if pump.q_max else '—' }} m³/h</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Liquid Medium</span>
+            <span class="text-white font-medium capitalize">{{ form_data.liquid or 'Clean Water' }} (ρ={{ form_data.rho or 1000 }} kg/m³)</span>
+          </div>
+          <div class="flex justify-between py-1">
+            <span class="text-[#8b949e]">Selection Mode</span>
+            <span class="text-white font-medium">{{ 'Variable Speed VSD' if (active_result and active_result.is_vsd) else 'Fixed Speed Impeller Trim' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recommended Motor Power Box -->
+      {% if active_result and active_result.op_power_kw %}
+        {% set p_kw = active_result.op_power_kw|float %}
+        {% set motor_kw = p_kw * 1.15 %}
+        <div class="mt-4 p-2.5 bg-[rgba(88,166,255,0.06)] border border-[rgba(88,166,255,0.2)] rounded flex items-center justify-between text-xs">
+          <div>
+            <span class="text-[#58a6ff] font-bold block">Recommended Motor Sizing (Lytrose Spec)</span>
+            <span class="text-[11px] text-[#8b949e]">15% margin over duty point / End-of-Curve rated</span>
+          </div>
+          <div class="text-right font-extrabold text-[#58a6ff] text-sm font-mono">
+            {{ "%.1f"|format(motor_kw) }} kW
+            <span class="text-[10px] text-[#8b949e] font-normal block">({{ "%.1f"|format(motor_kw * 1.341) }} hp)</span>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+</div>

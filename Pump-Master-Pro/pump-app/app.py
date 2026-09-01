@@ -25,6 +25,9 @@ app.secret_key = os.environ.get('SESSION_SECRET', 'pump-dev-secret')
 # Initialize database extension with Flask app
 db.init_app(app)
 
+# Expose helper builtins to Jinja templates
+app.jinja_env.globals['getattr'] = getattr
+
 # ── Database Creation & Auto-Migration ─────────────────────────────────────────
 with app.app_context():
     try:
@@ -64,6 +67,8 @@ with app.app_context():
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN notes TEXT DEFAULT ''"))
             if 'graph_styles_json' not in org_cols:
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN graph_styles_json TEXT DEFAULT '{}'"))
+            if 'pump_details_template' not in org_cols:
+                conn.execute(text("ALTER TABLE organisations ADD COLUMN pump_details_template VARCHAR(255) DEFAULT 'details/default_pump_details.html'"))
 
             # 1. Reports table schema migrations
             rep_res = conn.execute(text("PRAGMA table_info(reports)"))

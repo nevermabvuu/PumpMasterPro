@@ -317,6 +317,8 @@ def pump_selection_details(pump_id):
         'size':    UNITS_SIZE
     }
 
+    details_template = current_org.get_pump_details_template() if current_org else 'details/default_pump_details.html'
+
     return render_template('pump_selection_details.html',
                            pump=pump,
                            results=results,
@@ -324,6 +326,7 @@ def pump_selection_details(pump_id):
                            form_data=f,
                            current_org=current_org,
                            org_styles=org_styles,
+                           details_template=details_template,
                            default_report_id=default_report_id,
                            available_reports=available_reports,
                            units_tables=units_tables,

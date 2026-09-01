@@ -1,0 +1,248 @@
+{# templates/details/default_pump_details.html — Standard Engineering Pump Details Specification Sheet #}
+{# Beginners Note: This template renders comprehensive hydraulic, mechanical, and operational details for the selected pump. #}
+{# Organisations can customize or provide their own template path in Organisation Settings. #}
+
+<div class="space-y-6">
+
+  <!-- ── 1. OPERATING POINT & HYDRAULIC PERFORMANCE KPI GRID ── -->
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-4 shadow-sm">
+    <div class="flex items-center justify-between border-b border-[#30363d] pb-3 mb-4">
+      <div class="flex items-center gap-2">
+        <span class="p-1.5 bg-[rgba(88,166,255,0.1)] text-[#58a6ff] rounded-lg">
+          <i class="bi bi-speedometer2 text-base"></i>
+        </span>
+        <div>
+          <h3 class="text-sm font-bold text-white">Operating Performance at Specified Duty</h3>
+          <p class="text-[11px] text-[#8b949e]">Evaluated hydraulic point, delivered energy, and motor power requirements.</p>
+        </div>
+      </div>
+      {% if active_result %}
+      <span class="px-2.5 py-1 text-xs font-bold rounded-full {{ 'bg-[rgba(63,185,80,0.15)] text-[#3fb950] border border-[rgba(63,185,80,0.3)]' if active_result.rating >= 80 else ('bg-[rgba(240,136,62,0.15)] text-[#f0883e] border border-[rgba(240,136,62,0.3)]' if active_result.rating >= 50 else 'bg-[rgba(248,81,73,0.15)] text-[#f85149] border border-[rgba(248,81,73,0.3)]') }}">
+        <i class="bi bi-star-fill mr-1"></i>Match Rating: {{ active_result.rating|int }}% ({{ active_result.rating_label or 'Good' }})
+      </span>
+      {% endif %}
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <!-- Duty Flow -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Target Flow (Q)</span>
+        <div class="text-base font-extrabold text-[#58a6ff]">
+          {{ active_result.disp_q_duty if active_result and active_result.disp_q_duty else (form_data.q_duty or '—') }}
+          <span class="text-[11px] font-normal text-[#8b949e]">{{ active_result.disp_unit_q if active_result and active_result.disp_unit_q else unit_q }}</span>
+        </div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">Specified Duty</div>
+      </div>
+
+      <!-- Delivered Head -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Delivered Head (H)</span>
+        <div class="text-base font-extrabold text-[#58a6ff]">
+          {{ active_result.disp_h_duty if active_result and active_result.disp_h_duty else (form_data.h_duty or '—') }}
+          <span class="text-[11px] font-normal text-[#8b949e]">{{ active_result.disp_unit_h if active_result and active_result.disp_unit_h else unit_h }}</span>
+        </div>
+        <div class="text-[10px] text-[#3fb950] mt-0.5"><i class="bi bi-check-circle"></i> On Target Head</div>
+      </div>
+
+      <!-- Operating Efficiency -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Operating Efficiency</span>
+        <div class="text-base font-extrabold text-[#3fb950]">
+          {{ "%.1f"|format(active_result.op_eta|float) if active_result and active_result.op_eta else "—" }}
+          <span class="text-[11px] font-normal text-[#8b949e]">%</span>
+        </div>
+        {% if pump.eff_bep %}
+        <div class="text-[10px] text-[#8b949e] mt-0.5">BEP: {{ "%.1f"|format(pump.eff_bep|float) }}%</div>
+        {% endif %}
+      </div>
+
+      <!-- Shaft Power -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Shaft Power (P)</span>
+        <div class="text-base font-extrabold text-[#f0c040]">
+          {{ active_result.disp_power if active_result and active_result.disp_power else ("%.2f"|format(active_result.op_power_kw|float) if active_result and active_result.op_power_kw else "—") }}
+          <span class="text-[11px] font-normal text-[#8b949e]">{{ active_result.disp_unit_pow if active_result and active_result.disp_unit_pow else unit_pow }}</span>
+        </div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">Hydraulic Absorbed</div>
+      </div>
+
+      <!-- NPSHr -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">NPSHr at Duty</span>
+        <div class="text-base font-extrabold text-[#bc8cff]">
+          {{ active_result.disp_npshr if active_result and active_result.disp_npshr else ("%.2f"|format(active_result.op_npshr|float) if active_result and active_result.op_npshr else "—") }}
+          <span class="text-[11px] font-normal text-[#8b949e]">{{ active_result.disp_unit_npsh if active_result and active_result.disp_unit_npsh else unit_npsh }}</span>
+        </div>
+        {% if form_data.npsh_avail %}
+          {% set npsha_f = form_data.npsh_avail|float %}
+          {% set npshr_f = (active_result.op_npshr|float) if active_result and active_result.op_npshr else 0.0 %}
+          {% set margin = npsha_f - npshr_f %}
+          <div class="text-[10px] {{ 'text-[#3fb950]' if margin >= 1.0 else ('text-[#f0883e]' if margin >= 0 else 'text-[#f85149]') }} mt-0.5 font-medium">
+            Margin: {{ "+%.1f"|format(margin) if margin > 0 else "%.1f"|format(margin) }}m
+          </div>
+        {% else %}
+          <div class="text-[10px] text-[#8b949e] mt-0.5">Required Head</div>
+        {% endif %}
+      </div>
+
+      <!-- Optimal Speed / Trim -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">
+          {{ 'Optimal Speed' if (active_result and active_result.is_vsd) else 'Impeller Diameter' }}
+        </span>
+        <div class="text-base font-extrabold text-[#e6edf3]">
+          {% if active_result and active_result.is_vsd %}
+            {{ active_result.optimal_speed_rpm|int }}
+            <span class="text-[11px] font-normal text-[#8b949e]">RPM</span>
+          {% elif active_result and active_result.optimal_trim_dia_mm %}
+            Ø{{ "%.1f"|format(active_result.optimal_trim_dia_mm|float) }}
+            <span class="text-[11px] font-normal text-[#8b949e]">mm</span>
+          {% else %}
+            Ø{{ pump.impeller_dia_mm|int if pump.impeller_dia_mm else '—' }}
+            <span class="text-[11px] font-normal text-[#8b949e]">mm</span>
+          {% endif %}
+        </div>
+        <div class="text-[10px] text-[#58a6ff] mt-0.5">
+          {{ 'VSD Regulated' if (active_result and active_result.is_vsd) else ('Trimmed Impeller' if active_result and active_result.optimal_trim_ratio < 0.99 else 'Full Impeller') }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── 2. TWO-COLUMN DETAILED SPECIFICATION SECTION ── -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <!-- LEFT SPEC CARD: Mechanical & Physical Dimensions -->
+    <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-4 shadow-sm flex flex-col justify-between">
+      <div>
+        <div class="flex items-center gap-2 border-b border-[#30363d] pb-2.5 mb-3">
+          <span class="p-1 bg-[rgba(240,136,62,0.1)] text-[#f0883e] rounded">
+            <i class="bi bi-gear-wide-connected"></i>
+          </span>
+          <h4 class="text-xs font-bold text-white uppercase tracking-wider">Pump Mechanical &amp; Physical Specifications</h4>
+        </div>
+
+        <div class="space-y-2 text-xs">
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Manufacturer</span>
+            <span class="text-white font-medium">{{ pump.manufacturer or 'Generic / Standard' }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Model / Part Number</span>
+            <span class="text-white font-mono font-medium">{{ pump.name }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Size / Nominal Diameter</span>
+            <span class="text-white font-medium">{{ pump.size or '—' }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Base Synchronous Speed</span>
+            <span class="text-white font-medium">{{ pump.speed_rpm|int if pump.speed_rpm else '—' }} RPM</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Max Impeller Diameter</span>
+            <span class="text-white font-medium">Ø{{ pump.impeller_dia_mm|int if pump.impeller_dia_mm else '—' }} mm</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Suction Flange Size</span>
+            <span class="text-white font-medium">{{ pump.suction_flange_dn or 'DN 100 / PN 16' }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Discharge Flange Size</span>
+            <span class="text-white font-medium">{{ pump.discharge_flange_dn or 'DN 65 / PN 16' }}</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Casing Max Working Pressure</span>
+            <span class="text-white font-medium">{{ pump.casing_pressure_bar or '16.0' }} bar</span>
+          </div>
+          <div class="flex justify-between py-1">
+            <span class="text-[#8b949e]">Max Solids Passage Sphere</span>
+            <span class="text-white font-medium">{{ pump.solids_max_sphere_mm or '—' }} mm</span>
+          </div>
+        </div>
+      </div>
+
+      {% if pump.notes %}
+      <div class="mt-4 p-2.5 bg-[#0d1117] border border-[#30363d] rounded text-[11px] text-[#8b949e]">
+        <span class="text-white font-semibold block mb-0.5"><i class="bi bi-info-circle mr-1"></i>Engineering Note:</span>
+        {{ pump.notes }}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- RIGHT SPEC CARD: Best Efficiency Point (BEP) & Application Range -->
+    <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-4 shadow-sm flex flex-col justify-between">
+      <div>
+        <div class="flex items-center gap-2 border-b border-[#30363d] pb-2.5 mb-3">
+          <span class="p-1 bg-[rgba(63,185,80,0.1)] text-[#3fb950] rounded">
+            <i class="bi bi-graph-up-arrow"></i>
+          </span>
+          <h4 class="text-xs font-bold text-white uppercase tracking-wider">BEP Analysis &amp; Operating Region</h4>
+        </div>
+
+        <div class="space-y-2 text-xs">
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">BEP Flow Rate (Q_bep)</span>
+            <span class="text-white font-medium">{{ "%.1f"|format(pump.q_bep|float) if pump.q_bep else '—' }} m³/h</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">BEP Head (H_bep)</span>
+            <span class="text-white font-medium">{{ "%.1f"|format(pump.h_bep|float) if pump.h_bep else '—' }} m</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Peak BEP Efficiency</span>
+            <span class="text-[#3fb950] font-bold">{{ "%.1f"|format(pump.eff_bep|float) if pump.eff_bep else '—' }}%</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Duty Point Location</span>
+            {% if active_result and active_result.bep_ratio %}
+              {% set r = active_result.bep_ratio|float %}
+              <span class="font-bold {{ 'text-[#3fb950]' if (r >= 0.8 and r <= 1.1) else ('text-[#f0883e]' if (r >= 0.7 and r <= 1.2) else 'text-[#f85149]') }}">
+                {{ "%.1f"|format(r * 100) }}% of Q_bep
+              </span>
+            {% else %}
+              <span class="text-[#8b949e]">Within Operating Range</span>
+            {% endif %}
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Preferred Operating Region (POR)</span>
+            <span class="text-white font-medium">80% – 110% BEP</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Allowable Operating Region (AOR)</span>
+            <span class="text-white font-medium">70% – 120% BEP</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Operation Mode Modeled</span>
+            <span class="text-white font-medium">
+              {{ 'Variable Speed Drive (VSD)' if (active_result and active_result.is_vsd) else 'Fixed Speed Trim' }}
+            </span>
+          </div>
+          <div class="flex justify-between py-1">
+            <span class="text-[#8b949e]">Liquid Medium</span>
+            <span class="text-white font-medium capitalize">{{ form_data.liquid or 'Clean Water' }} (ρ={{ form_data.rho or 1000 }} kg/m³)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recommended Motor Power Box -->
+      {% if active_result and active_result.op_power_kw %}
+        {% set p_kw = active_result.op_power_kw|float %}
+        {% set motor_kw = p_kw * 1.15 %}
+        <div class="mt-4 p-2.5 bg-[rgba(240,192,64,0.06)] border border-[rgba(240,192,64,0.2)] rounded flex items-center justify-between text-xs">
+          <div>
+            <span class="text-[#f0c040] font-bold block">Recommended Motor Sizing (+15% Margin)</span>
+            <span class="text-[11px] text-[#8b949e]">ISO 5199 / API 610 continuous duty guideline</span>
+          </div>
+          <div class="text-right font-extrabold text-[#f0c040] text-sm font-mono">
+            {{ "%.1f"|format(motor_kw) }} kW
+            <span class="text-[10px] text-[#8b949e] font-normal block">({{ "%.1f"|format(motor_kw * 1.341) }} hp)</span>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+</div>

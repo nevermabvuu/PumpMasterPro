@@ -19,7 +19,7 @@ _app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if _app_dir not in sys.path:
     sys.path.insert(0, _app_dir)
 
-from flask import Blueprint, render_template, request, jsonify, session
+from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, flash, abort
 from models import Pump
 from utils import _get_float, get_visible_pumps_query, get_current_organisation
 from pump_selection import select_pumps, get_filter_options
@@ -168,7 +168,36 @@ def pump_selection_details(pump_id):
     elif sort_by == 'eff':
         results.sort(key=lambda x: x.get('op_eta', 0), reverse=True)
 
-    pump = Pump.query.get_or_404(pump_id)
+    # ── Security & Shortlist Authorization Check ──────────────────────────────
+    # Beginners Note: Extract all valid pump IDs from the active selection engine results.
+    shortlisted_ids = [r['pump_id'] for r in results if 'pump_id' in r]
+
+    # 1. If no search has been executed or zero pumps matched, redirect to search page
+    if not results or not shortlisted_ids:
+        flash("No active pump selection found. Please specify your operating duty point to find matching pumps.", "warning")
+        return redirect(url_for('selection.pump_selection'))
+
+    # 2. If the user changed the URL to an unshortlisted pump ID, block access and remain on currently selected pump
+    if pump_id not in shortlisted_ids:
+        # Beginners Note: URL Tampering Protection
+        # Prevents users from arbitrarily altering the ID in the browser URL (/pump-selection/details/<id>)
+        # to view pumps that did not pass the engineering selection criteria.
+        # Instead of falling back to the highest-rated pump, we keep the user on their currently selected pump.
+        flash(f"Access Denied: Pump #{pump_id} is not in your current selection shortlist. You can only view shortlisted pumps.", "warning")
+        
+        # Check if the user already had an active pump selected in this session
+        active_sel = session.get('active_selection', {})
+        current_active_id = active_sel.get('pump_id')
+        
+        # Remain on currently selected pump if valid and shortlisted, otherwise fallback to first shortlisted
+        fallback_id = current_active_id if (current_active_id and current_active_id in shortlisted_ids) else shortlisted_ids[0]
+        return redirect(url_for('selection.pump_selection_details', pump_id=fallback_id))
+
+    # 3. Ensure the pump belongs to the user's visible organisation scope
+    pump = get_visible_pumps_query().filter(Pump.id == pump_id).first()
+    if not pump:
+        abort(403)
+
     current_org = get_current_organisation()
     org_styles = current_org.get_graph_styles() if current_org else {}
     

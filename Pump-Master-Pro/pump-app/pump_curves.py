@@ -188,7 +188,11 @@ def full_curve_data(pump, n_points=80, liquid='water', rho=1000.0, viscosity_cSt
     h    = hq_curve(pump, q_arr, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
     eta  = efficiency_curve(pump, q_arr, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
     pwr  = power_curve(pump, q_arr, liquid, rho, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
-    npsh = npsh_curve(pump, q_arr)
+    # npsh_curve() returns values from the polynomial; if the pump has no NPSH data
+    # (all coefficients are zero) has_npsh_poly() returns False and we emit None so the
+    # frontend can skip the NPSH sub-plot entirely instead of showing a flat zero line.
+    has_npsh = pump.has_npsh_poly()
+    npsh = npsh_curve(pump, q_arr) if has_npsh else None
 
     h_clean = eta_clean = pwr_clean = None
     if liquid in ('slurry', 'viscous'):
@@ -198,7 +202,9 @@ def full_curve_data(pump, n_points=80, liquid='water', rho=1000.0, viscosity_cSt
 
     return {
         'q': q_arr.tolist(), 'h': h.tolist(), 'eta': eta.tolist(),
-        'power': pwr.tolist(), 'npsh': npsh.tolist(),
+        'power': pwr.tolist(),
+        # npsh is None when the pump has no NPSH data, so JS can hide the NPSH sub-plot.
+        'npsh': npsh.tolist() if npsh is not None else None,
         'h_clean': h_clean, 'eta_clean': eta_clean, 'power_clean': pwr_clean,
         'liquid': liquid,
     }
@@ -223,9 +229,13 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
     h_base   = hq_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
     eta_base = efficiency_curve(pump, q_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
     pwr_base = power_curve(pump, q_base, liquid, rho, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
-    npsh_base = npsh_curve(pump, q_base)
 
     extra_curves = pump.get_extra_curves()
+    # Determine once whether this pump has any NPSH data at all (non-zero polynomial).
+    # Used below to set npsh=None in curve dicts when there is no data, rather than
+    # returning a flat zero array that would render as an empty NPSH sub-plot.
+    pump_has_npsh = pump.has_npsh_poly()
+    npsh_base = npsh_curve(pump, q_base) if pump_has_npsh else None
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
     if fam_type == 'variable_speed':
         trim_penalty_coeff = 0.0
@@ -337,7 +347,12 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
             h_arr = np.clip(_poly_array(hq_coeffs, q_arr), 0, None)
             eta_arr = np.clip(_poly_array(eff_coeffs, q_arr), 0, 100)
             pwr_arr = np.clip(_poly_array(pwr_coeffs, q_arr), 0, None)
-            if npsh_coeffs[1] != 0 or npsh_coeffs[2] != 0:
+            # Use the extra curve's own NPSH coefficients if they are meaningful;
+            # otherwise fall back to the max-dia base curve scaled by affinity law.
+            # If the pump has no NPSH data at all, emit None so the frontend hides the sub-plot.
+            if not pump_has_npsh:
+                npsh_arr = None
+            elif npsh_coeffs[1] != 0 or npsh_coeffs[2] != 0:
                 npsh_arr = np.clip(_poly_array(npsh_coeffs, q_arr), 0, None)
             else:
                 npsh_arr = np.clip(npsh_curve(pump, q_arr) * r**2, 0, None)
@@ -373,7 +388,7 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
                 'h': h_arr.tolist(),
                 'eta': eta_arr.tolist(),
                 'power': pwr_arr.tolist(),
-                'npsh': npsh_arr.tolist(),
+                'npsh': npsh_arr.tolist() if npsh_arr is not None else None,
                 'bep': bep_dict,
                 'color': c.get('color'),
                 'use_custom_style': c_use_custom,
@@ -424,7 +439,8 @@ def family_curves_diameter(pump, n_points=100, liquid='water', rho=1000.0,
                 'h': (h_base * r ** 2).tolist(),
                 'eta': eta_trimmed.tolist(),
                 'power': (pwr_base * r ** 3).tolist(),
-                'npsh': (npsh_base * r ** 2).tolist(),
+                # When the pump has no NPSH polynomial, emit None rather than a zero array.
+                'npsh': (npsh_base * r ** 2).tolist() if npsh_base is not None else None,
                 'bep': _bep_for_ratio(pump, r, h_base, eta_base, pwr_base, q_base, trim_penalty_coeff),
                 'color': c_color,
                 'use_custom_style': use_custom,

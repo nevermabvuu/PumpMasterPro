@@ -258,6 +258,14 @@ function renderAll() {
   const scaledMaxPow = maxCurve.power.map(p => p * multPow);
   const scaledMaxNpsh = maxCurve.npsh ? maxCurve.npsh.map(n => n * multNpsh) : [];
 
+  // Compute hasNpsh early — before any trace loop — from ALL available curve sources.
+  // The backend returns npsh: null when the pump has no NPSH polynomial, so we check
+  // both the single base curve (maxCurve.npsh) and any family curves (fam[*].npsh).
+  // We also reject all-zero arrays (1e-4 tolerance) in case of stale cached data.
+  const _npshHasValues = arr => Array.isArray(arr) && arr.some(v => Math.abs(v) > 1e-4);
+  const hasNpsh = _npshHasValues(maxCurve.npsh) ||
+                  (fam && fam.some(c => _npshHasValues(c.npsh)));
+
   const qDutyCurve = scaledMaxQ.map(q => q * cfg.TRIM_RATIO);
   const hDutyCurve = scaledMaxH.map(h => h * Math.pow(cfg.TRIM_RATIO, 2));
   const pDutyCurve = scaledMaxPow.map(p => p * Math.pow(cfg.TRIM_RATIO, 3));
@@ -291,7 +299,10 @@ function renderAll() {
       traces.push({x: scQ, y: scPow, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: powColor, width: isMax ? powWidth : Math.max(1.2, powWidth * 0.7), dash: powStyle}, yaxis: 'y2', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'pow'});
       addLabel(annotations, scQ, scPow, 'y2', lbl, powColor);
 
-      if (scNpsh && scNpsh.length) {
+      // Only add NPSH traces when the pump actually has NPSH data (guarded by hasNpsh
+      // computed above). Without this guard, traces on the hidden 'y' axis bleed into
+      // adjacent sub-plots (e.g., efficiency) when the axis domain is collapsed.
+      if (hasNpsh && scNpsh && scNpsh.length) {
         traces.push({x: scQ, y: scNpsh, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: npshColor, width: isMax ? npshWidth : Math.max(1.2, npshWidth * 0.7), dash: npshStyle}, yaxis: 'y', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'npsh'});
         addLabel(annotations, scQ, scNpsh, 'y', lbl, npshColor);
       }
@@ -331,12 +342,32 @@ function renderAll() {
     ]);
     let hoverTmplRated = `<b>${lbl}</b><br>Flow: %{x:.1f} ${lblQ}<br>Head: %{customdata[0]} ${lblH}<br>Eff: %{customdata[1]} %<br>Power: %{customdata[2]} ${lblPow}<br>NPSHr: %{customdata[3]} ${lblNpsh}<extra></extra>`;
 
-    traces.push({x: qDutyCurve, y: hDutyCurve, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y4', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated'});
-    traces.push({x: qDutyCurve, y: maxCurve.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y3', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated'});
-    traces.push({x: qDutyCurve, y: pDutyCurve, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y2', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated'});
-    if (npshDutyCurve && npshDutyCurve.length) {
-      traces.push({x: qDutyCurve, y: npshDutyCurve, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated'});
+    // Rated (trimmed/VSD) curves on each sub-plot.
+    // All values are affinity-law scaled: x[i]=Q_max[i]*r, y_H[i]=H_max[i]*r², y_P[i]=P_max[i]*r³
+    // Efficiency: by affinity law, efficiency is the same curve but over a shorter Q range.
+    //   scaledMaxQ is evenly spaced 0..Q_max (N points).
+    //   The rated Q range is 0..Q_max*r, which corresponds to the FIRST ~N*r indices of
+    //   the max-dia arrays.  Using ALL N eta values compressed into N*r x-positions
+    //   made the post-BEP efficiency drop crowd near the right end (flat-looking tail).
+    //   Fix: slice to ratedN = round(N * TRIM_RATIO) so the x-y pairing is correct.
+    const ratedN   = Math.max(2, Math.round(scaledMaxQ.length * cfg.TRIM_RATIO));
+    const ratedQ   = qDutyCurve.slice(0, ratedN);
+    const ratedH   = hDutyCurve.slice(0, ratedN);
+    // Eta: interpolate the max-dia curve at the rated Q positions so the shape is identical
+    // to the max-dia efficiency bell, simply cut off at the rated flow.
+    const ratedEta = maxCurve.eta.slice(0, ratedN);
+    const ratedPow = pDutyCurve.slice(0, ratedN);
+
+
+    traces.push({x: ratedQ, y: ratedH,   name: `Head ${lbl}`,  type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y4', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated'});
+    traces.push({x: ratedQ, y: ratedEta, name: `Eff ${lbl}`,   type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y3', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated'});
+    traces.push({x: ratedQ, y: ratedPow, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y2', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated'});
+    if (hasNpsh && npshDutyCurve && npshDutyCurve.length) {
+      const ratedNpsh = npshDutyCurve.slice(0, ratedQIdx);
+      traces.push({x: ratedQ, y: ratedNpsh, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated'});
     }
+
+
   }
 
   if (cfg.Q_DUTY && cfg.H_DUTY) {
@@ -362,10 +393,18 @@ function renderAll() {
     traces.push({x: sysQ, y: sysH, name: 'System Curve', type: 'scatter', mode: 'lines', line: {color: sysColor, width: 2.2, dash: sysStyle}, yaxis: 'y4', showlegend: false, hovertemplate: hoverTmplSys, curveGroup: 'system'});
   }
 
+  // Determine once whether this pump has any NPSH data at all.
+  // (hasNpsh was computed early above from all curve sources.)
+  // As a final safety net, also strip any NPSH-group traces from the legend
+  // and the render array so a collapsed/invisible axis cannot cause them to
+  // bleed into adjacent sub-plots (efficiency, power, etc.).
   traces.push({x: [null], y: [null], name: 'Head', type: 'scatter', mode: 'lines', line: {color: hqColor, width: hqWidth, dash: hqStyle}, showlegend: true, curveGroup: 'hq'});
   traces.push({x: [null], y: [null], name: 'Efficiency', type: 'scatter', mode: 'lines', line: {color: etaColor, width: etaWidth, dash: etaStyle}, showlegend: true, curveGroup: 'eta'});
   traces.push({x: [null], y: [null], name: 'Power', type: 'scatter', mode: 'lines', line: {color: powColor, width: powWidth, dash: powStyle}, showlegend: true, curveGroup: 'pow'});
-  traces.push({x: [null], y: [null], name: 'NPSHr', type: 'scatter', mode: 'lines', line: {color: npshColor, width: npshWidth, dash: npshStyle}, showlegend: true, curveGroup: 'npsh'});
+  // Only add the NPSHr legend entry when there is actual NPSH data to show.
+  if (hasNpsh) {
+    traces.push({x: [null], y: [null], name: 'NPSHr', type: 'scatter', mode: 'lines', line: {color: npshColor, width: npshWidth, dash: npshStyle}, showlegend: true, curveGroup: 'npsh'});
+  }
   
   let ratedLegendName = cfg.TRIM_RATIO < 1.0 
     ? (cfg.IS_VSD ? `Rated Curve (${cfg.RATED_SPEED} RPM)` : `Rated Curve (Ø ${cfg.RATED_TRIM} mm)`)
@@ -394,6 +433,16 @@ function renderAll() {
     });
   }
 
+  // ── Y-axis domain layout ──
+  // When the pump has NPSH data, the chart is split into four vertical sub-plots:
+  //   y  (NPSH)  0.00-0.20  |  y2 (Power) 0.25-0.45  |  y3 (Eff) 0.50-0.70  |  y4 (Head) 0.75-1.0
+  // When there is no NPSH data the bottom 20 % is reclaimed and shared equally among
+  // the three remaining sub-plots so the chart does not have wasted white space.
+  const domainNpsh  = hasNpsh ? [0.00, 0.20] : null;
+  const domainPow   = hasNpsh ? [0.25, 0.45] : [0.00, 0.32];
+  const domainEff   = hasNpsh ? [0.50, 0.70] : [0.36, 0.65];
+  const domainHead  = hasNpsh ? [0.75, 1.00] : [0.69, 1.00];
+
   const layout = {
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
@@ -404,23 +453,24 @@ function renderAll() {
       title: `Flow (${lblQ})`, 
       gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
     },
-    yaxis: { 
-      title: `NPSHr (${lblNpsh})`, domain: [0.0, 0.20],
+    // NPSH sub-plot: hidden (visible:false) when there is no NPSH data so it occupies no space.
+    yaxis: hasNpsh ? { 
+      title: `NPSHr (${lblNpsh})`, domain: domainNpsh,
       titlefont: {color: npshColor}, tickfont: {color: npshColor},
       gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
-    },
+    } : { visible: false, domain: [0.0, 0.0] },
     yaxis2: { 
-      title: `Power (${lblPow})`, domain: [0.25, 0.45],
+      title: `Power (${lblPow})`, domain: domainPow,
       titlefont: {color: powColor}, tickfont: {color: powColor},
       gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
     },
     yaxis3: { 
-      title: 'Eff (%)', domain: [0.50, 0.70],
+      title: 'Eff (%)', domain: domainEff,
       titlefont: {color: etaColor}, tickfont: {color: etaColor},
       gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
     },
     yaxis4: { 
-      title: `Head (${lblH})`, domain: [0.75, 1.0],
+      title: `Head (${lblH})`, domain: domainHead,
       titlefont: {color: hqColor}, tickfont: {color: hqColor},
       gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
     },
@@ -433,20 +483,28 @@ function renderAll() {
   applyAxisScale(layout.yaxis4, 'head', pumpObj, minorGridColor, axisLineColor);
   applyAxisScale(layout.yaxis3, 'eff', pumpObj, minorGridColor, axisLineColor);
   applyAxisScale(layout.yaxis2, 'power', pumpObj, minorGridColor, axisLineColor);
-  applyAxisScale(layout.yaxis, 'npsh', pumpObj, minorGridColor, axisLineColor);
+  // Only scale the NPSH axis when it is actually shown.
+  if (hasNpsh) applyAxisScale(layout.yaxis, 'npsh', pumpObj, minorGridColor, axisLineColor);
+
+  // ── Final safety net: strip NPSH traces from the render list when hasNpsh is false.
+  // Even though the fam loop already guards NPSH traces with hasNpsh, this filter
+  // ensures that no NPSH trace can reach Plotly with a collapsed/invisible axis.
+  const renderTraces = hasNpsh ? traces : traces.filter(t => t.curveGroup !== 'npsh');
 
   // Render Chart
   document.getElementById('chartComp').style.height = '900px';
   document.getElementById('singleChartPanel').style.display = 'block';
-  Plotly.newPlot('chartComp', traces, layout, {responsive: true});
+  Plotly.newPlot('chartComp', renderTraces, layout, {responsive: true});
 
   // ── Interactive Legend & Curve Visibility Synchronization ──
   // Beginners Note: Global visibility state object reflecting which curves are currently toggled on/off.
+  // npsh is only relevant when the pump actually has NPSH data; default it to false otherwise
+  // so that any visibility-toggle logic that checks window.curveVisibility.npsh behaves correctly.
   window.curveVisibility = {
     hq: true,
     eta: true,
     pow: true,
-    npsh: true,
+    npsh: hasNpsh,   // false when pump has no NPSH – keeps toggle logic consistent
     rated: true,
     system: true,
     duty: true

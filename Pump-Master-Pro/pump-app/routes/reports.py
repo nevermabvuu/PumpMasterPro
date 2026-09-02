@@ -983,11 +983,79 @@ def _build_report_curve_context(pump, report, params_override=None):
     # Check NPSH Availability (e.g. pumps without NPSH data have max NPSH = 0)
     has_npsh = max(npsh_pts) > 0.05 and (pump.has_npsh_poly() if hasattr(pump, 'has_npsh_poly') else any(abs(getattr(pump, f'npsh_c{i}', 0.0) or 0.0) > 1e-6 for i in range(6)))
 
+    # Proposal detection and operating mode resolution
+    rep_type = (getattr(report, 'report_type', '') or '').strip().lower()
+    rep_name = (getattr(report, 'report_name', '') or '').strip().lower()
+    rep_title = (getattr(report, 'title', '') or '').strip().lower()
+    is_proposal = ('proposal' in rep_type) or ('proposal' in rep_name) or ('proposal' in rep_title) or (str(_param('is_proposal', '')).lower() in ('1', 'true'))
+
+    op_mode = (_param('operation_mode') or '').strip().lower()
+    if not op_mode and session:
+        op_mode = (session.get('selection_form_data', {}).get('operation_mode') or session.get('active_selection', {}).get('operation_mode') or '').strip().lower()
+    if not op_mode:
+        op_mode = 'fixed'
+
+    # Determine is_variable_speed and overlay selections
+    explicit_dia = getattr(report, 'show_dia_overlay', None)
+    explicit_rpm = getattr(report, 'show_rpm_overlay', None)
+
+    if is_proposal:
+        # In Proposal report, VSD vs Fixed speed is determined solely by the selection operation_mode,
+        # exactly as in the interactive Details view. Report settings or pump default family_type
+        # must NOT override the user's selected operation mode.
+        mode = 'all'
+        is_variable_speed = (op_mode == 'vsd')
+        show_primary = True
+        show_secondary = False
+        show_rpm = is_variable_speed
+        show_dia = not is_variable_speed
+    else:
+        is_variable_speed = (pump.family_type == 'variable_speed') or \
+                            (op_mode == 'vsd') or \
+                            ('vsd' in (getattr(report, 'report_name', '') or '').lower()) or \
+                            ('variable' in (getattr(report, 'report_name', '') or '').lower()) or \
+                            (explicit_rpm is True and explicit_dia is False)
+
+        show_dia = (explicit_dia if explicit_dia is not None else getattr(pump, 'graph_show_dia_overlay', True))
+        show_rpm = (explicit_rpm if explicit_rpm is not None else getattr(pump, 'graph_show_rpm_overlay', True))
+
+        # Conflict resolution: if one is explicitly requested by the report, turn the other off (unless both were explicitly requested)
+        if explicit_dia is True and explicit_rpm is None:
+            show_rpm = False
+        elif explicit_rpm is True and explicit_dia is None:
+            show_dia = False
+
+        show_primary = (show_rpm if is_variable_speed else show_dia)
+        show_secondary = (show_dia if is_variable_speed else show_rpm)
+
     # 1. Parse custom curve diameters from pump.curve_diameters (supporting ;, |, ,, spaces)
     custom_d_list = _parse_diameters_string(getattr(pump, 'curve_diameters', None))
 
+    # If evaluating a fixed-speed pump (not is_variable_speed), resolve diameter list
+    # from graph_dia_overlay_values or pump.get_diameters() if curve_diameters is empty
+    # or if the pump was natively variable_speed (matches comparison.py / details view).
+    if not is_variable_speed:
+        if not custom_d_list or pump.family_type == 'variable_speed' or is_proposal:
+            raw_dia_str = getattr(pump, 'graph_dia_overlay_values', None)
+            if raw_dia_str and str(raw_dia_str).strip():
+                parsed_dias = _parse_diameters_string(raw_dia_str)
+                if parsed_dias:
+                    custom_d_list = parsed_dias
+            if not custom_d_list and hasattr(pump, 'get_diameters'):
+                orig_fam = pump.family_type
+                orig_cd = pump.curve_diameters
+                try:
+                    pump.family_type = 'trimmed_impeller'
+                    pump.curve_diameters = ''
+                    dias = pump.get_diameters()
+                    if dias:
+                        custom_d_list = dias
+                finally:
+                    pump.family_type = orig_fam
+                    pump.curve_diameters = orig_cd
+
     # 2. Check if extra_curves_json has additional diameters
-    if hasattr(pump, 'extra_curves_json') and pump.extra_curves_json:
+    if not is_proposal and hasattr(pump, 'extra_curves_json') and pump.extra_curves_json:
         try:
             extra_data = json.loads(pump.extra_curves_json)
             if isinstance(extra_data, list):
@@ -1016,30 +1084,6 @@ def _build_report_curve_context(pump, report, params_override=None):
 
     palette = ['#1e3a8a', '#2563eb', '#3b82f6', '#64748b', '#94a3b8']
 
-    # Determine if user explicitly forced a specific overlay via report settings
-    explicit_dia = getattr(report, 'show_dia_overlay', None)
-    explicit_rpm = getattr(report, 'show_rpm_overlay', None)
-
-    # Check Family Type / Test Basis (auto-detects VSD templates and URL operation_mode so reports display RPM curves and labels)
-    op_mode = (_param('operation_mode') or '').strip().lower()
-    if not op_mode and session:
-        op_mode = (session.get('selection_form_data', {}).get('operation_mode') or '').strip().lower()
-
-    is_variable_speed = (pump.family_type == 'variable_speed') or \
-                        (op_mode == 'vsd') or \
-                        ('vsd' in (getattr(report, 'report_name', '') or '').lower()) or \
-                        ('variable' in (getattr(report, 'report_name', '') or '').lower()) or \
-                        (explicit_rpm is True and explicit_dia is False)
-
-    show_dia = (explicit_dia if explicit_dia is not None else getattr(pump, 'graph_show_dia_overlay', True))
-    show_rpm = (explicit_rpm if explicit_rpm is not None else getattr(pump, 'graph_show_rpm_overlay', True))
-
-    # Conflict resolution: if one is explicitly requested by the report, turn the other off (unless both were explicitly requested)
-    if explicit_dia is True and explicit_rpm is None:
-        show_rpm = False
-    elif explicit_rpm is True and explicit_dia is None:
-        show_dia = False
-
     # ── Resolve Operating Duty Point & Optimal Trim / Speed Ratio ──
     q_duty_val = None
     h_duty_val = None
@@ -1060,9 +1104,6 @@ def _build_report_curve_context(pump, report, params_override=None):
     except Exception:
         pass
 
-    # Determine primary vs secondary display selection
-    show_primary = (show_rpm if is_variable_speed else show_dia)
-    show_secondary = (show_dia if is_variable_speed else show_rpm)
 
     # ── 1. Variable Speed Family (Constant Diameter, Varying Speeds) ──
     if is_variable_speed:
@@ -1570,7 +1611,37 @@ def _build_report_curve_context(pump, report, params_override=None):
     npsh_active = bool(getattr(report, 'show_additional_graphs', True) and getattr(report, 'show_npsh_graph', True) and has_npsh)
 
     # Apply details view visibility overrides (especially for Proposal reports)
-    if is_proposal or arg_show_hq is not None or arg_show_eta is not None or arg_show_pow is not None or arg_show_npsh is not None or hidden_set:
+    if is_proposal:
+        # Default all graphs to active in Proposal report matching Details view layout,
+        # unless specifically toggled off by the user in details view (via params or hidden_curves)
+        if arg_show_hq is not None:
+            hq_active = (arg_show_hq in ('1', 'true', 'True'))
+        elif 'hq' in hidden_set or 'head' in hidden_set:
+            hq_active = False
+        else:
+            hq_active = True
+
+        if arg_show_eta is not None:
+            eta_active = (arg_show_eta in ('1', 'true', 'True'))
+        elif 'eta' in hidden_set or 'eff' in hidden_set or 'efficiency' in hidden_set:
+            eta_active = False
+        else:
+            eta_active = True
+
+        if arg_show_pow is not None:
+            pow_active = (arg_show_pow in ('1', 'true', 'True'))
+        elif 'pow' in hidden_set or 'power' in hidden_set:
+            pow_active = False
+        else:
+            pow_active = True
+
+        if arg_show_npsh is not None:
+            npsh_active = (arg_show_npsh in ('1', 'true', 'True')) and has_npsh
+        elif 'npsh' in hidden_set or 'npshr' in hidden_set:
+            npsh_active = False
+        else:
+            npsh_active = has_npsh
+    elif arg_show_hq is not None or arg_show_eta is not None or arg_show_pow is not None or arg_show_npsh is not None or hidden_set:
         if arg_show_hq is not None:
             hq_active = (arg_show_hq in ('1', 'true', 'True'))
         elif 'hq' in hidden_set or 'head' in hidden_set:
@@ -2217,7 +2288,9 @@ def view_report(report_id, pump_id):
     template_file = f"reports/{report.template_name}" if report.template_name else "reports/standard_datasheet.html"
     current_date = datetime.now().strftime("%B %d, %Y")
     
-    curves_ctx = _build_report_curve_context(pump, report)
+    state = session.get('active_selection') or {}
+    params_override = state if (state.get('pump_id') == pump_id) else None
+    curves_ctx = _build_report_curve_context(pump, report, params_override=params_override)
 
     report_content = render_template(
         template_file,

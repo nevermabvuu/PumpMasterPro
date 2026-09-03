@@ -122,22 +122,73 @@
       </div>
       
       <!-- Operation Mode card -->
+      <!-- Beginners Note:
+           Fixed Speed: allows the engineer to decide whether the operating speed is
+           automatically calculated to meet the duty point at full diameter (ideal for belt/gearbox drives),
+           or manually entered (e.g. 1450 RPM or 960 RPM for direct electric motor coupling).
+           Variable Speed Drive (VSD): regulates pump speed within min and max frequency bounds.
+      -->
       <div class="card-dark mb-3">
-        <div class="card-header-dark">
-          <i class="bi bi-gear-wide-connected mr-2"></i>Operation Mode
+        <div class="card-header-dark flex items-center justify-between">
+          <span class="flex items-center gap-2">
+            <i class="bi bi-gear-wide-connected text-[#58a6ff]"></i>
+            <span class="font-semibold">Operation Mode</span>
+          </span>
         </div>
         <div class="p-4">
-          <div class="space-y-2">
-            <label class="flex items-center gap-2 text-sm cursor-pointer hover:text-white transition-colors">
-              <input type="radio" name="operation_mode" value="fixed" class="accent-[#d29922]" 
-                     {{ 'checked' if form_data.get('operation_mode', 'fixed') == 'fixed' else '' }}>
-              Fixed Speed (Trim Impeller)
-            </label>
-            <label class="flex items-center gap-2 text-sm cursor-pointer hover:text-white transition-colors">
-              <input type="radio" name="operation_mode" value="vsd" class="accent-[#d29922]"
-                     {{ 'checked' if form_data.get('operation_mode') == 'vsd' else '' }}>
-              Variable Speed Drive (VSD)
-            </label>
+          <div class="space-y-2.5">
+            <!-- Mode 1: Fixed Speed -->
+            <div>
+              <label class="flex items-center gap-2 text-sm cursor-pointer hover:text-white transition-colors">
+                <input type="radio" name="operation_mode" value="fixed" id="opModeFixed" class="accent-[#58a6ff]" 
+                       {{ 'checked' if form_data.get('operation_mode', 'fixed') == 'fixed' else '' }}
+                       onchange="onOperationModeChange()">
+                <span class="font-semibold text-white">Fixed Speed</span>
+              </label>
+
+              <!-- Nested Fixed Speed Sub-Options -->
+              <div id="fixedSpeedOptions" class="ml-6 pl-3 border-l-2 border-[#30363d] space-y-2 mt-2"
+                   style="{{ '' if form_data.get('operation_mode', 'fixed') == 'fixed' else 'display:none;' }}">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-[#8b949e] block mb-1">
+                  Speed Specification:
+                </span>
+                <label class="flex items-center gap-2 text-xs cursor-pointer hover:text-white transition-colors">
+                  <input type="radio" name="fixed_speed_mode" value="auto" id="fixedSpeedAuto" class="accent-[#58a6ff]"
+                         {{ 'checked' if form_data.get('fixed_speed_mode', 'auto') == 'auto' else '' }}
+                         onchange="onFixedSpeedModeChange()">
+                  <span>Automatically calculate pump speed (RPM)</span>
+                </label>
+                <label class="flex items-center gap-2 text-xs cursor-pointer hover:text-white transition-colors">
+                  <input type="radio" name="fixed_speed_mode" value="manual" id="fixedSpeedManual" class="accent-[#58a6ff]"
+                         {{ 'checked' if form_data.get('fixed_speed_mode') == 'manual' else '' }}
+                         onchange="onFixedSpeedModeChange()">
+                  <span>Enter pump speed manually</span>
+                </label>
+
+                <!-- Manual Speed RPM Input -->
+                <div id="manualSpeedGroup" class="ml-5 pt-1"
+                     style="{{ '' if form_data.get('fixed_speed_mode') == 'manual' else 'display:none;' }}">
+                  <div class="flex items-center gap-2">
+                    <input type="number" name="manual_speed_rpm" id="inputManualSpeed"
+                           class="form-control form-control-dark text-xs py-1 px-2.5 w-28 text-white font-mono"
+                           value="{{ form_data.get('manual_speed_rpm', '') }}"
+                           placeholder="e.g. 1450" step="1" min="100" max="6000">
+                    <span class="text-xs font-mono text-[#8b949e]">RPM</span>
+                  </div>
+                  <span class="text-[10px] text-[#8b949e] block mt-0.5">Fixed motor or drive operating speed</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mode 2: Variable Speed Drive -->
+            <div class="pt-1 border-t border-[#30363d]/50">
+              <label class="flex items-center gap-2 text-sm cursor-pointer hover:text-white transition-colors">
+                <input type="radio" name="operation_mode" value="vsd" id="opModeVsd" class="accent-[#58a6ff]"
+                       {{ 'checked' if form_data.get('operation_mode') == 'vsd' else '' }}
+                       onchange="onOperationModeChange()">
+                <span class="font-semibold text-white">Variable Speed Drive (VSD)</span>
+              </label>
+            </div>
           </div>
         </div>
       </div>
@@ -296,20 +347,88 @@
         </div>
       </div>
 
+      <!-- ── CARD: PUMP ATTRIBUTES SELECTION FILTERS (ORGANISATION DEFINED) ─────── -->
+      <!-- Beginners Note:
+           Displays organisation-enabled custom pump attributes (e.g. Impeller Type, Design Standard,
+           Impeller Material, No of Vanes) directly on the Pump Selection view.
+           Allows engineers to shortlist pumps matching specific design criteria directly
+           from the primary selection panel (e.g. selecting 'Open' impellers only).
+      -->
+      {% if filter_options and filter_options.custom_attributes and filter_options.custom_attributes|length > 0 %}
+      <div class="card-dark mb-3" id="pumpAttributesCard">
+        <div class="card-header-dark flex items-center justify-between">
+          <span class="flex items-center gap-2">
+            <i class="bi bi-tags text-[#58a6ff]"></i>
+            <span class="font-semibold">Pump Attribute Filters</span>
+            <span class="text-xs text-[#8b949e] font-normal font-mono">({{ current_org.name if current_org else 'Organisation' }})</span>
+          </span>
+          <span class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#58a6ff]/15 border border-[#58a6ff]/30 text-[#58a6ff]">
+            {{ filter_options.custom_attributes|length }} enabled
+          </span>
+        </div>
+        <div class="p-4">
+          <p class="text-xs text-[#8b949e] mb-3">
+            Select specifications to filter pumps (e.g. choose <strong class="text-[#58a6ff]">Impeller Type: Open</strong> to shortlist only open impeller pumps).
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {% for attr in filter_options.custom_attributes %}
+            <div class="bg-[#0d1117] border border-[#30363d] rounded-lg p-2.5 space-y-1 hover:border-[#58a6ff]/40 transition-colors">
+              <div class="flex items-center justify-between">
+                <label class="block text-xs font-semibold text-[#c9d1d9] truncate" title="{{ attr.name }}">
+                  {{ attr.name }}
+                </label>
+                <span class="text-[10px] font-mono text-[#8b949e]">#{{ attr.index }}</span>
+              </div>
+              {% set cur_val = form_data.get('filter_attribute_' ~ attr.index, '') %}
+              {% if attr.options and attr.options|length > 0 %}
+                <select name="filter_attribute_{{ attr.index }}" class="form-select form-control-dark w-full text-xs py-1.5 focus:border-[#58a6ff]">
+                  <option value="">All {{ attr.name }}</option>
+                  {% for opt in attr.options %}
+                    <option value="{{ opt }}" {{ 'selected' if cur_val == opt or cur_val|lower == opt|lower }}>{{ opt }}</option>
+                  {% endfor %}
+                </select>
+              {% else %}
+                <input type="text" 
+                       name="filter_attribute_{{ attr.index }}" 
+                       class="form-control form-control-dark w-full text-xs py-1.5 focus:border-[#58a6ff]" 
+                       value="{{ cur_val }}" 
+                       placeholder="Filter {{ attr.name }}...">
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Advanced Filters card (collapsible) -->
       <!-- Beginners Note: Optional filters to narrow down the pump catalogue before hydraulic evaluation.
-           Collapsed by default to keep the form compact. -->
+           Includes manufacturer, pump type, operational speed range, and sizing. -->
+      {% set active_filters_count = namespace(value=0) %}
+      {% if form_data.get('filter_manufacturer') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
+      {% if form_data.get('filter_pump_type') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
+      {% if form_data.get('filter_speed_min') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
+      {% if form_data.get('filter_speed_max') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
+      {% if form_data.get('filter_size') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
+
       <div class="card-dark mb-3">
         <div class="card-header-dark cursor-pointer flex items-center justify-between" onclick="toggleFilterPanel()" id="filterToggleBtn">
-          <span><i class="bi bi-funnel mr-2"></i>Advanced Filters</span>
-          <i class="bi bi-chevron-down text-sm transition-transform" id="filterChevron"></i>
+          <div class="flex items-center gap-2">
+            <span><i class="bi bi-funnel mr-1"></i>Advanced Filters</span>
+            {% if active_filters_count.value > 0 %}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/35">
+                {{ active_filters_count.value }} active
+              </span>
+            {% endif %}
+          </div>
+          <i class="bi bi-chevron-down text-sm transition-transform" id="filterChevron" style="{{ 'transform: rotate(180deg);' if active_filters_count.value > 0 else '' }}"></i>
         </div>
-        <div id="filterPanel" class="p-4 border-t border-[#30363d]" style="display:none">
+        <div id="filterPanel" class="p-4 border-t border-[#30363d]" style="{{ '' if active_filters_count.value > 0 else 'display:none' }}">
           <div class="grid grid-cols-2 gap-3">
             <!-- Manufacturer filter -->
             <div>
               <label class="form-label">Manufacturer</label>
-              <select name="filter_manufacturer" class="form-select form-control-dark w-full">
+              <select name="filter_manufacturer" class="form-select form-control-dark w-full text-xs">
                 <option value="">All Manufacturers</option>
                 {% if filter_options and filter_options.manufacturers %}
                   {% for mfr in filter_options.manufacturers %}
@@ -322,7 +441,7 @@
             <!-- Pump type filter -->
             <div>
               <label class="form-label">Pump Type</label>
-              <select name="filter_pump_type" class="form-select form-control-dark w-full">
+              <select name="filter_pump_type" class="form-select form-control-dark w-full text-xs">
                 <option value="">All Types</option>
                 {% if filter_options and filter_options.pump_types %}
                   {% for pt in filter_options.pump_types %}
@@ -335,21 +454,30 @@
             <!-- Speed range filters -->
             <div>
               <label class="form-label">Min Speed (RPM)</label>
-              <input type="number" name="filter_speed_min" class="form-control form-control-dark w-full"
+              <input type="number" name="filter_speed_min" class="form-control form-control-dark w-full text-xs"
                      value="{{ form_data.get('filter_speed_min', '') }}" placeholder="e.g. 500">
             </div>
             <div>
               <label class="form-label">Max Speed (RPM)</label>
-              <input type="number" name="filter_speed_max" class="form-control form-control-dark w-full"
+              <input type="number" name="filter_speed_max" class="form-control form-control-dark w-full text-xs"
                      value="{{ form_data.get('filter_speed_max', '') }}" placeholder="e.g. 3000">
             </div>
 
             <!-- Size filter -->
             <div class="col-span-2">
               <label class="form-label">Size (partial match)</label>
-              <input type="text" name="filter_size" class="form-control form-control-dark w-full"
+              <input type="text" name="filter_size" class="form-control form-control-dark w-full text-xs"
                      value="{{ form_data.get('filter_size', '') }}" placeholder="e.g. 6/4">
             </div>
+
+            <!-- Clear filters button if active -->
+            {% if active_filters_count.value > 0 %}
+            <div class="col-span-2 flex justify-end pt-1">
+              <button type="button" onclick="clearAllFilters()" class="text-xs text-[#f85149] hover:text-[#ff7b72] flex items-center gap-1.5 py-1 px-2 rounded hover:bg-[#f85149]/10 transition-colors">
+                <i class="bi bi-x-circle"></i> Clear advanced filters
+              </button>
+            </div>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -359,7 +487,7 @@
 
       <!-- Submit button -->
       <!-- Beginners Note: Submits the form to run the selection engine and display matching pumps -->
-      <button type="submit"
+      <button type="submit" id="btnFindPumps"
               class="w-full flex items-center justify-center gap-2 py-2.5 rounded font-semibold text-sm transition-colors"
               style="background:#58a6ff;color:#0d1117;"
               onmouseover="this.style.background='#79baff'" onmouseout="this.style.background='#58a6ff'">
@@ -426,9 +554,24 @@
                   <div>
                     <h5 class="sel-card-title mb-0">{{ r.pump_name }}</h5>
                     <div class="text-muted text-sm mt-0.5">
-                      {{ r.manufacturer }} &bull; {{ r.size }} &bull; {{ r.speed_rpm|int }} rpm
-                      {% if r.is_vsd %}<span class="inline-flex items-center ml-1 px-1.5 py-0 rounded text-[10px] font-semibold" style="background:rgba(88,166,255,0.15);color:#58a6ff;">VSD</span>{% endif %}
+                      {{ r.manufacturer }} &bull; {{ r.size }} &bull; {{ r.optimal_speed_rpm|int if r.optimal_speed_rpm else r.speed_rpm|int }} rpm
+                      {% if r.is_vsd %}
+                        <span class="inline-flex items-center ml-1 px-1.5 py-0 rounded text-[10px] font-semibold" style="background:rgba(88,166,255,0.15);color:#58a6ff;">VSD</span>
+                      {% elif r.fixed_speed_mode == 'auto' %}
+                        <span class="inline-flex items-center ml-1 px-1.5 py-0 rounded text-[10px] font-semibold" style="background:rgba(88,166,255,0.15);color:#58a6ff;">Auto Speed</span>
+                      {% elif r.fixed_speed_mode == 'manual' %}
+                        <span class="inline-flex items-center ml-1 px-1.5 py-0 rounded text-[10px] font-semibold" style="background:rgba(210,153,34,0.15);color:#d29922;">Manual RPM</span>
+                      {% endif %}
                     </div>
+                    {% if r.attributes_display and r.attributes_display|length > 0 %}
+                    <div class="flex items-center gap-1.5 flex-wrap mt-1.5">
+                      {% for attr in r.attributes_display %}
+                      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#0d1117] text-[#c9d1d9] border border-[#30363d]" title="{{ attr.name }}: {{ attr.value }}">
+                        <span class="text-[#8b949e]">{{ attr.name }}:</span> <strong class="text-[#58a6ff]">{{ attr.value }}</strong>
+                      </span>
+                      {% endfor %}
+                    </div>
+                    {% endif %}
                   </div>
                   <!-- Rating badge -->
                   <div class="flex items-center gap-2 shrink-0">
@@ -493,6 +636,22 @@
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.25);color:#58a6ff;">
                     <i class="bi bi-speedometer2"></i> Optimal Speed: {{ r.optimal_speed_rpm|int }} RPM ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
                   </span>
+                  {% elif r.fixed_speed_mode == 'auto' %}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.25);color:#58a6ff;">
+                    <i class="bi bi-calculator"></i> Calculated Speed: {{ r.optimal_speed_rpm|int }} RPM ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
+                  </span>
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.25);color:#3fb950;">
+                    <i class="bi bi-disc"></i> Full Impeller: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm
+                  </span>
+                  {% elif r.fixed_speed_mode == 'manual' %}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(210,153,34,0.1);border:1px solid rgba(210,153,34,0.25);color:#d29922;">
+                    <i class="bi bi-speedometer"></i> Fixed Speed: {{ r.optimal_speed_rpm|int }} RPM (Manual)
+                  </span>
+                  {% if r.optimal_trim_ratio < 0.995 %}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.25);color:#3fb950;">
+                    <i class="bi bi-disc"></i> Trim: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
+                  </span>
+                  {% endif %}
                   {% else %}
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.25);color:#3fb950;">
                     <i class="bi bi-disc"></i> Trim: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)

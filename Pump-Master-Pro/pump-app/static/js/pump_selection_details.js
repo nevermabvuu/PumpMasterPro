@@ -2,7 +2,7 @@ let pumpData = null;
 
 async function fetchPumpData() {
   document.getElementById('chartLoading').style.display = 'block';
-  
+
   const params = new URLSearchParams({
     ids: window.PumpDetailsConfig.PUMP_ID,
     liquid: window.PumpDetailsConfig.LIQUID_TYPE,
@@ -18,7 +18,7 @@ async function fetchPumpData() {
     const res = await fetch(`/papi/compare-pumps?${params.toString()}`);
     const data = await res.json();
     if (data && data.length > 0) {
-      pumpData = data[0]; 
+      pumpData = data[0];
       renderAll();
     }
   } catch (e) {
@@ -174,7 +174,7 @@ function applyAxisScale(axisConfig, axisKey, pumpObj, minorGridColor, axisLineCo
   axisConfig.mirror = true;
 }
 
-function addLabel(annotations, x, y, yref, text, color, isMid=false) {
+function addLabel(annotations, x, y, yref, text, color, isMid = false) {
   if (x && x.length > 0) {
     let idx = isMid ? Math.floor(x.length / 2) : x.length - 1;
     annotations.push({
@@ -185,7 +185,7 @@ function addLabel(annotations, x, y, yref, text, color, isMid=false) {
       showarrow: false,
       xanchor: isMid ? 'center' : 'left',
       yanchor: isMid ? 'bottom' : 'middle',
-      font: {color: color, size: 11},
+      font: { color: color, size: 11 },
       xshift: isMid ? 0 : 5,
       yshift: isMid ? 10 : 0
     });
@@ -264,7 +264,7 @@ function renderAll() {
   // We also reject all-zero arrays (1e-4 tolerance) in case of stale cached data.
   const _npshHasValues = arr => Array.isArray(arr) && arr.some(v => Math.abs(v) > 1e-4);
   const hasNpsh = _npshHasValues(maxCurve.npsh) ||
-                  (fam && fam.some(c => _npshHasValues(c.npsh)));
+    (fam && fam.some(c => _npshHasValues(c.npsh)));
 
   const qDutyCurve = scaledMaxQ.map(q => q * cfg.TRIM_RATIO);
   const hDutyCurve = scaledMaxH.map(h => h * Math.pow(cfg.TRIM_RATIO, 2));
@@ -274,9 +274,9 @@ function renderAll() {
   if (fam && fam.length > 0) {
     fam.forEach((c, idx) => {
       let lbl = cfg.IS_VSD ? `${c.rpm || c.val} RPM` : `Ø ${c.dia} mm`;
-      let isMax = idx === fam.length - 1; 
+      let isMax = idx === fam.length - 1;
       let curveWidth = isMax ? hqWidth : Math.max(1.2, hqWidth * 0.7);
-      
+
       const scQ = c.q.map(q => q * multQ);
       const scH = c.h.map(h => h * multH);
       const scPow = c.power.map(p => p * multPow);
@@ -289,21 +289,21 @@ function renderAll() {
         (scNpsh && scNpsh[i] != null) ? scNpsh[i].toFixed(1) : 'N/A'
       ]);
       let hoverTmpl = `<b>${lbl}</b><br>Flow: %{x:.1f} ${lblQ}<br>Head: %{customdata[0]} ${lblH}<br>Eff: %{customdata[1]} %<br>Power: %{customdata[2]} ${lblPow}<br>NPSHr: %{customdata[3]} ${lblNpsh}<extra></extra>`;
-      
-      traces.push({x: scQ, y: scH, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: {color: hqColor, width: curveWidth, dash: hqStyle}, yaxis: 'y4', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'hq'});
+
+      traces.push({ x: scQ, y: scH, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: { color: hqColor, width: curveWidth, dash: hqStyle }, yaxis: 'y4', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'hq' });
       addLabel(annotations, scQ, scH, 'y4', lbl, hqColor);
-      
-      traces.push({x: scQ, y: c.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: {color: etaColor, width: isMax ? etaWidth : Math.max(1.2, etaWidth * 0.7), dash: etaStyle}, yaxis: 'y3', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'eta'});
+
+      traces.push({ x: scQ, y: c.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: { color: etaColor, width: isMax ? etaWidth : Math.max(1.2, etaWidth * 0.7), dash: etaStyle }, yaxis: 'y3', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'eta' });
       addLabel(annotations, scQ, c.eta, 'y3', lbl, etaColor);
 
-      traces.push({x: scQ, y: scPow, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: powColor, width: isMax ? powWidth : Math.max(1.2, powWidth * 0.7), dash: powStyle}, yaxis: 'y2', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'pow'});
+      traces.push({ x: scQ, y: scPow, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: { color: powColor, width: isMax ? powWidth : Math.max(1.2, powWidth * 0.7), dash: powStyle }, yaxis: 'y2', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'pow' });
       addLabel(annotations, scQ, scPow, 'y2', lbl, powColor);
 
       // Only add NPSH traces when the pump actually has NPSH data (guarded by hasNpsh
       // computed above). Without this guard, traces on the hidden 'y' axis bleed into
       // adjacent sub-plots (e.g., efficiency) when the axis domain is collapsed.
       if (hasNpsh && scNpsh && scNpsh.length) {
-        traces.push({x: scQ, y: scNpsh, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: npshColor, width: isMax ? npshWidth : Math.max(1.2, npshWidth * 0.7), dash: npshStyle}, yaxis: 'y', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'npsh'});
+        traces.push({ x: scQ, y: scNpsh, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: { color: npshColor, width: isMax ? npshWidth : Math.max(1.2, npshWidth * 0.7), dash: npshStyle }, yaxis: 'y', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'npsh' });
         addLabel(annotations, scQ, scNpsh, 'y', lbl, npshColor);
       }
     });
@@ -317,17 +317,17 @@ function renderAll() {
     ]);
     let hoverTmpl = `<b>${lbl}</b><br>Flow: %{x:.1f} ${lblQ}<br>Head: %{customdata[0]} ${lblH}<br>Eff: %{customdata[1]} %<br>Power: %{customdata[2]} ${lblPow}<br>NPSHr: %{customdata[3]} ${lblNpsh}<extra></extra>`;
 
-    traces.push({x: scaledMaxQ, y: scaledMaxH, name: 'Head (Max)', type: 'scatter', mode: 'lines', line: {color: hqColor, width: hqWidth, dash: hqStyle}, yaxis: 'y4', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'hq'});
+    traces.push({ x: scaledMaxQ, y: scaledMaxH, name: 'Head (Max)', type: 'scatter', mode: 'lines', line: { color: hqColor, width: hqWidth, dash: hqStyle }, yaxis: 'y4', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'hq' });
     addLabel(annotations, scaledMaxQ, scaledMaxH, 'y4', 'Max', hqColor);
-    
-    traces.push({x: scaledMaxQ, y: maxCurve.eta, name: 'Eff (Max)', type: 'scatter', mode: 'lines', line: {color: etaColor, width: etaWidth, dash: etaStyle}, yaxis: 'y3', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'eta'});
+
+    traces.push({ x: scaledMaxQ, y: maxCurve.eta, name: 'Eff (Max)', type: 'scatter', mode: 'lines', line: { color: etaColor, width: etaWidth, dash: etaStyle }, yaxis: 'y3', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'eta' });
     addLabel(annotations, scaledMaxQ, maxCurve.eta, 'y3', 'Max', etaColor);
-    
-    traces.push({x: scaledMaxQ, y: scaledMaxPow, name: 'Power (Max)', type: 'scatter', mode: 'lines', line: {color: powColor, width: powWidth, dash: powStyle}, yaxis: 'y2', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'pow'});
+
+    traces.push({ x: scaledMaxQ, y: scaledMaxPow, name: 'Power (Max)', type: 'scatter', mode: 'lines', line: { color: powColor, width: powWidth, dash: powStyle }, yaxis: 'y2', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'pow' });
     addLabel(annotations, scaledMaxQ, scaledMaxPow, 'y2', 'Max', powColor);
-    
+
     if (scaledMaxNpsh.length) {
-      traces.push({x: scaledMaxQ, y: scaledMaxNpsh, name: 'NPSHr (Max)', type: 'scatter', mode: 'lines', line: {color: npshColor, width: npshWidth, dash: npshStyle}, yaxis: 'y', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'npsh'});
+      traces.push({ x: scaledMaxQ, y: scaledMaxNpsh, name: 'NPSHr (Max)', type: 'scatter', mode: 'lines', line: { color: npshColor, width: npshWidth, dash: npshStyle }, yaxis: 'y', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'npsh' });
       addLabel(annotations, scaledMaxQ, scaledMaxNpsh, 'y', 'Max', npshColor);
     }
   }
@@ -350,21 +350,21 @@ function renderAll() {
     //   the max-dia arrays.  Using ALL N eta values compressed into N*r x-positions
     //   made the post-BEP efficiency drop crowd near the right end (flat-looking tail).
     //   Fix: slice to ratedN = round(N * TRIM_RATIO) so the x-y pairing is correct.
-    const ratedN   = Math.max(2, Math.round(scaledMaxQ.length * cfg.TRIM_RATIO));
-    const ratedQ   = qDutyCurve.slice(0, ratedN);
-    const ratedH   = hDutyCurve.slice(0, ratedN);
+    const ratedN = Math.max(2, Math.round(scaledMaxQ.length * cfg.TRIM_RATIO));
+    const ratedQ = qDutyCurve.slice(0, ratedN);
+    const ratedH = hDutyCurve.slice(0, ratedN);
     // Eta: interpolate the max-dia curve at the rated Q positions so the shape is identical
     // to the max-dia efficiency bell, simply cut off at the rated flow.
     const ratedEta = maxCurve.eta.slice(0, ratedN);
     const ratedPow = pDutyCurve.slice(0, ratedN);
 
 
-    traces.push({x: ratedQ, y: ratedH,   name: `Head ${lbl}`,  type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y4', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated'});
-    traces.push({x: ratedQ, y: ratedEta, name: `Eff ${lbl}`,   type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y3', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated'});
-    traces.push({x: ratedQ, y: ratedPow, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y2', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated'});
+    traces.push({ x: ratedQ, y: ratedH, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: { color: ratedColor, width: trimWidth, dash: trimStyle }, yaxis: 'y4', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated' });
+    traces.push({ x: ratedQ, y: ratedEta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: { color: ratedColor, width: trimWidth, dash: trimStyle }, yaxis: 'y3', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated' });
+    traces.push({ x: ratedQ, y: ratedPow, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: { color: ratedColor, width: trimWidth, dash: trimStyle }, yaxis: 'y2', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated' });
     if (hasNpsh && npshDutyCurve && npshDutyCurve.length) {
-      const ratedNpsh = npshDutyCurve.slice(0, ratedQIdx);
-      traces.push({x: ratedQ, y: ratedNpsh, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, yaxis: 'y', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated'});
+      const ratedNpsh = npshDutyCurve.slice(0, ratedN);
+      traces.push({ x: ratedQ, y: ratedNpsh, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: { color: ratedColor, width: trimWidth, dash: trimStyle }, yaxis: 'y', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated' });
     }
 
 
@@ -374,23 +374,23 @@ function renderAll() {
     const k = cfg.H_DUTY / Math.pow(cfg.Q_DUTY, 2);
     const maxPumpH = Math.max(...scaledMaxH);
     const limitH = maxPumpH * 1.25;
-    
+
     const sysQ = [];
     const sysH = [];
     for (let i = 0; i < scaledMaxQ.length; i++) {
-        const q = scaledMaxQ[i];
-        const h = k * Math.pow(q, 2);
-        if (h <= limitH) {
-            sysQ.push(q);
-            sysH.push(h);
-        }
+      const q = scaledMaxQ[i];
+      const h = k * Math.pow(q, 2);
+      if (h <= limitH) {
+        sysQ.push(q);
+        sysH.push(h);
+      }
     }
     if (sysQ.length === 0 || sysQ[sysQ.length - 1] < cfg.Q_DUTY) {
-        sysQ.push(cfg.Q_DUTY);
-        sysH.push(cfg.H_DUTY);
+      sysQ.push(cfg.Q_DUTY);
+      sysH.push(cfg.H_DUTY);
     }
     let hoverTmplSys = `<b>System Curve</b><br>Flow: %{x:.1f} ${lblQ}<br>Head: %{y:.1f} ${lblH}<extra></extra>`;
-    traces.push({x: sysQ, y: sysH, name: 'System Curve', type: 'scatter', mode: 'lines', line: {color: sysColor, width: 2.2, dash: sysStyle}, yaxis: 'y4', showlegend: false, hovertemplate: hoverTmplSys, curveGroup: 'system'});
+    traces.push({ x: sysQ, y: sysH, name: 'System Curve', type: 'scatter', mode: 'lines', line: { color: sysColor, width: 2.2, dash: sysStyle }, yaxis: 'y4', showlegend: false, hovertemplate: hoverTmplSys, curveGroup: 'system' });
   }
 
   // Determine once whether this pump has any NPSH data at all.
@@ -398,19 +398,29 @@ function renderAll() {
   // As a final safety net, also strip any NPSH-group traces from the legend
   // and the render array so a collapsed/invisible axis cannot cause them to
   // bleed into adjacent sub-plots (efficiency, power, etc.).
-  traces.push({x: [null], y: [null], name: 'Head', type: 'scatter', mode: 'lines', line: {color: hqColor, width: hqWidth, dash: hqStyle}, showlegend: true, curveGroup: 'hq'});
-  traces.push({x: [null], y: [null], name: 'Efficiency', type: 'scatter', mode: 'lines', line: {color: etaColor, width: etaWidth, dash: etaStyle}, showlegend: true, curveGroup: 'eta'});
-  traces.push({x: [null], y: [null], name: 'Power', type: 'scatter', mode: 'lines', line: {color: powColor, width: powWidth, dash: powStyle}, showlegend: true, curveGroup: 'pow'});
+  traces.push({ x: [null], y: [null], name: 'Head', type: 'scatter', mode: 'lines', line: { color: hqColor, width: hqWidth, dash: hqStyle }, showlegend: true, curveGroup: 'hq' });
+  traces.push({ x: [null], y: [null], name: 'Efficiency', type: 'scatter', mode: 'lines', line: { color: etaColor, width: etaWidth, dash: etaStyle }, showlegend: true, curveGroup: 'eta' });
+  traces.push({ x: [null], y: [null], name: 'Power', type: 'scatter', mode: 'lines', line: { color: powColor, width: powWidth, dash: powStyle }, showlegend: true, curveGroup: 'pow' });
   // Only add the NPSHr legend entry when there is actual NPSH data to show.
   if (hasNpsh) {
-    traces.push({x: [null], y: [null], name: 'NPSHr', type: 'scatter', mode: 'lines', line: {color: npshColor, width: npshWidth, dash: npshStyle}, showlegend: true, curveGroup: 'npsh'});
+    traces.push({ x: [null], y: [null], name: 'NPSHr', type: 'scatter', mode: 'lines', line: { color: npshColor, width: npshWidth, dash: npshStyle }, showlegend: true, curveGroup: 'npsh' });
   }
-  
-  let ratedLegendName = cfg.TRIM_RATIO < 1.0 
-    ? (cfg.IS_VSD ? `Rated Curve (${cfg.RATED_SPEED} RPM)` : `Rated Curve (Ø ${cfg.RATED_TRIM} mm)`)
-    : 'Rated Curve';
-  traces.push({x: [null], y: [null], name: ratedLegendName, type: 'scatter', mode: 'lines', line: {color: ratedColor, width: trimWidth, dash: trimStyle}, showlegend: true, curveGroup: 'rated'});
-  traces.push({x: [null], y: [null], name: 'System Curve', type: 'scatter', mode: 'lines', line: {color: sysColor, width: 2.2, dash: sysStyle}, showlegend: true, curveGroup: 'system'});
+
+  let ratedLegendName = 'Rated Curve';
+  if (cfg.IS_VSD) {
+    ratedLegendName = `Rated Curve (${cfg.RATED_SPEED || Math.round(cfg.PUMP_SPEED * cfg.TRIM_RATIO)} RPM)`;
+  } else if (cfg.FIXED_SPEED_MODE === 'auto') {
+    ratedLegendName = `Calculated Speed (${cfg.RATED_SPEED || Math.round(cfg.PUMP_SPEED * cfg.TRIM_RATIO)} RPM)`;
+  } else if (cfg.FIXED_SPEED_MODE === 'manual') {
+    ratedLegendName = `Manual Speed (${cfg.RATED_SPEED || cfg.MANUAL_SPEED_RPM} RPM)`;
+    if (cfg.TRIM_RATIO < 0.995 && cfg.RATED_TRIM) {
+      ratedLegendName += ` (Ø${cfg.RATED_TRIM}mm)`;
+    }
+  } else if (cfg.TRIM_RATIO < 1.0) {
+    ratedLegendName = `Rated Curve (Ø ${cfg.RATED_TRIM} mm)`;
+  }
+  traces.push({ x: [null], y: [null], name: ratedLegendName, type: 'scatter', mode: 'lines', line: { color: ratedColor, width: trimWidth, dash: trimStyle }, showlegend: true, curveGroup: 'rated' });
+  traces.push({ x: [null], y: [null], name: 'System Curve', type: 'scatter', mode: 'lines', line: { color: sysColor, width: 2.2, dash: sysStyle }, showlegend: true, curveGroup: 'system' });
 
   if (cfg.Q_DUTY && cfg.H_DUTY) {
     traces.push({
@@ -429,7 +439,7 @@ function renderAll() {
       showarrow: true,
       arrowcolor: ratedColor,
       ax: 20, ay: -20,
-      font: {color: ratedColor, size: 11}
+      font: { color: ratedColor, size: 11 }
     });
   }
 
@@ -438,10 +448,10 @@ function renderAll() {
   //   y  (NPSH)  0.00-0.20  |  y2 (Power) 0.25-0.45  |  y3 (Eff) 0.50-0.70  |  y4 (Head) 0.75-1.0
   // When there is no NPSH data the bottom 20 % is reclaimed and shared equally among
   // the three remaining sub-plots so the chart does not have wasted white space.
-  const domainNpsh  = hasNpsh ? [0.00, 0.20] : null;
-  const domainPow   = hasNpsh ? [0.25, 0.45] : [0.00, 0.32];
-  const domainEff   = hasNpsh ? [0.50, 0.70] : [0.36, 0.65];
-  const domainHead  = hasNpsh ? [0.75, 1.00] : [0.69, 1.00];
+  const domainNpsh = hasNpsh ? [0.00, 0.20] : null;
+  const domainPow = hasNpsh ? [0.25, 0.45] : [0.00, 0.32];
+  const domainEff = hasNpsh ? [0.50, 0.70] : [0.36, 0.65];
+  const domainHead = hasNpsh ? [0.75, 1.00] : [0.69, 1.00];
 
   const layout = {
     paper_bgcolor: 'rgba(0,0,0,0)',
@@ -449,29 +459,29 @@ function renderAll() {
     font: { color: '#8b949e', family: fontFamily },
     margin: { t: 40, r: 80, l: 60, b: 40 },
     hovermode: 'closest',
-    xaxis: { 
-      title: `Flow (${lblQ})`, 
+    xaxis: {
+      title: `Flow (${lblQ})`,
       gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
     },
     // NPSH sub-plot: hidden (visible:false) when there is no NPSH data so it occupies no space.
-    yaxis: hasNpsh ? { 
+    yaxis: hasNpsh ? {
       title: `NPSHr (${lblNpsh})`, domain: domainNpsh,
-      titlefont: {color: npshColor}, tickfont: {color: npshColor},
+      titlefont: { color: npshColor }, tickfont: { color: npshColor },
       gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
     } : { visible: false, domain: [0.0, 0.0] },
-    yaxis2: { 
+    yaxis2: {
       title: `Power (${lblPow})`, domain: domainPow,
-      titlefont: {color: powColor}, tickfont: {color: powColor},
+      titlefont: { color: powColor }, tickfont: { color: powColor },
       gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
     },
-    yaxis3: { 
+    yaxis3: {
       title: 'Eff (%)', domain: domainEff,
-      titlefont: {color: etaColor}, tickfont: {color: etaColor},
+      titlefont: { color: etaColor }, tickfont: { color: etaColor },
       gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
     },
-    yaxis4: { 
+    yaxis4: {
       title: `Head (${lblH})`, domain: domainHead,
-      titlefont: {color: hqColor}, tickfont: {color: hqColor},
+      titlefont: { color: hqColor }, tickfont: { color: hqColor },
       gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
     },
     legend: { orientation: 'h', y: 1.05, x: 0 },
@@ -494,7 +504,7 @@ function renderAll() {
   // Render Chart
   document.getElementById('chartComp').style.height = '900px';
   document.getElementById('singleChartPanel').style.display = 'block';
-  Plotly.newPlot('chartComp', renderTraces, layout, {responsive: true});
+  Plotly.newPlot('chartComp', renderTraces, layout, { responsive: true });
 
   // ── Interactive Legend & Curve Visibility Synchronization ──
   // Beginners Note: Global visibility state object reflecting which curves are currently toggled on/off.
@@ -514,7 +524,7 @@ function renderAll() {
 
   // Beginners Note: When clicking a category on the Plotly legend, toggle all matching curve traces
   // and update report URLs so that Proposal reports generated will exactly mirror the visible curves on screen.
-  chartEl.on('plotly_legendclick', function(data) {
+  chartEl.on('plotly_legendclick', function (data) {
     const clickedTrace = data.data[data.curveNumber];
     const group = clickedTrace ? clickedTrace.curveGroup : null;
     if (!group) return true;
@@ -548,7 +558,7 @@ function renderAll() {
 
 // Beginners Note: Opens the report with a 100% clean URL (/reports/view) with zero parameters.
 // Stores the active report ID and curve visibility toggles into server session['active_selection'].
-window.openSessionReport = function(event, reportId) {
+window.openSessionReport = function (event, reportId) {
   if (event) event.preventDefault();
 
   const vis = window.curveVisibility || {};
@@ -613,7 +623,7 @@ function updateReportLinks() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ params: params })
-  }).catch(() => {});
+  }).catch(() => { });
 }
 
 // Load data on page load

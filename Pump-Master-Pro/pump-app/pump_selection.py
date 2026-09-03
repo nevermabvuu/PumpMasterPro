@@ -35,13 +35,15 @@ SPARKLINE_POINTS = 30
 def select_pumps(pumps, q_duty, h_duty, npsh_avail=None,
                  liquid='water', rho=1000.0, viscosity_cSt=1.0,
                  slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650.0,
-                 tolerance=0.15, filters=None, operation_mode='fixed'):
+                 tolerance=0.15, filters=None, operation_mode='fixed',
+                 enabled_attributes=None,
+                 fixed_speed_mode='auto', manual_speed_rpm=None):
     """
     Select pumps that can satisfy the duty point.
 
     Beginners Note:
         This is the main function called by the route handler. It:
-        1. Pre-filters pumps by user-specified criteria (type, manufacturer, speed, etc.)
+        1. Pre-filters pumps by user-specified criteria (type, manufacturer, speed, custom attributes, etc.)
         2. For each pump, checks if the duty point falls within the H-Q envelope
         3. Calculates the optimal trim/speed ratio to meet the duty exactly
         4. Scores each pump on suitability (0–100)
@@ -59,7 +61,9 @@ def select_pumps(pumps, q_duty, h_duty, npsh_avail=None,
         slurry_d50: Median particle size in mm (for slurry)
         rho_solid: Solid particle density in kg/m³ (for slurry)
         tolerance: Head surplus tolerance factor (not currently used for exclusion)
-        filters: Dict of filter criteria (manufacturer, pump_type, speed_min, speed_max, etc.)
+        filters: Dict of filter criteria (manufacturer, pump_type, speed_min, speed_max, custom attributes, etc.)
+        operation_mode: 'fixed' or 'vsd'
+        enabled_attributes: List of enabled custom pump attributes dicts [{'index': 1, 'name': '...'}, ...]
 
     Returns:
         List of dicts sorted by rating (descending), each containing pump info,
@@ -82,7 +86,8 @@ def select_pumps(pumps, q_duty, h_duty, npsh_avail=None,
             pump, q_duty, h_duty, npsh_avail,
             liquid, rho, viscosity_cSt,
             slurry_cv, slurry_d50, rho_solid,
-            operation_mode
+            operation_mode, enabled_attributes=enabled_attributes,
+            fixed_speed_mode=fixed_speed_mode, manual_speed_rpm=manual_speed_rpm
         )
         if result is not None:
             results.append(result)
@@ -109,6 +114,7 @@ def _apply_filters(pumps, filters, operation_mode):
         - speed_max: Maximum speed RPM
         - application: Comma-separated application module keys (AND logic — pump must have all)
         - size: Pump size string (partial match)
+        - attribute_{1-30}, filter_attribute_{1-30}, PumpAttribute{1-30}: Organisation custom pump attribute filters
     """
     if not filters:
         return pumps
@@ -163,6 +169,43 @@ def _apply_filters(pumps, filters, operation_mode):
             if size_filter and size_filter not in (pump.size or '').lower():
                 continue
 
+        # ── Custom Organisation Pump Attributes Filters (attribute_1 to 30) ─────────
+        # Beginners Note:
+        # Allows engineers to filter pumps by custom organisation specifications
+        # (for example: Impeller Type = 'Open', Design Standard = 'ANSI', Impeller Material = 'Rubber').
+        #
+        # Matching Rules:
+        # 1. Accepts keys formatted as 'filter_attribute_{i}', 'attribute_{i}', or 'PumpAttribute{i}'
+        # 2. Case-insensitive comparison so selecting 'Open' matches 'open', 'Open', or 'OPEN'
+        # 3. Supports partial and substring matches (e.g. 'open' matches 'Open Impeller' or 'Semi-Open')
+        # 4. Supports comma-separated multi-value selections (e.g. 'Open, Semi-Open' acts as an OR filter)
+        # 5. Pumps without a value for the filtered attribute are excluded
+        attr_mismatch = False
+        for k, fval in filters.items():
+            if not fval or not str(fval).strip():
+                continue
+            attr_idx = None
+            for prefix in ('filter_attribute_', 'attribute_', 'filter_PumpAttribute', 'PumpAttribute'):
+                if k.startswith(prefix):
+                    suffix = k[len(prefix):]
+                    if suffix.isdigit():
+                        attr_idx = int(suffix)
+                        break
+            if attr_idx and 1 <= attr_idx <= 30:
+                pump_val = (getattr(pump, f'PumpAttribute{attr_idx}', '') or '').strip().lower()
+                target_val = str(fval).strip().lower()
+                targets = [t.strip().lower() for t in target_val.split(',') if t.strip()]
+                # A pump must have a populated value for this attribute to match
+                if not pump_val:
+                    attr_mismatch = True
+                    break
+                # If target list specified, pump attribute must match at least one target option
+                if targets and not any(t == pump_val or t in pump_val or pump_val in t for t in targets):
+                    attr_mismatch = True
+                    break
+        if attr_mismatch:
+            continue
+
         filtered.append(pump)
 
     return filtered
@@ -173,7 +216,8 @@ def _apply_filters(pumps, filters, operation_mode):
 def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
                    liquid, rho, viscosity_cSt,
                    slurry_cv, slurry_d50, rho_solid,
-                   operation_mode='fixed'):
+                   operation_mode='fixed', enabled_attributes=None,
+                   fixed_speed_mode='auto', manual_speed_rpm=None):
     """
     Evaluate a single pump against the duty point.
 
@@ -280,13 +324,12 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
     else:
         optimal_trim_ratio = 1.0
 
-    # Calculate the corresponding physical diameter or speed
-    optimal_trim_dia_mm = d_max * optimal_trim_ratio
-    
+    base_speed = float(pump.speed_rpm) if pump.speed_rpm else 1450.0
+
     if is_vsd:
-        # User constraint: VSD speed must be within min and max bounds
-        base_speed = pump.speed_rpm if pump.speed_rpm else 1450.0
+        # VSD: speed varies between VFD min and max bounds
         optimal_speed_rpm = base_speed * optimal_trim_ratio
+        optimal_trim_dia_mm = d_max
         
         # Parse RPM bounds
         rpm_str = getattr(pump, 'graph_rpm_values', '') or ''
@@ -310,8 +353,59 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
         # Reject pump if the required VSD speed is outside bounds
         if optimal_speed_rpm < min_rpm or optimal_speed_rpm > (max_rpm * 1.05):  # 5% tolerance on max
             return None
+
+    elif fixed_speed_mode == 'manual' and manual_speed_rpm is not None:
+        # ── Fixed Speed (Manual Entry) ───────────────────────────────────────
+        # Beginners Note: The engineer enters a specific fixed operating speed (e.g. 1450 RPM or 960 RPM).
+        # We scale the pump's head-flow curve to this manual speed using affinity laws.
+        try:
+            target_rpm = float(manual_speed_rpm)
+        except (ValueError, TypeError):
+            target_rpm = base_speed
+
+        speed_ratio = target_rpm / base_speed if base_speed > 0 else 1.0
+
+        # Check maximum flow capacity at this manual speed
+        q_max_at_speed = (pump.q_max or 100.0) * speed_ratio * 1.05
+        if q_duty > q_max_at_speed:
+            return None
+
+        # Check head capacity at duty flow at this manual speed on max diameter
+        q_equiv_base = np.array([q_duty / speed_ratio])
+        h_base_at_equiv = float(hq_curve(pump, q_equiv_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)[0])
+        h_max_at_speed = h_base_at_equiv * (speed_ratio ** 2)
+
+        # If the pump at this manual speed cannot produce the required head, reject it
+        if h_max_at_speed < h_duty:
+            return None
+
+        # Calculate the required impeller trim ratio at this manual speed:
+        # Total scale factor from base curve is optimal_trim_ratio.
+        # Since total = speed_ratio * dia_trim_ratio, we have: dia_trim_ratio = optimal_trim_ratio / speed_ratio
+        dia_trim_ratio = optimal_trim_ratio / speed_ratio if speed_ratio > 0 else 1.0
+        dia_trim_ratio = min(1.0, max(0.2, dia_trim_ratio))
+
+        optimal_speed_rpm = target_rpm
+        optimal_trim_dia_mm = d_max * dia_trim_ratio
+        optimal_trim_ratio = dia_trim_ratio
+
+    elif fixed_speed_mode == 'auto':
+        # ── Fixed Speed (Automatically Calculate Pump Speed) ─────────────────
+        # Beginners Note: The system automatically calculates the exact required operating speed (RPM)
+        # to satisfy the duty point using the full impeller diameter (no machining needed).
+        # This is standard practice for belt-driven or gearbox process/slurry pumps.
+        optimal_speed_rpm = round(base_speed * optimal_trim_ratio, 1)
+        optimal_trim_dia_mm = d_max
+
+        # Sanity check: Ensure auto-calculated speed is within realistic operational limits
+        # (between 25% and 135% of base catalogue speed)
+        if optimal_speed_rpm < (base_speed * 0.25) or optimal_speed_rpm > (base_speed * 1.35):
+            return None
+
     else:
-        optimal_speed_rpm = pump.speed_rpm
+        # Default / Catalogue Rated Speed with Impeller Trim
+        optimal_speed_rpm = base_speed
+        optimal_trim_dia_mm = d_max * optimal_trim_ratio
 
     # ── NPSH evaluation ────────────────────────────────────────────────────
     # Beginners Note: NPSHr (required) must be less than NPSHa (available) with safety margin
@@ -389,6 +483,7 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
         'optimal_trim_dia_mm': round(optimal_trim_dia_mm, 1),
         'optimal_speed_rpm': round(optimal_speed_rpm, 0),
         'is_vsd': is_vsd,
+        'fixed_speed_mode': fixed_speed_mode if not is_vsd else None,
         'd_max': d_max,
         'd_min': d_min,
         'duty_in_envelope': duty_in_envelope,
@@ -410,6 +505,21 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
         
         # Default report ID for PDF generation
         'default_report_id': _get_default_report_id(pump, operation_mode),
+
+        # Custom Organisation Pump Attributes (1 to 30)
+        'custom_attributes': {
+            f'PumpAttribute{i}': getattr(pump, f'PumpAttribute{i}', '') or ''
+            for i in range(1, 31)
+        },
+        'attributes_display': [
+            {
+                'index': attr['index'],
+                'name': attr['name'],
+                'value': (getattr(pump, f'PumpAttribute{attr["index"]}', '') or '').strip()
+            }
+            for attr in (enabled_attributes or [])
+            if (getattr(pump, f'PumpAttribute{attr["index"]}', '') or '').strip()
+        ],
     }
 
 
@@ -585,16 +695,18 @@ def _generate_mini_chart(pump, q_duty, h_duty, d_max, d_min, optimal_trim_ratio,
 
 # ── Filter Options Helper ─────────────────────────────────────────────────────
 
-def get_filter_options(pumps):
+def get_filter_options(pumps, enabled_attributes=None):
     """
     Extract unique filter option values from a list of pumps for populating UI dropdowns.
 
     Beginners Note:
-        Scans all pumps and collects unique values for each filterable field.
+        Scans all pumps and collects unique values for each filterable field,
+        including organisation-enabled custom PumpAttributes (1 to 30).
         Used by the route handler to populate the filter panel dropdowns.
 
     Returns:
-        Dict with keys 'manufacturers', 'pump_types', 'sizes', 'speed_range', 'applications'
+        Dict with keys 'manufacturers', 'pump_types', 'sizes', 'speed_range',
+        'applications', and 'custom_attributes'
     """
     manufacturers = set()
     pump_types = set()
@@ -616,6 +728,34 @@ def get_filter_options(pumps):
                 if app.strip():
                     applications.add(app.strip())
 
+    # ── Extract distinct values for enabled organisation custom attributes ────
+    # Beginners Note:
+    # Scans all visible pumps and identifies unique values for each enabled PumpAttribute slot
+    # (e.g. for slot #1 'Impeller Type', finds ['Closed', 'Open']).
+    # Values are normalized (e.g., lowercase 'open' becomes 'Open') and deduplicated case-insensitively
+    # so dropdown selectors in the UI offer neat, predictable choices for engineers.
+    custom_attributes = []
+    if enabled_attributes:
+        for attr in enabled_attributes:
+            idx = attr['index']
+            name = attr['name']
+            seen_lower = set()
+            options = []
+            for p in pumps:
+                val = (getattr(p, f'PumpAttribute{idx}', '') or '').strip()
+                if val:
+                    # Clean casing for display (e.g. capitalize 'open' -> 'Open', while preserving acronyms 'ANSI')
+                    clean_val = val.capitalize() if val.islower() else val
+                    if clean_val.lower() not in seen_lower:
+                        seen_lower.add(clean_val.lower())
+                        options.append(clean_val)
+            options.sort(key=lambda s: s.lower())
+            custom_attributes.append({
+                'index': idx,
+                'name': name,
+                'options': options
+            })
+
     return {
         'manufacturers': sorted(manufacturers),
         'pump_types': sorted(pump_types),
@@ -625,6 +765,7 @@ def get_filter_options(pumps):
             'max': max(speeds) if speeds else 3600,
         },
         'applications': sorted(applications),
+        'custom_attributes': custom_attributes,
     }
 
 def _get_default_report_id(pump, operation_mode):

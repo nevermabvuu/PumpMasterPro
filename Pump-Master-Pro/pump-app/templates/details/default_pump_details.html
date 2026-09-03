@@ -245,4 +245,46 @@
 
   </div>
 
+  <!-- ── 3. CUSTOM ORGANISATION PUMP ATTRIBUTES (IF CONFIGURED) ── -->
+  {% set target_org = (pump.organisation if pump and pump.organisation else current_org) %}
+  {% set enabled_attrs = target_org.get_enabled_pump_attributes() if target_org else [] %}
+  {% set has_custom_values = namespace(value=false) %}
+  {% if enabled_attrs %}
+    {% for attr in enabled_attrs %}
+      {% if getattr(pump, 'PumpAttribute' ~ attr.index, '') %}
+        {% set has_custom_values.value = true %}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+
+  {% if has_custom_values.value %}
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-4 shadow-sm">
+    <div class="flex items-center justify-between border-b border-[#30363d] pb-2.5 mb-3">
+      <div class="flex items-center gap-2">
+        <span class="p-1 bg-[rgba(88,166,255,0.1)] text-[#58a6ff] rounded">
+          <i class="bi bi-tags"></i>
+        </span>
+        <h4 class="text-xs font-bold text-white uppercase tracking-wider">Custom Organisation Pump Attributes</h4>
+        <span class="text-[11px] text-[#8b949e]">({{ target_org.name if target_org else 'Organisation' }})</span>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+      {% for attr in enabled_attrs %}
+        {% set val = getattr(pump, 'PumpAttribute' ~ attr.index, '') %}
+        {% if val %}
+        <div class="p-2.5 bg-[#0d1117] border border-[#30363d] rounded-lg">
+          <div class="flex items-center justify-between text-[10px] text-[#8b949e] uppercase font-semibold mb-0.5">
+            <span class="truncate" title="{{ attr.name }}">{{ attr.name }}</span>
+            <span class="font-mono text-[9px] text-[#8b949e]">#{{ attr.index }}</span>
+          </div>
+          <div class="text-xs font-bold text-white truncate" title="{{ val }}">
+            {{ val }}
+          </div>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
 </div>

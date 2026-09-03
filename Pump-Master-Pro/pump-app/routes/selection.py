@@ -30,6 +30,46 @@ from pump_selection import select_pumps, get_filter_options
 selection_bp = Blueprint('selection', __name__)
 
 
+def _get_enabled_pump_attributes(current_org, all_pumps):
+    """
+    Beginners Note:
+        Collects all defined and enabled custom pump attributes (slots 1 to 30)
+        from the active working organisation as well as any organisations owning
+        the pumps currently visible to the user.
+        
+        Why this is important:
+        - In Organisation Settings, users configure custom attributes such as:
+          Slot #1: 'Impeller Type' (Open, Semi-Open, Closed)
+          Slot #2: 'Design Standard' (ANSI, ISO, API 610)
+          Slot #5: 'Impeller Material' (Rubber, Metal, Stainless Steel)
+        - This helper aggregates all enabled attribute definitions so that the
+          Pump Selection view can render interactive filter controls for every active attribute.
+    """
+    attr_map = {}
+    
+    # 1. Attributes defined and enabled on the current active organisation
+    if current_org and hasattr(current_org, 'get_enabled_pump_attributes'):
+        for a in current_org.get_enabled_pump_attributes():
+            attr_map[a['index']] = a
+            
+    # 2. Attributes defined and enabled on organisations of visible catalogue pumps
+    for p in (all_pumps or []):
+        if p.organisation and hasattr(p.organisation, 'get_enabled_pump_attributes'):
+            for a in p.organisation.get_enabled_pump_attributes():
+                if a['index'] not in attr_map:
+                    attr_map[a['index']] = a
+
+    # 3. Fallback: check all registered organisations in case none were attached yet
+    if not attr_map:
+        from models import Organisation
+        for org in Organisation.query.all():
+            for a in org.get_enabled_pump_attributes():
+                if a['index'] not in attr_map:
+                    attr_map[a['index']] = a
+
+    return sorted(attr_map.values(), key=lambda a: a['index'])
+
+
 @selection_bp.route('/pump-selection', methods=['GET', 'POST'], endpoint='pump_selection')
 def pump_selection():
     """
@@ -39,13 +79,26 @@ def pump_selection():
         Supports comprehensive multi-unit engineering conversions (Metric SI vs Imperial US and custom mixed units).
         User inputs are normalized to base SI units (m³/h, m, kg/m³) for hydraulic evaluation,
         and results are dynamically presented in the user's selected display units.
+        Custom organisation pump attributes (e.g. Impeller Type: Open/Closed) are loaded and
+        rendered as selection filters.
     """
     results   = None
     form_data = {}
 
-    # ── Populate filter options from all visible pumps ─────────────────────
+    # ── Active organisation and enabled custom attributes ─────────────────
+    # Beginners Note:
+    # Fetch the active working organisation and determine which custom pump attributes
+    # are enabled. These enabled attributes (e.g., 'Impeller Type', 'Impeller Material')
+    # will be rendered directly in the Pump Selection view as selectable filters.
+    current_org = get_current_organisation()
     all_pumps = get_visible_pumps_query().all()
-    filter_options = get_filter_options(all_pumps)
+    enabled_pump_attributes = _get_enabled_pump_attributes(current_org, all_pumps)
+
+    # ── Populate filter options from all visible pumps ─────────────────────
+    # Beginners Note:
+    # get_filter_options extracts distinct catalogue values (e.g., 'Open', 'Closed')
+    # for each enabled custom attribute slot to populate the dropdown selectors.
+    filter_options = get_filter_options(all_pumps, enabled_attributes=enabled_pump_attributes)
 
     if request.method == 'POST':
         f = request.form.to_dict()
@@ -110,11 +163,26 @@ def pump_selection():
         if f.get('filter_size'):         filters['size'] = f.get('filter_size')
         if f.get('filter_application'):  filters['application'] = f.get('filter_application')
 
+        # Extract custom organisation pump attribute filters (1 to 30)
+        for i in range(1, 31):
+            attr_val = f.get(f'filter_attribute_{i}') or f.get(f'filter_PumpAttribute{i}') or f.get(f'PumpAttribute{i}')
+            if attr_val and str(attr_val).strip():
+                filters[f'attribute_{i}'] = str(attr_val).strip()
+
+        # ── Fixed Speed Mode (Auto Calculate vs Manual Speed) ─────────────
+        # Beginners Note: If in Fixed Speed mode, the user can choose whether the pump operating
+        # speed is automatically calculated via affinity laws, or entered manually (e.g. 1450 RPM).
+        fixed_speed_mode = f.get('fixed_speed_mode', 'auto')
+        manual_speed_rpm = _get_float(f, 'manual_speed_rpm', None) if (f.get('manual_speed_rpm') and str(f.get('manual_speed_rpm')).strip() != '') else None
+
         # ── Run selection engine ───────────────────────────────────────────
         results = select_pumps(all_pumps, q_duty, h_duty, npsh_avail,
                                liquid, rho, vis, cv, d50, rho_s,
                                filters=filters,
-                               operation_mode=f.get('operation_mode', 'fixed'))
+                               operation_mode=f.get('operation_mode', 'fixed'),
+                               enabled_attributes=enabled_pump_attributes,
+                               fixed_speed_mode=fixed_speed_mode,
+                               manual_speed_rpm=manual_speed_rpm)
 
         # ── Convert result performance metrics into user-selected display units ─
         # Beginners Note: Attach display values so cards & result tables show native user units
@@ -148,6 +216,8 @@ def pump_selection():
                            results=results,
                            form_data=form_data,
                            filter_options=filter_options,
+                           current_org=current_org,
+                           enabled_pump_attributes=enabled_pump_attributes,
                            units_tables=units_tables,
                            unit_system=unit_system,
                            unit_q=unit_q,
@@ -182,7 +252,9 @@ def pump_selection_details(pump_id):
 
     # Run the selection engine to get the shortlist
     results = []
+    current_org = get_current_organisation()
     all_pumps = get_visible_pumps_query().all()
+    enabled_pump_attributes = _get_enabled_pump_attributes(current_org, all_pumps)
     q_duty_str = f.get('q_duty')
     h_duty_str = f.get('h_duty')
     
@@ -220,10 +292,21 @@ def pump_selection_details(pump_id):
         if f.get('filter_size'):         filters['size'] = f.get('filter_size')
         if f.get('filter_application'):  filters['application'] = f.get('filter_application')
 
+        for i in range(1, 31):
+            attr_val = f.get(f'filter_attribute_{i}') or f.get(f'filter_PumpAttribute{i}') or f.get(f'PumpAttribute{i}')
+            if attr_val and str(attr_val).strip():
+                filters[f'attribute_{i}'] = str(attr_val).strip()
+
+        fixed_speed_mode = f.get('fixed_speed_mode', 'auto')
+        manual_speed_rpm = _get_float(f, 'manual_speed_rpm', None) if (f.get('manual_speed_rpm') and str(f.get('manual_speed_rpm')).strip() != '') else None
+
         results = select_pumps(all_pumps, q_duty, h_duty, npsh_avail,
                                liquid, rho, vis, cv, d50, rho_s,
                                filters=filters,
-                               operation_mode=f.get('operation_mode', 'fixed'))
+                               operation_mode=f.get('operation_mode', 'fixed'),
+                               enabled_attributes=enabled_pump_attributes,
+                               fixed_speed_mode=fixed_speed_mode,
+                               manual_speed_rpm=manual_speed_rpm)
 
         for r in results:
             r['disp_q_duty']   = raw_q_duty

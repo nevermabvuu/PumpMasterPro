@@ -377,6 +377,32 @@ function toggleFilterPanel() {
   }
 }
 
+// ── Clear All Filters ────────────────────────────────────────────────────────
+// Beginners Note: Resets all filter dropdowns and text inputs (both standard advanced filters
+// and organisation custom PumpAttributes) back to blank/default, then automatically resubmits.
+function clearAllFilters() {
+  const panel = document.getElementById('filterPanel');
+  if (panel) {
+    const selects = panel.querySelectorAll('select');
+    selects.forEach(s => s.value = '');
+    const inputs = panel.querySelectorAll('input[type="text"], input[type="number"]');
+    inputs.forEach(i => i.value = '');
+  }
+
+  const attrCard = document.getElementById('pumpAttributesCard');
+  if (attrCard) {
+    const selects = attrCard.querySelectorAll('select');
+    selects.forEach(s => s.value = '');
+    const inputs = attrCard.querySelectorAll('input[type="text"]');
+    inputs.forEach(i => i.value = '');
+  }
+
+  const form = document.getElementById('selectionForm');
+  if (form) {
+    form.submit();
+  }
+}
+
 // ── Sorting Logic ────────────────────────────────────────────────────────────
 // Beginners Note: Updates the hidden sort input and resubmits the form
 function setSortAndSubmit(sortBy) {
@@ -452,4 +478,27 @@ function renderSparkline(container, data) {
 
   svg += `</svg>`;
   container.innerHTML = svg;
+}
+
+// ── Operation Mode & Fixed Speed Handlers ────────────────────────────────────
+// Beginners Note: Shows/hides the fixed speed sub-options when switching between
+// Fixed Speed and VSD, and toggles the manual RPM input when choosing manual entry.
+function onOperationModeChange() {
+  const isFixed = document.getElementById('opModeFixed')?.checked;
+  const optionsPanel = document.getElementById('fixedSpeedOptions');
+  if (optionsPanel) {
+    optionsPanel.style.display = isFixed ? 'block' : 'none';
+  }
+}
+
+function onFixedSpeedModeChange() {
+  const isManual = document.getElementById('fixedSpeedManual')?.checked;
+  const manualGroup = document.getElementById('manualSpeedGroup');
+  if (manualGroup) {
+    manualGroup.style.display = isManual ? 'block' : 'none';
+    const input = document.getElementById('inputManualSpeed');
+    if (isManual && input) {
+      input.focus();
+    }
+  }
 }

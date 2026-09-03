@@ -409,6 +409,12 @@ def _pump_from_form(f, pump=None):
         if po_val is not None and 1 <= po_val <= 5:
             setattr(pump, order_key, po_val)
 
+    # Beginners Note: Extract custom organisation pump attributes (PumpAttribute1 to 30)
+    for i in range(1, 31):
+        attr_key = f'PumpAttribute{i}'
+        if attr_key in f:
+            setattr(pump, attr_key, str(f.get(attr_key) or '').strip())
+
     # Convert op-range values from display unit to SI (m³/h) before persisting
     units_dict = pump._get_data_units()
     op_q_unit = units_dict.get('op_q', 'm3h')

@@ -197,6 +197,38 @@ class Pump(db.Model):
     vfd_min_hz             = db.Column(db.Float, default=30.0)
     vfd_max_hz             = db.Column(db.Float, default=60.0)
 
+    # Custom Organisation Pump Attributes (PumpAttribute1 to PumpAttribute30)
+    PumpAttribute1  = db.Column(db.String(255), default='')
+    PumpAttribute2  = db.Column(db.String(255), default='')
+    PumpAttribute3  = db.Column(db.String(255), default='')
+    PumpAttribute4  = db.Column(db.String(255), default='')
+    PumpAttribute5  = db.Column(db.String(255), default='')
+    PumpAttribute6  = db.Column(db.String(255), default='')
+    PumpAttribute7  = db.Column(db.String(255), default='')
+    PumpAttribute8  = db.Column(db.String(255), default='')
+    PumpAttribute9  = db.Column(db.String(255), default='')
+    PumpAttribute10 = db.Column(db.String(255), default='')
+    PumpAttribute11 = db.Column(db.String(255), default='')
+    PumpAttribute12 = db.Column(db.String(255), default='')
+    PumpAttribute13 = db.Column(db.String(255), default='')
+    PumpAttribute14 = db.Column(db.String(255), default='')
+    PumpAttribute15 = db.Column(db.String(255), default='')
+    PumpAttribute16 = db.Column(db.String(255), default='')
+    PumpAttribute17 = db.Column(db.String(255), default='')
+    PumpAttribute18 = db.Column(db.String(255), default='')
+    PumpAttribute19 = db.Column(db.String(255), default='')
+    PumpAttribute20 = db.Column(db.String(255), default='')
+    PumpAttribute21 = db.Column(db.String(255), default='')
+    PumpAttribute22 = db.Column(db.String(255), default='')
+    PumpAttribute23 = db.Column(db.String(255), default='')
+    PumpAttribute24 = db.Column(db.String(255), default='')
+    PumpAttribute25 = db.Column(db.String(255), default='')
+    PumpAttribute26 = db.Column(db.String(255), default='')
+    PumpAttribute27 = db.Column(db.String(255), default='')
+    PumpAttribute28 = db.Column(db.String(255), default='')
+    PumpAttribute29 = db.Column(db.String(255), default='')
+    PumpAttribute30 = db.Column(db.String(255), default='')
+
     # Graph curve styles stored as 'color;weight,lineStyle' format
     head_curve_style  = db.Column(db.String(50), default='#58a6ff;2.0,solid')
     eff_curve_style   = db.Column(db.String(50), default='#3fb950;1.5,dot')
@@ -849,7 +881,20 @@ class Pump(db.Model):
             'catalogue_report_ids': getattr(self, 'catalogue_report_ids', 'all') or 'all',
             'selection_allow_fixed_speed': getattr(self, 'selection_allow_fixed_speed', True),
             'selection_allow_vsd': getattr(self, 'selection_allow_vsd', True),
+            **{f'PumpAttribute{i}': getattr(self, f'PumpAttribute{i}', '') or '' for i in range(1, 31)},
         }
+
+    def get_custom_attribute(self, index):
+        """
+        Beginners Note: Retrieves the custom PumpAttribute value by index (1 to 30).
+        """
+        try:
+            idx = int(index)
+            if 1 <= idx <= 30:
+                return getattr(self, f'PumpAttribute{idx}', '') or ''
+        except (ValueError, TypeError):
+            pass
+        return ''
 
     def get_effective_catalogue_reports(self, org=None):
         """
@@ -923,6 +968,91 @@ class Organisation(db.Model):
     # Custom Pump Details Jinja2 Template Path (served from templates/ directory)
     # e.g., 'details/default_pump_details.html' or 'details/lytrose_pump_details.html'
     pump_details_template = db.Column(db.String(255), default='details/default_pump_details.html')
+
+    # Custom Organisation Pump Attribute Definitions (PumpAttributeName1 to 30)
+    PumpAttributeName1  = db.Column(db.String(100), default='')
+    PumpAttributeName2  = db.Column(db.String(100), default='')
+    PumpAttributeName3  = db.Column(db.String(100), default='')
+    PumpAttributeName4  = db.Column(db.String(100), default='')
+    PumpAttributeName5  = db.Column(db.String(100), default='')
+    PumpAttributeName6  = db.Column(db.String(100), default='')
+    PumpAttributeName7  = db.Column(db.String(100), default='')
+    PumpAttributeName8  = db.Column(db.String(100), default='')
+    PumpAttributeName9  = db.Column(db.String(100), default='')
+    PumpAttributeName10 = db.Column(db.String(100), default='')
+    PumpAttributeName11 = db.Column(db.String(100), default='')
+    PumpAttributeName12 = db.Column(db.String(100), default='')
+    PumpAttributeName13 = db.Column(db.String(100), default='')
+    PumpAttributeName14 = db.Column(db.String(100), default='')
+    PumpAttributeName15 = db.Column(db.String(100), default='')
+    PumpAttributeName16 = db.Column(db.String(100), default='')
+    PumpAttributeName17 = db.Column(db.String(100), default='')
+    PumpAttributeName18 = db.Column(db.String(100), default='')
+    PumpAttributeName19 = db.Column(db.String(100), default='')
+    PumpAttributeName20 = db.Column(db.String(100), default='')
+    PumpAttributeName21 = db.Column(db.String(100), default='')
+    PumpAttributeName22 = db.Column(db.String(100), default='')
+    PumpAttributeName23 = db.Column(db.String(100), default='')
+    PumpAttributeName24 = db.Column(db.String(100), default='')
+    PumpAttributeName25 = db.Column(db.String(100), default='')
+    PumpAttributeName26 = db.Column(db.String(100), default='')
+    PumpAttributeName27 = db.Column(db.String(100), default='')
+    PumpAttributeName28 = db.Column(db.String(100), default='')
+    PumpAttributeName29 = db.Column(db.String(100), default='')
+    PumpAttributeName30 = db.Column(db.String(100), default='')
+
+    # Checkbox flags to enable/disable each attribute definition
+    PumpAttributeEnabled1  = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled2  = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled3  = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled4  = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled5  = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled6  = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled7  = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled8  = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled9  = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled10 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled11 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled12 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled13 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled14 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled15 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled16 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled17 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled18 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled19 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled20 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled21 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled22 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled23 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled24 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled25 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled26 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled27 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled28 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled29 = db.Column(db.Boolean, default=True)
+    PumpAttributeEnabled30 = db.Column(db.Boolean, default=True)
+
+    def get_pump_attributes(self):
+        """
+        Beginners Note: Returns all 30 custom pump attribute slots with index, name, and enabled state.
+        """
+        attrs = []
+        for i in range(1, 31):
+            name = (getattr(self, f'PumpAttributeName{i}', '') or '').strip()
+            enabled = bool(getattr(self, f'PumpAttributeEnabled{i}', True))
+            attrs.append({
+                'index': i,
+                'name': name,
+                'enabled': enabled
+            })
+        return attrs
+
+    def get_enabled_pump_attributes(self):
+        """
+        Beginners Note: Returns only defined and enabled pump attribute slots.
+        """
+        return [attr for attr in self.get_pump_attributes() if attr['name'] and attr['enabled']]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

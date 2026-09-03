@@ -127,6 +127,29 @@ def save_profile():
     return redirect(url_for('organisations.settings'))
 
 
+@organisations_bp.route('/attributes/save', methods=['POST'], endpoint='save_attributes')
+def save_attributes():
+    """
+    Beginners Note: Saves custom PumpAttributeNames (1-30) and their enabled/disabled checkbox states
+    for the active organisation.
+    """
+    current_org = get_current_organisation()
+    if not current_org:
+        flash('Active organisation not found.', 'error')
+        return redirect(url_for('organisations.settings'))
+
+    for i in range(1, 31):
+        name_val = request.form.get(f'PumpAttributeName{i}', '').strip()
+        setattr(current_org, f'PumpAttributeName{i}', name_val)
+        # Checkbox is present in request.form if checked
+        is_enabled = f'PumpAttributeEnabled{i}' in request.form
+        setattr(current_org, f'PumpAttributeEnabled{i}', is_enabled)
+
+    db.session.commit()
+    flash('Custom pump attribute definitions saved successfully.', 'success')
+    return redirect(url_for('organisations.settings'))
+
+
 @organisations_bp.route('/visibility/save', methods=['POST'], endpoint='save_visibility')
 def save_visibility():
     """

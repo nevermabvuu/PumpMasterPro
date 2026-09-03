@@ -69,6 +69,13 @@ with app.app_context():
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN graph_styles_json TEXT DEFAULT '{}'"))
             if 'pump_details_template' not in org_cols:
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN pump_details_template VARCHAR(255) DEFAULT 'details/default_pump_details.html'"))
+            for i in range(1, 31):
+                col_name = f'PumpAttributeName{i}'
+                if col_name not in org_cols:
+                    conn.execute(text(f"ALTER TABLE organisations ADD COLUMN {col_name} VARCHAR(100) DEFAULT ''"))
+                col_enabled = f'PumpAttributeEnabled{i}'
+                if col_enabled not in org_cols:
+                    conn.execute(text(f"ALTER TABLE organisations ADD COLUMN {col_enabled} INTEGER DEFAULT 1"))
 
             # 1. Reports table schema migrations
             rep_res = conn.execute(text("PRAGMA table_info(reports)"))
@@ -204,6 +211,11 @@ with app.app_context():
             for p_col, p_def in [('poly_order', 3), ('poly_order_hq', 3), ('poly_order_eff', 3), ('poly_order_npsh', 2), ('poly_order_pow', 2)]:
                 if p_col not in cols:
                     conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {p_col} INTEGER DEFAULT {p_def}"))
+
+            for i in range(1, 31):
+                col_attr = f'PumpAttribute{i}'
+                if col_attr not in cols:
+                    conn.execute(text(f"ALTER TABLE pumps ADD COLUMN {col_attr} TEXT DEFAULT ''"))
             # Auto-migrate reports table columns
             rep_cols = [c[1] for c in conn.execute(text("PRAGMA table_info(reports)")).fetchall()]
             if 'label_format' not in rep_cols:

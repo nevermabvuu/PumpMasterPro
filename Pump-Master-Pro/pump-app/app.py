@@ -11,6 +11,7 @@ import re
 import json
 from flask import Flask
 from models import db, Organisation, Supplier, ReportConfig
+from motor_models import Motor, seed_motors
 from seed_data import seed_pumps
 from routes import main_bp, pumps_bp, curves_bp, selection_bp, comparison_bp, reports_bp, organisations_bp, debug_bp
 
@@ -314,6 +315,7 @@ with app.app_context():
         print("Migration notice:", e)
 
     seed_pumps(app)
+    seed_motors(db)
 
 # ── Register Modular Blueprints ────────────────────────────────────────────────
 app.register_blueprint(main_bp)

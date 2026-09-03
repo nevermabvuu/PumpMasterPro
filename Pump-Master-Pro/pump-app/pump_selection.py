@@ -37,7 +37,11 @@ def select_pumps(pumps, q_duty, h_duty, npsh_avail=None,
                  slurry_cv=0.0, slurry_d50=0.3, rho_solid=2650.0,
                  tolerance=0.15, filters=None, operation_mode='fixed',
                  enabled_attributes=None,
-                 fixed_speed_mode='auto', manual_speed_rpm=None):
+                 fixed_speed_mode='auto',
+                 motor_freq_hz=50, motor_poles=4,
+                 motor_selection_mode='auto', manual_motor_id=None,
+                 vsd_f_min=30.0, vsd_f_max=50.0,
+                 drive_type='direct'):
     """
     Select pumps that can satisfy the duty point.
 
@@ -87,7 +91,12 @@ def select_pumps(pumps, q_duty, h_duty, npsh_avail=None,
             liquid, rho, viscosity_cSt,
             slurry_cv, slurry_d50, rho_solid,
             operation_mode, enabled_attributes=enabled_attributes,
-            fixed_speed_mode=fixed_speed_mode, manual_speed_rpm=manual_speed_rpm
+            fixed_speed_mode=fixed_speed_mode,
+            motor_freq_hz=motor_freq_hz, motor_poles=motor_poles,
+            motor_selection_mode=motor_selection_mode,
+            manual_motor_id=manual_motor_id,
+            vsd_f_min=vsd_f_min, vsd_f_max=vsd_f_max,
+            drive_type=drive_type
         )
         if result is not None:
             results.append(result)
@@ -217,7 +226,11 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
                    liquid, rho, viscosity_cSt,
                    slurry_cv, slurry_d50, rho_solid,
                    operation_mode='fixed', enabled_attributes=None,
-                   fixed_speed_mode='auto', manual_speed_rpm=None):
+                   fixed_speed_mode='auto',
+                   motor_freq_hz=50, motor_poles=4,
+                   motor_selection_mode='auto', manual_motor_id=None,
+                   vsd_f_min=30.0, vsd_f_max=50.0,
+                   drive_type='direct'):
     """
     Evaluate a single pump against the duty point.
 
@@ -354,46 +367,10 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
         if optimal_speed_rpm < min_rpm or optimal_speed_rpm > (max_rpm * 1.05):  # 5% tolerance on max
             return None
 
-    elif fixed_speed_mode == 'manual' and manual_speed_rpm is not None:
-        # ── Fixed Speed (Manual Entry) ───────────────────────────────────────
-        # Beginners Note: The engineer enters a specific fixed operating speed (e.g. 1450 RPM or 960 RPM).
-        # We scale the pump's head-flow curve to this manual speed using affinity laws.
-        try:
-            target_rpm = float(manual_speed_rpm)
-        except (ValueError, TypeError):
-            target_rpm = base_speed
-
-        speed_ratio = target_rpm / base_speed if base_speed > 0 else 1.0
-
-        # Check maximum flow capacity at this manual speed
-        q_max_at_speed = (pump.q_max or 100.0) * speed_ratio * 1.05
-        if q_duty > q_max_at_speed:
-            return None
-
-        # Check head capacity at duty flow at this manual speed on max diameter
-        q_equiv_base = np.array([q_duty / speed_ratio])
-        h_base_at_equiv = float(hq_curve(pump, q_equiv_base, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)[0])
-        h_max_at_speed = h_base_at_equiv * (speed_ratio ** 2)
-
-        # If the pump at this manual speed cannot produce the required head, reject it
-        if h_max_at_speed < h_duty:
-            return None
-
-        # Calculate the required impeller trim ratio at this manual speed:
-        # Total scale factor from base curve is optimal_trim_ratio.
-        # Since total = speed_ratio * dia_trim_ratio, we have: dia_trim_ratio = optimal_trim_ratio / speed_ratio
-        dia_trim_ratio = optimal_trim_ratio / speed_ratio if speed_ratio > 0 else 1.0
-        dia_trim_ratio = min(1.0, max(0.2, dia_trim_ratio))
-
-        optimal_speed_rpm = target_rpm
-        optimal_trim_dia_mm = d_max * dia_trim_ratio
-        optimal_trim_ratio = dia_trim_ratio
-
     elif fixed_speed_mode == 'auto':
         # ── Fixed Speed (Automatically Calculate Pump Speed) ─────────────────
         # Beginners Note: The system automatically calculates the exact required operating speed (RPM)
         # to satisfy the duty point using the full impeller diameter (no machining needed).
-        # This is standard practice for belt-driven or gearbox process/slurry pumps.
         optimal_speed_rpm = round(base_speed * optimal_trim_ratio, 1)
         optimal_trim_dia_mm = d_max
 
@@ -445,6 +422,26 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
     mini_chart = _generate_mini_chart(pump, q_duty, h_duty, d_max, d_min, optimal_trim_ratio,
                                        liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
 
+    # ── Motor Selection & Drive Arrangement Evaluation ───────────────────────
+    # Beginners Note:
+    # 1. Pump calculation already determines the required pump duty speed (optimal_speed_rpm).
+    # 2. Motor speed is determined independently from the motor database based on frequency and poles.
+    # 3. For direct coupling: we compare motor rated speed from DB against pump speed and report suitability.
+    # 4. For VSD: we calculate the required inverter frequency (Hz) and verify against user limits.
+    from motor_selection import evaluate_motor_and_drive
+    motor_eval = evaluate_motor_and_drive(
+        pump_duty_power_kw=op['power'],
+        pump_duty_speed_rpm=optimal_speed_rpm,
+        operation_mode=operation_mode,
+        drive_type=drive_type,
+        motor_freq_hz=motor_freq_hz,
+        motor_poles=motor_poles,
+        motor_selection_mode=motor_selection_mode,
+        manual_motor_id=manual_motor_id,
+        vsd_f_min=vsd_f_min,
+        vsd_f_max=vsd_f_max
+    )
+
     # ── Build result dict ──────────────────────────────────────────────────
     return {
         # Pump identity
@@ -487,6 +484,9 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
         'd_max': d_max,
         'd_min': d_min,
         'duty_in_envelope': duty_in_envelope,
+
+        # Motor & Drive Arrangement
+        'motor': motor_eval,
 
         # NPSH data
         'npsh_ok': npsh_ok,

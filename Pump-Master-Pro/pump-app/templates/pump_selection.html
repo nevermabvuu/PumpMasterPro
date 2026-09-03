@@ -122,16 +122,10 @@
       </div>
       
       <!-- Operation Mode card -->
-      <!-- Beginners Note:
-           Fixed Speed: allows the engineer to decide whether the operating speed is
-           automatically calculated to meet the duty point at full diameter (ideal for belt/gearbox drives),
-           or manually entered (e.g. 1450 RPM or 960 RPM for direct electric motor coupling).
-           Variable Speed Drive (VSD): regulates pump speed within min and max frequency bounds.
-      -->
       <div class="card-dark mb-3">
         <div class="card-header-dark flex items-center justify-between">
           <span class="flex items-center gap-2">
-            <i class="bi bi-gear-wide-connected text-[#58a6ff]"></i>
+            <i class="bi bi-speedometer2 text-[#58a6ff]"></i>
             <span class="font-semibold">Operation Mode</span>
           </span>
         </div>
@@ -145,50 +139,137 @@
                        onchange="onOperationModeChange()">
                 <span class="font-semibold text-white">Fixed Speed</span>
               </label>
-
-              <!-- Nested Fixed Speed Sub-Options -->
-              <div id="fixedSpeedOptions" class="ml-6 pl-3 border-l-2 border-[#30363d] space-y-2 mt-2"
-                   style="{{ '' if form_data.get('operation_mode', 'fixed') == 'fixed' else 'display:none;' }}">
-                <span class="text-[10px] font-mono uppercase tracking-wider text-[#8b949e] block mb-1">
-                  Speed Specification:
-                </span>
-                <label class="flex items-center gap-2 text-xs cursor-pointer hover:text-white transition-colors">
-                  <input type="radio" name="fixed_speed_mode" value="auto" id="fixedSpeedAuto" class="accent-[#58a6ff]"
-                         {{ 'checked' if form_data.get('fixed_speed_mode', 'auto') == 'auto' else '' }}
-                         onchange="onFixedSpeedModeChange()">
-                  <span>Automatically calculate pump speed (RPM)</span>
-                </label>
-                <label class="flex items-center gap-2 text-xs cursor-pointer hover:text-white transition-colors">
-                  <input type="radio" name="fixed_speed_mode" value="manual" id="fixedSpeedManual" class="accent-[#58a6ff]"
-                         {{ 'checked' if form_data.get('fixed_speed_mode') == 'manual' else '' }}
-                         onchange="onFixedSpeedModeChange()">
-                  <span>Enter pump speed manually</span>
-                </label>
-
-                <!-- Manual Speed RPM Input -->
-                <div id="manualSpeedGroup" class="ml-5 pt-1"
-                     style="{{ '' if form_data.get('fixed_speed_mode') == 'manual' else 'display:none;' }}">
-                  <div class="flex items-center gap-2">
-                    <input type="number" name="manual_speed_rpm" id="inputManualSpeed"
-                           class="form-control form-control-dark text-xs py-1 px-2.5 w-28 text-white font-mono"
-                           value="{{ form_data.get('manual_speed_rpm', '') }}"
-                           placeholder="e.g. 1450" step="1" min="100" max="6000">
-                    <span class="text-xs font-mono text-[#8b949e]">RPM</span>
-                  </div>
-                  <span class="text-[10px] text-[#8b949e] block mt-0.5">Fixed motor or drive operating speed</span>
-                </div>
-              </div>
+              <span class="text-[11px] text-[#8b949e] block ml-6">Pump operates at constant duty speed. Direct-drive suitability is evaluated against motor rated speed.</span>
             </div>
 
             <!-- Mode 2: Variable Speed Drive -->
-            <div class="pt-1 border-t border-[#30363d]/50">
+            <div class="pt-2 border-t border-[#30363d]/50">
               <label class="flex items-center gap-2 text-sm cursor-pointer hover:text-white transition-colors">
                 <input type="radio" name="operation_mode" value="vsd" id="opModeVsd" class="accent-[#58a6ff]"
                        {{ 'checked' if form_data.get('operation_mode') == 'vsd' else '' }}
                        onchange="onOperationModeChange()">
                 <span class="font-semibold text-white">Variable Speed Drive (VSD)</span>
               </label>
+              <span class="text-[11px] text-[#8b949e] block ml-6">Inverter regulates motor speed to meet duty point. Inverter output frequency is verified against user limits.</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Motor & Drive Arrangement card -->
+      <div class="card-dark mb-3">
+        <div class="card-header-dark flex items-center justify-between">
+          <span class="flex items-center gap-2">
+            <i class="bi bi-cpu text-[#58a6ff]"></i>
+            <span class="font-semibold">Motor &amp; Drive Arrangement</span>
+          </span>
+        </div>
+        <div class="p-4 space-y-3.5">
+          <!-- 1. Drive Arrangement -->
+          <div>
+            <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Drive Arrangement</label>
+            <select name="drive_type" id="driveTypeSel" class="form-select form-control-dark w-full text-xs">
+              <option value="direct" {{ 'selected' if form_data.get('drive_type', 'direct') == 'direct' else '' }}>Direct Coupled (1:1 Ratio)</option>
+              <option value="belt" disabled>Belt Driven (Coming Soon)</option>
+              <option value="gearbox" disabled>Gearbox (Coming Soon)</option>
+            </select>
+            <span class="text-[10px] text-[#8b949e] block mt-0.5">Relates motor speed to pump duty speed</span>
+          </div>
+
+          <!-- 2. Motor Frequency -->
+          <div>
+            <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Motor Supply Frequency</label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="flex items-center gap-2 p-1.5 rounded bg-[#161b22] border border-[#30363d] cursor-pointer hover:border-[#58a6ff] transition-colors text-xs">
+                <input type="radio" name="motor_freq_hz" value="50" class="accent-[#58a6ff]"
+                       {{ 'checked' if form_data.get('motor_freq_hz', 50)|int == 50 else '' }}
+                       onchange="onMotorSpecChange()">
+                <span class="text-white font-medium">50 Hz</span>
+                <span class="text-[10px] text-[#8b949e] ml-auto">400V</span>
+              </label>
+              <label class="flex items-center gap-2 p-1.5 rounded bg-[#161b22] border border-[#30363d] cursor-pointer hover:border-[#58a6ff] transition-colors text-xs">
+                <input type="radio" name="motor_freq_hz" value="60" class="accent-[#58a6ff]"
+                       {{ 'checked' if form_data.get('motor_freq_hz')|int == 60 else '' }}
+                       onchange="onMotorSpecChange()">
+                <span class="text-white font-medium">60 Hz</span>
+                <span class="text-[10px] text-[#8b949e] ml-auto">460V</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 3. Number of Poles -->
+          <div>
+            <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Number of Poles</label>
+            <select name="motor_poles" id="motorPolesSel" class="form-select form-control-dark w-full text-xs" onchange="onMotorSpecChange()">
+              <option value="2" {{ 'selected' if form_data.get('motor_poles')|int == 2 else '' }}>2 Poles (~3000 / ~3600 RPM)</option>
+              <option value="4" {{ 'selected' if form_data.get('motor_poles', 4)|int == 4 else '' }}>4 Poles (~1500 / ~1800 RPM)</option>
+              <option value="6" {{ 'selected' if form_data.get('motor_poles')|int == 6 else '' }}>6 Poles (~1000 / ~1200 RPM)</option>
+              <option value="8" {{ 'selected' if form_data.get('motor_poles')|int == 8 else '' }}>8 Poles (~750 / ~900 RPM)</option>
+            </select>
+            <span class="text-[10px] text-[#8b949e] block mt-0.5">Motor actual rated speed comes from database</span>
+          </div>
+
+          <!-- 4. Motor Selection Mode (Auto vs Manual) -->
+          <div class="pt-2 border-t border-[#30363d]/50">
+            <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Motor Selection</label>
+            <div class="space-y-2">
+              <label class="flex items-center gap-2 text-xs cursor-pointer hover:text-white transition-colors">
+                <input type="radio" name="motor_selection_mode" value="auto" id="motorSelectAuto" class="accent-[#58a6ff]"
+                       {{ 'checked' if form_data.get('motor_selection_mode', 'auto') == 'auto' else '' }}
+                       onchange="onMotorSelectionModeChange()">
+                <span class="text-white font-medium">Automatic Sizing</span>
+                <span class="text-[10px] text-[#8b949e] ml-1">(Duty kW + 15% margin)</span>
+              </label>
+              <label class="flex items-center gap-2 text-xs cursor-pointer hover:text-white transition-colors">
+                <input type="radio" name="motor_selection_mode" value="manual" id="motorSelectManual" class="accent-[#58a6ff]"
+                       {{ 'checked' if form_data.get('motor_selection_mode') == 'manual' else '' }}
+                       onchange="onMotorSelectionModeChange()">
+                <span class="text-white font-medium">Manual Selection from Database</span>
+              </label>
+
+              <!-- Manual Motor Dropdown -->
+              <div id="manualMotorDropdownGroup" class="ml-5 pt-1"
+                   style="{{ '' if form_data.get('motor_selection_mode') == 'manual' else 'display:none;' }}">
+                <select name="manual_motor_id" id="manualMotorSelect" class="form-select form-control-dark w-full text-xs font-mono">
+                  <option value="">-- Select Motor from DB --</option>
+                  {% for m in (available_motors or []) %}
+                  <option value="{{ m.id }}" {{ 'selected' if form_data.get('manual_motor_id')|int == m.id else '' }}>
+                    {{ m.rated_power_kw }}kW ({{ m.rated_speed_rpm|int }} rpm) - Frame {{ m.frame_size }}
+                  </option>
+                  {% endfor %}
+                </select>
+                <span class="text-[10px] text-[#8b949e] block mt-0.5">Filtered by selected Frequency &amp; Poles</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. VSD Frequency Limits (Visible only when in VSD mode) -->
+          <div id="vsdFrequencyLimitsGroup" class="pt-2 border-t border-[#30363d]/50"
+               style="{{ '' if form_data.get('operation_mode') == 'vsd' else 'display:none;' }}">
+            <span class="text-xs font-semibold text-[#58a6ff] block mb-1">
+              <i class="bi bi-sliders mr-1"></i>VSD Frequency Bounds
+            </span>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Min Frequency</label>
+                <div class="flex items-center gap-1">
+                  <input type="number" name="vsd_f_min" id="inputVsdFMin"
+                         class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
+                         value="{{ form_data.get('vsd_f_min', '30.0') }}" step="0.5" min="10" max="100">
+                  <span class="text-xs font-mono text-[#8b949e]">Hz</span>
+                </div>
+              </div>
+              <div>
+                <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Max Frequency</label>
+                <div class="flex items-center gap-1">
+                  <input type="number" name="vsd_f_max" id="inputVsdFMax"
+                         class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
+                         value="{{ form_data.get('vsd_f_max', '50.0') }}" step="0.5" min="20" max="120">
+                  <span class="text-xs font-mono text-[#8b949e]">Hz</span>
+                </div>
+              </div>
+            </div>
+            <span class="text-[10px] text-[#8b949e] block mt-1">Allowable VSD output frequency limits</span>
           </div>
         </div>
       </div>
@@ -557,10 +638,8 @@
                       {{ r.manufacturer }} &bull; {{ r.size }} &bull; {{ r.optimal_speed_rpm|int if r.optimal_speed_rpm else r.speed_rpm|int }} rpm
                       {% if r.is_vsd %}
                         <span class="inline-flex items-center ml-1 px-1.5 py-0 rounded text-[10px] font-semibold" style="background:rgba(88,166,255,0.15);color:#58a6ff;">VSD</span>
-                      {% elif r.fixed_speed_mode == 'auto' %}
-                        <span class="inline-flex items-center ml-1 px-1.5 py-0 rounded text-[10px] font-semibold" style="background:rgba(88,166,255,0.15);color:#58a6ff;">Auto Speed</span>
-                      {% elif r.fixed_speed_mode == 'manual' %}
-                        <span class="inline-flex items-center ml-1 px-1.5 py-0 rounded text-[10px] font-semibold" style="background:rgba(210,153,34,0.15);color:#d29922;">Manual RPM</span>
+                      {% else %}
+                        <span class="inline-flex items-center ml-1 px-1.5 py-0 rounded text-[10px] font-semibold" style="background:rgba(63,185,80,0.15);color:#3fb950;">Fixed Speed</span>
                       {% endif %}
                     </div>
                     {% if r.attributes_display and r.attributes_display|length > 0 %}
@@ -628,6 +707,58 @@
                     {% endif %}
                   </div>
                 </div>
+
+                <!-- Motor & Drive Arrangement Strip -->
+                <!-- Beginners Note: Shows selected motor sizing, rated RPM from DB, and direct-drive suitability or VSD frequency -->
+                {% if r.motor and not r.motor.error %}
+                <div class="p-2 rounded mb-2 text-xs flex flex-col md:flex-row md:items-center justify-between gap-2"
+                     style="background:rgba(22,27,34,0.85);border:1px solid #30363d;">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-semibold text-white flex items-center gap-1.5">
+                      <i class="bi bi-cpu text-[#58a6ff]"></i>
+                      <span>Motor:</span>
+                      <strong class="text-[#58a6ff]">{{ r.motor.rated_power_kw }} kW</strong>
+                      <span class="text-[#8b949e]">({{ r.motor.poles }}P &bull; {{ r.motor.rated_speed_rpm|int }} RPM &bull; {{ r.motor.frequency_hz }}Hz)</span>
+                    </span>
+                    <span class="px-1.5 py-0.5 rounded text-[10px] bg-[#0d1117] text-[#8b949e] border border-[#30363d]">
+                      {{ r.motor.drive_name }}
+                    </span>
+                    {% if r.motor.frame_size %}
+                    <span class="px-1.5 py-0.5 rounded text-[10px] bg-[#0d1117] text-[#8b949e] border border-[#30363d]">
+                      Frame: {{ r.motor.frame_size }}
+                    </span>
+                    {% endif %}
+                  </div>
+
+                  <div class="flex items-center gap-2 flex-wrap">
+                    {% if r.is_vsd %}
+                      {% if r.motor.vsd_freq_status == 'suitable' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold" style="background:rgba(63,185,80,0.15);color:#3fb950;border:1px solid rgba(63,185,80,0.3);">
+                          <i class="bi bi-check-circle-fill"></i> VSD Freq: {{ r.motor.vsd_required_freq_hz }} Hz ({{ r.motor.vsd_f_min|int }}–{{ r.motor.vsd_f_max|int }} Hz)
+                        </span>
+                      {% else %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold" style="background:rgba(248,81,73,0.15);color:#f85149;border:1px solid rgba(248,81,73,0.3);" title="{{ r.motor.match_message }}">
+                          <i class="bi bi-exclamation-triangle-fill"></i> VSD Freq: {{ r.motor.vsd_required_freq_hz }} Hz (Out of bounds)
+                        </span>
+                      {% endif %}
+                    {% else %}
+                      {% if r.motor.speed_match_status == 'suitable' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold" style="background:rgba(63,185,80,0.15);color:#3fb950;border:1px solid rgba(63,185,80,0.3);" title="{{ r.motor.match_message }}">
+                          <i class="bi bi-check-circle-fill"></i> Direct Coupled Match ({{ r.motor.speed_deviation_pct }}% dev)
+                        </span>
+                      {% elif r.motor.speed_match_status == 'marginal' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold" style="background:rgba(210,153,34,0.15);color:#d29922;border:1px solid rgba(210,153,34,0.3);" title="{{ r.motor.match_message }}">
+                          <i class="bi bi-exclamation-circle-fill"></i> Acceptable Match ({{ r.motor.speed_deviation_pct }}% dev)
+                        </span>
+                      {% else %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold" style="background:rgba(248,81,73,0.15);color:#f85149;border:1px solid rgba(248,81,73,0.3);" title="{{ r.motor.match_message }}">
+                          <i class="bi bi-exclamation-triangle-fill"></i> Speed Mismatch (Motor {{ r.motor.rated_speed_rpm|int }} vs Pump {{ r.optimal_speed_rpm|int }} RPM)
+                        </span>
+                      {% endif %}
+                    {% endif %}
+                  </div>
+                </div>
+                {% endif %}
 
                 <!-- Trim / Speed information -->
                 <!-- Beginners Note: Shows the optimal impeller diameter or speed to meet the duty exactly -->

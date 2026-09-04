@@ -21,16 +21,23 @@ CURVE_CONVERSIONS = {
     'q': {
         'm3h': 1.0,
         'ls': 0.2777777777777778,
+        'lmin': 16.666666666666668,
         'gpm': 4.4028675393,
-        'lmin': 16.666666666666668
+        'ukgpm': 3.66615413038,
+        'cfs': 0.00980962963,
+        'mgd': 0.00633998899
     },
     'h': {
         'm': 1.0,
-        'ft': 3.280839895
+        'ft': 3.280839895,
+        'kpa': 9.80665,
+        'bar': 0.0980665,
+        'psi': 1.42233433
     },
     'pow': {
         'kw': 1.0,
-        'hp': 1.3410220896
+        'hp': 1.3410220896,
+        'w': 1000.0
     },
     'npsh': {
         'm': 1.0,
@@ -44,17 +51,81 @@ import os, sys, io, re, tempfile, subprocess, json
 
 reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
 
-# Human-readable labels for unit keys stored in the database
+def _normalize_unit_key(axis, key):
+    """Normalize any user/database unit string to a standardized dictionary key."""
+    if not key:
+        return 'm3h' if axis == 'q' else ('kw' if axis == 'pow' else 'm')
+    k = str(key).strip().lower().replace('/', '').replace(' ', '')
+    if axis == 'q':
+        if k in ('m3hr', 'm3h', 'm3'):
+            return 'm3h'
+        if k in ('ls', 'lps', 'litersec', 'litressec', 'literssec'):
+            return 'ls'
+        if k in ('lmin', 'lpm', 'litermin', 'litresmin', 'litersmin'):
+            return 'lmin'
+        if k in ('gpm', 'usgpm', 'us_gpm'):
+            return 'gpm'
+        if k in ('ukgpm', 'uk_gpm', 'imp_gpm', 'impgpm'):
+            return 'ukgpm'
+        if k in ('cfs', 'ft3s'):
+            return 'cfs'
+        if k in ('mgd',):
+            return 'mgd'
+    elif axis in ('h', 'npsh'):
+        if k in ('m', 'meters', 'metres'):
+            return 'm'
+        if k in ('ft', 'feet'):
+            return 'ft'
+        if k in ('kpa',):
+            return 'kpa'
+        if k in ('bar', 'bars'):
+            return 'bar'
+        if k in ('psi',):
+            return 'psi'
+    elif axis == 'pow':
+        if k in ('kw', 'kilowatt', 'kilowatts'):
+            return 'kw'
+        if k in ('hp', 'horsepower'):
+            return 'hp'
+        if k in ('w', 'watt', 'watts'):
+            return 'w'
+    return k
+
+# Human-readable labels for unit keys stored in the database or user selection
 UNIT_DISPLAY_LABELS = {
-    'q': {'m3h': 'm³/h', 'ls': 'L/s', 'gpm': 'US gpm', 'lmin': 'L/min'},
-    'h': {'m': 'm', 'ft': 'ft'},
-    'pow': {'kw': 'kW', 'hp': 'hp'},
-    'npsh': {'m': 'm', 'ft': 'ft'}
+    'q': {
+        'm3h': 'm³/h',
+        'ls': 'L/s',
+        'lmin': 'L/min',
+        'gpm': 'US gpm',
+        'ukgpm': 'UK gpm',
+        'cfs': 'ft³/s',
+        'mgd': 'MGD'
+    },
+    'h': {
+        'm': 'm',
+        'ft': 'ft',
+        'kpa': 'kPa',
+        'bar': 'bar',
+        'psi': 'psi'
+    },
+    'pow': {
+        'kw': 'kW',
+        'hp': 'hp',
+        'w': 'W'
+    },
+    'npsh': {
+        'm': 'm',
+        'ft': 'ft'
+    }
 }
 
 def _unit_label(axis, key):
     """Return a human-readable unit label for a given axis and key."""
-    return UNIT_DISPLAY_LABELS.get(axis, {}).get(key, key)
+    if not key:
+        return ''
+    norm_key = _normalize_unit_key(axis, key)
+    return UNIT_DISPLAY_LABELS.get(axis, {}).get(norm_key, UNIT_DISPLAY_LABELS.get(axis, {}).get(key, key))
 
 
 def render_pdf_with_headless_browser(html_content, output_path):
@@ -943,22 +1014,55 @@ def _build_report_curve_context(pump, report, params_override=None):
             return request.args.get(k)
         return default
 
-    rep_unit_q = getattr(report, 'unit_flow', None) or pump.unit_q or 'm3h'
-    rep_unit_h = getattr(report, 'unit_head', None) or pump.unit_h or 'm'
-    rep_unit_pow = getattr(report, 'unit_power', None) or pump.unit_pow or 'kw'
-    rep_unit_npsh = getattr(report, 'unit_npsh', None) or pump.unit_npsh or 'm'
+    # Detect catalogue source
+    is_from_catalogue = (_param('source') == 'catalogue') or (request and request.args and request.args.get('source') == 'catalogue')
+    
+    # Selection parameters
+    sel_unit_q = _param('unit_q') or _param('unit_flow')
+    sel_unit_h = _param('unit_h') or _param('unit_head')
+    sel_unit_pow = _param('unit_pow') or _param('unit_power')
+    sel_unit_npsh = _param('unit_npsh')
+    
+    explicit_q_duty = _param('q_duty') or _param('q') or _param('flow')
+    if not is_from_catalogue and not explicit_q_duty:
+        session_sel = session.get('active_selection', {}) if session else {}
+        if not session_sel.get('q_duty'):
+            is_from_catalogue = True
+
+    if is_from_catalogue:
+        # Strictly follow the report configuration / pump defaults in Catalogue view
+        rep_unit_q = getattr(report, 'unit_flow', None) or pump.unit_q or 'm3h'
+        rep_unit_h = getattr(report, 'unit_head', None) or pump.unit_h or 'm'
+        rep_unit_pow = getattr(report, 'unit_power', None) or pump.unit_pow or 'kw'
+        rep_unit_npsh = getattr(report, 'unit_npsh', None) or pump.unit_npsh or 'm'
+    else:
+        # Selection view: selection units TAKE PRECEDENCE over report configuration!
+        rep_unit_q = sel_unit_q or getattr(report, 'unit_flow', None) or pump.unit_q or 'm3h'
+        rep_unit_h = sel_unit_h or getattr(report, 'unit_head', None) or pump.unit_h or 'm'
+        rep_unit_pow = sel_unit_pow or getattr(report, 'unit_power', None) or pump.unit_pow or 'kw'
+        rep_unit_npsh = sel_unit_npsh or getattr(report, 'unit_npsh', None) or pump.unit_npsh or 'm'
+
+    norm_q = _normalize_unit_key('q', rep_unit_q)
+    norm_h = _normalize_unit_key('h', rep_unit_h)
+    norm_pow = _normalize_unit_key('pow', rep_unit_pow)
+    norm_npsh = _normalize_unit_key('npsh', rep_unit_npsh)
 
     # Compute scaling factors for curves (curves are ALWAYS generated in m3h, m, kw by pump_curves.py)
-    fQ_curve = CURVE_CONVERSIONS['q'].get(rep_unit_q.lower().replace('/', ''), 1.0) / 1.0
-    fH_curve = CURVE_CONVERSIONS['h'].get(rep_unit_h.lower(), 1.0) / 1.0
-    fPow_curve = CURVE_CONVERSIONS['pow'].get(rep_unit_pow.lower(), 1.0) / 1.0
-    fNpsh_curve = CURVE_CONVERSIONS['npsh'].get(rep_unit_npsh.lower(), 1.0) / 1.0
+    fQ_curve = CURVE_CONVERSIONS['q'].get(norm_q, 1.0)
+    fH_curve = CURVE_CONVERSIONS['h'].get(norm_h, 1.0)
+    fPow_curve = CURVE_CONVERSIONS['pow'].get(norm_pow, 1.0)
+    fNpsh_curve = CURVE_CONVERSIONS['npsh'].get(norm_npsh, 1.0)
 
     # Compute scaling factors for labels (labels are saved relative to the pump's native base unit)
-    fQ_raw = CURVE_CONVERSIONS['q'].get(rep_unit_q.lower().replace('/', ''), 1.0) / CURVE_CONVERSIONS['q'].get((pump.unit_q or 'm3h').lower().replace('/', ''), 1.0)
-    fH_raw = CURVE_CONVERSIONS['h'].get(rep_unit_h.lower(), 1.0) / CURVE_CONVERSIONS['h'].get((pump.unit_h or 'm').lower(), 1.0)
-    fPow_raw = CURVE_CONVERSIONS['pow'].get(rep_unit_pow.lower(), 1.0) / CURVE_CONVERSIONS['pow'].get((pump.unit_pow or 'kw').lower(), 1.0)
-    fNpsh_raw = CURVE_CONVERSIONS['npsh'].get(rep_unit_npsh.lower(), 1.0) / CURVE_CONVERSIONS['npsh'].get((pump.unit_npsh or 'm').lower(), 1.0)
+    base_q = _normalize_unit_key('q', pump.unit_q or 'm3h')
+    base_h = _normalize_unit_key('h', pump.unit_h or 'm')
+    base_pow = _normalize_unit_key('pow', pump.unit_pow or 'kw')
+    base_npsh = _normalize_unit_key('npsh', pump.unit_npsh or 'm')
+
+    fQ_raw = fQ_curve / CURVE_CONVERSIONS['q'].get(base_q, 1.0)
+    fH_raw = fH_curve / CURVE_CONVERSIONS['h'].get(base_h, 1.0)
+    fPow_raw = fPow_curve / CURVE_CONVERSIONS['pow'].get(base_pow, 1.0)
+    fNpsh_raw = fNpsh_curve / CURVE_CONVERSIONS['npsh'].get(base_npsh, 1.0)
 
     q_max = pump.q_max if hasattr(pump, 'q_max') and pump.q_max and pump.q_max > 0 else 200.0
     q_pts = list(np.linspace(pump.q_min or 0.0, q_max, 150))
@@ -980,6 +1084,10 @@ def _build_report_curve_context(pump, report, params_override=None):
     if show_rated is None:
         show_rated = True
 
+    # In catalogue view, mode == 'rated_only' falls back to 'all' so curves are rendered
+    if is_from_catalogue and mode == 'rated_only':
+        mode = 'all'
+
     # Check NPSH Availability (e.g. pumps without NPSH data have max NPSH = 0)
     has_npsh = max(npsh_pts) > 0.05 and (pump.has_npsh_poly() if hasattr(pump, 'has_npsh_poly') else any(abs(getattr(pump, f'npsh_c{i}', 0.0) or 0.0) > 1e-6 for i in range(6)))
 
@@ -990,7 +1098,7 @@ def _build_report_curve_context(pump, report, params_override=None):
     is_proposal = ('proposal' in rep_type) or ('proposal' in rep_name) or ('proposal' in rep_title) or (str(_param('is_proposal', '')).lower() in ('1', 'true'))
 
     op_mode = (_param('operation_mode') or '').strip().lower()
-    if not op_mode and session:
+    if not op_mode and not is_from_catalogue and session:
         op_mode = (session.get('selection_form_data', {}).get('operation_mode') or session.get('active_selection', {}).get('operation_mode') or '').strip().lower()
     if not op_mode:
         op_mode = 'fixed'
@@ -1001,17 +1109,16 @@ def _build_report_curve_context(pump, report, params_override=None):
 
     if is_proposal:
         # In Proposal report, VSD vs Fixed speed is determined solely by the selection operation_mode,
-        # exactly as in the interactive Details view. Report settings or pump default family_type
-        # must NOT override the user's selected operation mode.
+        # exactly as in the interactive Details view.
         mode = 'all'
         is_variable_speed = (op_mode == 'vsd')
         show_primary = True
         show_secondary = False
         show_rpm = is_variable_speed
         show_dia = not is_variable_speed
-    else:
+    elif is_from_catalogue:
+        # In catalogue view: follow report definition and pump defaults
         is_variable_speed = (pump.family_type == 'variable_speed') or \
-                            (op_mode == 'vsd') or \
                             ('vsd' in (getattr(report, 'report_name', '') or '').lower()) or \
                             ('variable' in (getattr(report, 'report_name', '') or '').lower()) or \
                             (explicit_rpm is True and explicit_dia is False)
@@ -1019,7 +1126,28 @@ def _build_report_curve_context(pump, report, params_override=None):
         show_dia = (explicit_dia if explicit_dia is not None else getattr(pump, 'graph_show_dia_overlay', True))
         show_rpm = (explicit_rpm if explicit_rpm is not None else getattr(pump, 'graph_show_rpm_overlay', True))
 
-        # Conflict resolution: if one is explicitly requested by the report, turn the other off (unless both were explicitly requested)
+        if explicit_dia is True and explicit_rpm is None:
+            show_rpm = False
+        elif explicit_rpm is True and explicit_dia is None:
+            show_dia = False
+
+        show_primary = (show_rpm if is_variable_speed else show_dia)
+        show_secondary = (show_dia if is_variable_speed else show_rpm)
+    else:
+        # In selection view: user's selection operation_mode takes PRECEDENCE over report template name!
+        if op_mode == 'vsd':
+            is_variable_speed = True
+        elif op_mode == 'fixed':
+            is_variable_speed = False
+        else:
+            is_variable_speed = (pump.family_type == 'variable_speed') or \
+                                ('vsd' in (getattr(report, 'report_name', '') or '').lower()) or \
+                                ('variable' in (getattr(report, 'report_name', '') or '').lower()) or \
+                                (explicit_rpm is True and explicit_dia is False)
+
+        show_dia = (explicit_dia if explicit_dia is not None else getattr(pump, 'graph_show_dia_overlay', True))
+        show_rpm = (explicit_rpm if explicit_rpm is not None else getattr(pump, 'graph_show_rpm_overlay', True))
+
         if explicit_dia is True and explicit_rpm is None:
             show_rpm = False
         elif explicit_rpm is True and explicit_dia is None:
@@ -1088,21 +1216,22 @@ def _build_report_curve_context(pump, report, params_override=None):
     q_duty_val = None
     h_duty_val = None
     r_opt = None
-    try:
-        q_d = _safe_float(_param('q_duty') or _param('q') or _param('flow'))
-        h_d = _safe_float(_param('h_duty') or _param('h') or _param('head'))
-        if (not q_d or not h_d) and session:
-            s_data = session.get('selection_form_data', {})
-            q_d = q_d or _safe_float(s_data.get('q_duty') or s_data.get('q'))
-            h_d = h_d or _safe_float(s_data.get('h_duty') or s_data.get('h'))
-        if q_d and h_d and q_d > 0 and h_d > 0:
-            q_duty_val = q_d
-            h_duty_val = h_d
-            q_m3h = q_duty_val / fQ_curve
-            h_m = h_duty_val / fH_curve
-            r_opt = _calc_optimal_trim_ratio(pump, q_m3h, h_m)
-    except Exception:
-        pass
+    if not is_from_catalogue:
+        try:
+            q_d = _safe_float(_param('q_duty') or _param('q') or _param('flow'))
+            h_d = _safe_float(_param('h_duty') or _param('h') or _param('head'))
+            if (not q_d or not h_d) and session:
+                s_data = session.get('selection_form_data', {})
+                q_d = q_d or _safe_float(s_data.get('q_duty') or s_data.get('q'))
+                h_d = h_d or _safe_float(s_data.get('h_duty') or s_data.get('h'))
+            if q_d and h_d and q_d > 0 and h_d > 0:
+                q_duty_val = q_d
+                h_duty_val = h_d
+                q_m3h = q_duty_val / fQ_curve
+                h_m = h_duty_val / fH_curve
+                r_opt = _calc_optimal_trim_ratio(pump, q_m3h, h_m)
+        except Exception:
+            pass
 
 
     # ── 1. Variable Speed Family (Constant Diameter, Varying Speeds) ──
@@ -1144,7 +1273,7 @@ def _build_report_curve_context(pump, report, params_override=None):
                 npsh_curves_list.append({'label': lbl, 'x': c_q, 'y': c_npsh, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': rpm_val, 'rpm': rpm_val})
 
         # ── Overlay Rated Speed Curve (if show_rated is enabled or mode == 'rated_only') ──
-        if show_rated or mode == 'rated_only':
+        if not is_from_catalogue and (show_rated or mode == 'rated_only'):
             rated_rpm = None
             try:
                 rpm_arg = _param('rpm') or _param('speed') or _param('rated_speed') or _param('optimal_speed_rpm')
@@ -1254,7 +1383,7 @@ def _build_report_curve_context(pump, report, params_override=None):
                 npsh_curves_list.append({'label': lbl, 'x': c_q, 'y': c_npsh, 'color': cur_color, 'is_secondary': not is_primary, 'pct': pct, 'val': d_val, 'dia': d_val})
 
         # ── Overlay Rated Trim Curve (if show_rated is enabled or mode == 'rated_only') ──
-        if show_rated or mode == 'rated_only':
+        if not is_from_catalogue and (show_rated or mode == 'rated_only'):
             rated_d = None
             try:
                 dia_arg = _param('dia') or _param('trim_dia') or _param('rated_dia') or _param('impeller_dia') or _param('optimal_trim_dia_mm')
@@ -1663,22 +1792,28 @@ def _build_report_curve_context(pump, report, params_override=None):
             npsh_active = False
 
     # Duty point visibility override
-    show_duty_effective = getattr(report, 'show_duty_point', True)
-    if is_proposal or arg_show_duty is not None or 'duty' in hidden_set or 'duty_point' in hidden_set:
-        if arg_show_duty is not None:
-            show_duty_effective = (arg_show_duty in ('1', 'true', 'True'))
-        elif 'duty' in hidden_set or 'duty_point' in hidden_set:
-            show_duty_effective = False
+    if is_from_catalogue:
+        show_duty_effective = False
+    else:
+        show_duty_effective = getattr(report, 'show_duty_point', True)
+        if is_proposal or arg_show_duty is not None or 'duty' in hidden_set or 'duty_point' in hidden_set:
+            if arg_show_duty is not None:
+                show_duty_effective = (arg_show_duty in ('1', 'true', 'True'))
+            elif 'duty' in hidden_set or 'duty_point' in hidden_set:
+                show_duty_effective = False
 
     # Rated curve visibility override
-    show_rated_effective = True
-    if is_proposal or arg_show_rated is not None or 'rated' in hidden_set:
-        if arg_show_rated is not None:
-            show_rated_effective = (arg_show_rated in ('1', 'true', 'True'))
-        elif 'rated' in hidden_set:
-            show_rated_effective = False
+    if is_from_catalogue:
+        show_rated_effective = False
+    else:
+        show_rated_effective = bool(show_rated)
+        if is_proposal or arg_show_rated is not None or 'rated' in hidden_set:
+            if arg_show_rated is not None:
+                show_rated_effective = (arg_show_rated in ('1', 'true', 'True'))
+            elif 'rated' in hidden_set:
+                show_rated_effective = False
 
-    if not show_rated_effective:
+    if not show_rated_effective or is_from_catalogue:
         hq_curves_list = [c for c in hq_curves_list if not c.get('is_rated') and '(rated)' not in c.get('label', '').lower()]
         eta_curves_list = [c for c in eta_curves_list if not c.get('is_rated') and '(rated)' not in c.get('label', '').lower()]
         pow_curves_list = [c for c in pow_curves_list if not c.get('is_rated') and '(rated)' not in c.get('label', '').lower()]
@@ -1687,13 +1822,13 @@ def _build_report_curve_context(pump, report, params_override=None):
     graph_styles = report.get_graph_styles() if (report and hasattr(report, 'get_graph_styles')) else {}
 
     # System curve for Proposal report (matching details view)
-    show_sys_effective = True
+    show_sys_effective = not is_from_catalogue
     if arg_show_sys is not None:
-        show_sys_effective = (arg_show_sys in ('1', 'true', 'True'))
+        show_sys_effective = (arg_show_sys in ('1', 'true', 'True')) and not is_from_catalogue
     elif 'system' in hidden_set or 'sys' in hidden_set:
         show_sys_effective = False
 
-    if (is_proposal or arg_show_sys == '1') and show_sys_effective and q_duty_val and h_duty_val:
+    if not is_from_catalogue and (is_proposal or arg_show_sys == '1') and show_sys_effective and q_duty_val and h_duty_val:
         try:
             k_sys = h_duty_val / (q_duty_val ** 2)
             sys_q = list(np.linspace(0, max(q_duty_val * 1.3, q_max * fQ_curve), 30))
@@ -1710,11 +1845,11 @@ def _build_report_curve_context(pump, report, params_override=None):
             print("System curve render notice:", e)
 
     duty_pt_dict = None
-    if q_duty_val and h_duty_val and show_duty_effective:
+    if not is_from_catalogue and q_duty_val and h_duty_val and show_duty_effective:
         duty_pt_dict = {
             'q': q_duty_val,
             'h': h_duty_val,
-            'label': f"Duty: {round(q_duty_val, 1)} {rep_unit_q} @ {round(h_duty_val, 1)} {rep_unit_h}"
+            'label': f"Duty: {round(q_duty_val, 1)} {lbl_q} @ {round(h_duty_val, 1)} {lbl_h}"
         }
 
     graph_defs = {
@@ -1819,12 +1954,19 @@ def _build_report_curve_context(pump, report, params_override=None):
 
     bep_info = None
     try:
-        bep_info = bep_point(pump)
+        raw_bep = bep_point(pump)
+        if raw_bep:
+            bep_info = {
+                'q': round(raw_bep.get('q', 0.0) * fQ_curve, 1),
+                'h': round(raw_bep.get('h', 0.0) * fH_curve, 1),
+                'eta': round(raw_bep.get('eta', 0.0), 1),
+                'power': round(raw_bep.get('power', 0.0) * fPow_curve, 1)
+            }
     except Exception:
         pass
 
-    final_rated_dia = rated_d if ('rated_d' in locals() and rated_d) else None
-    final_rated_rpm = rated_rpm if ('rated_rpm' in locals() and rated_rpm) else None
+    final_rated_dia = rated_d if ('rated_d' in locals() and rated_d and not is_from_catalogue and show_rated_effective) else None
+    final_rated_rpm = rated_rpm if ('rated_rpm' in locals() and rated_rpm and not is_from_catalogue and show_rated_effective) else None
 
     # ── Proposal Master Legend Items (Matching Details Page Exactly) ──
     # Beginners Note: Generate horizontal legend items matching the interactive Details view chart:
@@ -1858,7 +2000,7 @@ def _build_report_curve_context(pump, report, params_override=None):
             'style': 'solid',
             'type': 'line'
         })
-    if show_rated_effective and (final_rated_dia or final_rated_rpm):
+    if not is_from_catalogue and show_rated_effective and (final_rated_dia or final_rated_rpm):
         if is_variable_speed and final_rated_rpm:
             rated_lbl = f"Rated Curve ({int(round(final_rated_rpm))} RPM)"
         elif final_rated_dia:
@@ -1873,14 +2015,14 @@ def _build_report_curve_context(pump, report, params_override=None):
             'style': 'dashed',
             'type': 'line'
         })
-    if (is_proposal or (request and request.args.get('show_sys') == '1')) and show_sys_effective and q_duty_val and h_duty_val:
+    if not is_from_catalogue and (is_proposal or (request and request.args.get('show_sys') == '1')) and show_sys_effective and q_duty_val and h_duty_val:
         proposal_legend_items.append({
             'name': 'System Curve',
             'color': graph_styles.get('system_curve_color', '#8b949e') or '#8b949e',
             'style': 'dotted',
             'type': 'line'
         })
-    if show_duty_effective and q_duty_val and h_duty_val:
+    if not is_from_catalogue and show_duty_effective and q_duty_val and h_duty_val:
         proposal_legend_items.append({
             'name': 'Duty Point',
             'color': '#ef4444',
@@ -1903,7 +2045,10 @@ def _build_report_curve_context(pump, report, params_override=None):
         'rated_rpm': int(round(final_rated_rpm)) if final_rated_rpm else None,
         'rep_unit_q': _unit_label('q', rep_unit_q),
         'rep_unit_h': _unit_label('h', rep_unit_h),
+        'rep_unit_pow': _unit_label('pow', rep_unit_pow),
+        'rep_unit_npsh': _unit_label('npsh', rep_unit_npsh),
         'is_proposal': is_proposal,
+        'is_from_catalogue': is_from_catalogue,
         'proposal_legend_items': proposal_legend_items,
     }
 
@@ -2288,8 +2433,20 @@ def view_report(report_id, pump_id):
     template_file = f"reports/{report.template_name}" if report.template_name else "reports/standard_datasheet.html"
     current_date = datetime.now().strftime("%B %d, %Y")
     
-    state = session.get('active_selection') or {}
-    params_override = state if (state.get('pump_id') == pump_id) else None
+    is_cat = (request.args.get('source') == 'catalogue')
+    if is_cat:
+        params_override = {'source': 'catalogue'}
+    else:
+        state = session.get('active_selection') or {}
+        if state.get('pump_id') == pump_id and (state.get('q_duty') or 'q_duty' in request.args):
+            params_override = dict(state)
+            for k, v in request.args.items():
+                params_override[k] = v
+        elif 'q_duty' in request.args:
+            params_override = dict(request.args)
+        else:
+            params_override = {'source': 'catalogue'}
+
     curves_ctx = _build_report_curve_context(pump, report, params_override=params_override)
 
     report_content = render_template(
@@ -2339,7 +2496,22 @@ def download_pdf(report_id, pump_id):
     report = ReportConfig.query.get_or_404(report_id)
     pump = Pump.query.get_or_404(pump_id)
     _verify_pump_organisation_access(pump)
-    return _generate_pdf_response(report, pump)
+    
+    is_cat = (request.args.get('source') == 'catalogue')
+    if is_cat:
+        params_override = {'source': 'catalogue'}
+    else:
+        state = session.get('active_selection') or {}
+        if state.get('pump_id') == pump_id and (state.get('q_duty') or 'q_duty' in request.args):
+            params_override = dict(state)
+            for k, v in request.args.items():
+                params_override[k] = v
+        elif 'q_duty' in request.args:
+            params_override = dict(request.args)
+        else:
+            params_override = {'source': 'catalogue'}
+
+    return _generate_pdf_response(report, pump, params_override=params_override)
 
 
 def _generate_pdf_response(report, pump, params_override=None):

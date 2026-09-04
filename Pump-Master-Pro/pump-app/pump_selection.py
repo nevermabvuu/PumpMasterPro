@@ -39,6 +39,16 @@ def select_pumps(pumps, q_duty, h_duty, npsh_avail=None,
                  enabled_attributes=None,
                  fixed_speed_mode='auto',
                  manual_pump_speed_rpm=None,
+                 fixed_speed_min_rpm=None,
+                 fixed_speed_max_rpm=None,
+                 vsd_trim_mode='auto',
+                 vsd_trim_dia_mm=None,
+                 vsd_trim_min_mm=None,
+                 vsd_trim_max_mm=None,
+                 vsd_trim_min_pct=None,
+                 vsd_trim_max_pct=None,
+                 vsd_speed_min_rpm=None,
+                 vsd_speed_max_rpm=None,
                  motor_freq_hz=50, motor_poles=4,
                  motor_selection_mode='auto', manual_motor_id=None,
                  manual_motor_speed_rpm=None, manual_speed_tolerance_pct=5.0,
@@ -72,6 +82,15 @@ def select_pumps(pumps, q_duty, h_duty, npsh_avail=None,
         filters: Dict of filter criteria (manufacturer, pump_type, speed_min, speed_max, custom attributes, etc.)
         operation_mode: 'fixed' or 'vsd'
         enabled_attributes: List of enabled custom pump attributes dicts [{'index': 1, 'name': '...'}, ...]
+        fixed_speed_mode: 'auto', 'manual', or 'range'
+        manual_pump_speed_rpm: Exact operating speed in RPM when fixed_speed_mode == 'manual'
+        fixed_speed_min_rpm: Min speed RPM when fixed_speed_mode == 'range'
+        fixed_speed_max_rpm: Max speed RPM when fixed_speed_mode == 'range'
+        vsd_trim_mode: 'auto', 'manual_mm', 'range_mm', or 'range_pct'
+        vsd_trim_dia_mm: Specified impeller diameter in mm when vsd_trim_mode == 'manual_mm'
+        vsd_trim_min_mm, vsd_trim_max_mm: Min/max allowable diameter in mm when vsd_trim_mode == 'range_mm'
+        vsd_trim_min_pct, vsd_trim_max_pct: Min/max allowable trim percentage when vsd_trim_mode == 'range_pct'
+        vsd_speed_min_rpm, vsd_speed_max_rpm: Optional operating speed bounds in RPM for VSD mode
 
     Returns:
         List of dicts sorted by rating (descending), each containing pump info,
@@ -97,6 +116,16 @@ def select_pumps(pumps, q_duty, h_duty, npsh_avail=None,
             operation_mode, enabled_attributes=enabled_attributes,
             fixed_speed_mode=fixed_speed_mode,
             manual_pump_speed_rpm=manual_pump_speed_rpm,
+            fixed_speed_min_rpm=fixed_speed_min_rpm,
+            fixed_speed_max_rpm=fixed_speed_max_rpm,
+            vsd_trim_mode=vsd_trim_mode,
+            vsd_trim_dia_mm=vsd_trim_dia_mm,
+            vsd_trim_min_mm=vsd_trim_min_mm,
+            vsd_trim_max_mm=vsd_trim_max_mm,
+            vsd_trim_min_pct=vsd_trim_min_pct,
+            vsd_trim_max_pct=vsd_trim_max_pct,
+            vsd_speed_min_rpm=vsd_speed_min_rpm,
+            vsd_speed_max_rpm=vsd_speed_max_rpm,
             motor_freq_hz=motor_freq_hz, motor_poles=motor_poles,
             motor_selection_mode=motor_selection_mode,
             manual_motor_id=manual_motor_id,
@@ -245,6 +274,16 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
                    operation_mode='fixed', enabled_attributes=None,
                    fixed_speed_mode='auto',
                    manual_pump_speed_rpm=None,
+                   fixed_speed_min_rpm=None,
+                   fixed_speed_max_rpm=None,
+                   vsd_trim_mode='auto',
+                   vsd_trim_dia_mm=None,
+                   vsd_trim_min_mm=None,
+                   vsd_trim_max_mm=None,
+                   vsd_trim_min_pct=None,
+                   vsd_trim_max_pct=None,
+                   vsd_speed_min_rpm=None,
+                   vsd_speed_max_rpm=None,
                    motor_freq_hz=50, motor_poles=4,
                    motor_selection_mode='auto', manual_motor_id=None,
                    manual_motor_speed_rpm=None, manual_speed_tolerance_pct=5.0,
@@ -257,13 +296,14 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
 
     Beginners Note:
         This function performs a multi-step evaluation:
-        1. Check if duty flow is within the pump's operating range
+        1. Check if duty flow is within the pump's operating range (affinity-scaled for speed)
         2. Evaluate head at duty flow (max impeller) — pump must produce head >= required
         3. Find the H-Q envelope (max and min impeller curves) and check coverage
-        4. Calculate optimal trim ratio to place duty on the H-Q curve
-        5. Check NPSH margin
-        6. Calculate BEP proximity and suitability score
-        7. Generate mini-chart sparkline data
+        4. Calculate optimal trim/speed ratio via intermediate bisection
+        5. Resolve mode-specific speed and impeller diameter trim (Fixed Speed vs VSD)
+        6. Check NPSH margin and BEP proximity
+        7. Calculate power absorbing characteristics for motor sizing
+        8. Score pump suitability and generate inline sparkline data
 
     Returns:
         Dict with pump info and performance data, or None if pump can't meet duty.
@@ -272,8 +312,24 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
     fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
     is_vsd = (operation_mode == 'vsd')
     is_fixed_manual = (operation_mode == 'fixed' and fixed_speed_mode == 'manual' and manual_pump_speed_rpm and float(manual_pump_speed_rpm) > 0)
+    is_fixed_range = (operation_mode == 'fixed' and fixed_speed_mode == 'range')
     user_pump_rpm = float(manual_pump_speed_rpm) if is_fixed_manual else base_speed
     speed_ratio = (user_pump_rpm / base_speed) if (is_fixed_manual and base_speed > 0) else 1.0
+
+    # ── Fixed Speed Mode 'range': Validate catalogue base speed is within user speed limits ──
+    if is_fixed_range:
+        if fixed_speed_min_rpm is not None and str(fixed_speed_min_rpm).strip() != '':
+            try:
+                if base_speed < float(fixed_speed_min_rpm):
+                    return None
+            except (ValueError, TypeError):
+                pass
+        if fixed_speed_max_rpm is not None and str(fixed_speed_max_rpm).strip() != '':
+            try:
+                if base_speed > float(fixed_speed_max_rpm):
+                    return None
+            except (ValueError, TypeError):
+                pass
 
     # ── Check 1: Flow range — duty Q must be within pump's operating range at operating speed ──
     # Beginners Note on Affinity Law Flow Scaling:
@@ -346,11 +402,64 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
 
     # ── Mode-Specific Speed & Impeller Trim Resolution ───────────────────
     if is_vsd:
-        # VSD Mode: Impeller is full diameter; speed varies to hit duty point
-        optimal_speed_rpm = base_speed * composite_k
-        optimal_trim_dia_mm = d_max
-        optimal_trim_ratio = round(composite_k, 4)
+        # ── Variable Speed Drive (VSD) Mode ──────────────────────────────────
+        # Beginners Note:
+        # In VSD mode, the user can prescribe how impeller trimming is handled:
+        #   1. 'auto': Full catalogue diameter (d_max), speed is modulated by VFD
+        #   2. 'manual_mm': Exact impeller trim diameter in mm (e.g. 210 mm); speed is calculated to meet duty
+        #   3. 'range_mm': Allowable impeller trim diameter window in mm [min_mm, max_mm]
+        #   4. 'range_pct': Allowable impeller trim percentage window [min_%, max_%] (e.g. 80% to 100%)
+        #
+        # In all cases, affinity laws dictate:
+        #   composite_k = (N_vsd / N_base) * (D_trim / d_max) = s * r_dia
+        #   s = composite_k / r_dia  =>  N_vsd = s * N_base
 
+        min_trim_bound = max(0.55, (d_min / d_max) * 0.95) if (d_min and d_max and d_min < d_max) else 0.60
+
+        if vsd_trim_mode == 'manual_mm' and vsd_trim_dia_mm and str(vsd_trim_dia_mm).strip() != '':
+            target_dia = float(vsd_trim_dia_mm)
+            r_dia = target_dia / d_max if d_max > 0 else 1.0
+            if r_dia > 1.05 or r_dia < min_trim_bound:
+                # Specified diameter is outside this pump's allowable physical trim range
+                return None
+            optimal_trim_dia_mm = round(target_dia, 1)
+            optimal_trim_ratio = round(min(1.0, r_dia), 4)
+
+        elif vsd_trim_mode == 'range_mm' and (vsd_trim_min_mm or vsd_trim_max_mm):
+            min_dia_req = float(vsd_trim_min_mm) if (vsd_trim_min_mm and str(vsd_trim_min_mm).strip() != '') else 0.0
+            max_dia_req = float(vsd_trim_max_mm) if (vsd_trim_max_mm and str(vsd_trim_max_mm).strip() != '') else 9999.0
+            if d_max < min_dia_req:
+                # Pump's full casting impeller cannot reach the minimum required diameter
+                return None
+            target_dia = min(d_max, max_dia_req)
+            if target_dia < min_dia_req:
+                return None
+            r_dia = target_dia / d_max if d_max > 0 else 1.0
+            if r_dia < min_trim_bound:
+                return None
+            optimal_trim_dia_mm = round(target_dia, 1)
+            optimal_trim_ratio = round(min(1.0, r_dia), 4)
+
+        elif vsd_trim_mode == 'range_pct' and (vsd_trim_min_pct or vsd_trim_max_pct):
+            min_pct_req = (float(vsd_trim_min_pct) / 100.0) if (vsd_trim_min_pct and str(vsd_trim_min_pct).strip() != '') else 0.55
+            max_pct_req = (float(vsd_trim_max_pct) / 100.0) if (vsd_trim_max_pct and str(vsd_trim_max_pct).strip() != '') else 1.05
+            r_dia = min(1.0, max_pct_req)
+            if r_dia < min_pct_req or r_dia < min_trim_bound:
+                return None
+            optimal_trim_dia_mm = round(d_max * r_dia, 1)
+            optimal_trim_ratio = round(r_dia, 4)
+
+        else:
+            # Standard VSD 'auto': Full catalogue impeller diameter, speed is modulated
+            r_dia = 1.0
+            optimal_trim_dia_mm = d_max
+            optimal_trim_ratio = 1.0
+
+        # Calculate required VSD operating speed: s = composite_k / r_dia => N_vsd = s * N_base
+        vsd_speed_ratio = composite_k / r_dia if r_dia > 0 else composite_k
+        optimal_speed_rpm = round(base_speed * vsd_speed_ratio, 1)
+
+        # Validate VSD operating speed limits (catalogue / VFD limits)
         rpm_str = getattr(pump, 'graph_rpm_values', '') or ''
         rpm_vals = []
         for v in rpm_str.replace(',', ' ').replace(';', ' ').replace('|', ' ').split():
@@ -370,6 +479,20 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
 
         if optimal_speed_rpm < min_rpm or optimal_speed_rpm > (max_rpm * 1.05):
             return None
+
+        # Validate against user-specified VSD RPM limits if provided:
+        if vsd_speed_min_rpm is not None and str(vsd_speed_min_rpm).strip() != '':
+            try:
+                if optimal_speed_rpm < float(vsd_speed_min_rpm):
+                    return None
+            except (ValueError, TypeError):
+                pass
+        if vsd_speed_max_rpm is not None and str(vsd_speed_max_rpm).strip() != '':
+            try:
+                if optimal_speed_rpm > float(vsd_speed_max_rpm):
+                    return None
+            except (ValueError, TypeError):
+                pass
 
     elif fixed_speed_mode == 'auto':
         # Fixed Speed (Auto Calculate Pump Speed): Full impeller, speed is calculated
@@ -391,6 +514,17 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
             return None
 
         optimal_speed_rpm = round(user_pump_rpm, 1)
+        optimal_trim_dia_mm = round(d_max * min(1.0, r_dia), 1)
+        optimal_trim_ratio = round(min(1.0, r_dia), 4)
+
+    elif is_fixed_range:
+        # Fixed Speed (Min - Max Speed Range):
+        # Runs at base speed; trimmed to meet duty
+        r_dia = composite_k
+        min_trim_allowable = max(0.55, (d_min / d_max) * 0.95) if (d_min and d_max and d_min < d_max) else 0.60
+        if r_dia > 1.05 or r_dia < min_trim_allowable:
+            return None
+        optimal_speed_rpm = base_speed
         optimal_trim_dia_mm = round(d_max * min(1.0, r_dia), 1)
         optimal_trim_ratio = round(min(1.0, r_dia), 4)
 
@@ -555,7 +689,17 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
         'composite_ratio': round(composite_k, 4),
         'speed_ratio': round(speed_ratio, 4),
         'is_vsd': is_vsd,
+        'vsd_trim_mode': vsd_trim_mode if is_vsd else None,
+        'vsd_trim_dia_mm': vsd_trim_dia_mm if is_vsd else None,
+        'vsd_trim_min_mm': vsd_trim_min_mm if is_vsd else None,
+        'vsd_trim_max_mm': vsd_trim_max_mm if is_vsd else None,
+        'vsd_trim_min_pct': vsd_trim_min_pct if is_vsd else None,
+        'vsd_trim_max_pct': vsd_trim_max_pct if is_vsd else None,
+        'vsd_speed_min_rpm': vsd_speed_min_rpm if is_vsd else None,
+        'vsd_speed_max_rpm': vsd_speed_max_rpm if is_vsd else None,
         'fixed_speed_mode': fixed_speed_mode if not is_vsd else None,
+        'fixed_speed_min_rpm': fixed_speed_min_rpm if (fixed_speed_mode == 'range' and not is_vsd) else None,
+        'fixed_speed_max_rpm': fixed_speed_max_rpm if (fixed_speed_mode == 'range' and not is_vsd) else None,
         'manual_pump_speed_rpm': manual_pump_speed_rpm if (fixed_speed_mode == 'manual' and not is_vsd) else None,
         'd_max': d_max,
         'd_min': d_min,

@@ -333,11 +333,12 @@ function renderAll() {
     }
   }
 
-  if (dutyScaleRatio < 0.999 || cfg.IS_VSD || cfg.FIXED_SPEED_MODE === 'auto' || cfg.FIXED_SPEED_MODE === 'manual' || cfg.TRIM_RATIO < 1.0) {
-    let lbl = cfg.IS_VSD ? `Rated (${cfg.RATED_SPEED} RPM)` :
+  if (dutyScaleRatio < 0.999 || cfg.IS_VSD || cfg.FIXED_SPEED_MODE === 'auto' || cfg.FIXED_SPEED_MODE === 'manual' || cfg.FIXED_SPEED_MODE === 'range' || cfg.TRIM_RATIO < 1.0) {
+    let lbl = cfg.IS_VSD ? `VSD (${cfg.RATED_SPEED} RPM${(cfg.VSD_TRIM_MODE && cfg.VSD_TRIM_MODE !== 'auto' && cfg.RATED_TRIM) ? ', Ø ' + cfg.RATED_TRIM + ' mm' : ''})` :
               (cfg.FIXED_SPEED_MODE === 'auto' ? `Calculated (${cfg.RATED_SPEED} RPM)` :
               (cfg.FIXED_SPEED_MODE === 'manual' ? `Manual (${cfg.RATED_SPEED || cfg.MANUAL_SPEED_RPM} RPM${cfg.RATED_TRIM ? ', Ø ' + cfg.RATED_TRIM + ' mm' : ''})` :
-              `Rated (Ø ${cfg.RATED_TRIM} mm)`));
+              (cfg.FIXED_SPEED_MODE === 'range' ? `Rated (${cfg.RATED_SPEED} RPM${cfg.RATED_TRIM ? ', Ø ' + cfg.RATED_TRIM + ' mm' : ''})` :
+              `Rated (Ø ${cfg.RATED_TRIM} mm)`)));
     let cdataRated = qDutyCurve.map((q, i) => [
       hDutyCurve[i] != null ? hDutyCurve[i].toFixed(1) : 'N/A',
       maxCurve.eta[i] != null ? maxCurve.eta[i].toFixed(1) : 'N/A',
@@ -411,11 +412,19 @@ function renderAll() {
 
   let ratedLegendName = 'Rated Curve';
   if (cfg.IS_VSD) {
-    ratedLegendName = `Rated Curve (${cfg.RATED_SPEED || Math.round(cfg.PUMP_SPEED * cfg.TRIM_RATIO)} RPM)`;
+    ratedLegendName = `VSD Curve (${cfg.RATED_SPEED || Math.round(cfg.PUMP_SPEED * cfg.TRIM_RATIO)} RPM)`;
+    if (cfg.VSD_TRIM_MODE && cfg.VSD_TRIM_MODE !== 'auto' && cfg.RATED_TRIM) {
+      ratedLegendName += ` (Ø${cfg.RATED_TRIM}mm)`;
+    }
   } else if (cfg.FIXED_SPEED_MODE === 'auto') {
     ratedLegendName = `Calculated Speed (${cfg.RATED_SPEED || Math.round(cfg.PUMP_SPEED * cfg.TRIM_RATIO)} RPM)`;
   } else if (cfg.FIXED_SPEED_MODE === 'manual') {
     ratedLegendName = `Manual Speed (${cfg.RATED_SPEED || cfg.MANUAL_SPEED_RPM} RPM)`;
+    if (cfg.TRIM_RATIO < 0.995 && cfg.RATED_TRIM) {
+      ratedLegendName += ` (Ø${cfg.RATED_TRIM}mm)`;
+    }
+  } else if (cfg.FIXED_SPEED_MODE === 'range') {
+    ratedLegendName = `Range Speed (${cfg.RATED_SPEED} RPM)`;
     if (cfg.TRIM_RATIO < 0.995 && cfg.RATED_TRIM) {
       ratedLegendName += ` (Ø${cfg.RATED_TRIM}mm)`;
     }

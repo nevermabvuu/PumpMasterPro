@@ -169,13 +169,33 @@ def pump_selection():
             if attr_val and str(attr_val).strip():
                 filters[f'attribute_{i}'] = str(attr_val).strip()
 
-        # ── Fixed Speed Mode (Auto Calculate Pump Speed vs Manual Pump Speed) ──
+        # ── Fixed Speed Mode (Auto Calculate Pump Speed vs Manual Pump Speed vs Min-Max Speed Range) ──
         # Beginners Note:
         # If operation_mode is 'fixed', user chooses:
         # - 'auto': system automatically calculates pump speed at full impeller diameter
         # - 'manual': user manually enters pump speed (RPM); impeller trim is evaluated
+        # - 'range': user enters allowable min/max speed range (RPM)
         fixed_speed_mode = f.get('fixed_speed_mode', 'auto')
         manual_pump_speed_rpm = _get_float(f, 'manual_pump_speed_rpm') if (f.get('manual_pump_speed_rpm') and str(f.get('manual_pump_speed_rpm')).strip() != '') else (_get_float(f, 'manual_speed_rpm') if (f.get('manual_speed_rpm') and str(f.get('manual_speed_rpm')).strip() != '') else None)
+        fixed_speed_min_rpm = _get_float(f, 'fixed_speed_min_rpm') if (f.get('fixed_speed_min_rpm') and str(f.get('fixed_speed_min_rpm')).strip() != '') else None
+        fixed_speed_max_rpm = _get_float(f, 'fixed_speed_max_rpm') if (f.get('fixed_speed_max_rpm') and str(f.get('fixed_speed_max_rpm')).strip() != '') else None
+
+        # ── Variable Speed Drive (VSD) Impeller Trim & Speed Limit Controls ───
+        # Beginners Note:
+        # In VSD mode, user chooses:
+        # - 'auto': system calculates speed at full catalogue diameter (d_max)
+        # - 'manual_mm': exact impeller trim diameter specified in mm
+        # - 'range_mm': impeller trim diameter constrained within [min_mm, max_mm]
+        # - 'range_pct': impeller trim percentage constrained within [min_%, max_%]
+        # - vsd_speed_min_rpm, vsd_speed_max_rpm: optional speed limits (RPM)
+        vsd_trim_mode = f.get('vsd_trim_mode', 'auto')
+        vsd_trim_dia_mm = _get_float(f, 'vsd_trim_dia_mm') if (f.get('vsd_trim_dia_mm') and str(f.get('vsd_trim_dia_mm')).strip() != '') else None
+        vsd_trim_min_mm = _get_float(f, 'vsd_trim_min_mm') if (f.get('vsd_trim_min_mm') and str(f.get('vsd_trim_min_mm')).strip() != '') else None
+        vsd_trim_max_mm = _get_float(f, 'vsd_trim_max_mm') if (f.get('vsd_trim_max_mm') and str(f.get('vsd_trim_max_mm')).strip() != '') else None
+        vsd_trim_min_pct = _get_float(f, 'vsd_trim_min_pct') if (f.get('vsd_trim_min_pct') and str(f.get('vsd_trim_min_pct')).strip() != '') else None
+        vsd_trim_max_pct = _get_float(f, 'vsd_trim_max_pct') if (f.get('vsd_trim_max_pct') and str(f.get('vsd_trim_max_pct')).strip() != '') else None
+        vsd_speed_min_rpm = _get_float(f, 'vsd_speed_min_rpm') if (f.get('vsd_speed_min_rpm') and str(f.get('vsd_speed_min_rpm')).strip() != '') else None
+        vsd_speed_max_rpm = _get_float(f, 'vsd_speed_max_rpm') if (f.get('vsd_speed_max_rpm') and str(f.get('vsd_speed_max_rpm')).strip() != '') else None
 
         # ── Motor Selection & Drive Arrangement Controls ─────────────────
         # Beginners Note:
@@ -212,6 +232,16 @@ def pump_selection():
                                enabled_attributes=enabled_pump_attributes,
                                fixed_speed_mode=fixed_speed_mode,
                                manual_pump_speed_rpm=manual_pump_speed_rpm,
+                               fixed_speed_min_rpm=fixed_speed_min_rpm,
+                               fixed_speed_max_rpm=fixed_speed_max_rpm,
+                               vsd_trim_mode=vsd_trim_mode,
+                               vsd_trim_dia_mm=vsd_trim_dia_mm,
+                               vsd_trim_min_mm=vsd_trim_min_mm,
+                               vsd_trim_max_mm=vsd_trim_max_mm,
+                               vsd_trim_min_pct=vsd_trim_min_pct,
+                               vsd_trim_max_pct=vsd_trim_max_pct,
+                               vsd_speed_min_rpm=vsd_speed_min_rpm,
+                               vsd_speed_max_rpm=vsd_speed_max_rpm,
                                motor_freq_hz=motor_freq_hz,
                                motor_poles=motor_poles,
                                motor_selection_mode=motor_selection_mode,
@@ -357,6 +387,18 @@ def pump_selection_details(pump_id):
 
         fixed_speed_mode = f.get('fixed_speed_mode', 'auto')
         manual_pump_speed_rpm = _get_float(f, 'manual_pump_speed_rpm') if (f.get('manual_pump_speed_rpm') and str(f.get('manual_pump_speed_rpm')).strip() != '') else (_get_float(f, 'manual_speed_rpm') if (f.get('manual_speed_rpm') and str(f.get('manual_speed_rpm')).strip() != '') else None)
+        fixed_speed_min_rpm = _get_float(f, 'fixed_speed_min_rpm') if (f.get('fixed_speed_min_rpm') and str(f.get('fixed_speed_min_rpm')).strip() != '') else None
+        fixed_speed_max_rpm = _get_float(f, 'fixed_speed_max_rpm') if (f.get('fixed_speed_max_rpm') and str(f.get('fixed_speed_max_rpm')).strip() != '') else None
+
+        vsd_trim_mode = f.get('vsd_trim_mode', 'auto')
+        vsd_trim_dia_mm = _get_float(f, 'vsd_trim_dia_mm') if (f.get('vsd_trim_dia_mm') and str(f.get('vsd_trim_dia_mm')).strip() != '') else None
+        vsd_trim_min_mm = _get_float(f, 'vsd_trim_min_mm') if (f.get('vsd_trim_min_mm') and str(f.get('vsd_trim_min_mm')).strip() != '') else None
+        vsd_trim_max_mm = _get_float(f, 'vsd_trim_max_mm') if (f.get('vsd_trim_max_mm') and str(f.get('vsd_trim_max_mm')).strip() != '') else None
+        vsd_trim_min_pct = _get_float(f, 'vsd_trim_min_pct') if (f.get('vsd_trim_min_pct') and str(f.get('vsd_trim_min_pct')).strip() != '') else None
+        vsd_trim_max_pct = _get_float(f, 'vsd_trim_max_pct') if (f.get('vsd_trim_max_pct') and str(f.get('vsd_trim_max_pct')).strip() != '') else None
+        vsd_speed_min_rpm = _get_float(f, 'vsd_speed_min_rpm') if (f.get('vsd_speed_min_rpm') and str(f.get('vsd_speed_min_rpm')).strip() != '') else None
+        vsd_speed_max_rpm = _get_float(f, 'vsd_speed_max_rpm') if (f.get('vsd_speed_max_rpm') and str(f.get('vsd_speed_max_rpm')).strip() != '') else None
+
         try:
             motor_freq_hz = int(f.get('motor_freq_hz', 50))
         except (ValueError, TypeError):
@@ -387,6 +429,16 @@ def pump_selection_details(pump_id):
                                enabled_attributes=enabled_pump_attributes,
                                fixed_speed_mode=fixed_speed_mode,
                                manual_pump_speed_rpm=manual_pump_speed_rpm,
+                               fixed_speed_min_rpm=fixed_speed_min_rpm,
+                               fixed_speed_max_rpm=fixed_speed_max_rpm,
+                               vsd_trim_mode=vsd_trim_mode,
+                               vsd_trim_dia_mm=vsd_trim_dia_mm,
+                               vsd_trim_min_mm=vsd_trim_min_mm,
+                               vsd_trim_max_mm=vsd_trim_max_mm,
+                               vsd_trim_min_pct=vsd_trim_min_pct,
+                               vsd_trim_max_pct=vsd_trim_max_pct,
+                               vsd_speed_min_rpm=vsd_speed_min_rpm,
+                               vsd_speed_max_rpm=vsd_speed_max_rpm,
                                motor_freq_hz=motor_freq_hz,
                                motor_poles=motor_poles,
                                motor_selection_mode=motor_selection_mode,
@@ -559,7 +611,17 @@ def api_select_pumps():
         filters=filters,
         operation_mode=data.get('operation_mode', 'fixed'),
         fixed_speed_mode=data.get('fixed_speed_mode', 'auto'),
-        manual_pump_speed_rpm=_get_float(data, 'manual_pump_speed_rpm') if (data.get('manual_pump_speed_rpm') and str(data.get('manual_pump_speed_rpm')).strip() != '') else None
+        manual_pump_speed_rpm=_get_float(data, 'manual_pump_speed_rpm') if (data.get('manual_pump_speed_rpm') and str(data.get('manual_pump_speed_rpm')).strip() != '') else None,
+        fixed_speed_min_rpm=_get_float(data, 'fixed_speed_min_rpm') if (data.get('fixed_speed_min_rpm') and str(data.get('fixed_speed_min_rpm')).strip() != '') else None,
+        fixed_speed_max_rpm=_get_float(data, 'fixed_speed_max_rpm') if (data.get('fixed_speed_max_rpm') and str(data.get('fixed_speed_max_rpm')).strip() != '') else None,
+        vsd_trim_mode=data.get('vsd_trim_mode', 'auto'),
+        vsd_trim_dia_mm=_get_float(data, 'vsd_trim_dia_mm') if (data.get('vsd_trim_dia_mm') and str(data.get('vsd_trim_dia_mm')).strip() != '') else None,
+        vsd_trim_min_mm=_get_float(data, 'vsd_trim_min_mm') if (data.get('vsd_trim_min_mm') and str(data.get('vsd_trim_min_mm')).strip() != '') else None,
+        vsd_trim_max_mm=_get_float(data, 'vsd_trim_max_mm') if (data.get('vsd_trim_max_mm') and str(data.get('vsd_trim_max_mm')).strip() != '') else None,
+        vsd_trim_min_pct=_get_float(data, 'vsd_trim_min_pct') if (data.get('vsd_trim_min_pct') and str(data.get('vsd_trim_min_pct')).strip() != '') else None,
+        vsd_trim_max_pct=_get_float(data, 'vsd_trim_max_pct') if (data.get('vsd_trim_max_pct') and str(data.get('vsd_trim_max_pct')).strip() != '') else None,
+        vsd_speed_min_rpm=_get_float(data, 'vsd_speed_min_rpm') if (data.get('vsd_speed_min_rpm') and str(data.get('vsd_speed_min_rpm')).strip() != '') else None,
+        vsd_speed_max_rpm=_get_float(data, 'vsd_speed_max_rpm') if (data.get('vsd_speed_max_rpm') and str(data.get('vsd_speed_max_rpm')).strip() != '') else None
     )
     return jsonify(results)
 

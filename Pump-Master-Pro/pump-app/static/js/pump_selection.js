@@ -487,25 +487,73 @@ function renderSparkline(container, data) {
 // 3. Asynchronously fetches available motors from /papi/motors-by-spec when Frequency or Poles change
 function onOperationModeChange() {
   const isVsd = document.getElementById('opModeVsd')?.checked;
-  const vsdGroup = document.getElementById('vsdFrequencyLimitsGroup');
+  const vsdFreqGroup = document.getElementById('vsdFrequencyLimitsGroup');
+  const vsdOptionsGroup = document.getElementById('vsdOptionsGroup');
   const fixedSpeedGroup = document.getElementById('fixedSpeedOptionsGroup');
-  if (vsdGroup) {
-    vsdGroup.style.display = isVsd ? 'block' : 'none';
+  if (vsdFreqGroup) {
+    vsdFreqGroup.style.display = isVsd ? 'block' : 'none';
+  }
+  if (vsdOptionsGroup) {
+    vsdOptionsGroup.style.display = isVsd ? 'block' : 'none';
   }
   if (fixedSpeedGroup) {
     fixedSpeedGroup.style.display = isVsd ? 'none' : 'block';
   }
 }
 
-// Fixed speed sub-option: Toggle manual pump speed input field
+// Fixed speed sub-option: Toggle manual pump speed vs min-max speed range inputs
 function onFixedSpeedModeChange() {
   const isManual = document.getElementById('fixedSpeedManual')?.checked;
+  const isRange = document.getElementById('fixedSpeedRange')?.checked;
+
   const manualGroup = document.getElementById('manualPumpSpeedGroup');
   if (manualGroup) {
     manualGroup.style.display = isManual ? 'block' : 'none';
     const input = document.getElementById('manualPumpSpeedRpm');
     if (isManual && input && !input.value) {
       input.focus();
+    }
+  }
+
+  const rangeGroup = document.getElementById('fixedSpeedRangeGroup');
+  if (rangeGroup) {
+    rangeGroup.style.display = isRange ? 'block' : 'none';
+    const minInput = document.getElementById('fixedSpeedMinRpm');
+    if (isRange && minInput && !minInput.value) {
+      minInput.focus();
+    }
+  }
+}
+
+// Variable speed drive (VSD) sub-option: Toggle impeller trimming mode inputs
+function onVsdTrimModeChange() {
+  const trimMode = document.querySelector('input[name="vsd_trim_mode"]:checked')?.value || 'auto';
+
+  const manualMmGroup = document.getElementById('vsdManualMmGroup');
+  const rangeMmGroup = document.getElementById('vsdRangeMmGroup');
+  const rangePctGroup = document.getElementById('vsdRangePctGroup');
+
+  if (manualMmGroup) {
+    manualMmGroup.style.display = (trimMode === 'manual_mm') ? 'block' : 'none';
+    if (trimMode === 'manual_mm') {
+      const input = document.getElementById('vsdTrimDiaMm');
+      if (input && !input.value) input.focus();
+    }
+  }
+
+  if (rangeMmGroup) {
+    rangeMmGroup.style.display = (trimMode === 'range_mm') ? 'block' : 'none';
+    if (trimMode === 'range_mm') {
+      const input = document.getElementById('vsdTrimMinMm');
+      if (input && !input.value) input.focus();
+    }
+  }
+
+  if (rangePctGroup) {
+    rangePctGroup.style.display = (trimMode === 'range_pct') ? 'block' : 'none';
+    if (trimMode === 'range_pct') {
+      const input = document.getElementById('vsdTrimMinPct');
+      if (input && !input.value) input.focus();
     }
   }
 }
@@ -563,5 +611,6 @@ document.addEventListener('DOMContentLoaded', () => {
   onMotorSelectionModeChange();
   onOperationModeChange();
   onFixedSpeedModeChange();
+  onVsdTrimModeChange();
 });
 

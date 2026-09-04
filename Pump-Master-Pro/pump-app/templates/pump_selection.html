@@ -193,6 +193,39 @@
                     Pumps evaluated at this exact speed; required trim ratio computed to meet duty point.
                   </span>
                 </div>
+
+                <!-- Option C: Min - Max Speed Range -->
+                <label class="flex items-start gap-2 text-xs cursor-pointer hover:text-white transition-colors">
+                  <input type="radio" name="fixed_speed_mode" value="range" id="fixedSpeedRange" class="accent-[#58a6ff] mt-0.5"
+                         {{ 'checked' if form_data.get('fixed_speed_mode') == 'range' else '' }}
+                         onchange="onFixedSpeedModeChange()">
+                  <div>
+                    <span class="text-white font-medium">Min - Max speed range</span>
+                    <span class="text-[10px] text-[#8b949e] block">Pumps running at rated speed within this interval are evaluated and trimmed to duty</span>
+                  </div>
+                </label>
+
+                <!-- Speed Range Input Fields (Visible when fixed_speed_mode is 'range') -->
+                <div id="fixedSpeedRangeGroup" class="ml-5 p-2 rounded bg-[#0d1117] border border-[#30363d] space-y-1.5"
+                     style="{{ '' if form_data.get('fixed_speed_mode') == 'range' else 'display:none;' }}">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Min Speed (RPM)</label>
+                      <input type="number" name="fixed_speed_min_rpm" id="fixedSpeedMinRpm"
+                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
+                             value="{{ form_data.get('fixed_speed_min_rpm', '') }}" placeholder="e.g. 1400" step="10">
+                    </div>
+                    <div>
+                      <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Max Speed (RPM)</label>
+                      <input type="number" name="fixed_speed_max_rpm" id="fixedSpeedMaxRpm"
+                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
+                             value="{{ form_data.get('fixed_speed_max_rpm', '') }}" placeholder="e.g. 1550" step="10">
+                    </div>
+                  </div>
+                  <span class="text-[10px] text-[#8b949e] block">
+                    Only pumps whose catalogue speed falls within this range will be selected.
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -205,6 +238,130 @@
                 <span class="font-semibold text-white">Variable Speed Drive (VSD)</span>
               </label>
               <span class="text-[11px] text-[#8b949e] block ml-6">Inverter regulates motor speed to meet duty point. Inverter output frequency is verified against user limits.</span>
+
+              <!-- VSD Sub-Options: Impeller Trimming & Speed Limit Controls -->
+              <div id="vsdOptionsGroup" class="ml-6 mt-2.5 p-2.5 rounded-lg bg-[#161b22] border border-[#30363d] space-y-2.5"
+                   style="{{ '' if form_data.get('operation_mode') == 'vsd' else 'display:none;' }}">
+                <span class="text-[11px] font-bold text-[#c9d1d9] block uppercase tracking-wider">
+                  <i class="bi bi-disc text-[#58a6ff] mr-1"></i>Impeller Trimming Options
+                </span>
+
+                <!-- Option 1: Automatic calculate the trim (Full diameter, modulate speed) -->
+                <label class="flex items-start gap-2 text-xs cursor-pointer hover:text-white transition-colors">
+                  <input type="radio" name="vsd_trim_mode" value="auto" id="vsdTrimAuto" class="accent-[#58a6ff] mt-0.5"
+                         {{ 'checked' if form_data.get('vsd_trim_mode', 'auto') == 'auto' else '' }}
+                         onchange="onVsdTrimModeChange()">
+                  <div>
+                    <span class="text-white font-medium">Automatic calculate the trim</span>
+                    <span class="text-[10px] text-[#8b949e] block">Full catalogue diameter (D_max); required operating speed is modulated via VFD</span>
+                  </div>
+                </label>
+
+                <!-- Option 2: The impeller trim (exact specified diameter in mm) -->
+                <label class="flex items-start gap-2 text-xs cursor-pointer hover:text-white transition-colors">
+                  <input type="radio" name="vsd_trim_mode" value="manual_mm" id="vsdTrimManualMm" class="accent-[#58a6ff] mt-0.5"
+                         {{ 'checked' if form_data.get('vsd_trim_mode') == 'manual_mm' else '' }}
+                         onchange="onVsdTrimModeChange()">
+                  <div>
+                    <span class="text-white font-medium">The impeller trim (specified diameter)</span>
+                    <span class="text-[10px] text-[#8b949e] block">Specify exact impeller trim diameter in mm; VSD speed is computed to hit duty</span>
+                  </div>
+                </label>
+
+                <!-- Input for Option 2 -->
+                <div id="vsdManualMmGroup" class="ml-5 p-2 rounded bg-[#0d1117] border border-[#30363d] space-y-1"
+                     style="{{ '' if form_data.get('vsd_trim_mode') == 'manual_mm' else 'display:none;' }}">
+                  <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Impeller Diameter (mm)</label>
+                  <div class="flex items-center gap-1">
+                    <input type="number" name="vsd_trim_dia_mm" id="vsdTrimDiaMm"
+                           class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
+                           value="{{ form_data.get('vsd_trim_dia_mm', '') }}" placeholder="e.g. 210" step="1">
+                    <span class="text-xs font-mono text-[#8b949e]">mm</span>
+                  </div>
+                </div>
+
+                <!-- Option 3: Min - Max impeller trim in mm -->
+                <label class="flex items-start gap-2 text-xs cursor-pointer hover:text-white transition-colors">
+                  <input type="radio" name="vsd_trim_mode" value="range_mm" id="vsdTrimRangeMm" class="accent-[#58a6ff] mt-0.5"
+                         {{ 'checked' if form_data.get('vsd_trim_mode') == 'range_mm' else '' }}
+                         onchange="onVsdTrimModeChange()">
+                  <div>
+                    <span class="text-white font-medium">Min - Max impeller trim (mm)</span>
+                    <span class="text-[10px] text-[#8b949e] block">Allowable trim diameter bounds in mm</span>
+                  </div>
+                </label>
+
+                <!-- Inputs for Option 3 -->
+                <div id="vsdRangeMmGroup" class="ml-5 p-2 rounded bg-[#0d1117] border border-[#30363d] space-y-1"
+                     style="{{ '' if form_data.get('vsd_trim_mode') == 'range_mm' else 'display:none;' }}">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Min Trim (mm)</label>
+                      <input type="number" name="vsd_trim_min_mm" id="vsdTrimMinMm"
+                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
+                             value="{{ form_data.get('vsd_trim_min_mm', '') }}" placeholder="e.g. 180" step="1">
+                    </div>
+                    <div>
+                      <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Max Trim (mm)</label>
+                      <input type="number" name="vsd_trim_max_mm" id="vsdTrimMaxMm"
+                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
+                             value="{{ form_data.get('vsd_trim_max_mm', '') }}" placeholder="e.g. 210" step="1">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Option 4: Min - Max impeller trim as a % -->
+                <label class="flex items-start gap-2 text-xs cursor-pointer hover:text-white transition-colors">
+                  <input type="radio" name="vsd_trim_mode" value="range_pct" id="vsdTrimRangePct" class="accent-[#58a6ff] mt-0.5"
+                         {{ 'checked' if form_data.get('vsd_trim_mode') == 'range_pct' else '' }}
+                         onchange="onVsdTrimModeChange()">
+                  <div>
+                    <span class="text-white font-medium">Min - Max impeller trim (%)</span>
+                    <span class="text-[10px] text-[#8b949e] block">Allowable trim percentage window relative to full impeller (e.g. 80% to 100%)</span>
+                  </div>
+                </label>
+
+                <!-- Inputs for Option 4 -->
+                <div id="vsdRangePctGroup" class="ml-5 p-2 rounded bg-[#0d1117] border border-[#30363d] space-y-1"
+                     style="{{ '' if form_data.get('vsd_trim_mode') == 'range_pct' else 'display:none;' }}">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Min Trim (%)</label>
+                      <input type="number" name="vsd_trim_min_pct" id="vsdTrimMinPct"
+                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
+                             value="{{ form_data.get('vsd_trim_min_pct', '') }}" placeholder="e.g. 80" step="1" min="50" max="100">
+                    </div>
+                    <div>
+                      <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Max Trim (%)</label>
+                      <input type="number" name="vsd_trim_max_pct" id="vsdTrimMaxPct"
+                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
+                             value="{{ form_data.get('vsd_trim_max_pct', '') }}" placeholder="e.g. 100" step="1" min="50" max="100">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- VSD Operating Speed Range Bounds (moved from Advanced Filters) -->
+                <div class="pt-2 border-t border-[#30363d]/50">
+                  <span class="text-[11px] font-bold text-[#c9d1d9] block uppercase tracking-wider mb-1.5">
+                    <i class="bi bi-speedometer text-[#58a6ff] mr-1"></i>VSD Operating Speed Bounds (RPM)
+                  </span>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Min Speed (RPM)</label>
+                      <input type="number" name="vsd_speed_min_rpm" id="vsdSpeedMinRpm"
+                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
+                             value="{{ form_data.get('vsd_speed_min_rpm', '') }}" placeholder="e.g. 800" step="10">
+                    </div>
+                    <div>
+                      <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Max Speed (RPM)</label>
+                      <input type="number" name="vsd_speed_max_rpm" id="vsdSpeedMaxRpm"
+                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
+                             value="{{ form_data.get('vsd_speed_max_rpm', '') }}" placeholder="e.g. 2950" step="10">
+                    </div>
+                  </div>
+                  <span class="text-[10px] text-[#8b949e] block mt-0.5">Optional RPM bounds on required VSD operating duty speed.</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -630,8 +787,6 @@
       {% set active_filters_count = namespace(value=0) %}
       {% if form_data.get('filter_manufacturer') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
       {% if form_data.get('filter_pump_type') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
-      {% if form_data.get('filter_speed_min') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
-      {% if form_data.get('filter_speed_max') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
       {% if form_data.get('filter_size') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
 
       <div class="card-dark mb-3">
@@ -672,18 +827,6 @@
                   {% endfor %}
                 {% endif %}
               </select>
-            </div>
-
-            <!-- Speed range filters -->
-            <div>
-              <label class="form-label">Min Speed (RPM)</label>
-              <input type="number" name="filter_speed_min" class="form-control form-control-dark w-full text-xs"
-                     value="{{ form_data.get('filter_speed_min', '') }}" placeholder="e.g. 500">
-            </div>
-            <div>
-              <label class="form-label">Max Speed (RPM)</label>
-              <input type="number" name="filter_speed_max" class="form-control form-control-dark w-full text-xs"
-                     value="{{ form_data.get('filter_speed_max', '') }}" placeholder="e.g. 3000">
             </div>
 
             <!-- Size filter -->
@@ -917,8 +1060,17 @@
                 <div class="flex items-center gap-3 mb-2 text-xs flex-wrap">
                   {% if r.is_vsd %}
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.25);color:#58a6ff;">
-                    <i class="bi bi-speedometer2"></i> Optimal Speed: {{ r.optimal_speed_rpm|int }} RPM ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
+                    <i class="bi bi-speedometer2"></i> VSD Speed: {{ r.optimal_speed_rpm|int }} RPM ({{ (r.speed_ratio * 100)|round(1) }}%)
                   </span>
+                  {% if r.vsd_trim_mode and r.vsd_trim_mode != 'auto' and r.optimal_trim_ratio < 0.999 %}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(210,153,34,0.1);border:1px solid rgba(210,153,34,0.25);color:#d29922;">
+                    <i class="bi bi-disc"></i> Trim: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
+                  </span>
+                  {% else %}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.25);color:#3fb950;">
+                    <i class="bi bi-disc"></i> Full Impeller: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm
+                  </span>
+                  {% endif %}
                   {% elif r.fixed_speed_mode == 'auto' %}
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.25);color:#58a6ff;">
                     <i class="bi bi-calculator"></i> Calculated Speed: {{ r.optimal_speed_rpm|int }} RPM ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
@@ -935,6 +1087,13 @@
                     <i class="bi bi-disc"></i> Trim: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
                   </span>
                   {% endif %}
+                  {% elif r.fixed_speed_mode == 'range' %}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.25);color:#58a6ff;">
+                    <i class="bi bi-speedometer2"></i> Speed: {{ r.optimal_speed_rpm|int }} RPM (Within Range)
+                  </span>
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.25);color:#3fb950;">
+                    <i class="bi bi-disc"></i> Trim: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
+                  </span>
                   {% else %}
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.25);color:#3fb950;">
                     <i class="bi bi-disc"></i> Trim: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)

@@ -20,6 +20,8 @@ class Motor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     model_name = db.Column(db.String(120), nullable=False)
     manufacturer = db.Column(db.String(100), default='Standard IEC')
+    standard = db.Column(db.String(20), default='IEC')               # 'IEC' or 'NEMA'
+    efficiency_class = db.Column(db.String(30), default='IE3')       # 'IE2', 'IE3', 'IE4', 'NEMA Premium'
     rated_power_kw = db.Column(db.Float, nullable=False)
     rated_power_hp = db.Column(db.Float, nullable=False)
     frequency_hz = db.Column(db.Integer, nullable=False, default=50)  # 50 or 60 Hz
@@ -36,6 +38,8 @@ class Motor(db.Model):
             'id': self.id,
             'model_name': self.model_name,
             'manufacturer': self.manufacturer,
+            'standard': self.standard or 'IEC',
+            'efficiency_class': self.efficiency_class or 'IE3',
             'rated_power_kw': self.rated_power_kw,
             'rated_power_hp': self.rated_power_hp,
             'frequency_hz': self.frequency_hz,
@@ -105,21 +109,54 @@ def _get_frame_size(kw, poles):
     return '355L'
 
 
+def _get_nema_frame_size(hp, poles):
+    """Typical NEMA frame size mapping."""
+    if hp <= 1.0: return '143T'
+    if hp <= 2.0: return '145T'
+    if hp <= 3.0: return '182T'
+    if hp <= 5.0: return '184T'
+    if hp <= 7.5: return '213T'
+    if hp <= 10.0: return '215T'
+    if hp <= 15.0: return '254T'
+    if hp <= 20.0: return '256T'
+    if hp <= 30.0: return '286T'
+    if hp <= 50.0: return '326T'
+    if hp <= 75.0: return '365T'
+    if hp <= 100.0: return '405T'
+    if hp <= 150.0: return '445T'
+    if hp <= 250.0: return '449T'
+    return '5009'
+
+
+# Standard NEMA power ratings (hp)
+STANDARD_NEMA_HP_RATINGS = [
+    1.0, 1.5, 2.0, 3.0, 5.0, 7.5, 10.0, 15.0, 20.0, 25.0, 30.0,
+    40.0, 50.0, 60.0, 75.0, 100.0, 125.0, 150.0, 200.0, 250.0, 300.0,
+    350.0, 400.0, 450.0, 500.0
+]
+
+
 def seed_motors(app_db):
     """
-    Seed standard industrial electric motors for 50 Hz and 60 Hz across 2, 4, 6, 8 poles.
+    Seed standard industrial electric motors across suppliers (Standard IEC, WEG, ABB, Siemens, Baldor-Reliance),
+    standards (IEC, NEMA), efficiency classes (IE2, IE3, IE4, NEMA Premium), 50/60 Hz, and 2, 4, 6, 8 poles.
     """
-    # Create table if it doesn't exist
     app_db.create_all()
 
-    if Motor.query.first() is not None:
-        return  # Already seeded
+    # Check if comprehensive multi-supplier catalogue is already present
+    has_weg = Motor.query.filter_by(manufacturer='WEG').first() is not None
+    has_nema = Motor.query.filter_by(standard='NEMA').first() is not None
+    if has_weg and has_nema:
+        return  # Already seeded with full catalogue
+
+    # If only partial/old seed exists without suppliers or standards, clean up
+    Motor.query.delete()
+    app_db.session.commit()
 
     records = []
 
-    # 50 Hz configurations: sync speeds = 3000, 1500, 1000, 750
-    # 60 Hz configurations: sync speeds = 3600, 1800, 1200, 900
-    configs = [
+    # 1. IEC Configurations (50 Hz & 60 Hz)
+    iec_configs = [
         (50, 2, 3000.0, '400V'),
         (50, 4, 1500.0, '400V'),
         (50, 6, 1000.0, '400V'),
@@ -130,40 +167,126 @@ def seed_motors(app_db):
         (60, 8, 900.0,  '460V'),
     ]
 
-    for freq, poles, sync_rpm, volt in configs:
-        for kw in STANDARD_KW_RATINGS:
-            rated_rpm = _calc_slip_rpm(sync_rpm, kw, poles)
-            hp = round(kw * 1.34102, 1)
-            frame = _get_frame_size(kw, poles)
-            eff = min(96.8, round(88.0 + 8.0 * (kw / (kw + 30.0)), 1))
+    iec_suppliers = [
+        ('Standard IEC', ['IE3']),
+        ('WEG', ['IE3', 'IE4']),
+        ('ABB', ['IE3', 'IE4']),
+        ('Siemens', ['IE2', 'IE3', 'IE4']),
+    ]
 
-            model_name = f"IE3 {kw:.1f}kW {poles}P {freq}Hz ({int(rated_rpm)} rpm)"
-            records.append(Motor(
-                model_name=model_name,
-                manufacturer='Standard IEC',
-                rated_power_kw=kw,
-                rated_power_hp=hp,
-                frequency_hz=freq,
-                poles=poles,
-                sync_speed_rpm=sync_rpm,
-                rated_speed_rpm=rated_rpm,
-                efficiency_pct=eff,
-                power_factor=0.86,
-                frame_size=frame,
-                voltage=volt
-            ))
+    for mfr, eff_classes in iec_suppliers:
+        for eff_cls in eff_classes:
+            eff_bonus = 1.0 if eff_cls == 'IE4' else (-1.2 if eff_cls == 'IE2' else 0.0)
+            for freq, poles, sync_rpm, volt in iec_configs:
+                for kw in STANDARD_KW_RATINGS:
+                    rated_rpm = _calc_slip_rpm(sync_rpm, kw, poles)
+                    hp = round(kw * 1.34102, 1)
+                    frame = _get_frame_size(kw, poles)
+                    base_eff = round(88.0 + 8.0 * (kw / (kw + 30.0)), 1)
+                    eff = min(97.2, max(82.0, round(base_eff + eff_bonus, 1)))
+
+                    model_name = f"{mfr} {eff_cls} {kw:.1f}kW {poles}P {freq}Hz ({int(rated_rpm)} rpm)"
+                    records.append(Motor(
+                        model_name=model_name,
+                        manufacturer=mfr,
+                        standard='IEC',
+                        efficiency_class=eff_cls,
+                        rated_power_kw=kw,
+                        rated_power_hp=hp,
+                        frequency_hz=freq,
+                        poles=poles,
+                        sync_speed_rpm=sync_rpm,
+                        rated_speed_rpm=rated_rpm,
+                        efficiency_pct=eff,
+                        power_factor=0.86,
+                        frame_size=frame,
+                        voltage=volt
+                    ))
+
+    # 2. NEMA Configurations (60 Hz standard)
+    nema_configs = [
+        (60, 2, 3600.0, '460V'),
+        (60, 4, 1800.0, '460V'),
+        (60, 6, 1200.0, '460V'),
+        (60, 8, 900.0,  '460V'),
+    ]
+
+    nema_suppliers = ['Baldor-Reliance', 'WEG']
+
+    for mfr in nema_suppliers:
+        for freq, poles, sync_rpm, volt in nema_configs:
+            for hp in STANDARD_NEMA_HP_RATINGS:
+                kw = round(hp * 0.7457, 2)
+                rated_rpm = _calc_slip_rpm(sync_rpm, kw, poles)
+                frame = _get_nema_frame_size(hp, poles)
+                eff = min(96.5, round(88.5 + 7.5 * (kw / (kw + 30.0)), 1))
+
+                model_name = f"{mfr} NEMA Premium {hp:.0f}HP {poles}P {freq}Hz ({int(rated_rpm)} rpm)"
+                records.append(Motor(
+                    model_name=model_name,
+                    manufacturer=mfr,
+                    standard='NEMA',
+                    efficiency_class='NEMA Premium',
+                    rated_power_kw=kw,
+                    rated_power_hp=hp,
+                    frequency_hz=freq,
+                    poles=poles,
+                    sync_speed_rpm=sync_rpm,
+                    rated_speed_rpm=rated_rpm,
+                    efficiency_pct=eff,
+                    power_factor=0.87,
+                    frame_size=frame,
+                    voltage=volt
+                ))
 
     app_db.session.bulk_save_objects(records)
     app_db.session.commit()
-    print(f"[OK] Seeded {len(records)} industrial electric motors into database.")
+    print(f"[OK] Seeded {len(records)} industrial electric motors across IEC & NEMA standards.")
 
 
-def get_available_motors(frequency_hz=50, poles=4):
+def get_available_motors(frequency_hz=50, poles=4, standard=None, efficiency_class=None, manufacturer=None):
     """
-    Query available motors for a given frequency and pole count, sorted by rated power.
+    Query available motors for a given frequency and pole count, with optional
+    standard, efficiency class, and manufacturer/supplier filters.
     """
-    return Motor.query.filter_by(frequency_hz=int(frequency_hz), poles=int(poles))\
-                      .order_by(Motor.rated_power_kw.asc()).all()
+    from models import db
+    query = Motor.query.filter_by(frequency_hz=int(frequency_hz), poles=int(poles))
+
+    if standard and str(standard).strip().lower() not in ('all', ''):
+        query = query.filter(db.func.lower(Motor.standard) == str(standard).strip().lower())
+
+    if efficiency_class and str(efficiency_class).strip().lower() not in ('all', ''):
+        query = query.filter(db.func.lower(Motor.efficiency_class) == str(efficiency_class).strip().lower())
+
+    if manufacturer and str(manufacturer).strip().lower() not in ('all', ''):
+        query = query.filter(db.func.lower(Motor.manufacturer) == str(manufacturer).strip().lower())
+
+    return query.order_by(Motor.rated_power_kw.asc()).all()
+
+
+def get_motor_filter_options():
+    """
+    Returns distinct filter options available in the motor catalogue:
+    - Suppliers / Manufacturers
+    - Standards (IEC, NEMA)
+    - Efficiency Classes (IE2, IE3, IE4, NEMA Premium)
+    """
+    from models import db
+    try:
+        suppliers = [r[0] for r in db.session.query(Motor.manufacturer).distinct().filter(Motor.manufacturer != '').order_by(Motor.manufacturer.asc()).all()]
+        standards = [r[0] for r in db.session.query(Motor.standard).distinct().filter(Motor.standard != '').order_by(Motor.standard.asc()).all()]
+        efficiencies = [r[0] for r in db.session.query(Motor.efficiency_class).distinct().filter(Motor.efficiency_class != '').order_by(Motor.efficiency_class.asc()).all()]
+        return {
+            'suppliers': suppliers or ['Standard IEC', 'WEG', 'ABB', 'Siemens', 'Baldor-Reliance'],
+            'standards': standards or ['IEC', 'NEMA'],
+            'efficiencies': efficiencies or ['IE2', 'IE3', 'IE4', 'NEMA Premium']
+        }
+    except Exception:
+        return {
+            'suppliers': ['Standard IEC', 'WEG', 'ABB', 'Siemens', 'Baldor-Reliance'],
+            'standards': ['IEC', 'NEMA'],
+            'efficiencies': ['IE2', 'IE3', 'IE4', 'NEMA Premium']
+        }
 
 
 def get_motor_by_id(motor_id):
@@ -176,3 +299,4 @@ def get_motor_by_id(motor_id):
         return Motor.query.get(int(motor_id))
     except Exception:
         return None
+

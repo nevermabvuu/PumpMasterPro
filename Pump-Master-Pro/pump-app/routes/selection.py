@@ -169,13 +169,18 @@ def pump_selection():
             if attr_val and str(attr_val).strip():
                 filters[f'attribute_{i}'] = str(attr_val).strip()
 
-        # ── Fixed Speed Mode (Auto Calculate Pump Speed vs Catalogue Speed) ──
+        # ── Fixed Speed Mode (Auto Calculate Pump Speed vs Manual Pump Speed) ──
+        # Beginners Note:
+        # If operation_mode is 'fixed', user chooses:
+        # - 'auto': system automatically calculates pump speed at full impeller diameter
+        # - 'manual': user manually enters pump speed (RPM); impeller trim is evaluated
         fixed_speed_mode = f.get('fixed_speed_mode', 'auto')
+        manual_pump_speed_rpm = _get_float(f, 'manual_pump_speed_rpm') if (f.get('manual_pump_speed_rpm') and str(f.get('manual_pump_speed_rpm')).strip() != '') else (_get_float(f, 'manual_speed_rpm') if (f.get('manual_speed_rpm') and str(f.get('manual_speed_rpm')).strip() != '') else None)
 
         # ── Motor Selection & Drive Arrangement Controls ─────────────────
         # Beginners Note:
         # Motor frequency (50/60 Hz), poles (2, 4, 6, 8), selection mode (auto/manual),
-        # VSD frequency limits, and drive arrangement (Direct Coupled).
+        # VSD frequency limits, drive arrangement, sizing margin & basis, motor filters, and manual speed/tolerance.
         try:
             motor_freq_hz = int(f.get('motor_freq_hz', 50))
         except (ValueError, TypeError):
@@ -186,11 +191,18 @@ def pump_selection():
         except (ValueError, TypeError):
             motor_poles = 4
 
-        motor_selection_mode = f.get('motor_selection_mode', 'auto')
-        manual_motor_id      = int(f.get('manual_motor_id')) if (f.get('manual_motor_id') and str(f.get('manual_motor_id')).strip() != '') else None
-        vsd_f_min            = _get_float(f, 'vsd_f_min', 30.0)
-        vsd_f_max            = _get_float(f, 'vsd_f_max', 60.0 if motor_freq_hz == 60 else 50.0)
-        drive_type           = f.get('drive_type', 'direct')
+        motor_selection_mode       = f.get('motor_selection_mode', 'auto')
+        manual_motor_id            = int(f.get('manual_motor_id')) if (f.get('manual_motor_id') and str(f.get('manual_motor_id')).strip() != '') else None
+        manual_motor_speed_rpm     = _get_float(f, 'manual_motor_speed_rpm') if (f.get('manual_motor_speed_rpm') and str(f.get('manual_motor_speed_rpm')).strip() != '') else None
+        manual_speed_tolerance_pct = _get_float(f, 'manual_speed_tolerance_pct', 5.0)
+        motor_margin_pct           = _get_float(f, 'motor_margin_pct', 15.0)
+        motor_margin_basis         = f.get('motor_margin_basis', 'duty')
+        motor_standard             = f.get('motor_standard', 'all')
+        motor_efficiency           = f.get('motor_efficiency', 'all')
+        motor_supplier             = f.get('motor_supplier', 'all')
+        vsd_f_min                  = _get_float(f, 'vsd_f_min', 30.0)
+        vsd_f_max                  = _get_float(f, 'vsd_f_max', 60.0 if motor_freq_hz == 60 else 50.0)
+        drive_type                 = f.get('drive_type', 'direct')
 
         # ── Run selection engine ───────────────────────────────────────────
         results = select_pumps(all_pumps, q_duty, h_duty, npsh_avail,
@@ -199,10 +211,18 @@ def pump_selection():
                                operation_mode=f.get('operation_mode', 'fixed'),
                                enabled_attributes=enabled_pump_attributes,
                                fixed_speed_mode=fixed_speed_mode,
+                               manual_pump_speed_rpm=manual_pump_speed_rpm,
                                motor_freq_hz=motor_freq_hz,
                                motor_poles=motor_poles,
                                motor_selection_mode=motor_selection_mode,
                                manual_motor_id=manual_motor_id,
+                               manual_motor_speed_rpm=manual_motor_speed_rpm,
+                               manual_speed_tolerance_pct=manual_speed_tolerance_pct,
+                               motor_margin_pct=motor_margin_pct,
+                               motor_margin_basis=motor_margin_basis,
+                               motor_standard=motor_standard,
+                               motor_efficiency=motor_efficiency,
+                               motor_supplier=motor_supplier,
                                vsd_f_min=vsd_f_min,
                                vsd_f_max=vsd_f_max,
                                drive_type=drive_type)
@@ -234,12 +254,18 @@ def pump_selection():
         'size':    UNITS_SIZE
     }
 
-    # ── Available Motors for Manual Selection ───────────────────────────────
-    # Beginners Note: Query standard motors matching the active frequency and pole count
-    from motor_models import get_available_motors
+    # ── Available Motors & Filter Options for Selection ─────────────────────
+    from motor_models import get_available_motors, get_motor_filter_options
     active_motor_freq = int(form_data.get('motor_freq_hz', 50))
     active_motor_poles = int(form_data.get('motor_poles', 4))
-    available_motors = get_available_motors(frequency_hz=active_motor_freq, poles=active_motor_poles)
+    available_motors = get_available_motors(
+        frequency_hz=active_motor_freq,
+        poles=active_motor_poles,
+        standard=form_data.get('motor_standard'),
+        efficiency_class=form_data.get('motor_efficiency'),
+        manufacturer=form_data.get('motor_supplier')
+    )
+    motor_filter_options = get_motor_filter_options()
 
     # ── Render template with results and filter options ─────────────────────
     return render_template('pump_selection.html',
@@ -249,6 +275,7 @@ def pump_selection():
                            current_org=current_org,
                            enabled_pump_attributes=enabled_pump_attributes,
                            available_motors=available_motors,
+                           motor_filter_options=motor_filter_options,
                            units_tables=units_tables,
                            unit_system=unit_system,
                            unit_q=unit_q,
@@ -329,6 +356,7 @@ def pump_selection_details(pump_id):
                 filters[f'attribute_{i}'] = str(attr_val).strip()
 
         fixed_speed_mode = f.get('fixed_speed_mode', 'auto')
+        manual_pump_speed_rpm = _get_float(f, 'manual_pump_speed_rpm') if (f.get('manual_pump_speed_rpm') and str(f.get('manual_pump_speed_rpm')).strip() != '') else (_get_float(f, 'manual_speed_rpm') if (f.get('manual_speed_rpm') and str(f.get('manual_speed_rpm')).strip() != '') else None)
         try:
             motor_freq_hz = int(f.get('motor_freq_hz', 50))
         except (ValueError, TypeError):
@@ -339,11 +367,18 @@ def pump_selection_details(pump_id):
         except (ValueError, TypeError):
             motor_poles = 4
 
-        motor_selection_mode = f.get('motor_selection_mode', 'auto')
-        manual_motor_id      = int(f.get('manual_motor_id')) if (f.get('manual_motor_id') and str(f.get('manual_motor_id')).strip() != '') else None
-        vsd_f_min            = _get_float(f, 'vsd_f_min', 30.0)
-        vsd_f_max            = _get_float(f, 'vsd_f_max', 60.0 if motor_freq_hz == 60 else 50.0)
-        drive_type           = f.get('drive_type', 'direct')
+        motor_selection_mode       = f.get('motor_selection_mode', 'auto')
+        manual_motor_id            = int(f.get('manual_motor_id')) if (f.get('manual_motor_id') and str(f.get('manual_motor_id')).strip() != '') else None
+        manual_motor_speed_rpm     = _get_float(f, 'manual_motor_speed_rpm') if (f.get('manual_motor_speed_rpm') and str(f.get('manual_motor_speed_rpm')).strip() != '') else None
+        manual_speed_tolerance_pct = _get_float(f, 'manual_speed_tolerance_pct', 5.0)
+        motor_margin_pct           = _get_float(f, 'motor_margin_pct', 15.0)
+        motor_margin_basis         = f.get('motor_margin_basis', 'duty')
+        motor_standard             = f.get('motor_standard', 'all')
+        motor_efficiency           = f.get('motor_efficiency', 'all')
+        motor_supplier             = f.get('motor_supplier', 'all')
+        vsd_f_min                  = _get_float(f, 'vsd_f_min', 30.0)
+        vsd_f_max                  = _get_float(f, 'vsd_f_max', 60.0 if motor_freq_hz == 60 else 50.0)
+        drive_type                 = f.get('drive_type', 'direct')
 
         results = select_pumps(all_pumps, q_duty, h_duty, npsh_avail,
                                liquid, rho, vis, cv, d50, rho_s,
@@ -351,10 +386,18 @@ def pump_selection_details(pump_id):
                                operation_mode=f.get('operation_mode', 'fixed'),
                                enabled_attributes=enabled_pump_attributes,
                                fixed_speed_mode=fixed_speed_mode,
+                               manual_pump_speed_rpm=manual_pump_speed_rpm,
                                motor_freq_hz=motor_freq_hz,
                                motor_poles=motor_poles,
                                motor_selection_mode=motor_selection_mode,
                                manual_motor_id=manual_motor_id,
+                               manual_motor_speed_rpm=manual_motor_speed_rpm,
+                               manual_speed_tolerance_pct=manual_speed_tolerance_pct,
+                               motor_margin_pct=motor_margin_pct,
+                               motor_margin_basis=motor_margin_basis,
+                               motor_standard=motor_standard,
+                               motor_efficiency=motor_efficiency,
+                               motor_supplier=motor_supplier,
                                vsd_f_min=vsd_f_min,
                                vsd_f_max=vsd_f_max,
                                drive_type=drive_type)
@@ -514,7 +557,9 @@ def api_select_pumps():
         slurry_d50=_get_float(data, 'slurry_d50', 0.3),
         rho_solid=_get_float(data, 'rho_solid', 2650.0),
         filters=filters,
-        operation_mode=data.get('operation_mode', 'fixed')
+        operation_mode=data.get('operation_mode', 'fixed'),
+        fixed_speed_mode=data.get('fixed_speed_mode', 'auto'),
+        manual_pump_speed_rpm=_get_float(data, 'manual_pump_speed_rpm') if (data.get('manual_pump_speed_rpm') and str(data.get('manual_pump_speed_rpm')).strip() != '') else None
     )
     return jsonify(results)
 
@@ -530,7 +575,16 @@ def api_motors_by_spec():
     from motor_models import get_available_motors
     freq = request.args.get('freq', 50, type=int)
     poles = request.args.get('poles', 4, type=int)
-    motors = get_available_motors(frequency_hz=freq, poles=poles)
+    standard = request.args.get('standard')
+    efficiency = request.args.get('efficiency')
+    supplier = request.args.get('supplier')
+    motors = get_available_motors(
+        frequency_hz=freq,
+        poles=poles,
+        standard=standard,
+        efficiency_class=efficiency,
+        manufacturer=supplier
+    )
     return jsonify([m.to_dict() for m in motors])
 
 

@@ -38,8 +38,12 @@ def select_pumps(pumps, q_duty, h_duty, npsh_avail=None,
                  tolerance=0.15, filters=None, operation_mode='fixed',
                  enabled_attributes=None,
                  fixed_speed_mode='auto',
+                 manual_pump_speed_rpm=None,
                  motor_freq_hz=50, motor_poles=4,
                  motor_selection_mode='auto', manual_motor_id=None,
+                 manual_motor_speed_rpm=None, manual_speed_tolerance_pct=5.0,
+                 motor_margin_pct=15.0, motor_margin_basis='duty',
+                 motor_standard=None, motor_efficiency=None, motor_supplier=None,
                  vsd_f_min=30.0, vsd_f_max=50.0,
                  drive_type='direct'):
     """
@@ -92,9 +96,17 @@ def select_pumps(pumps, q_duty, h_duty, npsh_avail=None,
             slurry_cv, slurry_d50, rho_solid,
             operation_mode, enabled_attributes=enabled_attributes,
             fixed_speed_mode=fixed_speed_mode,
+            manual_pump_speed_rpm=manual_pump_speed_rpm,
             motor_freq_hz=motor_freq_hz, motor_poles=motor_poles,
             motor_selection_mode=motor_selection_mode,
             manual_motor_id=manual_motor_id,
+            manual_motor_speed_rpm=manual_motor_speed_rpm,
+            manual_speed_tolerance_pct=manual_speed_tolerance_pct,
+            motor_margin_pct=motor_margin_pct,
+            motor_margin_basis=motor_margin_basis,
+            motor_standard=motor_standard,
+            motor_efficiency=motor_efficiency,
+            motor_supplier=motor_supplier,
             vsd_f_min=vsd_f_min, vsd_f_max=vsd_f_max,
             drive_type=drive_type
         )
@@ -149,10 +161,15 @@ def _apply_filters(pumps, filters, operation_mode):
                 continue
 
         # Speed range filter
+        # Beginners Note: When operating in Fixed Speed manual mode, evaluate the speed filter
+        # against the prescribed operating speed rather than the catalogue base speed.
+        is_fixed_manual = (operation_mode == 'fixed' and fixed_speed_mode == 'manual' and manual_pump_speed_rpm and float(manual_pump_speed_rpm) > 0)
+        eval_speed = float(manual_pump_speed_rpm) if is_fixed_manual else (pump.speed_rpm or 1450.0)
+
         speed_min = filters.get('speed_min') if filters else None
         if speed_min is not None and speed_min != '':
             try:
-                if pump.speed_rpm < float(speed_min):
+                if eval_speed < float(speed_min):
                     continue
             except (ValueError, TypeError):
                 pass
@@ -160,7 +177,7 @@ def _apply_filters(pumps, filters, operation_mode):
         speed_max = filters.get('speed_max') if filters else None
         if speed_max is not None and speed_max != '':
             try:
-                if pump.speed_rpm > float(speed_max):
+                if eval_speed > float(speed_max):
                     continue
             except (ValueError, TypeError):
                 pass
@@ -227,8 +244,12 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
                    slurry_cv, slurry_d50, rho_solid,
                    operation_mode='fixed', enabled_attributes=None,
                    fixed_speed_mode='auto',
+                   manual_pump_speed_rpm=None,
                    motor_freq_hz=50, motor_poles=4,
                    motor_selection_mode='auto', manual_motor_id=None,
+                   manual_motor_speed_rpm=None, manual_speed_tolerance_pct=5.0,
+                   motor_margin_pct=15.0, motor_margin_basis='duty',
+                   motor_standard=None, motor_efficiency=None, motor_supplier=None,
                    vsd_f_min=30.0, vsd_f_max=50.0,
                    drive_type='direct'):
     """
@@ -247,31 +268,41 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
     Returns:
         Dict with pump info and performance data, or None if pump can't meet duty.
     """
-    # ── Check 1: Flow range — duty Q must be within pump's operating range ──
-    # Beginners Note: Use a generous range check since trimmed impellers shift Q range
-    q_lo = pump.q_min or 0.0
-    q_hi = pump.q_max
-    # Allow some flow range flexibility — trimmed impellers reduce max Q proportionally
+    base_speed = float(pump.speed_rpm) if pump.speed_rpm else 1450.0
+    fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
+    is_vsd = (operation_mode == 'vsd')
+    is_fixed_manual = (operation_mode == 'fixed' and fixed_speed_mode == 'manual' and manual_pump_speed_rpm and float(manual_pump_speed_rpm) > 0)
+    user_pump_rpm = float(manual_pump_speed_rpm) if is_fixed_manual else base_speed
+    speed_ratio = (user_pump_rpm / base_speed) if (is_fixed_manual and base_speed > 0) else 1.0
+
+    # ── Check 1: Flow range — duty Q must be within pump's operating range at operating speed ──
+    # Beginners Note on Affinity Law Flow Scaling:
+    # Under affinity laws, flow scales directly proportional to speed: Q ∝ N (Q_scaled = speed_ratio * Q_base).
+    # When a pump is driven at an operating speed N different from its catalogue base speed N_base,
+    # its entire allowable flow envelope shifts by speed_ratio = N / N_base.
+    # We apply this scaling to both q_min and q_max before evaluating if the duty flow is reachable.
+    q_lo = (pump.q_min or 0.0) * speed_ratio
+    q_hi = (pump.q_max or 100.0) * speed_ratio
     if q_duty < q_lo or q_duty > q_hi * 1.05:
         return None
 
-    # ── Check 2: Head at duty flow on max impeller ──────────────────────────
-    # Beginners Note: Evaluate the H-Q polynomial at the duty flow rate
-    q_arr = np.array([q_duty])
-    h_at_duty_max = float(hq_curve(pump, q_arr, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)[0])
+    # ── Check 2: Head at duty flow on max impeller at operating speed ──────────
+    # Beginners Note on Affinity Law Head Scaling:
+    # Under affinity laws, head scales with the square of speed: H ∝ N² (H_scaled = speed_ratio² * H_base).
+    # To determine the maximum head the pump can produce at operating speed N_manual with full diameter,
+    # we evaluate the catalogue curve at the equivalent base flow Q_base = Q_duty / speed_ratio,
+    # and multiply the resulting head by (speed_ratio)².
+    # If the duty head exceeds this maximum capacity, the pump cannot achieve the duty point at this speed.
+    q_eval_max = np.array([q_duty / speed_ratio])
+    h_eval_max = float(hq_curve(pump, q_eval_max, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)[0])
+    h_at_duty_max = h_eval_max * (speed_ratio ** 2)
 
-    # Pump must produce at least the required head on max impeller
     if h_at_duty_max < h_duty:
         return None
 
     # ── Check 3: Multi-curve envelope evaluation ────────────────────────────
-    # Beginners Note: Get the pump's available impeller diameters (or speeds for VSD pumps)
-    # and find the minimum impeller head at duty flow to determine the pump's full envelope
-    fam_type = getattr(pump, 'family_type', 'trimmed_impeller') or 'trimmed_impeller'
-    is_vsd = (operation_mode == 'vsd')
-
+    # Beginners Note: Determine available impeller diameters to assess envelope coverage
     if not is_vsd and fam_type == 'variable_speed':
-        # If a VS pump is used in a fixed speed selection, we only consider its physical impeller
         d_max = pump.impeller_dia_mm or 300.0
         d_min = d_max
     else:
@@ -279,8 +310,6 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
         d_max = max(diameters) if diameters else (pump.impeller_dia_mm or 300.0)
         d_min = min(diameters) if len(diameters) > 1 else d_max
 
-
-    # Calculate head at duty for minimum impeller/speed using affinity laws
     if d_min != d_max and d_max > 0:
         r_min = d_min / d_max
         h_at_duty_min = h_at_duty_max * (r_min ** 2)
@@ -288,63 +317,40 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
         h_at_duty_min = 0.0
         r_min = 0.0
 
-    # Check if duty head falls within the envelope [h_min, h_max]
     duty_in_envelope = h_at_duty_min <= h_duty <= h_at_duty_max
-    # Even if duty is above the min curve head, max impeller must cover it (already checked)
 
     # ── Optimal Trim / Speed Ratio Calculation via Bisection Method ───────
-    # Beginners Note on Bisection:
-    # -----------------------------
-    # WHAT IS BISECTION?
-    # Bisection is a robust, guaranteed numerical root-finding algorithm based on the
-    # Intermediate Value Theorem. It solves non-linear equations of the form f(r) = 0.
+    # Beginners Note on Composite Affinity Solver:
+    # When both speed N and impeller diameter D may vary, the combined affinity scaling factor is:
+    #     k = (N / N_base) * (D / D_max) = speed_ratio * dia_trim_ratio
+    # Affinity laws dictate:
+    #     Q_duty = k * Q_base  =>  Q_base = Q_duty / k
+    #     H_duty = k² * H_base(Q_base) = k² * H_base(Q_duty / k)
     #
-    # THE PHYSICAL PROBLEM:
-    # Under affinity laws, trimming an impeller to diameter ratio r = D/D_max (or reducing speed to r = N/N_max)
-    # transforms the head-flow curve according to:
-    #     Q_scaled = r * Q_base  =>  Q_base = Q_duty / r
-    #     H_scaled = r^2 * H_base
-    # For the scaled curve to pass exactly through the target duty point (Q_duty, H_duty):
-    #     H_duty = r^2 * H_max(Q_duty / r)
-    #
-    # Rearranging into a root-finding equation f(r) = 0:
-    #     f(r) = [ r^2 * H_max(Q_duty / r) ] - H_duty = 0
-    #
-    # HOW THE BISECTION ALGORITHM WORKS HERE:
-    # 1. We define a bracket [r_low, r_high] = [0.20, 1.05] representing realistic physical trim bounds (20% to 105%).
-    # 2. In each iteration:
-    #      a. Compute midpoint r_mid = (r_low + r_high) / 2.
-    #      b. Evaluate the pump's head at equivalent base flow Q_eval = Q_duty / r_mid.
-    #      c. Calculate scaled head h_calc = H_max(Q_eval) * r_mid^2.
-    #      d. If h_calc < H_duty, the pump is under-producing, so we need a larger trim ratio: set r_low = r_mid.
-    #         Else, the pump is over-producing, so we need a smaller trim ratio: set r_high = r_mid.
-    # 3. Repeating this 25 times reduces the uncertainty interval by a factor of 2^25 (~33.5 million),
-    #    yielding an extremely accurate ratio (precision < 0.00000003 or ~0.000003%).
-    # 4. Unlike Newton-Raphson, Bisection requires no derivative (dH/dQ) and cannot diverge or oscillate.
-    if h_at_duty_max > 0:
-        r_low = 0.2
-        r_high = 1.05
-        for _ in range(25):
-            r_mid = (r_low + r_high) / 2.0
-            q_eval = np.array([q_duty / r_mid])
+    # We solve f(k) = [ k² * H_base(Q_duty / k) ] - H_duty = 0 using bisection on [0.15, 1.25].
+    if h_at_duty_max > 0 and h_duty > 0:
+        k_low = 0.15
+        k_high = 1.25
+        for _ in range(30):
+            k_mid = (k_low + k_high) / 2.0
+            q_eval = np.array([q_duty / k_mid])
             h_eval = float(hq_curve(pump, q_eval, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)[0])
-            h_calc = h_eval * (r_mid ** 2)
+            h_calc = h_eval * (k_mid ** 2)
             if h_calc < h_duty:
-                r_low = r_mid
+                k_low = k_mid
             else:
-                r_high = r_mid
-        optimal_trim_ratio = min(1.0, (r_low + r_high) / 2.0)
+                k_high = k_mid
+        composite_k = (k_low + k_high) / 2.0
     else:
-        optimal_trim_ratio = 1.0
+        composite_k = speed_ratio
 
-    base_speed = float(pump.speed_rpm) if pump.speed_rpm else 1450.0
-
+    # ── Mode-Specific Speed & Impeller Trim Resolution ───────────────────
     if is_vsd:
-        # VSD: speed varies between VFD min and max bounds
-        optimal_speed_rpm = base_speed * optimal_trim_ratio
+        # VSD Mode: Impeller is full diameter; speed varies to hit duty point
+        optimal_speed_rpm = base_speed * composite_k
         optimal_trim_dia_mm = d_max
-        
-        # Parse RPM bounds
+        optimal_trim_ratio = round(composite_k, 4)
+
         rpm_str = getattr(pump, 'graph_rpm_values', '') or ''
         rpm_vals = []
         for v in rpm_str.replace(',', ' ').replace(';', ' ').replace('|', ' ').split():
@@ -352,75 +358,132 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
                 rpm_vals.append(float(v))
             except ValueError:
                 pass
-        
+
         if rpm_vals:
             max_rpm = max(rpm_vals)
             min_rpm = min(rpm_vals)
         else:
-            # Fallback to VFD Hz bounds if RPM values aren't explicitly given
             min_hz = getattr(pump, 'vfd_min_hz', 30.0)
             max_hz = getattr(pump, 'vfd_max_hz', 50.0)
             max_rpm = base_speed
             min_rpm = base_speed * (min_hz / max_hz) if max_hz > 0 else base_speed * 0.6
-            
-        # Reject pump if the required VSD speed is outside bounds
-        if optimal_speed_rpm < min_rpm or optimal_speed_rpm > (max_rpm * 1.05):  # 5% tolerance on max
+
+        if optimal_speed_rpm < min_rpm or optimal_speed_rpm > (max_rpm * 1.05):
             return None
 
     elif fixed_speed_mode == 'auto':
-        # ── Fixed Speed (Automatically Calculate Pump Speed) ─────────────────
-        # Beginners Note: The system automatically calculates the exact required operating speed (RPM)
-        # to satisfy the duty point using the full impeller diameter (no machining needed).
-        optimal_speed_rpm = round(base_speed * optimal_trim_ratio, 1)
+        # Fixed Speed (Auto Calculate Pump Speed): Full impeller, speed is calculated
+        optimal_speed_rpm = round(base_speed * composite_k, 1)
         optimal_trim_dia_mm = d_max
+        optimal_trim_ratio = round(composite_k, 4)
 
-        # Sanity check: Ensure auto-calculated speed is within realistic operational limits
-        # (between 25% and 135% of base catalogue speed)
         if optimal_speed_rpm < (base_speed * 0.25) or optimal_speed_rpm > (base_speed * 1.35):
             return None
 
-    else:
-        # Default / Catalogue Rated Speed with Impeller Trim
-        optimal_speed_rpm = base_speed
-        optimal_trim_dia_mm = d_max * optimal_trim_ratio
+    elif is_fixed_manual:
+        # Fixed Speed (Manual User Prescribed Speed):
+        # Operating speed is fixed to user_pump_rpm.
+        # Impeller diameter trim ratio r_dia = composite_k / speed_ratio.
+        r_dia = composite_k / speed_ratio if speed_ratio > 0 else 1.0
 
-    # ── NPSH evaluation ────────────────────────────────────────────────────
-    # Beginners Note: NPSHr (required) must be less than NPSHa (available) with safety margin
-    npsh_req = float(npsh_curve(pump, q_arr)[0])
+        min_trim_allowable = max(0.55, (d_min / d_max) * 0.95) if (d_min and d_max and d_min < d_max) else 0.60
+        if r_dia > 1.05 or r_dia < min_trim_allowable:
+            return None
+
+        optimal_speed_rpm = round(user_pump_rpm, 1)
+        optimal_trim_dia_mm = round(d_max * min(1.0, r_dia), 1)
+        optimal_trim_ratio = round(min(1.0, r_dia), 4)
+
+    else:
+        # Fixed Speed (Catalogue Rated Base Speed with Impeller Trim):
+        r_dia = composite_k
+        if r_dia > 1.05 or r_dia < 0.60:
+            return None
+        optimal_speed_rpm = base_speed
+        optimal_trim_dia_mm = round(d_max * min(1.0, r_dia), 1)
+        optimal_trim_ratio = round(min(1.0, r_dia), 4)
+
+    # ── Operating Point Performance with Affinity Scaling ────────────────
+    # Beginners Note on Hydraulic Performance at Operating Condition:
+    # Operating point on base curve is evaluated at equivalent base flow Q_base = Q_duty / composite_k.
+    # By affinity laws:
+    #   - Shaft Power P ∝ k³: P_duty = k³ * P_base(Q_base)
+    #   - NPSHr ∝ k²: NPSHr_duty = k² * NPSHr_base(Q_base)
+    #   - Efficiency η is preserved at corresponding affinity point
+    q_base_eval = np.array([q_duty / composite_k])
+    eta_eval = float(efficiency_curve(pump, q_base_eval, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)[0])
+    pwr_base_eval = float(power_curve(pump, q_base_eval, liquid, rho, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)[0])
+    pwr_duty = max(0.1, pwr_base_eval * (composite_k ** 3))
+
+    npsh_base_eval = float(npsh_curve(pump, q_base_eval)[0])
+    npsh_req = max(0.0, npsh_base_eval * (composite_k ** 2))
+
+    # NPSH evaluation against available NPSH
     npsh_ok = True
     npsh_margin = None
     if npsh_avail is not None:
         npsh_margin = npsh_avail - npsh_req
-        # Require NPSHa >= 1.1 × NPSHr (10% safety margin per industry standard)
         if npsh_avail < 1.1 * npsh_req:
             npsh_ok = False
 
-    # ── Operating point at duty flow ───────────────────────────────────────
-    # Beginners Note: Get full performance (H, η, P, NPSH) at the duty flow rate
-    op = operating_point(pump, q_duty, liquid, rho, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
+    # BEP point at operating speed
+    bep_base = bep_point(pump, liquid, rho, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
+    bep_q = round(bep_base['q'] * composite_k, 2)
+    bep_h = round(bep_base['h'] * (composite_k ** 2), 2)
+    bep_power = round(bep_base['power'] * (composite_k ** 3), 2)
+    bep_eta = bep_base['eta']
 
-    # ── BEP point ──────────────────────────────────────────────────────────
-    # Beginners Note: Best Efficiency Point — the flow rate where the pump runs most efficiently
-    bep = bep_point(pump, liquid, rho, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
-
-    # ── Calculate BEP proximity ratio ──────────────────────────────────────
-    # Beginners Note: How close the duty flow is to BEP flow (1.0 = exactly at BEP)
-    q_ratio = q_duty / bep['q'] if bep['q'] > 0 else 1.0
+    # BEP proximity ratio
+    q_ratio = q_duty / bep_q if bep_q > 0 else 1.0
     in_preferred_range = 0.80 <= q_ratio <= 1.20
     in_acceptable_range = 0.65 <= q_ratio <= 1.35
 
-    # ── Head surplus calculation ───────────────────────────────────────────
-    # Beginners Note: How much extra head the pump produces above what's needed at max impeller
+    # Head surplus calculation
     head_surplus = h_at_duty_max - h_duty
     head_surplus_pct = (head_surplus / h_duty) * 100 if h_duty > 0 else 0
 
-    # ── Suitability rating (0–100) ─────────────────────────────────────────
-    rating = _suitability_rating(q_ratio, op['eta'], npsh_ok, head_surplus_pct, optimal_trim_ratio)
+    # Suitability rating (0–100)
+    rating = _suitability_rating(q_ratio, eta_eval, npsh_ok, head_surplus_pct, optimal_trim_ratio)
 
-    # ── Mini-chart sparkline data ──────────────────────────────────────────
-    # Beginners Note: Generate compact H-Q curve arrays for inline SVG sparklines
+    # Mini-chart sparkline data
     mini_chart = _generate_mini_chart(pump, q_duty, h_duty, d_max, d_min, optimal_trim_ratio,
-                                       liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
+                                      liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid,
+                                      speed_ratio=speed_ratio, composite_ratio=composite_k)
+
+    # ── Power Calculations for Motor Sizing Basis ────────────────────────
+    duty_power = round(pwr_duty, 2)
+    bep_power = round(bep_base['power'] * (composite_k ** 3), 2)
+
+    # Calculate shutoff power (at Q = 0) scaled by composite_k³
+    try:
+        shutoff_arr = power_curve(pump, np.array([0.0]), liquid, rho, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
+        shutoff_power_base = float(shutoff_arr[0]) if shutoff_arr is not None and len(shutoff_arr) > 0 else 0.0
+    except Exception:
+        shutoff_power_base = 0.0
+    if shutoff_power_base <= 0:
+        shutoff_power_base = round(bep_base['power'] * 0.40, 2)
+    shutoff_power = round(shutoff_power_base * (composite_k ** 3), 2)
+
+    # Calculate end of curve power (at Q_max) scaled by composite_k³
+    try:
+        q_max_val = float(pump.q_max or (bep_base['q'] * 1.3))
+        eoc_arr = power_curve(pump, np.array([q_max_val]), liquid, rho, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
+        eoc_power_base = float(eoc_arr[0]) if eoc_arr is not None and len(eoc_arr) > 0 else 0.0
+    except Exception:
+        eoc_power_base = 0.0
+    if eoc_power_base <= 0:
+        eoc_power_base = round(bep_base['power'] * 1.20, 2)
+    eoc_power = round(eoc_power_base * (composite_k ** 3), 2)
+
+    # Select base power matching motor_margin_basis
+    if motor_margin_basis == 'bep':
+        base_power_kw = bep_power
+    elif motor_margin_basis == 'shutoff':
+        base_power_kw = shutoff_power
+    elif motor_margin_basis == 'eoc':
+        base_power_kw = eoc_power
+    else:
+        base_power_kw = duty_power
 
     # ── Motor Selection & Drive Arrangement Evaluation ───────────────────────
     # Beginners Note:
@@ -430,7 +493,7 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
     # 4. For VSD: we calculate the required inverter frequency (Hz) and verify against user limits.
     from motor_selection import evaluate_motor_and_drive
     motor_eval = evaluate_motor_and_drive(
-        pump_duty_power_kw=op['power'],
+        pump_duty_power_kw=duty_power,
         pump_duty_speed_rpm=optimal_speed_rpm,
         operation_mode=operation_mode,
         drive_type=drive_type,
@@ -438,6 +501,14 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
         motor_poles=motor_poles,
         motor_selection_mode=motor_selection_mode,
         manual_motor_id=manual_motor_id,
+        manual_motor_speed_rpm=manual_motor_speed_rpm,
+        manual_speed_tolerance_pct=manual_speed_tolerance_pct,
+        motor_margin_pct=motor_margin_pct,
+        motor_margin_basis=motor_margin_basis,
+        base_power_kw=base_power_kw,
+        motor_standard=motor_standard,
+        motor_efficiency=motor_efficiency,
+        motor_supplier=motor_supplier,
         vsd_f_min=vsd_f_min,
         vsd_f_max=vsd_f_max
     )
@@ -455,32 +526,37 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
         'pump_type': pump.pump_type or 'centrifugal',
         'family_type': fam_type,
 
-        # Performance at duty (max impeller)
-        'op_q': op['q'],
-        'op_h': op['h'],
-        'op_eta': op['eta'],
-        'op_power': op['power'],
-        'op_npsh': npsh_req,
+        # Performance at duty
+        'op_q': q_duty,
+        'op_h': round(h_duty, 2),
+        'op_eta': round(eta_eval, 2),
+        'op_power': duty_power,
+        'op_npsh': round(npsh_req, 2),
 
         # Head surplus
         'head_surplus': round(head_surplus, 2),
         'head_surplus_pct': round(head_surplus_pct, 1),
 
-        # BEP data
-        'bep_q': bep['q'],
-        'bep_h': bep['h'],
-        'bep_eta': bep['eta'],
-        'bep_power': bep['power'],
+        # BEP & Limit data
+        'bep_q': bep_q,
+        'bep_h': bep_h,
+        'bep_eta': bep_eta,
+        'bep_power': bep_power,
+        'shutoff_power': shutoff_power,
+        'eoc_power': eoc_power,
         'q_ratio': round(q_ratio, 3),
         'in_preferred_range': in_preferred_range,
         'in_acceptable_range': in_acceptable_range,
 
         # Trim / speed data
-        'optimal_trim_ratio': round(optimal_trim_ratio, 4),
-        'optimal_trim_dia_mm': round(optimal_trim_dia_mm, 1),
+        'optimal_trim_ratio': optimal_trim_ratio,
+        'optimal_trim_dia_mm': optimal_trim_dia_mm,
         'optimal_speed_rpm': round(optimal_speed_rpm, 0),
+        'composite_ratio': round(composite_k, 4),
+        'speed_ratio': round(speed_ratio, 4),
         'is_vsd': is_vsd,
         'fixed_speed_mode': fixed_speed_mode if not is_vsd else None,
+        'manual_pump_speed_rpm': manual_pump_speed_rpm if (fixed_speed_mode == 'manual' and not is_vsd) else None,
         'd_max': d_max,
         'd_min': d_min,
         'duty_in_envelope': duty_in_envelope,
@@ -627,14 +703,15 @@ def _rating_label(score):
 # ── Mini Sparkline Chart Data ─────────────────────────────────────────────────
 
 def _generate_mini_chart(pump, q_duty, h_duty, d_max, d_min, optimal_trim_ratio,
-                          liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid):
+                          liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid,
+                          speed_ratio=1.0, composite_ratio=None):
     """
     Generate compact H-Q curve data for inline SVG sparklines.
 
     Beginners Note:
         Returns a dict with:
-        - q_max: Array of flow values for max impeller H-Q curve
-        - h_max: Array of head values for max impeller H-Q curve
+        - q_max: Array of flow values for max impeller H-Q curve at operating speed
+        - h_max: Array of head values for max impeller H-Q curve at operating speed
         - q_min: Array of flow values for min impeller H-Q curve (if applicable)
         - h_min: Array of head values for min impeller H-Q curve (if applicable)
         - q_trim: Array of flow values for optimal trim H-Q curve
@@ -647,12 +724,13 @@ def _generate_mini_chart(pump, q_duty, h_duty, d_max, d_min, optimal_trim_ratio,
         All arrays are compact (SPARKLINE_POINTS values) for lightweight rendering.
     """
     n = SPARKLINE_POINTS
-    q_lo = pump.q_min or 0.0
-    q_hi = pump.q_max
+    q_lo = (pump.q_min or 0.0) * speed_ratio
+    q_hi = (pump.q_max or 100.0) * speed_ratio
 
-    # ── Max impeller H-Q curve ─────────────────────────────────────────────
+    # ── Max impeller H-Q curve at operating speed ──────────────────────────
     q_max_arr = np.linspace(q_lo, q_hi, n)
-    h_max_arr = hq_curve(pump, q_max_arr, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid)
+    q_base_arr = q_max_arr / speed_ratio if speed_ratio > 0 else q_max_arr
+    h_max_arr = hq_curve(pump, q_base_arr, liquid, viscosity_cSt, slurry_cv, slurry_d50, rho_solid) * (speed_ratio ** 2)
 
     chart = {
         'q_max': [round(float(v), 2) for v in q_max_arr],
@@ -662,7 +740,6 @@ def _generate_mini_chart(pump, q_duty, h_duty, d_max, d_min, optimal_trim_ratio,
     }
 
     # ── Min impeller H-Q curve (using affinity laws) ───────────────────────
-    # Beginners Note: For trimmed impeller pumps, scale by D²/D ratio. For VSD, by N²/N ratio.
     if d_min != d_max and d_max > 0:
         r_min = d_min / d_max
         q_min_arr = q_max_arr * r_min
@@ -675,9 +752,10 @@ def _generate_mini_chart(pump, q_duty, h_duty, d_max, d_min, optimal_trim_ratio,
 
     # ── Optimal trim H-Q curve ─────────────────────────────────────────────
     # Beginners Note: The curve at the calculated optimal trim ratio
-    if optimal_trim_ratio < 0.99:
-        q_trim_arr = q_max_arr * optimal_trim_ratio
-        h_trim_arr = h_max_arr * (optimal_trim_ratio ** 2)
+    trim_factor = (composite_ratio / speed_ratio) if (composite_ratio and speed_ratio > 0) else optimal_trim_ratio
+    if trim_factor < 0.99:
+        q_trim_arr = q_max_arr * trim_factor
+        h_trim_arr = h_max_arr * (trim_factor ** 2)
         chart['q_trim'] = [round(float(v), 2) for v in q_trim_arr]
         chart['h_trim'] = [round(float(v), 2) for v in h_trim_arr]
     else:

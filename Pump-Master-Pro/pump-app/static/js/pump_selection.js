@@ -482,25 +482,57 @@ function renderSparkline(container, data) {
 
 // ── Operation Mode & Motor/Drive Arrangement Handlers ───────────────────────
 // Beginners Note:
-// 1. Toggles VSD frequency limits bounds when switching between Fixed Speed and VSD mode
+// 1. Toggles between Fixed Speed options (auto calculation vs manual speed) and VSD frequency limits bounds
 // 2. Toggles manual motor dropdown when switching between Automatic and Manual motor selection
 // 3. Asynchronously fetches available motors from /papi/motors-by-spec when Frequency or Poles change
 function onOperationModeChange() {
   const isVsd = document.getElementById('opModeVsd')?.checked;
   const vsdGroup = document.getElementById('vsdFrequencyLimitsGroup');
+  const fixedSpeedGroup = document.getElementById('fixedSpeedOptionsGroup');
   if (vsdGroup) {
     vsdGroup.style.display = isVsd ? 'block' : 'none';
   }
+  if (fixedSpeedGroup) {
+    fixedSpeedGroup.style.display = isVsd ? 'none' : 'block';
+  }
+}
+
+// Fixed speed sub-option: Toggle manual pump speed input field
+function onFixedSpeedModeChange() {
+  const isManual = document.getElementById('fixedSpeedManual')?.checked;
+  const manualGroup = document.getElementById('manualPumpSpeedGroup');
+  if (manualGroup) {
+    manualGroup.style.display = isManual ? 'block' : 'none';
+    const input = document.getElementById('manualPumpSpeedRpm');
+    if (isManual && input && !input.value) {
+      input.focus();
+    }
+  }
+}
+
+function updatePolesLabels(freq) {
+  const polesSelect = document.getElementById('motorPolesSel');
+  if (!polesSelect) return;
+  const speeds50 = { '2': '~3000 RPM', '4': '~1500 RPM', '6': '~1000 RPM', '8': '~750 RPM' };
+  const speeds60 = { '2': '~3600 RPM', '4': '~1800 RPM', '6': '~1200 RPM', '8': '~900 RPM' };
+  const speeds = (freq === 60) ? speeds60 : speeds50;
+
+  Array.from(polesSelect.options).forEach(opt => {
+    const p = opt.value;
+    if (speeds[p]) {
+      opt.textContent = `${p} Poles (${speeds[p]})`;
+    }
+  });
 }
 
 function onMotorSelectionModeChange() {
   const isManual = document.getElementById('motorSelectManual')?.checked;
-  const manualGroup = document.getElementById('manualMotorDropdownGroup');
+  const manualGroup = document.getElementById('manualMotorGroup');
   if (manualGroup) {
     manualGroup.style.display = isManual ? 'block' : 'none';
-    const select = document.getElementById('manualMotorSelect');
-    if (isManual && select) {
-      select.focus();
+    const input = document.getElementById('manualMotorSpeedRpm');
+    if (isManual && input && !input.value) {
+      input.focus();
     }
   }
 }
@@ -508,10 +540,11 @@ function onMotorSelectionModeChange() {
 async function onMotorSpecChange() {
   const freqRadio = document.querySelector('input[name="motor_freq_hz"]:checked');
   const freq = freqRadio ? parseInt(freqRadio.value, 10) : 50;
-  const polesSelect = document.getElementById('motorPolesSel');
-  const poles = polesSelect ? parseInt(polesSelect.value, 10) : 4;
 
-  // Auto-adjust default max VSD frequency if it matches standard mains
+  // 1. Dynamically update suggested speed in Poles dropdown options
+  updatePolesLabels(freq);
+
+  // 2. Auto-adjust default max VSD frequency if it matches standard mains
   const maxFreqInput = document.getElementById('inputVsdFMax');
   if (maxFreqInput) {
     const curVal = parseFloat(maxFreqInput.value);
@@ -521,27 +554,14 @@ async function onMotorSpecChange() {
       maxFreqInput.value = '50.0';
     }
   }
-
-  // Update manual motor dropdown via async API
-  const motorSelect = document.getElementById('manualMotorSelect');
-  if (!motorSelect) return;
-
-  const currentSelectedId = motorSelect.value;
-  motorSelect.innerHTML = '<option value="">Loading motors from database...</option>';
-
-  try {
-    const res = await fetch(`/papi/motors-by-spec?freq=${freq}&poles=${poles}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const motors = await res.json();
-
-    let html = '<option value="">-- Select Motor from DB --</option>';
-    motors.forEach(m => {
-      const isSelected = String(m.id) === String(currentSelectedId) ? 'selected' : '';
-      html += `<option value="${m.id}" ${isSelected}>${m.rated_power_kw}kW (${Math.round(m.rated_speed_rpm)} rpm) - Frame ${m.frame_size}</option>`;
-    });
-    motorSelect.innerHTML = html;
-  } catch (err) {
-    console.error('Error fetching motors:', err);
-    motorSelect.innerHTML = '<option value="">Error loading motors</option>';
-  }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const freqRadio = document.querySelector('input[name="motor_freq_hz"]:checked');
+  const freq = freqRadio ? parseInt(freqRadio.value, 10) : 50;
+  updatePolesLabels(freq);
+  onMotorSelectionModeChange();
+  onOperationModeChange();
+  onFixedSpeedModeChange();
+});
+

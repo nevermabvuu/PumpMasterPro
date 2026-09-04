@@ -144,7 +144,11 @@
             <span class="text-white font-medium">{{ pump.size or 'Industrial Heavy Duty' }}</span>
           </div>
           <div class="flex justify-between py-1 border-b border-[#21262d]">
-            <span class="text-[#8b949e]">Base Speed / Poles</span>
+            <span class="text-[#8b949e]">Operating Duty Speed</span>
+            <span class="text-[#3fb950] font-semibold">{{ active_result.optimal_speed_rpm|int if active_result and active_result.optimal_speed_rpm else pump.speed_rpm|int }} RPM</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#21262d]">
+            <span class="text-[#8b949e]">Catalogue Base Speed</span>
             <span class="text-white font-medium">{{ pump.speed_rpm|int if pump.speed_rpm else '—' }} RPM (50/60 Hz compatible)</span>
           </div>
           <div class="flex justify-between py-1 border-b border-[#21262d]">
@@ -234,23 +238,252 @@
         </div>
       </div>
 
-      <!-- Recommended Motor Power Box -->
-      {% if active_result and active_result.op_power_kw %}
-        {% set p_kw = active_result.op_power_kw|float %}
-        {% set motor_kw = p_kw * 1.15 %}
+      <!-- Recommended / Selected Motor Power Box -->
+      {% if active_result and (active_result.op_power or active_result.op_power_kw or active_result.motor) %}
+        {% set p_kw = (active_result.op_power|float) if active_result.op_power else ((active_result.op_power_kw|float) if active_result.op_power_kw else 0.0) %}
+        {% set mot_kw = active_result.motor.rated_power_kw if (active_result.motor and active_result.motor.rated_power_kw) else (p_kw * 1.15) %}
         <div class="mt-4 p-2.5 bg-[rgba(88,166,255,0.06)] border border-[rgba(88,166,255,0.2)] rounded flex items-center justify-between text-xs">
           <div>
-            <span class="text-[#58a6ff] font-bold block">Recommended Motor Sizing (Lytrose Spec)</span>
-            <span class="text-[11px] text-[#8b949e]">15% margin over duty point / End-of-Curve rated</span>
+            <span class="text-[#58a6ff] font-bold block">
+              {% if active_result.motor and active_result.motor.model_name %}
+                Selected Motor: {{ active_result.motor.model_name }}
+              {% else %}
+                Recommended Motor Sizing (Lytrose Spec)
+              {% endif %}
+            </span>
+            <span class="text-[11px] text-[#8b949e]">
+              {% if active_result.motor and active_result.motor.manufacturer %}
+                {{ active_result.motor.manufacturer }} &bull; {{ active_result.motor.standard }} {{ active_result.motor.efficiency_class }} &bull; {{ active_result.motor.rated_speed_rpm|int }} RPM
+              {% else %}
+                15% margin over duty point / End-of-Curve rated
+              {% endif %}
+            </span>
           </div>
           <div class="text-right font-extrabold text-[#58a6ff] text-sm font-mono">
-            {{ "%.1f"|format(motor_kw) }} kW
-            <span class="text-[10px] text-[#8b949e] font-normal block">({{ "%.1f"|format(motor_kw * 1.341) }} hp)</span>
+            {{ "%.1f"|format(mot_kw) }} kW
+            <span class="text-[10px] text-[#8b949e] font-normal block">({{ "%.1f"|format(mot_kw * 1.341) }} hp)</span>
           </div>
         </div>
       {% endif %}
     </div>
 
+  </div>
+
+  <!-- ── 3. SELECTED ELECTRIC MOTOR & DRIVE ARRANGEMENT SPECIFICATION ── -->
+  {% set mot = active_result.motor if (active_result and active_result.motor and not active_result.motor.error) else none %}
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-4 shadow-sm">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#30363d] pb-3 mb-4 gap-2">
+      <div class="flex items-center gap-2">
+        <span class="p-1.5 bg-[rgba(88,166,255,0.1)] text-[#58a6ff] rounded-lg">
+          <i class="bi bi-cpu text-base"></i>
+        </span>
+        <div>
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            Selected Electric Motor &amp; Drive Specification
+            {% if mot %}
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-[#0d1117] text-[#58a6ff] border border-[#30363d]">
+                {{ mot.standard }} &bull; {{ mot.efficiency_class }}
+              </span>
+            {% endif %}
+          </h3>
+          <p class="text-[11px] text-[#8b949e]">
+            Continuous industrial electric driver sized to hydraulic demand, sizing margin, and direct coupling dynamics.
+          </p>
+        </div>
+      </div>
+
+      {% if mot %}
+      <div>
+        {% if active_result.is_vsd %}
+          {% if mot.vsd_freq_status == 'suitable' %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-[rgba(63,185,80,0.15)] text-[#3fb950] border border-[rgba(63,185,80,0.3)]">
+              <i class="bi bi-check-circle-fill"></i> VSD Frequency In-Range: {{ mot.vsd_required_freq_hz }} Hz
+            </span>
+          {% else %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-[rgba(248,81,73,0.15)] text-[#f85149] border border-[rgba(248,81,73,0.3)]">
+              <i class="bi bi-exclamation-triangle-fill"></i> VSD Frequency Warning: {{ mot.vsd_required_freq_hz }} Hz
+            </span>
+          {% endif %}
+        {% else %}
+          {% if mot.speed_match_status == 'suitable' %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-[rgba(63,185,80,0.15)] text-[#3fb950] border border-[rgba(63,185,80,0.3)]">
+              <i class="bi bi-check-circle-fill"></i> Direct-Drive Suitable ({{ mot.speed_deviation_pct }}% dev)
+            </span>
+          {% elif mot.speed_match_status == 'marginal' %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-[rgba(210,153,34,0.15)] text-[#d29922] border border-[rgba(210,153,34,0.3)]">
+              <i class="bi bi-exclamation-triangle-fill"></i> Acceptable Match ({{ mot.speed_deviation_pct }}% dev)
+            </span>
+          {% else %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-[rgba(248,81,73,0.15)] text-[#f85149] border border-[rgba(248,81,73,0.3)]">
+              <i class="bi bi-x-circle-fill"></i> Speed Mismatch (Transmission Required)
+            </span>
+          {% endif %}
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    {% if mot %}
+    <!-- 4-Column Metric Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+      <!-- 1. Rated Motor Power -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Rated Motor Power</span>
+        <div class="text-base font-extrabold text-[#58a6ff]">
+          {{ mot.rated_power_kw }} kW
+          <span class="text-[11px] font-normal text-[#8b949e]">({{ mot.rated_power_hp }} HP)</span>
+        </div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">
+          Target: {{ "%.1f"|format(mot.target_power_kw) }} kW (+{{ mot.motor_margin_pct|int }}% over {{ mot.basis_label }})
+        </div>
+      </div>
+
+      <!-- 2. Motor Rated Speed -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Motor Rated Speed</span>
+        <div class="text-base font-extrabold text-[#e6edf3]">
+          {{ mot.rated_speed_rpm|int }} RPM
+          <span class="text-[11px] font-normal text-[#8b949e]">({{ mot.poles }}P &bull; {{ mot.frequency_hz }}Hz)</span>
+        </div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">
+          Sync Speed: {{ mot.sync_speed_rpm }} RPM {% if mot.is_manual %}(Manual Spec){% else %}(Catalogue Actual){% endif %}
+        </div>
+      </div>
+
+      <!-- 3. Efficiency & Frame -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Efficiency &amp; Frame</span>
+        <div class="text-base font-extrabold text-[#3fb950]">
+          {{ "%.1f"|format(mot.efficiency_pct) }}%
+          <span class="text-[11px] font-normal text-[#8b949e]">({{ mot.efficiency_class }})</span>
+        </div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">
+          Frame: {{ mot.frame_size or 'Standard' }} &bull; {{ mot.voltage }}
+        </div>
+      </div>
+
+      <!-- 4. Drive Relationship -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Drive Arrangement</span>
+        <div class="text-base font-extrabold text-white">
+          {{ mot.drive_name or 'Direct Coupled' }}
+          <span class="text-[11px] font-normal text-[#8b949e]">(1:1)</span>
+        </div>
+        <div class="text-[10px] {{ 'text-[#3fb950]' if mot.speed_match_status == 'suitable' else ('text-[#d29922]' if mot.speed_match_status == 'marginal' else 'text-[#f85149]') }} mt-0.5 font-medium">
+          Pump: {{ mot.pump_required_speed_rpm|int }} RPM ({{ mot.speed_deviation_pct }}% dev)
+        </div>
+      </div>
+    </div>
+
+    <!-- Detailed Specification Table & Assessment Note -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Left sub-card: Motor Catalogue Specifications -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-xs font-bold text-white block mb-2 pb-1 border-b border-[#21262d]">
+          <i class="bi bi-card-checklist text-[#58a6ff] mr-1.5"></i>Catalogue Nameplate &amp; Electrical Specs
+        </span>
+        <div class="space-y-1.5 text-xs">
+          <div class="flex justify-between py-0.5 border-b border-[#21262d]/60">
+            <span class="text-[#8b949e]">Manufacturer / Supplier</span>
+            <span class="text-white font-medium">{{ mot.manufacturer }}</span>
+          </div>
+          <div class="flex justify-between py-0.5 border-b border-[#21262d]/60">
+            <span class="text-[#8b949e]">Model / Catalogue Code</span>
+            <span class="text-white font-mono font-medium">{{ mot.model_name }}</span>
+          </div>
+          <div class="flex justify-between py-0.5 border-b border-[#21262d]/60">
+            <span class="text-[#8b949e]">Design Standard</span>
+            <span class="text-white font-medium">{{ mot.standard }}</span>
+          </div>
+          <div class="flex justify-between py-0.5 border-b border-[#21262d]/60">
+            <span class="text-[#8b949e]">Energy Efficiency Class</span>
+            <span class="text-[#3fb950] font-bold">{{ mot.efficiency_class }} ({{ "%.1f"|format(mot.efficiency_pct) }}%)</span>
+          </div>
+          <div class="flex justify-between py-0.5 border-b border-[#21262d]/60">
+            <span class="text-[#8b949e]">Frame Designation</span>
+            <span class="text-white font-mono">{{ mot.frame_size or 'Standard' }}</span>
+          </div>
+          <div class="flex justify-between py-0.5">
+            <span class="text-[#8b949e]">Nominal Voltage / Frequency</span>
+            <span class="text-white font-medium">{{ mot.voltage }} / {{ mot.frequency_hz }} Hz</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right sub-card: Sizing Basis & Drive Coupling Assessment -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg flex flex-col justify-between">
+        <div>
+          <span class="text-xs font-bold text-white block mb-2 pb-1 border-b border-[#21262d]">
+            <i class="bi bi-speedometer text-[#f0883e] mr-1.5"></i>Sizing Engineering Basis &amp; Coupling
+          </span>
+          <div class="space-y-1.5 text-xs">
+            <div class="flex justify-between py-0.5 border-b border-[#21262d]/60">
+              <span class="text-[#8b949e]">Power Sizing Basis</span>
+              <span class="text-[#58a6ff] font-medium">{{ mot.basis_label }} ({{ "%.2f"|format(mot.base_power_kw) }} kW)</span>
+            </div>
+            <div class="flex justify-between py-0.5 border-b border-[#21262d]/60">
+              <span class="text-[#8b949e]">Continuous Safety Margin</span>
+              <span class="text-white font-medium">+{{ mot.motor_margin_pct|int }}% &rarr; Target {{ "%.2f"|format(mot.target_power_kw) }} kW</span>
+            </div>
+            <div class="flex justify-between py-0.5 border-b border-[#21262d]/60">
+              <span class="text-[#8b949e]">Pump Operating Speed</span>
+              <span class="text-white font-mono font-medium">
+                {{ mot.pump_required_speed_rpm|int }} RPM
+                {% if active_result.fixed_speed_mode == 'auto' %}
+                  <span class="text-[10px] text-[#58a6ff] font-normal">(Auto Calculated)</span>
+                {% elif active_result.fixed_speed_mode == 'manual' %}
+                  <span class="text-[10px] text-[#d29922] font-normal">(Manual Entry)</span>
+                {% endif %}
+              </span>
+            </div>
+            <div class="flex justify-between py-0.5 border-b border-[#21262d]/60">
+              <span class="text-[#8b949e]">Motor Sizing Mode</span>
+              <span class="text-white capitalize">
+                {{ 'Manual Speed Input' if mot.is_manual else 'Automatic Catalogue Sizing' }}
+                {% if mot.is_manual %}(±{{ mot.manual_speed_tolerance_pct }}% tol){% endif %}
+              </span>
+            </div>
+            {% if active_result.is_vsd %}
+            <div class="flex justify-between py-0.5">
+              <span class="text-[#8b949e]">Required VSD Output Frequency</span>
+              <span class="font-mono font-bold {{ 'text-[#3fb950]' if mot.vsd_freq_status == 'suitable' else 'text-[#f85149]' }}">
+                {{ mot.vsd_required_freq_hz }} Hz (Range: {{ mot.vsd_f_min|int }}–{{ mot.vsd_f_max|int }} Hz)
+              </span>
+            </div>
+            {% else %}
+            <div class="flex justify-between py-0.5">
+              <span class="text-[#8b949e]">Speed Deviation Percentage</span>
+              <span class="font-mono font-bold {{ 'text-[#3fb950]' if mot.speed_match_status == 'suitable' else ('text-[#d29922]' if mot.speed_match_status == 'marginal' else 'text-[#f85149]') }}">
+                {{ mot.speed_deviation_pct }}%
+              </span>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Match message banner -->
+        {% if mot.match_message %}
+        <div class="mt-3 p-2 rounded text-[11px] {{ 'bg-[rgba(63,185,80,0.1)] border border-[rgba(63,185,80,0.25)] text-[#3fb950]' if mot.speed_match_status == 'suitable' else ('bg-[rgba(210,153,34,0.1)] border border-[rgba(210,153,34,0.25)] text-[#d29922]' if mot.speed_match_status == 'marginal' else 'bg-[rgba(248,81,73,0.1)] border border-[rgba(248,81,73,0.25)] text-[#f85149]') }}">
+          <i class="bi bi-info-circle mr-1"></i>{{ mot.match_message }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% else %}
+    <!-- Fallback if motor evaluation is not yet active (e.g. direct url jump) -->
+    <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg text-xs text-[#8b949e] flex items-center justify-between">
+      <div>
+        <span class="text-white font-bold block mb-0.5">Estimated Recommended Motor Power</span>
+        <span>Based on standard continuous duty power sizing (+15% margin over duty shaft power).</span>
+      </div>
+      {% set est_kw = (active_result.op_power|float * 1.15) if (active_result and active_result.op_power) else 15.0 %}
+      <div class="text-right font-extrabold text-[#58a6ff] text-sm font-mono">
+        {{ "%.1f"|format(est_kw) }} kW
+        <span class="text-[10px] text-[#8b949e] font-normal block">({{ "%.1f"|format(est_kw * 1.341) }} hp)</span>
+      </div>
+    </div>
+    {% endif %}
   </div>
 
 </div>

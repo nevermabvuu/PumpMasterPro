@@ -15,7 +15,10 @@
   <div class="page-header mb-0">
     <h1 class="page-title"><i class="bi bi-graph-up-arrow text-accent mr-2"></i>{{ pump.name }}</h1>
     <p class="page-subtitle">
-      {{ pump.manufacturer or '' }} &bull; {{ pump.pump_type }} &bull; {{ pump.speed_rpm|int }} rpm
+      {{ pump.manufacturer or '' }} &bull; {{ pump.pump_type }} &bull; {{ (active_result.optimal_speed_rpm|int if active_result and active_result.optimal_speed_rpm else pump.speed_rpm|int) }} rpm
+      {% if active_result and active_result.optimal_speed_rpm and (active_result.optimal_speed_rpm|int != pump.speed_rpm|int) %}
+        <span class="text-[#8b949e]">(Base: {{ pump.speed_rpm|int }} rpm)</span>
+      {% endif %}
       &bull; Ø{{ pump.impeller_dia_mm|int }} mm
     </p>
   </div>
@@ -104,7 +107,7 @@
           </span>
         </div>
         <div class="text-xs text-gray-400 flex flex-wrap gap-x-3 gap-y-1 mt-2">
-          <span><i class="bi bi-gear"></i> {{ r.optimal_speed_rpm|int if r.is_vsd else r.speed_rpm|int }} rpm</span>
+          <span><i class="bi bi-gear"></i> {{ r.optimal_speed_rpm|int if r.optimal_speed_rpm else r.speed_rpm|int }} rpm</span>
           <span><i class="bi bi-lightning"></i> {{ "%.1f"|format(r.op_eta|float) }}% eff</span>
           {% if r.operation_mode == 'vsd' %}
             <span class="text-[#f0c040]"><i class="bi bi-speedometer"></i> VSD</span>
@@ -182,10 +185,11 @@
     SLURRY_D50: {{ form_data.slurry_d50 or 0.3 }},
     RHO_SOLID: {{ form_data.rho_solid or 2650.0 }},
     TRIM_RATIO: {{ active_result.optimal_trim_ratio if active_result else 1.0 }},
+    COMPOSITE_RATIO: {{ active_result.composite_ratio if (active_result and active_result.composite_ratio) else (active_result.optimal_trim_ratio if active_result else 1.0) }},
     OPERATION_MODE: "{{ form_data.operation_mode or 'fixed' }}",
     IS_VSD: {{ 'true' if (form_data.operation_mode == 'vsd') else 'false' }},
     FIXED_SPEED_MODE: "{{ form_data.fixed_speed_mode or 'auto' }}",
-    MANUAL_SPEED_RPM: {{ form_data.manual_speed_rpm if form_data.manual_speed_rpm else 'null' }},
+    MANUAL_SPEED_RPM: {{ form_data.manual_pump_speed_rpm if form_data.manual_pump_speed_rpm else (form_data.manual_speed_rpm if form_data.manual_speed_rpm else 'null') }},
     RATED_SPEED: {{ active_result.optimal_speed_rpm | round(1) if active_result and active_result.optimal_speed_rpm else 'null' }},
     RATED_TRIM: {{ active_result.optimal_trim_dia_mm | round(1) if active_result and active_result.optimal_trim_dia_mm else 'null' }},
     ORG_STYLES: {{ (org_styles if org_styles else {}) | tojson }}

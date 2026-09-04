@@ -222,6 +222,14 @@ with app.app_context():
             if 'label_format' not in rep_cols:
                 conn.execute(text("ALTER TABLE reports ADD COLUMN label_format VARCHAR(20) DEFAULT 'auto'"))
 
+            # Auto-migrate motors table columns
+            mot_cols = [c[1] for c in conn.execute(text("PRAGMA table_info(motors)")).fetchall()]
+            if mot_cols:
+                if 'standard' not in mot_cols:
+                    conn.execute(text("ALTER TABLE motors ADD COLUMN standard VARCHAR(20) DEFAULT 'IEC'"))
+                if 'efficiency_class' not in mot_cols:
+                    conn.execute(text("ALTER TABLE motors ADD COLUMN efficiency_class VARCHAR(30) DEFAULT 'IE3'"))
+
             # Data cleanup for VS pumps where diameter values were saved in graph_speed_line_values
             try:
                 vs_pumps = conn.execute(text("SELECT id, speed_rpm, impeller_dia_mm, graph_speed_line_values, graph_dia_overlay_values FROM pumps WHERE family_type = 'variable_speed' AND graph_speed_line_values != '' AND graph_speed_line_values IS NOT NULL")).fetchall()

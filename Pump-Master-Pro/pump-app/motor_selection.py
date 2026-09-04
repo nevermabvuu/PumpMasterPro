@@ -26,17 +26,34 @@ DRIVE_ARRANGEMENTS = [
 ]
 
 
-def select_automatic_motor(required_shaft_power_kw, frequency_hz=50, poles=4, margin=1.15):
+def select_automatic_motor(
+    target_kw,
+    frequency_hz=50,
+    poles=4,
+    standard=None,
+    efficiency_class=None,
+    manufacturer=None
+):
     """
-    Select the standard industrial motor matching frequency and pole count whose rated kW
-    satisfies the required pump shaft power plus engineering safety margin (default +15%).
+    Select the standard industrial motor meeting or exceeding target_kw,
+    filtered by frequency, pole count, standard (IEC/NEMA), efficiency class (IE2/IE3/IE4/NEMA Premium),
+    and manufacturer/supplier.
 
     Beginners Note:
-    Pumps operate with variable liquid density and system transients, so a 10–15% motor power
+    Pumps operate with variable liquid density and system transients, so a motor power
     margin above operating shaft power is standard engineering practice.
     """
-    target_kw = (required_shaft_power_kw or 1.0) * margin
-    motors = get_available_motors(frequency_hz=frequency_hz, poles=poles)
+    motors = get_available_motors(
+        frequency_hz=frequency_hz,
+        poles=poles,
+        standard=standard,
+        efficiency_class=efficiency_class,
+        manufacturer=manufacturer
+    )
+
+    if not motors:
+        # Fallback to general search without strict manufacturer/efficiency constraints
+        motors = get_available_motors(frequency_hz=frequency_hz, poles=poles)
 
     if not motors:
         return None
@@ -59,6 +76,14 @@ def evaluate_motor_and_drive(
     motor_poles=4,
     motor_selection_mode='auto',
     manual_motor_id=None,
+    manual_motor_speed_rpm=None,
+    manual_speed_tolerance_pct=5.0,
+    motor_margin_pct=15.0,
+    motor_margin_basis='duty',
+    base_power_kw=None,
+    motor_standard=None,
+    motor_efficiency=None,
+    motor_supplier=None,
     vsd_f_min=30.0,
     vsd_f_max=50.0
 ):
@@ -73,7 +98,14 @@ def evaluate_motor_and_drive(
         motor_freq_hz: 50 or 60 Hz
         motor_poles: 2, 4, 6, 8
         motor_selection_mode: 'auto' or 'manual'
-        manual_motor_id: ID of selected Motor if mode is 'manual'
+        manual_motor_speed_rpm: Entered motor speed in RPM (Manual mode)
+        manual_speed_tolerance_pct: Allowable speed deviation in % (Manual mode, default 5.0)
+        motor_margin_pct: Sizing safety margin in % (default 15.0)
+        motor_margin_basis: 'duty', 'bep', 'shutoff', 'eoc'
+        base_power_kw: Base power in kW for chosen basis
+        motor_standard: 'IEC', 'NEMA', or 'all'
+        motor_efficiency: 'IE2', 'IE3', 'IE4', 'NEMA Premium', or 'all'
+        motor_supplier: Manufacturer name or 'all'
         vsd_f_min: User-specified minimum VSD frequency (Hz)
         vsd_f_max: User-specified maximum VSD frequency (Hz)
 
@@ -91,6 +123,16 @@ def evaluate_motor_and_drive(
         motor_poles = 4
 
     try:
+        motor_margin_pct = float(motor_margin_pct) if motor_margin_pct is not None else 15.0
+    except (ValueError, TypeError):
+        motor_margin_pct = 15.0
+
+    try:
+        manual_speed_tolerance_pct = float(manual_speed_tolerance_pct) if manual_speed_tolerance_pct is not None else 5.0
+    except (ValueError, TypeError):
+        manual_speed_tolerance_pct = 5.0
+
+    try:
         vsd_f_min = float(vsd_f_min) if vsd_f_min is not None else 30.0
     except (ValueError, TypeError):
         vsd_f_min = 30.0
@@ -100,41 +142,61 @@ def evaluate_motor_and_drive(
     except (ValueError, TypeError):
         vsd_f_max = 50.0
 
-    # 1. Resolve Selected Motor
+    # 1. Determine Power Sizing Basis and Target Power (kW)
+    if base_power_kw is None or base_power_kw <= 0:
+        base_power_kw = pump_duty_power_kw if (pump_duty_power_kw and pump_duty_power_kw > 0) else 1.0
+    base_power_kw = round(float(base_power_kw), 2)
+
+    margin_factor = 1.0 + (motor_margin_pct / 100.0)
+    target_power_kw = round(base_power_kw * margin_factor, 2)
+
+    basis_labels = {
+        'duty': 'Duty Power',
+        'bep': 'BEP Power',
+        'shutoff': 'Shutoff Power',
+        'eoc': 'End of Curve Power'
+    }
+    basis_label = basis_labels.get(motor_margin_basis, 'Duty Power')
+
+    # 2. Select Motor from Catalogue (Always sized to ensure power coverage)
     selected_motor = None
-    if motor_selection_mode == 'manual' and manual_motor_id:
+    if manual_motor_id and motor_selection_mode != 'manual':
         selected_motor = get_motor_by_id(manual_motor_id)
 
     if selected_motor is None:
         selected_motor = select_automatic_motor(
-            required_shaft_power_kw=pump_duty_power_kw,
+            target_kw=target_power_kw,
             frequency_hz=motor_freq_hz,
             poles=motor_poles,
-            margin=1.15
+            standard=motor_standard,
+            efficiency_class=motor_efficiency,
+            manufacturer=motor_supplier
         )
 
     if selected_motor is None:
-        # Fallback safety if database is empty
         return {
-            'error': 'No motors available in database',
+            'error': 'No motors available in database matching criteria',
             'is_suitable': False
         }
 
-    # 2. Drive Relationship (Direct coupling ratio = 1.0)
-    # Beginners Note: For direct coupling, motor speed equals pump speed (i = 1.0).
-    drive_ratio = 1.0
-    if drive_type == DRIVE_DIRECT:
-        motor_req_speed_rpm = pump_duty_speed_rpm * drive_ratio
-    else:
-        # Belt or gearbox (prepared for future extension)
-        motor_req_speed_rpm = pump_duty_speed_rpm * drive_ratio
-
-    motor_rated_rpm = selected_motor.rated_speed_rpm
-
-    # 3. Fixed Speed Suitability Assessment
+    # 3. Determine Operating Rated Motor Speed
     # Beginners Note:
-    # We compare the selected motor's actual rated speed against the required pump speed.
-    # We DO NOT force the motor to match pump speed; we report speed match suitability.
+    # In manual mode, the user enters the required motor rated speed (e.g. 1450 RPM).
+    # In auto mode, the actual rated speed comes from the motor database record (e.g. 1470 RPM).
+    is_manual = (motor_selection_mode == 'manual')
+    if is_manual and manual_motor_speed_rpm:
+        try:
+            motor_rated_rpm = float(manual_motor_speed_rpm)
+        except (ValueError, TypeError):
+            motor_rated_rpm = selected_motor.rated_speed_rpm
+    else:
+        motor_rated_rpm = selected_motor.rated_speed_rpm
+
+    # 4. Drive Relationship (Direct coupling ratio = 1.0)
+    drive_ratio = 1.0
+    motor_req_speed_rpm = pump_duty_speed_rpm * drive_ratio
+
+    # 5. Speed Suitability Assessment
     speed_deviation_pct = 0.0
     speed_match_status = 'suitable'
     match_message = ''
@@ -149,35 +211,51 @@ def evaluate_motor_and_drive(
         else:
             speed_deviation_pct = 0.0
 
-        if speed_deviation_pct <= 4.0:
-            speed_match_status = 'suitable'
-            match_message = (
-                f"Direct-drive suitable: motor rated at {int(motor_rated_rpm)} RPM matches "
-                f"required pump speed {int(pump_duty_speed_rpm)} RPM ({speed_deviation_pct:.1f}% deviation)."
-            )
-        elif speed_deviation_pct <= 8.0:
-            speed_match_status = 'marginal'
-            match_message = (
-                f"Acceptable match: {speed_deviation_pct:.1f}% speed difference between motor "
-                f"({int(motor_rated_rpm)} RPM) and pump duty speed ({int(pump_duty_speed_rpm)} RPM)."
-            )
+        if is_manual:
+            # Manual Mode: Evaluate against user-specified tolerance
+            if speed_deviation_pct <= manual_speed_tolerance_pct:
+                speed_match_status = 'suitable'
+                match_message = (
+                    f"Direct-drive suitable: entered motor speed {int(motor_rated_rpm)} RPM matches "
+                    f"pump duty speed {int(pump_duty_speed_rpm)} RPM within ±{manual_speed_tolerance_pct:.1f}% "
+                    f"tolerance ({speed_deviation_pct:.1f}% deviation)."
+                )
+            else:
+                speed_match_status = 'unsuitable'
+                match_message = (
+                    f"Speed mismatch: entered motor speed {int(motor_rated_rpm)} RPM deviates from "
+                    f"pump duty speed {int(pump_duty_speed_rpm)} RPM by {speed_deviation_pct:.1f}%, "
+                    f"exceeding specified ±{manual_speed_tolerance_pct:.1f}% tolerance."
+                )
         else:
-            speed_match_status = 'unsuitable'
-            match_message = (
-                f"Speed mismatch: selected motor rated at {int(motor_rated_rpm)} RPM is unsuitable for direct "
-                f"coupling to pump duty speed ({int(pump_duty_speed_rpm)} RPM, {speed_deviation_pct:.1f}% difference). "
-                f"A belt drive or gearbox is required for this speed difference."
-            )
+            # Automatic Mode: Standard engineering direct-drive thresholds
+            if speed_deviation_pct <= 4.0:
+                speed_match_status = 'suitable'
+                match_message = (
+                    f"Direct-drive suitable: catalogue motor rated at {int(motor_rated_rpm)} RPM matches "
+                    f"required pump speed {int(pump_duty_speed_rpm)} RPM ({speed_deviation_pct:.1f}% deviation)."
+                )
+            elif speed_deviation_pct <= 8.0:
+                speed_match_status = 'marginal'
+                match_message = (
+                    f"Acceptable match: {speed_deviation_pct:.1f}% speed difference between motor "
+                    f"({int(motor_rated_rpm)} RPM) and pump duty speed ({int(pump_duty_speed_rpm)} RPM)."
+                )
+            else:
+                speed_match_status = 'unsuitable'
+                match_message = (
+                    f"Speed mismatch: selected motor rated at {int(motor_rated_rpm)} RPM is unsuitable for direct "
+                    f"coupling to pump duty speed ({int(pump_duty_speed_rpm)} RPM, {speed_deviation_pct:.1f}% difference). "
+                    f"A belt drive or gearbox is required for this speed difference."
+                )
 
-    # 4. Variable Speed Drive (VSD) Assessment
-    # Beginners Note:
-    # In VSD mode, the inverter adjusts motor frequency to achieve the exact required pump speed.
-    # Required VSD frequency = f_rated * (N_pump_req / N_motor_rated)
+    # 6. Variable Speed Drive (VSD) Assessment
     else:
-        if motor_rated_rpm > 0:
-            vsd_req_freq_hz = round(selected_motor.frequency_hz * (pump_duty_speed_rpm / motor_rated_rpm), 1)
+        base_rated_rpm = motor_rated_rpm if motor_rated_rpm > 0 else selected_motor.rated_speed_rpm
+        if base_rated_rpm > 0:
+            vsd_req_freq_hz = round(motor_freq_hz * (pump_duty_speed_rpm / base_rated_rpm), 1)
         else:
-            vsd_req_freq_hz = float(selected_motor.frequency_hz)
+            vsd_req_freq_hz = float(motor_freq_hz)
 
         if vsd_req_freq_hz < vsd_f_min:
             vsd_freq_status = 'low'
@@ -205,12 +283,14 @@ def evaluate_motor_and_drive(
         'motor_id': selected_motor.id,
         'model_name': selected_motor.model_name,
         'manufacturer': selected_motor.manufacturer,
+        'standard': getattr(selected_motor, 'standard', 'IEC') or 'IEC',
+        'efficiency_class': getattr(selected_motor, 'efficiency_class', 'IE3') or 'IE3',
         'rated_power_kw': selected_motor.rated_power_kw,
         'rated_power_hp': selected_motor.rated_power_hp,
-        'frequency_hz': selected_motor.frequency_hz,
-        'poles': selected_motor.poles,
+        'frequency_hz': motor_freq_hz,
+        'poles': motor_poles,
         'sync_speed_rpm': selected_motor.sync_speed_rpm,
-        'rated_speed_rpm': selected_motor.rated_speed_rpm,
+        'rated_speed_rpm': motor_rated_rpm,
         'efficiency_pct': selected_motor.efficiency_pct,
         'frame_size': selected_motor.frame_size,
         'voltage': selected_motor.voltage,
@@ -225,5 +305,13 @@ def evaluate_motor_and_drive(
         'vsd_f_min': vsd_f_min,
         'vsd_f_max': vsd_f_max,
         'vsd_freq_status': vsd_freq_status,
-        'motor_selection_mode': motor_selection_mode
+        'motor_selection_mode': motor_selection_mode,
+        'is_manual': is_manual,
+        'manual_motor_speed_rpm': manual_motor_speed_rpm,
+        'manual_speed_tolerance_pct': manual_speed_tolerance_pct,
+        'motor_margin_pct': motor_margin_pct,
+        'motor_margin_basis': motor_margin_basis,
+        'basis_label': basis_label,
+        'base_power_kw': base_power_kw,
+        'target_power_kw': target_power_kw
     }

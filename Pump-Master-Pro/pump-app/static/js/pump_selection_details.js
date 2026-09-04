@@ -266,10 +266,11 @@ function renderAll() {
   const hasNpsh = _npshHasValues(maxCurve.npsh) ||
     (fam && fam.some(c => _npshHasValues(c.npsh)));
 
-  const qDutyCurve = scaledMaxQ.map(q => q * cfg.TRIM_RATIO);
-  const hDutyCurve = scaledMaxH.map(h => h * Math.pow(cfg.TRIM_RATIO, 2));
-  const pDutyCurve = scaledMaxPow.map(p => p * Math.pow(cfg.TRIM_RATIO, 3));
-  const npshDutyCurve = scaledMaxNpsh.length ? scaledMaxNpsh.map(n => n * Math.pow(cfg.TRIM_RATIO, 2)) : [];
+  const dutyScaleRatio = cfg.COMPOSITE_RATIO || cfg.TRIM_RATIO || 1.0;
+  const qDutyCurve = scaledMaxQ.map(q => q * dutyScaleRatio);
+  const hDutyCurve = scaledMaxH.map(h => h * Math.pow(dutyScaleRatio, 2));
+  const pDutyCurve = scaledMaxPow.map(p => p * Math.pow(dutyScaleRatio, 3));
+  const npshDutyCurve = scaledMaxNpsh.length ? scaledMaxNpsh.map(n => n * Math.pow(dutyScaleRatio, 2)) : [];
 
   if (fam && fam.length > 0) {
     fam.forEach((c, idx) => {
@@ -332,8 +333,11 @@ function renderAll() {
     }
   }
 
-  if (cfg.TRIM_RATIO < 1.0) {
-    let lbl = cfg.IS_VSD ? `Rated (${cfg.RATED_SPEED} RPM)` : `Rated (Ø ${cfg.RATED_TRIM} mm)`;
+  if (dutyScaleRatio < 0.999 || cfg.IS_VSD || cfg.FIXED_SPEED_MODE === 'auto' || cfg.FIXED_SPEED_MODE === 'manual' || cfg.TRIM_RATIO < 1.0) {
+    let lbl = cfg.IS_VSD ? `Rated (${cfg.RATED_SPEED} RPM)` :
+              (cfg.FIXED_SPEED_MODE === 'auto' ? `Calculated (${cfg.RATED_SPEED} RPM)` :
+              (cfg.FIXED_SPEED_MODE === 'manual' ? `Manual (${cfg.RATED_SPEED || cfg.MANUAL_SPEED_RPM} RPM${cfg.RATED_TRIM ? ', Ø ' + cfg.RATED_TRIM + ' mm' : ''})` :
+              `Rated (Ø ${cfg.RATED_TRIM} mm)`));
     let cdataRated = qDutyCurve.map((q, i) => [
       hDutyCurve[i] != null ? hDutyCurve[i].toFixed(1) : 'N/A',
       maxCurve.eta[i] != null ? maxCurve.eta[i].toFixed(1) : 'N/A',
@@ -347,10 +351,9 @@ function renderAll() {
     // Efficiency: by affinity law, efficiency is the same curve but over a shorter Q range.
     //   scaledMaxQ is evenly spaced 0..Q_max (N points).
     //   The rated Q range is 0..Q_max*r, which corresponds to the FIRST ~N*r indices of
-    //   the max-dia arrays.  Using ALL N eta values compressed into N*r x-positions
-    //   made the post-BEP efficiency drop crowd near the right end (flat-looking tail).
-    //   Fix: slice to ratedN = round(N * TRIM_RATIO) so the x-y pairing is correct.
-    const ratedN = Math.max(2, Math.round(scaledMaxQ.length * cfg.TRIM_RATIO));
+    //   the max-dia arrays.
+    //   Fix: slice to ratedN = round(N * dutyScaleRatio) so the x-y pairing is correct.
+    const ratedN = Math.max(2, Math.round(scaledMaxQ.length * dutyScaleRatio));
     const ratedQ = qDutyCurve.slice(0, ratedN);
     const ratedH = hDutyCurve.slice(0, ratedN);
     // Eta: interpolate the max-dia curve at the rated Q positions so the shape is identical

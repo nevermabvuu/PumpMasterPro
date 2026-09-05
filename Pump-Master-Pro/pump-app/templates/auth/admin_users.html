@@ -51,15 +51,22 @@
 
     <!-- Organisation Filter -->
     <div class="min-w-[180px]">
-      <select name="org_id" onchange="this.form.submit()"
-              class="form-control-dark w-full px-2.5 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-xs text-[#e6edf3] focus:border-[#58a6ff]">
-        <option value="">All Organisations</option>
-        {% for org in organisations %}
-          <option value="{{ org.id }}" {% if selected_org_id == org.id %}selected{% endif %}>
-            {{ org.name }}
-          </option>
-        {% endfor %}
-      </select>
+      {% if is_super_admin %}
+        <select name="org_id" onchange="this.form.submit()"
+                class="form-control-dark w-full px-2.5 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-xs text-[#e6edf3] focus:border-[#58a6ff]">
+          <option value="">All Organisations</option>
+          {% for org in organisations %}
+            <option value="{{ org.id }}" {% if selected_org_id == org.id %}selected{% endif %}>
+              {{ org.name }}
+            </option>
+          {% endfor %}
+        </select>
+      {% else %}
+        <div class="px-3 py-1.5 rounded-lg bg-[#0d1117] border border-[#30363d] text-xs text-[#8b949e] flex items-center gap-1.5 min-h-[32px]">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#58a6ff]"></span>
+          <span class="font-semibold text-[#e6edf3] truncate">{{ current_user.organisation_ref.name if current_user.organisation_ref else 'Active Organisation' }}</span>
+        </div>
+      {% endif %}
     </div>
 
     <!-- Role Filter -->
@@ -220,9 +227,10 @@
 
                   <!-- Toggle Active Status -->
                   {% if u.id != current_user.id %}
-                    <form method="POST" action="{{ url_for('auth.admin_user_toggle_status', user_id=u.id) }}" class="inline">
+                    <form method="POST" action="{{ url_for('auth.admin_user_toggle_status', user_id=u.id) }}" class="inline"
+                          onsubmit="return confirm('Are you sure you want to {{ 'deactivate' if u.status == 'active' else 'activate' }} access for {{ u.full_name }}?');">
                       <button type="submit"
-                              class="p-1.5 rounded {{ 'text-[#f85149] hover:bg-[#da3633]/10' if u.status == 'active' else 'text-[#3fb950] hover:bg-[#238636]/10' }} transition-colors"
+                              class="p-1.5 rounded {{ 'text-[#f85149] hover:bg-[#da3633]/10' if u.status == 'active' else 'text-[#3fb950] hover:bg-[#238636]/10' }} transition-colors cursor-pointer"
                               title="{{ 'Deactivate Account' if u.status == 'active' else 'Activate Account' }}">
                         <i class="bi {{ 'bi-person-x' if u.status == 'active' else 'bi-person-check' }}"></i>
                       </button>
@@ -289,12 +297,20 @@
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="block text-xs font-semibold text-[#8b949e] mb-1">Organisation</label>
-          <select id="add_org_id" name="organisation_id" onchange="loadRolesForOrg(this.value, 'add_role_id')"
-                  class="form-control-dark w-full px-2.5 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-xs text-[#e6edf3] focus:border-[#58a6ff]">
-            {% for org in organisations %}
-              <option value="{{ org.id }}">{{ org.name }}</option>
-            {% endfor %}
-          </select>
+          {% if is_super_admin %}
+            <select id="add_org_id" name="organisation_id" onchange="loadRolesForOrg(this.value, 'add_role_id')"
+                    class="form-control-dark w-full px-2.5 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-xs text-[#e6edf3] focus:border-[#58a6ff]">
+              {% for org in organisations %}
+                <option value="{{ org.id }}" {% if selected_org_id == org.id %}selected{% endif %}>{{ org.name }}</option>
+              {% endfor %}
+            </select>
+          {% else %}
+            <div class="px-3 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-xs text-[#58a6ff] font-semibold flex items-center gap-1.5 min-h-[32px]">
+              <i class="bi bi-buildings"></i>
+              <span>{{ current_user.organisation_ref.name if current_user.organisation_ref else 'Active Organisation' }}</span>
+            </div>
+            <input type="hidden" name="organisation_id" value="{{ current_user.organisation_id }}">
+          {% endif %}
         </div>
         <div>
           <label class="block text-xs font-semibold text-[#8b949e] mb-1">Role / Authority</label>
@@ -380,12 +396,20 @@
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="block text-xs font-semibold text-[#8b949e] mb-1">Organisation</label>
-          <select id="edit_org_id" name="organisation_id" onchange="loadRolesForOrg(this.value, 'edit_role_id')"
-                  class="form-control-dark w-full px-2.5 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-xs text-[#e6edf3] focus:border-[#58a6ff]">
-            {% for org in organisations %}
-              <option value="{{ org.id }}">{{ org.name }}</option>
-            {% endfor %}
-          </select>
+          {% if is_super_admin %}
+            <select id="edit_org_id" name="organisation_id" onchange="loadRolesForOrg(this.value, 'edit_role_id')"
+                    class="form-control-dark w-full px-2.5 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-xs text-[#e6edf3] focus:border-[#58a6ff]">
+              {% for org in organisations %}
+                <option value="{{ org.id }}">{{ org.name }}</option>
+              {% endfor %}
+            </select>
+          {% else %}
+            <div class="px-3 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-xs text-[#58a6ff] font-semibold flex items-center gap-1.5 min-h-[32px]">
+              <i class="bi bi-buildings"></i>
+              <span id="edit_org_name_display">{{ current_user.organisation_ref.name if current_user.organisation_ref else 'Active Organisation' }}</span>
+            </div>
+            <input type="hidden" id="edit_org_id" name="organisation_id" value="{{ current_user.organisation_id }}">
+          {% endif %}
         </div>
         <div>
           <label class="block text-xs font-semibold text-[#8b949e] mb-1">Role / Authority</label>

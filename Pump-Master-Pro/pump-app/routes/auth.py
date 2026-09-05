@@ -79,6 +79,18 @@ def admin_required(f):
     return decorated_function
 
 
+def super_admin_required(f):
+    """Restricts route access to the Lytrose Super Administrator with unlimited cross-organisation privileges."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user = get_current_user()
+        if not user or not user.is_super_admin_user:
+            flash("Only the Lytrose Super Administrator has permission to perform this action.", "danger")
+            return redirect(url_for('auth.admin_users'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 # ── Authentication Routes ────────────────────────────────────────────────────
 
 @auth_bp.route('/login', methods=['GET', 'POST'], endpoint='login')
@@ -346,16 +358,25 @@ def admin_roles():
     """
     Beginners Note:
     View and manage roles configured for each organisation.
-    Enables viewing built-in and custom roles, permissions matrices, and assigned user counts.
+    SuperAdmin: Unlimited access to view and manage roles across all organisations.
+    Regular Admin: Strictly scoped to viewing and managing roles for their own active organisation.
     """
-    organisations = Organisation.query.order_by(Organisation.name.asc()).all()
-    selected_org_id = request.args.get('org_id')
-    
-    if selected_org_id and selected_org_id.isdigit():
-        selected_org = Organisation.query.get(int(selected_org_id)) or (organisations[0] if organisations else None)
+    user = get_current_user()
+    is_super = user.is_super_admin_user if user else False
+
+    if not is_super:
+        # Regular admin: locked strictly to their own organisation
+        user_org = user.organisation_ref or Organisation.query.get(user.organisation_id)
+        organisations = [user_org] if user_org else []
+        selected_org = user_org
     else:
-        user = get_current_user()
-        selected_org = (Organisation.query.get(user.organisation_id) if user and user.organisation_id else None) or (organisations[0] if organisations else None)
+        # SuperAdmin: can view/manage all organisations
+        organisations = Organisation.query.order_by(Organisation.name.asc()).all()
+        selected_org_id = request.args.get('org_id')
+        if selected_org_id and selected_org_id.isdigit():
+            selected_org = Organisation.query.get(int(selected_org_id)) or (organisations[0] if organisations else None)
+        else:
+            selected_org = (Organisation.query.get(user.organisation_id) if user and user.organisation_id else None) or (organisations[0] if organisations else None)
 
     roles = []
     if selected_org:
@@ -365,7 +386,8 @@ def admin_roles():
         'auth/admin_roles.html',
         organisations=organisations,
         selected_org=selected_org,
-        roles=roles
+        roles=roles,
+        is_super_admin=is_super
     )
 
 
@@ -374,7 +396,14 @@ def admin_roles():
 @admin_required
 def admin_role_create():
     """Create a new custom role scoped to a specific organisation."""
+    user = get_current_user()
+    is_super = user.is_super_admin_user if user else False
+
     org_id = request.form.get('organisation_id')
+    # If regular admin, force organisation_id to their own organisation
+    if not is_super:
+        org_id = str(user.organisation_id)
+
     name = (request.form.get('name') or '').strip()
     code = (request.form.get('code') or '').strip().lower().replace(' ', '_')
     description = (request.form.get('description') or '').strip()
@@ -415,7 +444,14 @@ def admin_role_create():
 @admin_required
 def admin_role_edit(role_id):
     """Edit permissions and details of an existing role."""
+    user = get_current_user()
+    is_super = user.is_super_admin_user if user else False
+
     role = Role.query.get_or_404(role_id)
+    if not is_super and role.organisation_id != user.organisation_id:
+        flash("You cannot modify roles belonging to another organisation.", "danger")
+        return redirect(url_for('auth.admin_roles'))
+
     name = (request.form.get('name') or '').strip()
     description = (request.form.get('description') or '').strip()
 
@@ -447,7 +483,14 @@ def admin_role_edit(role_id):
 @admin_required
 def admin_role_delete(role_id):
     """Delete a custom role if not in active use."""
+    user = get_current_user()
+    is_super = user.is_super_admin_user if user else False
+
     role = Role.query.get_or_404(role_id)
+    if not is_super and role.organisation_id != user.organisation_id:
+        flash("You cannot delete roles belonging to another organisation.", "danger")
+        return redirect(url_for('auth.admin_roles'))
+
     org_id = role.organisation_id
 
     if role.is_system_role:
@@ -469,6 +512,13 @@ def admin_role_delete(role_id):
 @login_required
 def api_org_roles(org_id):
     """Returns JSON list of roles for an organisation to power dynamic role dropdowns."""
+    user = get_current_user()
+    is_super = user.is_super_admin_user if user else False
+
+    # Security check: regular admin can only query roles for their own organisation
+    if not is_super and org_id != user.organisation_id:
+        return jsonify([])
+
     roles = Role.query.filter_by(organisation_id=org_id).order_by(Role.name.asc()).all()
     return jsonify([r.to_dict() for r in roles])
 
@@ -482,11 +532,11 @@ def admin_users():
     """
     Beginners Note:
     User Management Console:
-    Displays all system users with search, organisation filter, role filter, and status filter.
-    Provides modals to add new users, edit existing user settings, reset passwords, and toggle access.
+    SuperAdmin: Unlimited access across all organisations with filter by organisation.
+    Regular Admin: Strictly scoped to users belonging to their active/current organisation.
     """
-    organisations = Organisation.query.order_by(Organisation.name.asc()).all()
-    roles = Role.query.order_by(Role.name.asc()).all()
+    user = get_current_user()
+    is_super = user.is_super_admin_user if user else False
 
     query = User.query
 
@@ -495,6 +545,21 @@ def admin_users():
     org_id = request.args.get('org_id')
     role_id = request.args.get('role_id')
     status = request.args.get('status')
+
+    if not is_super:
+        # Regular admin: scope STRICTLY to current user's active organisation
+        user_org = user.organisation_ref or Organisation.query.get(user.organisation_id)
+        organisations = [user_org] if user_org else []
+        selected_org_id = user.organisation_id
+        query = query.filter(User.organisation_id == user.organisation_id)
+        roles = Role.query.filter_by(organisation_id=user.organisation_id).order_by(Role.name.asc()).all()
+    else:
+        # SuperAdmin: unlimited access across all organisations
+        organisations = Organisation.query.order_by(Organisation.name.asc()).all()
+        roles = Role.query.order_by(Role.name.asc()).all()
+        selected_org_id = int(org_id) if (org_id and org_id.isdigit()) else None
+        if selected_org_id:
+            query = query.filter(User.organisation_id == selected_org_id)
 
     if search:
         query = query.filter(
@@ -505,8 +570,6 @@ def admin_users():
                 User.company.ilike(f"%{search}%")
             )
         )
-    if org_id and org_id.isdigit():
-        query = query.filter(User.organisation_id == int(org_id))
     if role_id and role_id.isdigit():
         query = query.filter(User.role_id == int(role_id))
     if status:
@@ -520,9 +583,10 @@ def admin_users():
         organisations=organisations,
         roles=roles,
         search=search,
-        selected_org_id=int(org_id) if (org_id and org_id.isdigit()) else None,
+        selected_org_id=selected_org_id,
         selected_role_id=int(role_id) if (role_id and role_id.isdigit()) else None,
-        selected_status=status
+        selected_status=status,
+        is_super_admin=is_super
     )
 
 
@@ -533,8 +597,12 @@ def admin_user_create():
     """
     Beginners Note:
     Adds a new user to the system directly from the administrator console.
-    Sets passwords, assigns organisation, and links role.
+    SuperAdmin: Can assign user to ANY organisation.
+    Regular Admin: User is AUTOMATICALLY assigned to the admin's active organisation.
     """
+    user = get_current_user()
+    is_super = user.is_super_admin_user if user else False
+
     first_name = (request.form.get('first_name') or '').strip()
     last_name = (request.form.get('last_name') or '').strip()
     email = (request.form.get('email') or '').strip().lower()
@@ -542,7 +610,6 @@ def admin_user_create():
     company = (request.form.get('company') or '').strip()
     job_title = (request.form.get('job_title') or '').strip()
     phone = (request.form.get('phone') or '').strip()
-    org_id = request.form.get('organisation_id')
     role_id = request.form.get('role_id')
     status = request.form.get('status', 'active')
 
@@ -554,11 +621,49 @@ def admin_user_create():
         flash("Password must be at least 6 characters.", "warning")
         return redirect(url_for('auth.admin_users'))
 
-    # Check email duplicate
+    # Check email duplicate: if user already exists
     existing = User.query.filter_by(email=email).first()
     if existing:
-        flash(f"A user with email '{email}' already exists.", "danger")
-        return redirect(url_for('auth.admin_users'))
+        if existing.status in ('disabled', 'pending_approval'):
+            # Admin is re-adding/activating an existing inactive user
+            existing.first_name = first_name
+            existing.last_name = last_name
+            if company: existing.company = company
+            if job_title: existing.job_title = job_title
+            if phone: existing.phone = phone
+            existing.set_password(password)
+            existing.status = status or 'active'
+
+            # Organisation assignment
+            if is_super:
+                form_org_id = request.form.get('organisation_id')
+                if form_org_id and form_org_id.isdigit():
+                    existing.organisation_id = int(form_org_id)
+            else:
+                existing.organisation_id = user.organisation_id
+
+            # Role assignment
+            role_str = (request.form.get('role_name') or request.form.get('role') or '').strip()
+            if role_id and str(role_id).isdigit():
+                role = Role.query.get(int(role_id))
+                if role and (is_super or role.organisation_id == existing.organisation_id):
+                    existing.role_id = role.id
+                    existing.role = role.code
+            elif role_str:
+                matched_role = Role.query.filter_by(organisation_id=existing.organisation_id, code=role_str).first() or \
+                               Role.query.filter_by(organisation_id=existing.organisation_id, name=role_str).first()
+                if matched_role:
+                    existing.role_id = matched_role.id
+                    existing.role = matched_role.code
+                else:
+                    existing.role = role_str
+
+            db.session.commit()
+            flash(f"Account for '{existing.full_name}' ({existing.email}) has been activated and updated to '{existing.status}'.", "success")
+            return redirect(url_for('auth.admin_users'))
+        else:
+            flash(f"A user with email '{email}' already exists with active status. You can modify their details using the Edit button.", "warning")
+            return redirect(url_for('auth.admin_users'))
 
     new_user = User(
         first_name=first_name,
@@ -571,18 +676,46 @@ def admin_user_create():
     )
     new_user.set_password(password)
 
-    if org_id and org_id.isdigit():
-        new_user.organisation_id = int(org_id)
+    # Organisation assignment:
+    if is_super:
+        form_org_id = request.form.get('organisation_id')
+        if form_org_id and form_org_id.isdigit():
+            new_user.organisation_id = int(form_org_id)
+        else:
+            new_user.organisation_id = user.organisation_id or 2
+    else:
+        # Regular admin: automatically assigned to admin's active organisation
+        new_user.organisation_id = user.organisation_id
 
-    if role_id and role_id.isdigit():
+    # Role assignment:
+    role_str = (request.form.get('role_name') or request.form.get('role') or '').strip()
+    if role_id and str(role_id).isdigit():
         role = Role.query.get(int(role_id))
-        if role:
+        if role and (is_super or role.organisation_id == new_user.organisation_id):
             new_user.role_id = role.id
             new_user.role = role.code
+        else:
+            def_role = Role.query.filter_by(organisation_id=new_user.organisation_id, code='engineer').first()
+            if def_role:
+                new_user.role_id = def_role.id
+                new_user.role = def_role.code
+    elif role_str:
+        matched_role = Role.query.filter_by(organisation_id=new_user.organisation_id, code=role_str).first() or \
+                       Role.query.filter_by(organisation_id=new_user.organisation_id, name=role_str).first()
+        if matched_role:
+            new_user.role_id = matched_role.id
+            new_user.role = matched_role.code
+        else:
+            new_user.role = role_str
+    else:
+        def_role = Role.query.filter_by(organisation_id=new_user.organisation_id, code='engineer').first()
+        if def_role:
+            new_user.role_id = def_role.id
+            new_user.role = def_role.code
 
     db.session.add(new_user)
     db.session.commit()
-    flash(f"User '{new_user.full_name}' ({new_user.email}) created successfully.", "success")
+    flash(f"User '{new_user.full_name}' ({new_user.email}) created successfully for organisation '{new_user.organisation_ref.name if new_user.organisation_ref else 'Default'}'.", "success")
     return redirect(url_for('auth.admin_users'))
 
 
@@ -591,27 +724,47 @@ def admin_user_create():
 @admin_required
 def admin_user_edit(user_id):
     """Update user profile, organisation assignment, and role."""
-    user = User.query.get_or_404(user_id)
-    user.first_name = (request.form.get('first_name') or '').strip()
-    user.last_name = (request.form.get('last_name') or '').strip()
-    user.company = (request.form.get('company') or '').strip()
-    user.job_title = (request.form.get('job_title') or '').strip()
-    user.phone = (request.form.get('phone') or '').strip()
-    user.status = request.form.get('status', 'active')
+    current_u = get_current_user()
+    is_super = current_u.is_super_admin_user if current_u else False
 
-    org_id = request.form.get('organisation_id')
-    if org_id and org_id.isdigit():
-        user.organisation_id = int(org_id)
+    target_user = User.query.get_or_404(user_id)
 
+    # Regular admin can only edit users in their own organisation
+    if not is_super and target_user.organisation_id != current_u.organisation_id:
+        flash("You do not have permission to edit users from another organisation.", "danger")
+        return redirect(url_for('auth.admin_users'))
+
+    target_user.first_name = (request.form.get('first_name') or '').strip()
+    target_user.last_name = (request.form.get('last_name') or '').strip()
+    target_user.company = (request.form.get('company') or '').strip()
+    target_user.job_title = (request.form.get('job_title') or '').strip()
+    target_user.phone = (request.form.get('phone') or '').strip()
+    target_user.status = request.form.get('status', 'active')
+
+    # Organisation reassignment: ONLY SuperAdmin can reassign organisation
+    if is_super:
+        org_id = request.form.get('organisation_id')
+        if org_id and org_id.isdigit():
+            target_user.organisation_id = int(org_id)
+
+    role_str = (request.form.get('role_name') or request.form.get('role') or '').strip()
     role_id = request.form.get('role_id')
-    if role_id and role_id.isdigit():
+    if role_id and str(role_id).isdigit():
         role = Role.query.get(int(role_id))
-        if role:
-            user.role_id = role.id
-            user.role = role.code
+        if role and (is_super or role.organisation_id == target_user.organisation_id):
+            target_user.role_id = role.id
+            target_user.role = role.code
+    elif role_str:
+        matched_role = Role.query.filter_by(organisation_id=target_user.organisation_id, code=role_str).first() or \
+                       Role.query.filter_by(organisation_id=target_user.organisation_id, name=role_str).first()
+        if matched_role:
+            target_user.role_id = matched_role.id
+            target_user.role = matched_role.code
+        else:
+            target_user.role = role_str
 
     db.session.commit()
-    flash(f"User '{user.full_name}' updated successfully.", "success")
+    flash(f"User '{target_user.full_name}' updated successfully.", "success")
     return redirect(url_for('auth.admin_users'))
 
 
@@ -621,14 +774,21 @@ def admin_user_edit(user_id):
 def admin_user_toggle_status(user_id):
     """Toggle a user's active/disabled status with self-protection."""
     current_u = get_current_user()
+    is_super = current_u.is_super_admin_user if current_u else False
+
+    target_user = User.query.get_or_404(user_id)
+
     if current_u and current_u.id == user_id:
         flash("You cannot deactivate your own account.", "danger")
         return redirect(url_for('auth.admin_users'))
 
-    user = User.query.get_or_404(user_id)
-    user.status = 'disabled' if user.status == 'active' else 'active'
+    if not is_super and target_user.organisation_id != current_u.organisation_id:
+        flash("You cannot modify accounts from another organisation.", "danger")
+        return redirect(url_for('auth.admin_users'))
+
+    target_user.status = 'disabled' if target_user.status == 'active' else 'active'
     db.session.commit()
-    flash(f"Account for {user.full_name} is now {user.status}.", "info")
+    flash(f"Account for {target_user.full_name} is now {target_user.status}.", "info")
     return redirect(url_for('auth.admin_users'))
 
 
@@ -637,14 +797,21 @@ def admin_user_toggle_status(user_id):
 @admin_required
 def admin_user_reset_password(user_id):
     """Reset a user's password directly as administrator."""
-    user = User.query.get_or_404(user_id)
-    new_pass = request.form.get('new_password') or ''
+    current_u = get_current_user()
+    is_super = current_u.is_super_admin_user if current_u else False
 
+    target_user = User.query.get_or_404(user_id)
+
+    if not is_super and target_user.organisation_id != current_u.organisation_id:
+        flash("You cannot modify accounts from another organisation.", "danger")
+        return redirect(url_for('auth.admin_users'))
+
+    new_pass = request.form.get('new_password') or ''
     if len(new_pass) < 6:
         flash("New password must be at least 6 characters long.", "warning")
         return redirect(url_for('auth.admin_users'))
 
-    user.set_password(new_pass)
+    target_user.set_password(new_pass)
     db.session.commit()
-    flash(f"Password for {user.full_name} has been reset successfully.", "success")
+    flash(f"Password for {target_user.full_name} has been reset successfully.", "success")
     return redirect(url_for('auth.admin_users'))

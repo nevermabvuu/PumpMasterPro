@@ -13,7 +13,7 @@ if _app_dir not in sys.path:
     sys.path.insert(0, _app_dir)
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from models import db, Organisation, Pump, ReportConfig
+from models import db, Organisation, Pump, ReportConfig, Role
 from utils import CURRENT_ORGANISATION_ID, get_current_organisation, get_visible_pumps_query
 
 organisations_bp = Blueprint('organisations', __name__, url_prefix='/organisations')
@@ -196,7 +196,14 @@ def save_graph_styles():
 
 @organisations_bp.route('/save', methods=['POST'], endpoint='save_organisation')
 def save_organisation():
-    """Add a new organisation or update an existing one."""
+    """
+    Add a new organisation or update an existing one.
+    Adding a new organisation is strictly restricted to the Lytrose SuperAdmin.
+    """
+    from routes.auth import get_current_user
+    current_u = get_current_user()
+    is_super = current_u.is_super_admin_user if current_u else False
+
     org_id = request.form.get('organisation_id')
     name = request.form.get('name', '').strip()
 
@@ -204,14 +211,64 @@ def save_organisation():
         flash('Organisation Name is required.', 'error')
         return redirect(url_for('organisations.settings'))
 
-    if org_id and org_id.isdigit():
+    if not org_id:
+        # Creating a NEW organisation requires Lytrose SuperAdmin
+        if not is_super:
+            flash('Only the Lytrose Super Administrator has permission to add new organisations.', 'danger')
+            return redirect(url_for('organisations.settings'))
+        org = Organisation(name=name)
+        db.session.add(org)
+        db.session.flush()
+
+        # Seed standard system roles for this new organisation
+        new_org_roles = [
+            Role(
+                organisation_id=org.id,
+                name='Administrator',
+                code='admin',
+                description='Full administrative authority over users, roles, and engineering defaults.',
+                can_select_pumps=True,
+                can_edit_catalogue=True,
+                can_export_reports=True,
+                can_manage_organisation=True,
+                can_manage_users=True,
+                is_system_role=True
+            ),
+            Role(
+                organisation_id=org.id,
+                name='Hydraulic Engineer',
+                code='engineer',
+                description='Standard engineering access to pump selection, comparison, and technical reports.',
+                can_select_pumps=True,
+                can_edit_catalogue=False,
+                can_export_reports=True,
+                can_manage_organisation=False,
+                can_manage_users=False,
+                is_system_role=True
+            ),
+            Role(
+                organisation_id=org.id,
+                name='Technical Viewer',
+                code='viewer',
+                description='Read-only access to browse pump catalogue and review datasheets.',
+                can_select_pumps=True,
+                can_edit_catalogue=False,
+                can_export_reports=True,
+                can_manage_organisation=False,
+                can_manage_users=False,
+                is_system_role=True
+            )
+        ]
+        db.session.add_all(new_org_roles)
+    else:
+        # Editing existing organisation: only SuperAdmin or admin belonging to this organisation
+        if not is_super and int(org_id) != (current_u.organisation_id if current_u else None):
+            flash('You do not have permission to edit other organisations.', 'danger')
+            return redirect(url_for('organisations.settings'))
         org = Organisation.query.get(int(org_id))
         if not org:
             flash('Organisation not found.', 'error')
             return redirect(url_for('organisations.settings'))
-    else:
-        org = Organisation(name=name)
-        db.session.add(org)
 
     org.name = name
     org.contact_email = request.form.get('contact_email', '').strip()
@@ -233,7 +290,13 @@ def save_organisation():
 
 @organisations_bp.route('/delete/<int:id>', methods=['POST'], endpoint='delete_organisation')
 def delete_organisation(id):
-    """Delete an organisation profile (excluding the active working organisation)."""
+    """Delete an organisation profile (Lytrose SuperAdmin only)."""
+    from routes.auth import get_current_user
+    current_u = get_current_user()
+    if not current_u or not current_u.is_super_admin_user:
+        flash('Only the Lytrose Super Administrator has permission to delete organisations.', 'danger')
+        return redirect(url_for('organisations.settings'))
+
     if id == CURRENT_ORGANISATION_ID:
         flash('Cannot delete the active working organisation.', 'error')
         return redirect(url_for('organisations.settings'))

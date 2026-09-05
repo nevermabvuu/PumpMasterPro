@@ -321,12 +321,19 @@ with app.app_context():
                 db.session.add(def_rep)
                 db.session.commit()
 
-            # Migration for users table: role_id column
+            # Migration for users table: role_id and is_super_admin columns
             user_res = conn.execute(text("PRAGMA table_info(users)"))
             user_cols = [row[1] for row in user_res.fetchall()]
             if 'role_id' not in user_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN role_id INTEGER"))
                 conn.commit()
+            if 'is_super_admin' not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN is_super_admin INTEGER DEFAULT 0"))
+                conn.commit()
+
+            # Ensure super administrator account is flagged
+            conn.execute(text("UPDATE users SET is_super_admin = 1 WHERE email = 'nevermabvuu@gmail.com' OR (organisation_id = 2 AND role = 'admin')"))
+            conn.commit()
 
             # Seed default roles for all organisations if missing
             for org in Organisation.query.all():

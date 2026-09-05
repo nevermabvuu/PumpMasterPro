@@ -31,9 +31,11 @@
          class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#c9d1d9] hover:text-white rounded-lg flex items-center gap-1.5 border border-[#30363d] transition-colors">
         <i class="bi bi-people text-[#58a6ff]"></i> Users
       </a>
+      {% if current_user and current_user.is_super_admin_user %}
       <button onclick="openOrgModal()" class="px-3.5 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-semibold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
         <i class="bi bi-building-add"></i> Add Organisation
       </button>
+      {% endif %}
     </div>
   </div>
 
@@ -625,9 +627,11 @@
       <h2 class="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
         <i class="bi bi-building text-[#58a6ff]"></i> All Registered Organisations &amp; Manufacturers ({{ all_organisations|length }})
       </h2>
+      {% if current_user and current_user.is_super_admin_user %}
       <button onclick="openOrgModal()" class="text-xs text-[#58a6ff] hover:underline flex items-center gap-1">
         <i class="bi bi-plus-lg"></i> Add New Profile
       </button>
+      {% endif %}
     </div>
 
     <div class="p-4">
@@ -641,10 +645,12 @@
               <h3 class="text-sm font-bold text-[#e6edf3]">{{ o.name }}</h3>
             </div>
             <div class="flex items-center gap-1">
+              {% if current_user and (current_user.is_super_admin_user or o.id == current_org.id) %}
               <button data-org='{{ o.to_dict()|tojson }}' onclick="editOrg(JSON.parse(this.dataset.org))" class="text-xs text-[#8b949e] hover:text-[#58a6ff] p-1" title="Edit Organisation">
                 <i class="bi bi-pencil"></i>
               </button>
-              {% if o.id != current_org.id %}
+              {% endif %}
+              {% if current_user and current_user.is_super_admin_user and o.id != current_org.id %}
               <form action="{{ url_for('organisations.delete_organisation', id=o.id) }}" method="POST" class="inline" onsubmit="return confirm('Delete organisation &quot;{{ o.name }}&quot;?');">
                 <button type="submit" class="text-xs text-[#8b949e] hover:text-[#f85149] p-1" title="Delete Organisation">
                   <i class="bi bi-trash"></i>

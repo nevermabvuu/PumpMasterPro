@@ -90,14 +90,49 @@ main { flex: 1; }
   border-radius: 10px 10px 0 0;
 }
 
-/* â”€â”€ Form controls â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€ Form controls & Dropdown Height Harmonization â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   Beginners Note:
+   Ensures all input boxes and select dropdown lists share identical height (32px for standard,
+   36px for text-sm inputs), identical line-height, and matching vertical padding
+   so that dropdown lists and inputs align seamlessly across all pump views.
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .form-control-dark,
 .form-select-dark,
-select.form-control-dark {
+select.form-control-dark,
+select.form-select,
+.form-select {
   background: var(--bg-input);
   border: 1px solid var(--border);
   color: var(--text-primary);
   border-radius: 6px;
+  min-height: 32px;
+  height: 32px;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  padding-left: 0.6rem;
+  padding-right: 1.6rem;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  box-sizing: border-box;
+}
+
+/* Prominent text-sm inputs and dropdowns */
+input.form-control-dark.text-sm,
+select.form-control-dark.text-sm {
+  min-height: 36px;
+  height: 36px;
+  font-size: 0.875rem;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
+/* Nested unit selectors inside flex input containers */
+.unit-select {
+  height: 100% !important;
+  min-height: 100% !important;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
 }
 .form-control-dark:focus,
 select.form-control-dark:focus {
@@ -671,7 +706,7 @@ select.form-select.form-control-dark option {
 .bg-white     { background-color: var(--bg-card)   !important; }
 .text-dark    { color: var(--text-primary) !important; }
 
-/ *   â  ¬ â  ¬   P u m p   S e l e c t i o n   C S S   â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬ â  ¬   * /  
+/ *   ï¿½  ï¿½ ï¿½  ï¿½   P u m p   S e l e c t i o n   C S S   ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½ ï¿½  ï¿½   * /  
   
  . s e l - c a r d   {  
      b a c k g r o u n d :   v a r ( - - c a r d - b g ) ;  

@@ -2,6 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone
 import json
 import re
+from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
@@ -1447,4 +1448,198 @@ class ReportConfig(db.Model):
             'unit_head': getattr(self, 'unit_head', None),
             'unit_power': getattr(self, 'unit_power', None),
             'unit_npsh': getattr(self, 'unit_npsh', None)
+        }
+
+
+# ── Role & Permissions Models ────────────────────────────────────────────────
+
+class Role(db.Model):
+    """
+    Beginners Note: Role Model ('roles' table)
+    Represents an organisational role with granular engineering permissions.
+    Enables organisations to define custom job roles (e.g. Lead Engineer, Catalogue Manager)
+    alongside baseline system roles.
+    """
+    __tablename__ = 'roles'
+
+    id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey('organisations.id'), nullable=True)
+    name = db.Column(db.String(80), nullable=False)
+    code = db.Column(db.String(50), nullable=False)
+    description = db.Column(db.String(255), default='')
+
+    # Granular functional permissions
+    can_select_pumps = db.Column(db.Boolean, default=True)
+    can_edit_catalogue = db.Column(db.Boolean, default=False)
+    can_export_reports = db.Column(db.Boolean, default=True)
+    can_manage_organisation = db.Column(db.Boolean, default=False)
+    can_manage_users = db.Column(db.Boolean, default=False)
+    is_system_role = db.Column(db.Boolean, default=False)
+
+    created_at = db.Column(db.DateTime, default=_utcnow)
+
+    # Relationships
+    organisation = db.relationship('Organisation', backref=db.backref('roles', lazy=True, cascade='all, delete-orphan'))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'organisation_id': self.organisation_id,
+            'name': self.name,
+            'code': self.code,
+            'description': self.description,
+            'can_select_pumps': bool(self.can_select_pumps),
+            'can_edit_catalogue': bool(self.can_edit_catalogue),
+            'can_export_reports': bool(self.can_export_reports),
+            'can_manage_organisation': bool(self.can_manage_organisation),
+            'can_manage_users': bool(self.can_manage_users),
+            'is_system_role': bool(self.is_system_role),
+            'created_at': self.created_at.isoformat() if self.created_at else ''
+        }
+
+
+# ── User & Authentication Models ─────────────────────────────────────────────
+
+class User(db.Model):
+    """
+    Beginners Note: User Model ('users' table)
+    Represents an authenticated system user with role-based access and organisation scoping.
+    Roles: Linked via role_id to the 'roles' table, with legacy 'role' string fallback.
+    Statuses: 'active' (permitted to log in), 'pending_approval' (awaiting admin verification), 'disabled'.
+    """
+    __tablename__ = 'users'
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(150), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    first_name = db.Column(db.String(80), default='')
+    last_name = db.Column(db.String(80), default='')
+    company = db.Column(db.String(150), default='')
+    phone = db.Column(db.String(50), default='')
+    job_title = db.Column(db.String(100), default='')
+    role = db.Column(db.String(30), default='engineer')
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=True)
+    status = db.Column(db.String(30), default='active')
+    organisation_id = db.Column(db.Integer, db.ForeignKey('organisations.id'), nullable=True)
+
+    created_at = db.Column(db.DateTime, default=_utcnow)
+    last_login_at = db.Column(db.DateTime, nullable=True)
+
+    # Relationships
+    organisation_ref = db.relationship('Organisation', backref='users', lazy=True, foreign_keys=[organisation_id])
+    role_rel = db.relationship('Role', foreign_keys=[role_id], backref=db.backref('assigned_users', lazy=True))
+
+    @property
+    def full_name(self):
+        parts = [self.first_name, self.last_name]
+        name = ' '.join(p for p in parts if p).strip()
+        return name if name else self.email.split('@')[0]
+
+    @property
+    def initials(self):
+        fn = self.first_name[0].upper() if self.first_name else ''
+        ln = self.last_name[0].upper() if self.last_name else ''
+        if fn or ln:
+            return f"{fn}{ln}"
+        return self.email[:2].upper()
+
+    @property
+    def role_display_name(self):
+        if self.role_rel and self.role_rel.name:
+            return self.role_rel.name
+        return (self.role or 'engineer').replace('_', ' ').title()
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, password)
+
+    def is_admin(self):
+        if self.role_rel:
+            return self.role_rel.can_manage_users or self.role_rel.code == 'admin'
+        return self.role == 'admin'
+
+    def can_select_pumps(self):
+        if self.role_rel:
+            return self.role_rel.can_select_pumps
+        return True
+
+    def can_edit_catalogue(self):
+        if self.role_rel:
+            return self.role_rel.can_edit_catalogue or self.is_admin()
+        return self.role in ('admin', 'engineer')
+
+    def is_active(self):
+        return self.status == 'active'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'email': self.email,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'full_name': self.full_name,
+            'initials': self.initials,
+            'company': self.company,
+            'phone': self.phone,
+            'job_title': self.job_title,
+            'role': self.role,
+            'role_id': self.role_id,
+            'role_display_name': self.role_display_name,
+            'status': self.status,
+            'organisation_id': self.organisation_id,
+            'created_at': self.created_at.isoformat() if self.created_at else '',
+            'last_login_at': self.last_login_at.isoformat() if self.last_login_at else ''
+        }
+
+
+class RegistrationRequest(db.Model):
+    """
+    Beginners Note: Registration Request Model ('registration_requests' table)
+    Stores incoming online access requests submitted by new engineers/companies.
+    Notifications are immediately dispatched to 'nevermabvuu@gmail.com'.
+    Statuses: 'pending', 'approved', 'rejected'.
+    """
+    __tablename__ = 'registration_requests'
+
+    id = db.Column(db.Integer, primary_key=True)
+    first_name = db.Column(db.String(80), nullable=False)
+    last_name = db.Column(db.String(80), nullable=False)
+    email = db.Column(db.String(150), nullable=False, index=True)
+    company = db.Column(db.String(150), default='')
+    phone = db.Column(db.String(50), default='')
+    job_title = db.Column(db.String(100), default='')
+    notes = db.Column(db.Text, default='')
+    password_hash = db.Column(db.String(255), default='')
+    status = db.Column(db.String(30), default='pending')
+    admin_notes = db.Column(db.Text, default='')
+
+    created_at = db.Column(db.DateTime, default=_utcnow)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'full_name': self.full_name,
+            'email': self.email,
+            'company': self.company,
+            'phone': self.phone,
+            'job_title': self.job_title,
+            'notes': self.notes,
+            'status': self.status,
+            'admin_notes': self.admin_notes,
+            'created_at': self.created_at.isoformat() if self.created_at else '',
+            'reviewed_at': self.reviewed_at.isoformat() if self.reviewed_at else ''
         }

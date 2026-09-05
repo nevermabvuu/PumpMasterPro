@@ -9,11 +9,12 @@ import os
 import sys
 import re
 import json
-from flask import Flask
-from models import db, Organisation, Supplier, ReportConfig
+from flask import Flask, request, redirect, url_for, jsonify
+from models import db, Organisation, Supplier, ReportConfig, User, RegistrationRequest, Role
 from motor_models import Motor, seed_motors
 from seed_data import seed_pumps
-from routes import main_bp, pumps_bp, curves_bp, selection_bp, comparison_bp, reports_bp, organisations_bp, debug_bp
+from routes import main_bp, pumps_bp, curves_bp, selection_bp, comparison_bp, reports_bp, organisations_bp, debug_bp, auth_bp
+from routes.auth import get_current_user
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH  = os.path.join(BASE_DIR, 'pumps.db')
@@ -319,6 +320,97 @@ with app.app_context():
                 )
                 db.session.add(def_rep)
                 db.session.commit()
+
+            # Migration for users table: role_id column
+            user_res = conn.execute(text("PRAGMA table_info(users)"))
+            user_cols = [row[1] for row in user_res.fetchall()]
+            if 'role_id' not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN role_id INTEGER"))
+                conn.commit()
+
+            # Seed default roles for all organisations if missing
+            for org in Organisation.query.all():
+                if Role.query.filter_by(organisation_id=org.id).count() == 0:
+                    default_roles = [
+                        Role(
+                            organisation_id=org.id,
+                            name='Administrator',
+                            code='admin',
+                            description='Full administrative authority over organisation settings, user profiles, and pump catalogue.',
+                            can_select_pumps=True,
+                            can_edit_catalogue=True,
+                            can_export_reports=True,
+                            can_manage_organisation=True,
+                            can_manage_users=True,
+                            is_system_role=True
+                        ),
+                        Role(
+                            organisation_id=org.id,
+                            name='Lead Hydraulic Engineer',
+                            code='lead_engineer',
+                            description='Lead engineering authority with full pump selection and catalogue editing permissions.',
+                            can_select_pumps=True,
+                            can_edit_catalogue=True,
+                            can_export_reports=True,
+                            can_manage_organisation=False,
+                            can_manage_users=False,
+                            is_system_role=True
+                        ),
+                        Role(
+                            organisation_id=org.id,
+                            name='Hydraulic Engineer',
+                            code='engineer',
+                            description='Standard engineering access to pump selection, comparison, and technical datasheet generation.',
+                            can_select_pumps=True,
+                            can_edit_catalogue=False,
+                            can_export_reports=True,
+                            can_manage_organisation=False,
+                            can_manage_users=False,
+                            is_system_role=True
+                        ),
+                        Role(
+                            organisation_id=org.id,
+                            name='Technical Viewer',
+                            code='viewer',
+                            description='Read-only access to browse pump catalogue, perform basic selections, and review reports.',
+                            can_select_pumps=True,
+                            can_edit_catalogue=False,
+                            can_export_reports=True,
+                            can_manage_organisation=False,
+                            can_manage_users=False,
+                            is_system_role=True
+                        )
+                    ]
+                    db.session.add_all(default_roles)
+                    db.session.commit()
+
+            # Seed default administrator account if users table is empty
+            if User.query.count() == 0:
+                admin_email = os.environ.get('DEFAULT_ADMIN_EMAIL', 'nevermabvuu@gmail.com')
+                admin_user = User(
+                    email=admin_email,
+                    first_name='Never',
+                    last_name='Mabvuu',
+                    company='Lytrose Engineering',
+                    job_title='Principal Engineer & System Administrator',
+                    role='admin',
+                    status='active',
+                    organisation_id=2
+                )
+                admin_user.set_password(os.environ.get('DEFAULT_ADMIN_PASSWORD', 'Admin123!'))
+                db.session.add(admin_user)
+                db.session.commit()
+                print(f"Default admin user seeded: {admin_email} (Role: admin)")
+
+            # Connect any user missing role_id to their organisation's matching Role
+            for u in User.query.filter(User.role_id.is_(None)).all():
+                target_org_id = u.organisation_id or 2
+                matched_role = Role.query.filter_by(organisation_id=target_org_id, code=u.role).first()
+                if not matched_role:
+                    matched_role = Role.query.filter_by(organisation_id=target_org_id, code='engineer').first() or Role.query.first()
+                if matched_role:
+                    u.role_id = matched_role.id
+            db.session.commit()
     except Exception as e:
         print("Migration notice:", e)
 
@@ -334,6 +426,37 @@ app.register_blueprint(comparison_bp)
 app.register_blueprint(reports_bp)
 app.register_blueprint(organisations_bp)
 app.register_blueprint(debug_bp)
+app.register_blueprint(auth_bp)
+
+
+# ── Global Authentication Gatekeeper ──────────────────────────────────────────
+@app.before_request
+def enforce_login_gatekeeper():
+    """
+    Beginners Note:
+    Global Authentication Gatekeeper:
+    Enforces that unauthenticated visitors are immediately redirected to the login page (/login).
+    Only public static files and authentication endpoints are accessible without logging in.
+    """
+    # 1. Allow static resources and favicon
+    if request.endpoint == 'static' or request.path.startswith('/static') or request.path == '/favicon.ico':
+        return None
+
+    # 2. Allow public authentication endpoints
+    public_endpoints = {'auth.login', 'auth.register', 'auth.logout', 'favicon'}
+    public_paths = {'/login', '/register', '/request-access', '/logout', '/favicon.ico'}
+    if request.endpoint in public_endpoints or request.path in public_paths:
+        return None
+
+    # 3. Check if user is authenticated
+    user = get_current_user()
+    if not user:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.path.startswith('/api/'):
+            return jsonify({'error': 'Authentication required', 'redirect': url_for('auth.login')}), 401
+        
+        # Redirect browser to /login with target destination in next parameter
+        next_url = request.url if (request.method == 'GET' and not request.path.startswith('/auth')) else url_for('index')
+        return redirect(url_for('auth.login', next=next_url))
 
 
 # Beginners Note: Register url_for alias resolver so templates calling url_for('pump_data')
@@ -341,7 +464,7 @@ app.register_blueprint(debug_bp)
 def handle_url_build_error(error, endpoint, values):
     if '.' not in endpoint:
         from flask import url_for as flask_url_for
-        for bp in ['main', 'pumps', 'curves', 'selection', 'comparison', 'reports', 'organisations', 'debug']:
+        for bp in ['main', 'pumps', 'curves', 'selection', 'comparison', 'reports', 'organisations', 'debug', 'auth']:
             target = f"{bp}.{endpoint}"
             if target in app.view_functions:
                 return flask_url_for(target, **values)

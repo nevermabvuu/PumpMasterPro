@@ -19,6 +19,7 @@ from .comparison import comparison_bp
 from .reports import reports_bp
 from .organisations import organisations_bp
 from .debug import debug_bp
+from .auth import auth_bp
 
-__all__ = ['main_bp', 'pumps_bp', 'curves_bp', 'selection_bp', 'comparison_bp', 'reports_bp', 'organisations_bp', 'debug_bp']
+__all__ = ['main_bp', 'pumps_bp', 'curves_bp', 'selection_bp', 'comparison_bp', 'reports_bp', 'organisations_bp', 'debug_bp', 'auth_bp']
 

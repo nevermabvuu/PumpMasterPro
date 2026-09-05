@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}Access Requests &mdash; PumpSelect Pro Administration{% endblock %}
+
+{% block content %}
+<div class="py-6 px-4 max-w-7xl mx-auto relative z-10">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between flex-wrap gap-4 mb-6 pb-4 border-b border-[#30363d]">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-[#58a6ff]/10 border border-[#58a6ff]/30 flex items-center justify-center text-[#58a6ff]">
+        <i class="bi bi-person-lines-fill text-xl"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-white tracking-tight">Online Access Registration Requests</h1>
+        <p class="text-xs text-[#8b949e]">
+          Review and authorize pending user registrations &bull; Alerts routed to <strong class="text-white">{{ admin_notification_email }}</strong>
+        </p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#d29922]/15 text-[#d29922] border border-[#d29922]/30">
+        {{ pending_requests|length }} Pending Review
+      </span>
+      <a href="{{ url_for('organisations.settings') }}"
+         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-white border border-[#30363d] transition-colors">
+        <i class="bi bi-buildings"></i>
+        <span>Organisations</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Pending Requests Section -->
+  <div class="card-dark rounded-xl border border-[#30363d] overflow-hidden mb-8 shadow-xl">
+    <div class="card-header-dark px-4 py-3 flex items-center justify-between bg-[#161b22] border-b border-[#30363d]">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#d29922] animate-pulse"></span>
+        <h2 class="text-sm font-bold text-white">Pending Access Requests</h2>
+      </div>
+      <span class="text-xs font-mono text-[#8b949e]">{{ pending_requests|length }} waiting</span>
+    </div>
+
+    {% if pending_requests %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-[#0d1117] text-[#8b949e] border-b border-[#30363d] uppercase tracking-wider font-semibold">
+              <th class="py-2.5 px-3">Applicant</th>
+              <th class="py-2.5 px-3">Work Email</th>
+              <th class="py-2.5 px-3">Company &amp; Role</th>
+              <th class="py-2.5 px-3">Phone</th>
+              <th class="py-2.5 px-3">Requested On</th>
+              <th class="py-2.5 px-3">Notes</th>
+              <th class="py-2.5 px-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#30363d]/50">
+            {% for req in pending_requests %}
+              <tr class="hover:bg-[#161b22]/70 transition-colors">
+                <!-- Applicant Name -->
+                <td class="py-3 px-3">
+                  <div class="font-bold text-white text-sm">{{ req.full_name }}</div>
+                </td>
+
+                <!-- Work Email -->
+                <td class="py-3 px-3 font-mono text-[#58a6ff]">
+                  <a href="mailto:{{ req.email }}" class="hover:underline flex items-center gap-1">
+                    <i class="bi bi-envelope"></i>
+                    <span>{{ req.email }}</span>
+                  </a>
+                </td>
+
+                <!-- Company & Role -->
+                <td class="py-3 px-3 text-white">
+                  <div>{{ req.company or '<span class="text-[#8b949e]">Individual</span>'|safe }}</div>
+                  {% if req.job_title %}
+                    <div class="text-[11px] text-[#8b949e]">{{ req.job_title }}</div>
+                  {% endif %}
+                </td>
+
+                <!-- Phone -->
+                <td class="py-3 px-3 font-mono text-[#8b949e]">
+                  {{ req.phone or '-' }}
+                </td>
+
+                <!-- Date -->
+                <td class="py-3 px-3 font-mono text-[#8b949e]">
+                  {{ req.created_at.strftime('%Y-%m-%d %H:%M') if req.created_at else '-' }}
+                </td>
+
+                <!-- Notes -->
+                <td class="py-3 px-3 text-[#c9d1d9] max-w-[200px] truncate" title="{{ req.notes }}">
+                  {{ req.notes or '<em class="text-[#6e7681]">None</em>'|safe }}
+                </td>
+
+                <!-- Action Form Modal/Trigger -->
+                <td class="py-3 px-3 text-right">
+                  <div class="inline-flex items-center gap-1.5 justify-end">
+                    <!-- Direct Approve Action -->
+                    <form method="POST" action="{{ url_for('auth.admin_request_action', req_id=req.id) }}" class="inline-flex items-center gap-1.5">
+                      <input type="hidden" name="action" value="approve">
+                      
+                      <select name="role" class="bg-[#0d1117] border border-[#30363d] rounded text-[11px] text-[#58a6ff] px-1.5 py-1 focus:outline-none cursor-pointer">
+                        <option value="engineer" selected>Engineer</option>
+                        <option value="admin">Admin</option>
+                        <option value="viewer">Viewer</option>
+                      </select>
+
+                      <select name="organisation_id" class="bg-[#0d1117] border border-[#30363d] rounded text-[11px] text-[#c9d1d9] px-1.5 py-1 focus:outline-none cursor-pointer max-w-[130px]">
+                        {% for org in organisations %}
+                          <option value="{{ org.id }}" {{ 'selected' if org.name.lower() in (req.company or '').lower() else '' }}>
+                            {{ org.name }}
+                          </option>
+                        {% endfor %}
+                      </select>
+
+                      <button type="submit"
+                              class="px-2.5 py-1 rounded font-semibold text-xs bg-[#3fb950] hover:bg-[#4ac260] text-[#0d1117] transition-all shadow"
+                              title="Approve user and send activation welcome email">
+                        <i class="bi bi-check-lg"></i> Approve
+                      </button>
+                    </form>
+
+                    <!-- Reject Action -->
+                    <form method="POST" action="{{ url_for('auth.admin_request_action', req_id=req.id) }}" onsubmit="return confirm('Are you sure you want to reject this request?');">
+                      <input type="hidden" name="action" value="reject">
+                      <button type="submit"
+                              class="px-2 py-1 rounded text-xs text-[#f85149] hover:bg-[#f85149]/10 border border-[#f85149]/30 transition-all"
+                              title="Reject registration request">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="p-8 text-center text-[#8b949e]">
+        <i class="bi bi-check-circle-fill text-3xl text-[#3fb950] mb-2 block"></i>
+        <h3 class="text-sm font-bold text-white mb-1">No Pending Registration Requests</h3>
+        <p class="text-xs">All submitted access requests have been processed.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Historical Processed Requests Section -->
+  <div class="card-dark rounded-xl border border-[#30363d] overflow-hidden">
+    <div class="card-header-dark px-4 py-3 flex items-center justify-between bg-[#161b22] border-b border-[#30363d]">
+      <h2 class="text-sm font-bold text-white">Processed Requests History</h2>
+      <span class="text-xs text-[#8b949e]">Recent 30 entries</span>
+    </div>
+
+    {% if history_requests %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-[#0d1117] text-[#8b949e] border-b border-[#30363d] uppercase tracking-wider font-semibold">
+              <th class="py-2.5 px-3">Applicant</th>
+              <th class="py-2.5 px-3">Email</th>
+              <th class="py-2.5 px-3">Company</th>
+              <th class="py-2.5 px-3">Status</th>
+              <th class="py-2.5 px-3">Requested</th>
+              <th class="py-2.5 px-3">Processed</th>
+              <th class="py-2.5 px-3">Admin Notes</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#30363d]/50">
+            {% for req in history_requests %}
+              <tr class="hover:bg-[#161b22]/50 transition-colors">
+                <td class="py-2.5 px-3 font-semibold text-white">{{ req.full_name }}</td>
+                <td class="py-2.5 px-3 font-mono text-[#8b949e]">{{ req.email }}</td>
+                <td class="py-2.5 px-3 text-[#c9d1d9]">{{ req.company or '-' }}</td>
+                <td class="py-2.5 px-3">
+                  {% if req.status == 'approved' %}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-[#3fb950]/15 text-[#3fb950] border border-[#3fb950]/30">Approved</span>
+                  {% else %}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-[#f85149]/15 text-[#f85149] border border-[#f85149]/30">Rejected</span>
+                  {% endif %}
+                </td>
+                <td class="py-2.5 px-3 font-mono text-[#8b949e]">{{ req.created_at.strftime('%Y-%m-%d') if req.created_at else '-' }}</td>
+                <td class="py-2.5 px-3 font-mono text-[#8b949e]">{{ req.reviewed_at.strftime('%Y-%m-%d %H:%M') if req.reviewed_at else '-' }}</td>
+                <td class="py-2.5 px-3 text-[#8b949e] italic">{{ req.admin_notes or '-' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="p-6 text-center text-xs text-[#8b949e]">
+        No previous processed registration requests in history.
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

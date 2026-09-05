@@ -143,6 +143,14 @@ function updateSystemBadge() {
 
 document.addEventListener('DOMContentLoaded', () => {
 
+  // ── Render SVG Sparklines Immediately ─────────────────────────────────────
+  // Beginners Note: Renders inline SVG tombstone curves at the earliest point in DOM ready
+  try {
+    initSparklines();
+  } catch (err) {
+    console.error('Initial sparkline error:', err);
+  }
+
   // ── Individual Unit Selector Dropdown Event Listeners ────────────────────────
   // Beginners Note: Auto-converts the value in the input field when the unit changes
   const unitSelects = document.querySelectorAll('.unit-select');
@@ -185,10 +193,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const slurryCheckboxes = document.querySelectorAll('.slurry-cb');
   const slurryInputs = document.querySelectorAll('.slurry-input');
   
-  // Helper to safely parse floats
-  const getVal = (id) => parseFloat(document.getElementById(id).value) || 0;
+  // Helper to safely parse floats with null-checks
+  const getVal = (id) => {
+    const el = document.getElementById(id);
+    return el ? (parseFloat(el.value) || 0) : 0;
+  };
+
   const setVal = (id, val) => {
     const el = document.getElementById(id);
+    if (!el) return;
     if (document.activeElement !== el && !isNaN(val) && isFinite(val)) {
       el.value = (val % 1 !== 0) ? val.toFixed(3) : val;
     }
@@ -210,72 +223,76 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function updateSlurryCalculator() {
-    // Collect active (checked) parameters
-    const active = new Set([...slurryCheckboxes].filter(cb => cb.checked).map(cb => cb.dataset.param));
-    
-    // Read raw inputs
-    let L = getVal('sg_l');
-    let S = getVal('sg_s');
-    let M = getVal('sg_m');
-    let Cv = getVal('slurry_cv');
-    let Cw = getVal('slurry_cw');
+    try {
+      // Collect active (checked) parameters
+      const active = new Set([...slurryCheckboxes].filter(cb => cb.checked).map(cb => cb.dataset.param));
+      
+      // Read raw inputs
+      let L = getVal('sg_l');
+      let S = getVal('sg_s');
+      let M = getVal('sg_m');
+      let Cv = getVal('slurry_cv');
+      let Cw = getVal('slurry_cw');
 
-    if (active.size !== 3) return; // Need exactly 3 knowns
+      if (active.size !== 3) return; // Need exactly 3 knowns
 
-    // Solver logic for all 10 combinations of 3 variables
-    if (active.has('L') && active.has('S') && active.has('M')) {
-      Cv = (S - L !== 0) ? (M - L) / (S - L) : 0;
-      Cw = M !== 0 ? (S * Cv) / M : 0;
-    }
-    else if (active.has('L') && active.has('S') && active.has('Cv')) {
-      M = L * (1 - Cv) + S * Cv;
-      Cw = M !== 0 ? (S * Cv) / M : 0;
-    }
-    else if (active.has('L') && active.has('S') && active.has('Cw')) {
-      const denom = S - Cw * (S - L);
-      Cv = denom !== 0 ? (Cw * L) / denom : 0;
-      M = L * (1 - Cv) + S * Cv;
-    }
-    else if (active.has('L') && active.has('M') && active.has('Cv')) {
-      S = Cv !== 0 ? (M - L * (1 - Cv)) / Cv : 0;
-      Cw = M !== 0 ? (S * Cv) / M : 0;
-    }
-    else if (active.has('L') && active.has('M') && active.has('Cw')) {
-      const denom = L + M * (Cw - 1);
-      S = denom !== 0 ? (Cw * M * L) / denom : 0;
-      Cv = (S - L !== 0) ? (M - L) / (S - L) : 0;
-    }
-    else if (active.has('S') && active.has('M') && active.has('Cv')) {
-      L = (1 - Cv !== 0) ? (M - S * Cv) / (1 - Cv) : 0;
-      Cw = M !== 0 ? (S * Cv) / M : 0;
-    }
-    else if (active.has('S') && active.has('M') && active.has('Cw')) {
-      Cv = S !== 0 ? (Cw * M) / S : 0;
-      L = (1 - Cv !== 0) ? (M - S * Cv) / (1 - Cv) : 0;
-    }
-    else if (active.has('L') && active.has('Cv') && active.has('Cw')) {
-      S = (Cv / Cw - Cv !== 0) ? L * (1 - Cv) / (Cv / Cw - Cv) : 0;
-      M = L * (1 - Cv) + S * Cv;
-    }
-    else if (active.has('S') && active.has('Cv') && active.has('Cw')) {
-      M = Cw !== 0 ? (S * Cv) / Cw : 0;
-      L = (1 - Cv !== 0) ? (M - S * Cv) / (1 - Cv) : 0;
-    }
-    else if (active.has('M') && active.has('Cv') && active.has('Cw')) {
-      S = Cv !== 0 ? (Cw * M) / Cv : 0;
-      L = (1 - Cv !== 0) ? (M - S * Cv) / (1 - Cv) : 0;
-    }
+      // Solver logic for combinations
+      if (active.has('L') && active.has('S') && active.has('M')) {
+        Cv = (S - L !== 0) ? (M - L) / (S - L) : 0;
+        Cw = M !== 0 ? (S * Cv) / M : 0;
+      }
+      else if (active.has('L') && active.has('S') && active.has('Cv')) {
+        M = L * (1 - Cv) + S * Cv;
+        Cw = M !== 0 ? (S * Cv) / M : 0;
+      }
+      else if (active.has('L') && active.has('S') && active.has('Cw')) {
+        const denom = S - Cw * (S - L);
+        Cv = denom !== 0 ? (Cw * L) / denom : 0;
+        M = L * (1 - Cv) + S * Cv;
+      }
+      else if (active.has('L') && active.has('M') && active.has('Cv')) {
+        S = Cv !== 0 ? (M - L * (1 - Cv)) / Cv : 0;
+        Cw = M !== 0 ? (S * Cv) / M : 0;
+      }
+      else if (active.has('L') && active.has('M') && active.has('Cw')) {
+        const denom = L + M * (Cw - 1);
+        S = denom !== 0 ? (Cw * M * L) / denom : 0;
+        Cv = (S - L !== 0) ? (M - L) / (S - L) : 0;
+      }
+      else if (active.has('S') && active.has('M') && active.has('Cv')) {
+        L = (1 - Cv !== 0) ? (M - S * Cv) / (1 - Cv) : 0;
+        Cw = M !== 0 ? (S * Cv) / M : 0;
+      }
+      else if (active.has('S') && active.has('M') && active.has('Cw')) {
+        Cv = S !== 0 ? (Cw * M) / S : 0;
+        L = (1 - Cv !== 0) ? (M - S * Cv) / (1 - Cv) : 0;
+      }
+      else if (active.has('L') && active.has('Cv') && active.has('Cw')) {
+        S = (Cv / Cw - Cv !== 0) ? L * (1 - Cv) / (Cv / Cw - Cv) : 0;
+        M = L * (1 - Cv) + S * Cv;
+      }
+      else if (active.has('S') && active.has('Cv') && active.has('Cw')) {
+        M = Cw !== 0 ? (S * Cv) / Cw : 0;
+        L = (1 - Cv !== 0) ? (M - S * Cv) / (1 - Cv) : 0;
+      }
+      else if (active.has('M') && active.has('Cv') && active.has('Cw')) {
+        S = Cv !== 0 ? (Cw * M) / Cv : 0;
+        L = (1 - Cv !== 0) ? (M - S * Cv) / (1 - Cv) : 0;
+      }
 
-    // Clamp values
-    Cv = Math.max(0, Math.min(Cv, 0.8));
-    Cw = Math.max(0, Math.min(Cw, 0.95));
+      // Clamp values
+      Cv = Math.max(0, Math.min(Cv, 0.8));
+      Cw = Math.max(0, Math.min(Cw, 0.95));
 
-    // Update the UI for calculated properties
-    if (!active.has('L')) { setVal('sg_l', L); setVal('rho_l', L * 1000); }
-    if (!active.has('S')) { setVal('sg_s', S); setVal('rho_s', S * 1000); }
-    if (!active.has('M')) { setVal('sg_m', M); setVal('rho_m', M * 1000); }
-    if (!active.has('Cv')) setVal('slurry_cv', Cv);
-    if (!active.has('Cw')) setVal('slurry_cw', Cw);
+      // Update the UI for calculated properties
+      if (!active.has('L')) { setVal('sg_l', L); setVal('rho_l', L * 1000); }
+      if (!active.has('S')) { setVal('sg_s', S); setVal('rho_s', S * 1000); }
+      if (!active.has('M')) { setVal('sg_m', M); setVal('rho_m', M * 1000); }
+      if (!active.has('Cv')) setVal('slurry_cv', Cv);
+      if (!active.has('Cw')) setVal('slurry_cw', Cw);
+    } catch (e) {
+      console.warn('Slurry calculation error:', e);
+    }
   }
 
   // Handle Checkbox Toggles: keep exactly 3 checked
@@ -298,14 +315,17 @@ document.addEventListener('DOMContentLoaded', () => {
       // Update readonly state based on checked param
       const active = new Set(checkedOrder.map(c => c.dataset.param));
       
-      document.getElementById('rho_l').readOnly = !active.has('L');
-      document.getElementById('sg_l').readOnly = !active.has('L');
-      document.getElementById('rho_s').readOnly = !active.has('S');
-      document.getElementById('sg_s').readOnly = !active.has('S');
-      document.getElementById('rho_m').readOnly = !active.has('M');
-      document.getElementById('sg_m').readOnly = !active.has('M');
-      document.getElementById('slurry_cv').readOnly = !active.has('Cv');
-      document.getElementById('slurry_cw').readOnly = !active.has('Cw');
+      const elementsToToggle = [
+        ['rho_l', 'L'], ['sg_l', 'L'],
+        ['rho_s', 'S'], ['sg_s', 'S'],
+        ['rho_m', 'M'], ['sg_m', 'M'],
+        ['slurry_cv', 'Cv'], ['slurry_cw', 'Cw']
+      ];
+      
+      elementsToToggle.forEach(([elemId, param]) => {
+        const el = document.getElementById(elemId);
+        if (el) el.readOnly = !active.has(param);
+      });
       
       updateSlurryCalculator();
     });
@@ -313,7 +333,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initial update
   if (slurryCheckboxes.length > 0) {
-    updateSlurryCalculator();
+    try {
+      updateSlurryCalculator();
+    } catch (err) {
+      console.warn('Slurry init notice:', err);
+    }
   }
 
 
@@ -327,14 +351,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const selected = [...document.querySelectorAll('.pump-compare-cb:checked')].map(cb => cb.value);
     if (compareCount) compareCount.textContent = selected.length;
     if (compareLink) {
-      if (selected.length >= 2) {
+      if (selected.length >= 1) {
         const liquid = document.getElementById('liquidSel')?.value || 'water';
         const qDuty  = document.querySelector('[name=q_duty]')?.value || '';
         const hDuty  = document.querySelector('[name=h_duty]')?.value || '';
         const params = selected.map(id => `ids=${id}`).join('&');
         compareLink.href = `/pump-comparison?${params}&liquid=${liquid}&q_duty=${qDuty}&h_duty=${hDuty}`;
         compareLink.classList.remove('disabled', 'pointer-events-none', 'opacity-50');
-        compareLink.style.background = 'rgba(57,211,192,0.1)';
+        compareLink.style.background = 'rgba(57,211,192,0.15)';
       } else {
         compareLink.classList.add('disabled', 'pointer-events-none', 'opacity-50');
         compareLink.style.background = 'transparent';
@@ -348,37 +372,126 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Render SVG Sparklines ──────────────────────────────────────────────────
   // Beginners Note: Finds all container divs with 'data-chart' attribute and draws an inline SVG
+  initSparklines();
+
+});
+
+// ── SVG Sparkline Initialization ─────────────────────────────────────────────
+// Beginners Note: Scans DOM for .sparkline-container and renders tombstone curves
+function initSparklines() {
   const sparkContainers = document.querySelectorAll('.sparkline-container');
   sparkContainers.forEach(container => {
     try {
+      if (container.querySelector('svg')) return; // Already rendered
       const dataStr = container.getAttribute('data-chart');
       if (!dataStr) return;
       const chartData = JSON.parse(dataStr);
       renderSparkline(container, chartData);
     } catch (e) {
       console.error('Error rendering sparkline:', e);
-      container.innerHTML = '<div class="text-xs text-red-500">Error rendering chart</div>';
+      container.innerHTML = '<div class="text-[9px] text-red-400">Chart err</div>';
+    }
+  });
+}
+
+// Expose globally so external scripts and HTML templates can trigger anytime
+window.initSparklines = initSparklines;
+
+// If DOM is already parsed when this script executes, run sparkline rendering immediately
+if (document.readyState === 'interactive' || document.readyState === 'complete') {
+  try {
+    initSparklines();
+  } catch (err) {
+    console.warn('Immediate sparkline render notice:', err);
+  }
+}
+
+// ── Attribute Panel Toggle ──────────────────────────────────────────────────
+function toggleAttrPanel() {
+  const panel = document.getElementById('attrPanel');
+  const chevron = document.getElementById('attrChevron');
+  if (!panel) return;
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    if (chevron) chevron.style.transform = 'rotate(180deg)';
+  } else {
+    panel.style.display = 'none';
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
+  }
+}
+
+// ── Client-side Live Search & Rating Filter for Minimal Shortlist ────────────
+let currentRatingFilter = 'all';
+
+function applyRatingFilter(cat, btn) {
+  currentRatingFilter = cat;
+  document.querySelectorAll('.rating-filter-pill').forEach(b => {
+    b.classList.remove('bg-[#21262d]', 'text-[#58a6ff]');
+    b.classList.add('text-[#8b949e]');
+  });
+  if (btn) {
+    btn.classList.add('bg-[#21262d]', 'text-[#58a6ff]');
+    btn.classList.remove('text-[#8b949e]');
+  }
+  filterShortlistItems();
+}
+
+function filterShortlistItems() {
+  const query = (document.getElementById('shortlistSearch')?.value || '').toLowerCase().trim();
+  const items = document.querySelectorAll('.sel-mini-card');
+  let visibleCount = 0;
+
+  items.forEach(card => {
+    const name = card.dataset.name || '';
+    const size = card.dataset.size || '';
+    const ratingCat = card.dataset.ratingCat || '';
+
+    const matchesQuery = !query || name.includes(query) || size.includes(query);
+    const matchesRating = currentRatingFilter === 'all' || ratingCat === currentRatingFilter;
+
+    if (matchesQuery && matchesRating) {
+      card.style.display = '';
+      visibleCount++;
+    } else {
+      card.style.display = 'none';
     }
   });
 
-});
+  const countDisplay = document.getElementById('shortlistCountDisplay');
+  if (countDisplay) {
+    countDisplay.textContent = visibleCount;
+  }
 
-// ── Filter Panel Toggle ──────────────────────────────────────────────────────
-// Beginners Note: Toggles the advanced filter panel open/closed
+  const notice = document.getElementById('noFilterMatchesNotice');
+  if (notice) {
+    notice.style.display = (visibleCount === 0 && items.length > 0) ? 'block' : 'none';
+  }
+}
+
+function clearShortlistFilter() {
+  const searchInput = document.getElementById('shortlistSearch');
+  if (searchInput) searchInput.value = '';
+  const allBtn = document.querySelector('.rating-filter-pill[data-filter="all"]');
+  applyRatingFilter('all', allBtn);
+}
+
+// ── Combined Filter Panel Toggle ─────────────────────────────────────────────
+// Beginners Note: Toggles the unified specifications and catalogue filter panel open/closed
 function toggleFilterPanel() {
   const panel = document.getElementById('filterPanel');
   const chevron = document.getElementById('filterChevron');
+  if (!panel) return;
   if (panel.style.display === 'none') {
     panel.style.display = 'block';
-    chevron.style.transform = 'rotate(180deg)';
+    if (chevron) chevron.style.transform = 'rotate(180deg)';
   } else {
     panel.style.display = 'none';
-    chevron.style.transform = 'rotate(0deg)';
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
   }
 }
 
 // ── Clear All Filters ────────────────────────────────────────────────────────
-// Beginners Note: Resets all filter dropdowns and text inputs (both standard advanced filters
+// Beginners Note: Resets all filter dropdowns and text inputs (both standard catalogue filters
 // and organisation custom PumpAttributes) back to blank/default, then automatically resubmits.
 function clearAllFilters() {
   const panel = document.getElementById('filterPanel');
@@ -389,42 +502,96 @@ function clearAllFilters() {
     inputs.forEach(i => i.value = '');
   }
 
-  const attrCard = document.getElementById('pumpAttributesCard');
-  if (attrCard) {
-    const selects = attrCard.querySelectorAll('select');
-    selects.forEach(s => s.value = '');
-    const inputs = attrCard.querySelectorAll('input[type="text"]');
-    inputs.forEach(i => i.value = '');
-  }
-
   const form = document.getElementById('selectionForm');
   if (form) {
     form.submit();
   }
 }
 
-// ── Sorting Logic ────────────────────────────────────────────────────────────
-// Beginners Note: Updates the hidden sort input and resubmits the form
-function setSortAndSubmit(sortBy) {
-  const input = document.getElementById('sortByInput');
-  if (input) {
-    input.value = sortBy;
-    document.getElementById('selectionForm').submit();
+// ── Client-side Instant Sorting Logic (No Page Reload) ───────────────────────
+// Beginners Note:
+// Re-orders the shortlisted pump cards in the DOM immediately without sending
+// an HTTP POST/GET request or reloading the entire webpage.
+// Supports both Ascending (Low to High) and Descending (High to Low) sorting.
+let currentSortKey = 'rating';
+let currentSortDirection = 'desc'; // 'desc' (high to low) or 'asc' (low to high)
+
+function toggleSortDirection() {
+  currentSortDirection = (currentSortDirection === 'desc') ? 'asc' : 'desc';
+  const icon = document.getElementById('sortDirectionIcon');
+  const btn = document.getElementById('btnSortDirection');
+  if (icon) {
+    if (currentSortDirection === 'asc') {
+      icon.className = 'bi bi-sort-up';
+      if (btn) btn.title = 'Order: Ascending (Low to High). Click to switch to Descending.';
+    } else {
+      icon.className = 'bi bi-sort-down';
+      if (btn) btn.title = 'Order: Descending (High to Low). Click to switch to Ascending.';
+    }
   }
+  applyClientSort();
 }
 
-// ── SVG Sparkline Renderer ───────────────────────────────────────────────────
-// Beginners Note: Draws a simple SVG H-Q envelope without heavy charting libraries
+function applyClientSort() {
+  const select = document.getElementById('clientSortSel');
+  if (select) {
+    currentSortKey = select.value;
+  }
+
+  const container = document.getElementById('shortlistItemsContainer');
+  if (!container) return;
+
+  const cards = Array.from(container.querySelectorAll('.sel-mini-card'));
+  if (cards.length === 0) return;
+
+  cards.sort((a, b) => {
+    let valA, valB;
+    if (currentSortKey === 'name') {
+      valA = a.dataset.name || '';
+      valB = b.dataset.name || '';
+      const comp = valA.localeCompare(valB);
+      return (currentSortDirection === 'asc') ? comp : -comp;
+    } else if (currentSortKey === 'efficiency') {
+      valA = parseFloat(a.dataset.efficiency) || 0;
+      valB = parseFloat(b.dataset.efficiency) || 0;
+    } else if (currentSortKey === 'power') {
+      valA = parseFloat(a.dataset.power) || 0;
+      valB = parseFloat(b.dataset.power) || 0;
+    } else if (currentSortKey === 'bep') {
+      valA = parseFloat(a.dataset.bep) || 0;
+      valB = parseFloat(b.dataset.bep) || 0;
+    } else {
+      // Default: rating
+      valA = parseFloat(a.dataset.rating) || 0;
+      valB = parseFloat(b.dataset.rating) || 0;
+    }
+
+    return (currentSortDirection === 'asc') ? (valA - valB) : (valB - valA);
+  });
+
+  // Re-append sorted cards into container without destroying rendered inner elements
+  const notice = document.getElementById('noFilterMatchesNotice');
+  cards.forEach(card => container.appendChild(card));
+  if (notice) container.appendChild(notice);
+
+  // Ensure any sparklines that need rendering are drawn
+  initSparklines();
+}
+
+// ── SVG Tombstone Sparkline Renderer ─────────────────────────────────────────
+// Beginners Note:
+// Draws a compact SVG H-Q envelope curve (max impeller, min impeller trim bounds,
+// optimal trim curve, and operating duty point crosshair) for instant visual recognition.
 function renderSparkline(container, data) {
-  const width = 180;
-  const height = 70;
-  const padding = { top: 5, right: 5, bottom: 5, left: 5 };
+  const width = 130;
+  const height = 50;
+  const padding = { top: 4, right: 6, bottom: 6, left: 6 };
   
   const innerWidth = width - padding.left - padding.right;
   const innerHeight = height - padding.top - padding.bottom;
   
-  const maxQ = data.q_range[1] || 100;
-  const maxH = data.h_range[1] || 100;
+  const maxQ = Math.max(1, (data.q_range && data.q_range[1] > 0) ? data.q_range[1] : (data.q_max && data.q_max.length > 0 ? Math.max(...data.q_max) * 1.05 : 100));
+  const maxH = Math.max(1, (data.h_range && data.h_range[1] > 0) ? data.h_range[1] : (data.h_max && data.h_max.length > 0 ? Math.max(...data.h_max) * 1.05 : 100));
   
   // Coordinate mapping functions
   const x = val => padding.left + (val / maxQ) * innerWidth;
@@ -433,25 +600,34 @@ function renderSparkline(container, data) {
   // Path generator
   const createPath = (qArr, hArr) => {
     if (!qArr || !hArr || qArr.length === 0 || qArr.length !== hArr.length) return '';
-    let d = `M ${x(qArr[0])} ${y(hArr[0])}`;
+    let d = `M ${x(qArr[0]).toFixed(1)} ${y(hArr[0]).toFixed(1)}`;
     for (let i = 1; i < qArr.length; i++) {
-      d += ` L ${x(qArr[i])} ${y(hArr[i])}`;
+      d += ` L ${x(qArr[i]).toFixed(1)} ${y(hArr[i]).toFixed(1)}`;
     }
     return d;
   };
 
-  // Build SVG
-  let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
+  // Build SVG with 100% width/height to fill the container responsively
+  let svg = `<svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" class="block overflow-visible">`;
 
-  // Draw envelope fill area (between max and min curves)
+  // Subtle axis lines (baseline & left axis)
+  svg += `<line x1="${padding.left}" y1="${padding.top + innerHeight}" x2="${padding.left + innerWidth}" y2="${padding.top + innerHeight}" stroke="#30363d" stroke-width="1" />`;
+  svg += `<line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${padding.top + innerHeight}" stroke="#30363d" stroke-width="1" />`;
+
+  // Draw envelope fill area
   if (data.q_max && data.q_min && data.q_min.length > 0) {
     let dArea = createPath(data.q_max, data.h_max);
-    // Add min curve in reverse order to close the path
     for (let i = data.q_min.length - 1; i >= 0; i--) {
-      dArea += ` L ${x(data.q_min[i])} ${y(data.h_min[i])}`;
+      dArea += ` L ${x(data.q_min[i]).toFixed(1)} ${y(data.h_min[i]).toFixed(1)}`;
     }
     dArea += ' Z';
-    svg += `<path d="${dArea}" fill="rgba(88,166,255,0.08)" />`;
+    svg += `<path d="${dArea}" fill="rgba(88,166,255,0.18)" />`;
+  } else if (data.q_max && data.q_max.length > 0) {
+    // Fill from max curve down to baseline
+    let dArea = createPath(data.q_max, data.h_max);
+    dArea += ` L ${x(data.q_max[data.q_max.length - 1]).toFixed(1)} ${(padding.top + innerHeight).toFixed(1)}`;
+    dArea += ` L ${x(data.q_max[0]).toFixed(1)} ${(padding.top + innerHeight).toFixed(1)} Z`;
+    svg += `<path d="${dArea}" fill="rgba(88,166,255,0.15)" />`;
   }
 
   // Draw Max curve (solid blue)
@@ -466,19 +642,26 @@ function renderSparkline(container, data) {
 
   // Draw Optimal Trim curve (dotted green)
   if (data.q_trim && data.q_trim.length > 0) {
-    svg += `<path d="${createPath(data.q_trim, data.h_trim)}" fill="none" stroke="#3fb950" stroke-width="1" stroke-dasharray="1,2" />`;
+    svg += `<path d="${createPath(data.q_trim, data.h_trim)}" fill="none" stroke="#3fb950" stroke-width="1.2" stroke-dasharray="2,2" />`;
   }
 
-  // Draw Duty Point (red cross)
-  const dx = x(data.q_duty);
-  const dy = y(data.h_duty);
-  const crossSize = 3;
-  svg += `<line x1="${dx - crossSize}" y1="${dy - crossSize}" x2="${dx + crossSize}" y2="${dy + crossSize}" stroke="#f85149" stroke-width="1.5" />`;
-  svg += `<line x1="${dx - crossSize}" y1="${dy + crossSize}" x2="${dx + crossSize}" y2="${dy - crossSize}" stroke="#f85149" stroke-width="1.5" />`;
+  // Draw Duty Point (red target point + crosshair)
+  if (data.q_duty !== undefined && data.h_duty !== undefined) {
+    const dx = x(data.q_duty);
+    const dy = y(data.h_duty);
+    const crossSize = 3.5;
+    svg += `<line x1="${(dx - crossSize).toFixed(1)}" y1="${dy.toFixed(1)}" x2="${(dx + crossSize).toFixed(1)}" y2="${dy.toFixed(1)}" stroke="#f85149" stroke-width="1.5" />`;
+    svg += `<line x1="${dx.toFixed(1)}" y1="${(dy - crossSize).toFixed(1)}" x2="${dx.toFixed(1)}" y2="${(dy + crossSize).toFixed(1)}" stroke="#f85149" stroke-width="1.5" />`;
+    svg += `<circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="2" fill="#f85149" stroke="#ffffff" stroke-width="0.8" />`;
+  }
+
+  // Small watermark badge
+  svg += `<text x="${(width - padding.right).toFixed(1)}" y="${(padding.top + 7).toFixed(1)}" text-anchor="end" font-size="7" fill="#8b949e" font-family="monospace">H-Q</text>`;
 
   svg += `</svg>`;
   container.innerHTML = svg;
 }
+window.renderSparkline = renderSparkline;
 
 // ── Operation Mode & Motor/Drive Arrangement Handlers ───────────────────────
 // Beginners Note:

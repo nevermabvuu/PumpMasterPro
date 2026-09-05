@@ -11,27 +11,80 @@ _app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if _app_dir not in sys.path:
     sys.path.insert(0, _app_dir)
 
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, session
 from models import Pump
-from utils import _get_float, get_visible_pumps_query
+from utils import _get_float, get_visible_pumps_query, get_current_organisation
 from pump_curves import full_curve_data, bep_point
+from routes.selection import run_selection_from_form
 
 comparison_bp = Blueprint('comparison', __name__)
 
 
 @comparison_bp.route('/pump-comparison', endpoint='pump_comparison')
 def pump_comparison():
-    """Render pump comparison page."""
+    """
+    Render pump comparison page.
+    If an active pump selection exists in the session, automatically loads the
+    complete detailed shortlisted pumps list and pre-selects the compared pumps.
+    """
+    # ── 1. Load active selection parameters ──────────────────────────────────
+    # Check session for selection parameters; if absent (e.g. direct link or fresh tab),
+    # fallback to URL query parameters so shortlisted pumps are always automatically listed.
+    f = session.get('selection_form_data', {})
+    if not f or not f.get('q_duty'):
+        args_dict = request.args.to_dict()
+        if args_dict.get('q_duty') and args_dict.get('h_duty'):
+            f = args_dict
+            session['selection_form_data'] = f
+            session.modified = True
+
+    # ── 1b. Fetch organisation and catalogue pumps for selection engine ──────
+    # Beginners Note: Ensures selection engine has the complete catalogue dataset
+    current_org = get_current_organisation()
+    all_pumps = get_visible_pumps_query().order_by(Pump.name).all()
+
+    # ── 2. Run selection engine to get all shortlisted pumps ─────────────────
+    # If selection parameters exist, calculate all shortlisted pumps for automatic listing.
+    shortlisted_results, ctx = run_selection_from_form(f, all_pumps=all_pumps, current_org=current_org)
+    if shortlisted_results is None:
+        shortlisted_results = []
+
+    # Get pump IDs requested for comparison
     pump_ids = request.args.getlist('ids', type=int)
-    q_duty   = request.args.get('q_duty', type=float)
-    h_duty   = request.args.get('h_duty', type=float)
-    liquid   = request.args.get('liquid', 'water')
-    pumps    = Pump.query.filter(Pump.id.in_(pump_ids)).all() if pump_ids else []
-    all_pumps= get_visible_pumps_query().order_by(Pump.name).all()
+    
+    # If no IDs explicitly passed via query string, but shortlisted results exist:
+    if not pump_ids and shortlisted_results:
+        # Pre-select top 2-3 pumps
+        pump_ids = [r['pump_id'] for r in shortlisted_results[:3] if 'pump_id' in r]
+    
+    pumps = Pump.query.filter(Pump.id.in_(pump_ids)).all() if pump_ids else []
+
+    # Duty point parameters (prefer query params, fallback to session ctx)
+    q_duty = request.args.get('q_duty', type=float)
+    if q_duty is None and ctx.get('raw_q_duty'):
+        q_duty = ctx.get('raw_q_duty')
+
+    h_duty = request.args.get('h_duty', type=float)
+    if h_duty is None and ctx.get('raw_h_duty'):
+        h_duty = ctx.get('raw_h_duty')
+
+    liquid = request.args.get('liquid')
+    if not liquid:
+        liquid = ctx.get('liquid', 'water')
+
+    operation_mode = f.get('operation_mode', 'fixed')
+
     return render_template('pump_comparison.html',
-                           pumps=pumps, all_pumps=all_pumps,
-                           pump_ids=pump_ids, q_duty=q_duty,
-                           h_duty=h_duty, liquid=liquid)
+                           pumps=pumps,
+                           all_pumps=all_pumps,
+                           pump_ids=pump_ids,
+                           shortlisted_results=shortlisted_results,
+                           q_duty=q_duty,
+                           h_duty=h_duty,
+                           liquid=liquid,
+                           ctx=ctx,
+                           form_data=f,
+                           operation_mode=operation_mode)
 
 
 @comparison_bp.route('/papi/compare-pumps')

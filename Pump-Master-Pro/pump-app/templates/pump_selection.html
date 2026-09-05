@@ -4,585 +4,146 @@
 {% block content %}
 {#
   Beginners Note:
-  This is the Pump Selection page. It provides a two-column layout:
-  - Left Panel (2/5): Duty point inputs, liquid options, and advanced filter controls
-  - Right Panel (3/5): Shortlist results table/cards with mini H-Q sparklines and sort controls
-
-  The form POSTs to the same route, and results are rendered server-side on page reload.
-  The JavaScript file (pump_selection.js) handles:
-  - Liquid panel switching
-  - Filter panel expand/collapse
-  - Client-side sort toggling
-  - Mini SVG sparkline rendering from inline data attributes
-  - Compare checkbox logic
+  Pump Selection page reorganized into a modern 3-Panel Layout:
+  - Panel 1 (Left): Core Duty Point & Fluid Properties (Flow, Head, NPSHa, Static Head, Liquid & Slurry calculator)
+  - Panel 2 (Middle): Operation Mode, Motor Sizing & Catalogue / Organisation Custom Filters
+  - Panel 3 (Right): Minimal Shortlist Results (High density, designed for 100s of pumps with live search, rating pills, sort controls)
+  Detailed engineering analysis cards, motor strips, BEP graphics, and multi-curve overlays are housed in the Comparison Tab.
 #}
 
-<div class="page-header mb-4">
-  <h1 class="page-title"><i class="bi bi-bullseye text-accent mr-2"></i>Pump Selection</h1>
-  <p class="page-subtitle">Enter your duty point to find matching pumps from the catalogue</p>
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+  <div class="page-header mb-0">
+    <h1 class="page-title"><i class="bi bi-bullseye text-accent mr-2"></i>Pump Selection</h1>
+    <p class="page-subtitle">Configure operating duty and specifications to find matching pumps</p>
+  </div>
+  <div class="flex items-center gap-2">
+    <!-- Quick navigation to comparison tab with active duty parameters -->
+    <a href="{{ url_for('pump_comparison', q_duty=form_data.q_duty, h_duty=form_data.h_duty, liquid=form_data.get('liquid', 'water'), operation_mode=form_data.get('operation_mode', 'fixed')) if form_data.q_duty else url_for('pump_comparison') }}"
+       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] hover:text-white border border-[#30363d] transition-colors shadow-sm">
+      <i class="bi bi-bar-chart-line"></i>
+      <span>Comparison Tab</span>
+      {% if results %}
+      <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-[#58a6ff]/20 font-mono">{{ results|length }}</span>
+      {% endif %}
+    </a>
+  </div>
 </div>
 
-<!-- Two-column layout: form (narrower) + results (wider) -->
-<div class="grid grid-cols-1 xl:grid-cols-5 gap-4">
+<form method="post" id="selectionForm" class="w-full">
+  <input type="hidden" name="sort_by" id="sortByInput" value="{{ sort_by or 'rating' }}">
+  <input type="hidden" name="unit_system" id="unitSystemInput" value="{{ unit_system or 'metric' }}">
 
-  <!-- ── Left Panel: Selection Form & Filters (2/5 width on xl) ──────── -->
-  <div class="xl:col-span-2">
-    <form method="post" id="selectionForm">
+  <!-- ── 3-Panel Responsive Layout Grid (Equal 4-col width for Panels 1, 2 & 3) ── -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
 
-      <!-- Duty point card -->
-      <!-- Beginners Note: Core inputs for the target operating point (Flow Q, Head H, NPSHa) with full unit switching -->
-      <div class="card-dark mb-3">
+    <!-- ════════════════════════════════════════════════════════════════════
+         PANEL 1: Duty Point & Fluid Properties (Cols 1-4 on lg and xl)
+         ════════════════════════════════════════════════════════════════════ -->
+    <div class="col-span-12 lg:col-span-4 xl:col-span-4 space-y-3">
+
+      <!-- Card: Duty Point -->
+      <div class="card-dark">
         <div class="card-header-dark flex items-center justify-between">
-          <span><i class="bi bi-crosshair mr-2"></i>Duty Point</span>
+          <span class="flex items-center gap-1.5 font-bold">
+            <i class="bi bi-crosshair text-[#58a6ff]"></i>
+            <span>Duty Point</span>
+          </span>
           <span id="unitSystemBadge" class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#1f6feb]/15 border border-[#1f6feb]/30 text-[#58a6ff]">
             {{ 'Metric (SI)' if unit_system != 'imperial' else 'Imperial (US)' }}
           </span>
         </div>
-        <div class="p-4">
+        <div class="p-3.5 space-y-3">
 
           <!-- Unit System Preset Switcher -->
-          <div class="flex items-center justify-between pb-3 mb-3 border-b border-[#30363d]">
-            <span class="text-xs font-semibold text-[#8b949e] flex items-center gap-1.5">
-              <i class="bi bi-sliders"></i> Unit Preset:
+          <div class="flex items-center justify-between pb-2.5 border-b border-[#30363d]">
+            <span class="text-xs font-semibold text-[#8b949e] flex items-center gap-1">
+              <i class="bi bi-sliders"></i> Presets:
             </span>
             <div class="inline-flex rounded-lg p-0.5 bg-[#0d1117] border border-[#30363d]">
               <button type="button" id="btnPresetMetric"
                       onclick="applyUnitPreset('metric')"
-                      class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all {{ 'bg-[#21262d] text-[#58a6ff] shadow-sm' if unit_system != 'imperial' else 'text-[#8b949e] hover:text-white' }}">
-                🌐 Metric (SI)
+                      class="px-2 py-0.5 text-xs font-semibold rounded transition-all {{ 'bg-[#21262d] text-[#58a6ff] shadow-sm' if unit_system != 'imperial' else 'text-[#8b949e] hover:text-white' }}">
+                Metric
               </button>
               <button type="button" id="btnPresetImperial"
                       onclick="applyUnitPreset('imperial')"
-                      class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all {{ 'bg-[#21262d] text-[#58a6ff] shadow-sm' if unit_system == 'imperial' else 'text-[#8b949e] hover:text-white' }}">
-                🇺🇸 Imperial (US)
+                      class="px-2 py-0.5 text-xs font-semibold rounded transition-all {{ 'bg-[#21262d] text-[#58a6ff] shadow-sm' if unit_system == 'imperial' else 'text-[#8b949e] hover:text-white' }}">
+                Imperial
               </button>
             </div>
-            <input type="hidden" name="unit_system" id="unitSystemInput" value="{{ unit_system or 'metric' }}">
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <!-- Flow Q Input + Unit Selector -->
-            <div>
-              <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Flow Rate Q *</label>
-              <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
-                <input type="number" name="q_duty" id="input_q_duty" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-2 text-sm text-white"
-                       value="{{ form_data.q_duty or '' }}" step="0.1" required placeholder="e.g. 150" data-unit-cat="flow">
-                <select name="unit_q" id="select_unit_q" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_q_duty" data-unit-cat="flow" data-prev="{{ unit_q or 'm3h' }}">
-                  {% for k, u in units_tables.flow.items() %}
-                    <option value="{{ k }}" {{ 'selected' if unit_q == k else '' }}>{{ u.name }}</option>
-                  {% endfor %}
-                </select>
-              </div>
+          <!-- Flow Q Input -->
+          <div>
+            <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Flow Rate Q *</label>
+            <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
+              <input type="number" name="q_duty" id="input_q_duty" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-1.5 text-sm text-white font-mono"
+                     value="{{ form_data.q_duty or '' }}" step="any" required placeholder="e.g. 150" data-unit-cat="flow">
+              <select name="unit_q" id="select_unit_q" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_q_duty" data-unit-cat="flow" data-prev="{{ unit_q or 'm3h' }}">
+                {% for k, u in units_tables.flow.items() %}
+                  <option value="{{ k }}" {{ 'selected' if unit_q == k else '' }}>{{ u.name }}</option>
+                {% endfor %}
+              </select>
             </div>
+          </div>
 
-            <!-- Head H Input + Unit Selector -->
-            <div>
-              <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Total Head H *</label>
-              <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
-                <input type="number" name="h_duty" id="input_h_duty" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-2 text-sm text-white"
-                       value="{{ form_data.h_duty or '' }}" step="0.1" required placeholder="e.g. 35" data-unit-cat="head">
-                <select name="unit_h" id="select_unit_h" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_h_duty" data-unit-cat="head" data-prev="{{ unit_h or 'm' }}">
-                  {% for k, u in units_tables.head.items() %}
-                    <option value="{{ k }}" {{ 'selected' if unit_h == k else '' }}>{{ u.name }}</option>
-                  {% endfor %}
-                </select>
-              </div>
+          <!-- Head H Input -->
+          <div>
+            <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Total Head H *</label>
+            <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
+              <input type="number" name="h_duty" id="input_h_duty" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-1.5 text-sm text-white font-mono"
+                     value="{{ form_data.h_duty or '' }}" step="any" required placeholder="e.g. 35" data-unit-cat="head">
+              <select name="unit_h" id="select_unit_h" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_h_duty" data-unit-cat="head" data-prev="{{ unit_h or 'm' }}">
+                {% for k, u in units_tables.head.items() %}
+                  <option value="{{ k }}" {{ 'selected' if unit_h == k else '' }}>{{ u.name }}</option>
+                {% endfor %}
+              </select>
             </div>
+          </div>
 
-            <!-- NPSHa Input + Unit Selector -->
-            <div>
-              <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">NPSH Available (NPSHa)</label>
-              <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
-                <input type="number" name="npsh_avail" id="input_npsh_avail" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-2 text-sm text-white"
-                       value="{{ form_data.npsh_avail or '' }}" step="0.1" placeholder="Optional" data-unit-cat="head">
-                <select name="unit_npsh" id="select_unit_npsh" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_npsh_avail" data-unit-cat="head" data-prev="{{ unit_npsh or 'm' }}">
-                  {% for k, u in units_tables.head.items() %}
-                    <option value="{{ k }}" {{ 'selected' if unit_npsh == k else '' }}>{{ u.name }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-              <div class="form-text text-[11px] text-[#8b949e] mt-1">Available NPSH at pump suction</div>
+          <!-- NPSHa Input -->
+          <div>
+            <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">NPSH Available (NPSHa)</label>
+            <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
+              <input type="number" name="npsh_avail" id="input_npsh_avail" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-1.5 text-sm text-white font-mono"
+                     value="{{ form_data.npsh_avail or '' }}" step="any" placeholder="Optional" data-unit-cat="head">
+              <select name="unit_npsh" id="select_unit_npsh" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_npsh_avail" data-unit-cat="head" data-prev="{{ unit_npsh or 'm' }}">
+                {% for k, u in units_tables.head.items() %}
+                  <option value="{{ k }}" {{ 'selected' if unit_npsh == k else '' }}>{{ u.name }}</option>
+                {% endfor %}
+              </select>
             </div>
+          </div>
 
-            <!-- Static Head Hs Input + Unit Selector -->
-            <div>
-              <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Static Head H<sub>s</sub></label>
-              <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
-                <input type="number" name="static_head" id="input_static_head" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-2 text-sm text-white"
-                       value="{{ form_data.static_head or '' }}" step="0.1" placeholder="0" data-unit-cat="head">
-                <select name="unit_static_head" id="select_unit_static_head" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_static_head" data-unit-cat="head" data-prev="{{ unit_static_head or 'm' }}">
-                  {% for k, u in units_tables.head.items() %}
-                    <option value="{{ k }}" {{ 'selected' if unit_static_head == k else '' }}>{{ u.name }}</option>
-                  {% endfor %}
-                </select>
-              </div>
+          <!-- Static Head Hs Input -->
+          <div>
+            <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Static Head H<sub>s</sub></label>
+            <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
+              <input type="number" name="static_head" id="input_static_head" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-1.5 text-sm text-white font-mono"
+                     value="{{ form_data.static_head or '' }}" step="any" placeholder="0" data-unit-cat="head">
+              <select name="unit_static_head" id="select_unit_static_head" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_static_head" data-unit-cat="head" data-prev="{{ unit_static_head or 'm' }}">
+                {% for k, u in units_tables.head.items() %}
+                  <option value="{{ k }}" {{ 'selected' if unit_static_head == k else '' }}>{{ u.name }}</option>
+                {% endfor %}
+              </select>
             </div>
           </div>
         </div>
       </div>
-      
-      <!-- Operation Mode card -->
-      <div class="card-dark mb-3">
+
+      <!-- Card: Liquid Options -->
+      <div class="card-dark">
         <div class="card-header-dark flex items-center justify-between">
-          <span class="flex items-center gap-2">
-            <i class="bi bi-speedometer2 text-[#58a6ff]"></i>
-            <span class="font-semibold">Operation Mode</span>
+          <span class="flex items-center gap-1.5 font-bold">
+            <i class="bi bi-droplet text-[#58a6ff]"></i>
+            <span>Fluid Properties</span>
           </span>
+          <span class="text-[11px] font-mono text-[#8b949e] uppercase">{{ form_data.get('liquid', 'water') }}</span>
         </div>
-        <div class="p-4">
-          <div class="space-y-2.5">
-            <!-- Mode 1: Fixed Speed -->
-            <div>
-              <label class="flex items-center gap-2 text-sm cursor-pointer hover:text-white transition-colors">
-                <input type="radio" name="operation_mode" value="fixed" id="opModeFixed" class="accent-[#58a6ff]" 
-                       {{ 'checked' if form_data.get('operation_mode', 'fixed') == 'fixed' else '' }}
-                       onchange="onOperationModeChange()">
-                <span class="font-semibold text-white">Fixed Speed</span>
-              </label>
-              <span class="text-[11px] text-[#8b949e] block ml-6">Pump operates at constant duty speed. Direct-drive suitability is evaluated against motor rated speed.</span>
-
-              <!-- Fixed Speed Sub-Options: Automatic Speed Calculation vs Manual Speed Specification -->
-              {#
-                Beginners Note:
-                When Fixed Speed mode is active, the pump duty speed can either be:
-                1. Calculated automatically: using affinity laws with full diameter (no machining),
-                2. Entered manually: user prescribes an exact pump speed (RPM), and the selection engine
-                   calculates the required trimmed impeller diameter to hit the duty point at that fixed speed.
-                In both cases, motor selection and rated speed remain independent from pump duty speed.
-              #}
-              <div id="fixedSpeedOptionsGroup" class="ml-6 mt-2.5 p-2.5 rounded-lg bg-[#161b22] border border-[#30363d] space-y-2.5"
-                   style="{{ '' if form_data.get('operation_mode', 'fixed') == 'fixed' else 'display:none;' }}">
-                <span class="text-[11px] font-bold text-[#c9d1d9] block uppercase tracking-wider">
-                  <i class="bi bi-gear-wide text-[#58a6ff] mr-1"></i>Pump Duty Speed Calculation
-                </span>
-
-                <!-- Option A: Automatically calculate pump speed -->
-                <label class="flex items-start gap-2 text-xs cursor-pointer hover:text-white transition-colors">
-                  <input type="radio" name="fixed_speed_mode" value="auto" id="fixedSpeedAuto" class="accent-[#58a6ff] mt-0.5"
-                         {{ 'checked' if form_data.get('fixed_speed_mode', 'auto') == 'auto' else '' }}
-                         onchange="onFixedSpeedModeChange()">
-                  <div>
-                    <span class="text-white font-medium">Calculate pump speed automatically</span>
-                    <span class="text-[10px] text-[#8b949e] block">Determines optimal pump RPM at full impeller diameter using affinity laws</span>
-                  </div>
-                </label>
-
-                <!-- Option B: Enter pump speed manually -->
-                <label class="flex items-start gap-2 text-xs cursor-pointer hover:text-white transition-colors">
-                  <input type="radio" name="fixed_speed_mode" value="manual" id="fixedSpeedManual" class="accent-[#58a6ff] mt-0.5"
-                         {{ 'checked' if form_data.get('fixed_speed_mode') == 'manual' else '' }}
-                         onchange="onFixedSpeedModeChange()">
-                  <div>
-                    <span class="text-white font-medium">Enter pump speed manually</span>
-                    <span class="text-[10px] text-[#8b949e] block">Specify exact operating pump speed (RPM); impeller trim is evaluated to meet duty</span>
-                  </div>
-                </label>
-
-                <!-- Manual Pump Speed Input Field (Visible when fixed_speed_mode is 'manual') -->
-                <div id="manualPumpSpeedGroup" class="ml-5 p-2 rounded bg-[#0d1117] border border-[#30363d] space-y-1"
-                     style="{{ '' if form_data.get('fixed_speed_mode') == 'manual' else 'display:none;' }}">
-                  <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Operating Pump Speed (RPM)</label>
-                  <div class="flex items-center gap-1">
-                    <input type="number" name="manual_pump_speed_rpm" id="manualPumpSpeedRpm"
-                           class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
-                           value="{{ form_data.get('manual_pump_speed_rpm', '') }}"
-                           placeholder="e.g. 1450, 2900" step="10" min="100" max="6000">
-                    <span class="text-xs font-mono text-[#8b949e]">RPM</span>
-                  </div>
-                  <span class="text-[10px] text-[#8b949e] block">
-                    Pumps evaluated at this exact speed; required trim ratio computed to meet duty point.
-                  </span>
-                </div>
-
-                <!-- Option C: Min - Max Speed Range -->
-                <label class="flex items-start gap-2 text-xs cursor-pointer hover:text-white transition-colors">
-                  <input type="radio" name="fixed_speed_mode" value="range" id="fixedSpeedRange" class="accent-[#58a6ff] mt-0.5"
-                         {{ 'checked' if form_data.get('fixed_speed_mode') == 'range' else '' }}
-                         onchange="onFixedSpeedModeChange()">
-                  <div>
-                    <span class="text-white font-medium">Min - Max speed range</span>
-                    <span class="text-[10px] text-[#8b949e] block">Pumps running at rated speed within this interval are evaluated and trimmed to duty</span>
-                  </div>
-                </label>
-
-                <!-- Speed Range Input Fields (Visible when fixed_speed_mode is 'range') -->
-                <div id="fixedSpeedRangeGroup" class="ml-5 p-2 rounded bg-[#0d1117] border border-[#30363d] space-y-1.5"
-                     style="{{ '' if form_data.get('fixed_speed_mode') == 'range' else 'display:none;' }}">
-                  <div class="grid grid-cols-2 gap-2">
-                    <div>
-                      <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Min Speed (RPM)</label>
-                      <input type="number" name="fixed_speed_min_rpm" id="fixedSpeedMinRpm"
-                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
-                             value="{{ form_data.get('fixed_speed_min_rpm', '') }}" placeholder="e.g. 1400" step="10">
-                    </div>
-                    <div>
-                      <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Max Speed (RPM)</label>
-                      <input type="number" name="fixed_speed_max_rpm" id="fixedSpeedMaxRpm"
-                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
-                             value="{{ form_data.get('fixed_speed_max_rpm', '') }}" placeholder="e.g. 1550" step="10">
-                    </div>
-                  </div>
-                  <span class="text-[10px] text-[#8b949e] block">
-                    Only pumps whose catalogue speed falls within this range will be selected.
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Mode 2: Variable Speed Drive -->
-            <div class="pt-2 border-t border-[#30363d]/50">
-              <label class="flex items-center gap-2 text-sm cursor-pointer hover:text-white transition-colors">
-                <input type="radio" name="operation_mode" value="vsd" id="opModeVsd" class="accent-[#58a6ff]"
-                       {{ 'checked' if form_data.get('operation_mode') == 'vsd' else '' }}
-                       onchange="onOperationModeChange()">
-                <span class="font-semibold text-white">Variable Speed Drive (VSD)</span>
-              </label>
-              <span class="text-[11px] text-[#8b949e] block ml-6">Inverter regulates motor speed to meet duty point. Inverter output frequency is verified against user limits.</span>
-
-              <!-- VSD Sub-Options: Impeller Trimming & Speed Limit Controls -->
-              <div id="vsdOptionsGroup" class="ml-6 mt-2.5 p-2.5 rounded-lg bg-[#161b22] border border-[#30363d] space-y-2.5"
-                   style="{{ '' if form_data.get('operation_mode') == 'vsd' else 'display:none;' }}">
-                <span class="text-[11px] font-bold text-[#c9d1d9] block uppercase tracking-wider">
-                  <i class="bi bi-disc text-[#58a6ff] mr-1"></i>Impeller Trimming Options
-                </span>
-
-                <!-- Option 1: Automatic calculate the trim (Full diameter, modulate speed) -->
-                <label class="flex items-start gap-2 text-xs cursor-pointer hover:text-white transition-colors">
-                  <input type="radio" name="vsd_trim_mode" value="auto" id="vsdTrimAuto" class="accent-[#58a6ff] mt-0.5"
-                         {{ 'checked' if form_data.get('vsd_trim_mode', 'auto') == 'auto' else '' }}
-                         onchange="onVsdTrimModeChange()">
-                  <div>
-                    <span class="text-white font-medium">Automatic calculate the trim</span>
-                    <span class="text-[10px] text-[#8b949e] block">Full catalogue diameter (D_max); required operating speed is modulated via VFD</span>
-                  </div>
-                </label>
-
-                <!-- Option 2: The impeller trim (exact specified diameter in mm) -->
-                <label class="flex items-start gap-2 text-xs cursor-pointer hover:text-white transition-colors">
-                  <input type="radio" name="vsd_trim_mode" value="manual_mm" id="vsdTrimManualMm" class="accent-[#58a6ff] mt-0.5"
-                         {{ 'checked' if form_data.get('vsd_trim_mode') == 'manual_mm' else '' }}
-                         onchange="onVsdTrimModeChange()">
-                  <div>
-                    <span class="text-white font-medium">The impeller trim (specified diameter)</span>
-                    <span class="text-[10px] text-[#8b949e] block">Specify exact impeller trim diameter in mm; VSD speed is computed to hit duty</span>
-                  </div>
-                </label>
-
-                <!-- Input for Option 2 -->
-                <div id="vsdManualMmGroup" class="ml-5 p-2 rounded bg-[#0d1117] border border-[#30363d] space-y-1"
-                     style="{{ '' if form_data.get('vsd_trim_mode') == 'manual_mm' else 'display:none;' }}">
-                  <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Impeller Diameter (mm)</label>
-                  <div class="flex items-center gap-1">
-                    <input type="number" name="vsd_trim_dia_mm" id="vsdTrimDiaMm"
-                           class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
-                           value="{{ form_data.get('vsd_trim_dia_mm', '') }}" placeholder="e.g. 210" step="1">
-                    <span class="text-xs font-mono text-[#8b949e]">mm</span>
-                  </div>
-                </div>
-
-                <!-- Option 3: Min - Max impeller trim in mm -->
-                <label class="flex items-start gap-2 text-xs cursor-pointer hover:text-white transition-colors">
-                  <input type="radio" name="vsd_trim_mode" value="range_mm" id="vsdTrimRangeMm" class="accent-[#58a6ff] mt-0.5"
-                         {{ 'checked' if form_data.get('vsd_trim_mode') == 'range_mm' else '' }}
-                         onchange="onVsdTrimModeChange()">
-                  <div>
-                    <span class="text-white font-medium">Min - Max impeller trim (mm)</span>
-                    <span class="text-[10px] text-[#8b949e] block">Allowable trim diameter bounds in mm</span>
-                  </div>
-                </label>
-
-                <!-- Inputs for Option 3 -->
-                <div id="vsdRangeMmGroup" class="ml-5 p-2 rounded bg-[#0d1117] border border-[#30363d] space-y-1"
-                     style="{{ '' if form_data.get('vsd_trim_mode') == 'range_mm' else 'display:none;' }}">
-                  <div class="grid grid-cols-2 gap-2">
-                    <div>
-                      <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Min Trim (mm)</label>
-                      <input type="number" name="vsd_trim_min_mm" id="vsdTrimMinMm"
-                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
-                             value="{{ form_data.get('vsd_trim_min_mm', '') }}" placeholder="e.g. 180" step="1">
-                    </div>
-                    <div>
-                      <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Max Trim (mm)</label>
-                      <input type="number" name="vsd_trim_max_mm" id="vsdTrimMaxMm"
-                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
-                             value="{{ form_data.get('vsd_trim_max_mm', '') }}" placeholder="e.g. 210" step="1">
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Option 4: Min - Max impeller trim as a % -->
-                <label class="flex items-start gap-2 text-xs cursor-pointer hover:text-white transition-colors">
-                  <input type="radio" name="vsd_trim_mode" value="range_pct" id="vsdTrimRangePct" class="accent-[#58a6ff] mt-0.5"
-                         {{ 'checked' if form_data.get('vsd_trim_mode') == 'range_pct' else '' }}
-                         onchange="onVsdTrimModeChange()">
-                  <div>
-                    <span class="text-white font-medium">Min - Max impeller trim (%)</span>
-                    <span class="text-[10px] text-[#8b949e] block">Allowable trim percentage window relative to full impeller (e.g. 80% to 100%)</span>
-                  </div>
-                </label>
-
-                <!-- Inputs for Option 4 -->
-                <div id="vsdRangePctGroup" class="ml-5 p-2 rounded bg-[#0d1117] border border-[#30363d] space-y-1"
-                     style="{{ '' if form_data.get('vsd_trim_mode') == 'range_pct' else 'display:none;' }}">
-                  <div class="grid grid-cols-2 gap-2">
-                    <div>
-                      <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Min Trim (%)</label>
-                      <input type="number" name="vsd_trim_min_pct" id="vsdTrimMinPct"
-                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
-                             value="{{ form_data.get('vsd_trim_min_pct', '') }}" placeholder="e.g. 80" step="1" min="50" max="100">
-                    </div>
-                    <div>
-                      <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Max Trim (%)</label>
-                      <input type="number" name="vsd_trim_max_pct" id="vsdTrimMaxPct"
-                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
-                             value="{{ form_data.get('vsd_trim_max_pct', '') }}" placeholder="e.g. 100" step="1" min="50" max="100">
-                    </div>
-                  </div>
-                </div>
-
-                <!-- VSD Operating Speed Range Bounds (moved from Advanced Filters) -->
-                <div class="pt-2 border-t border-[#30363d]/50">
-                  <span class="text-[11px] font-bold text-[#c9d1d9] block uppercase tracking-wider mb-1.5">
-                    <i class="bi bi-speedometer text-[#58a6ff] mr-1"></i>VSD Operating Speed Bounds (RPM)
-                  </span>
-                  <div class="grid grid-cols-2 gap-2">
-                    <div>
-                      <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Min Speed (RPM)</label>
-                      <input type="number" name="vsd_speed_min_rpm" id="vsdSpeedMinRpm"
-                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
-                             value="{{ form_data.get('vsd_speed_min_rpm', '') }}" placeholder="e.g. 800" step="10">
-                    </div>
-                    <div>
-                      <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Max Speed (RPM)</label>
-                      <input type="number" name="vsd_speed_max_rpm" id="vsdSpeedMaxRpm"
-                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
-                             value="{{ form_data.get('vsd_speed_max_rpm', '') }}" placeholder="e.g. 2950" step="10">
-                    </div>
-                  </div>
-                  <span class="text-[10px] text-[#8b949e] block mt-0.5">Optional RPM bounds on required VSD operating duty speed.</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Motor & Drive Arrangement card -->
-      <div class="card-dark mb-3">
-        <div class="card-header-dark flex items-center justify-between">
-          <span class="flex items-center gap-2">
-            <i class="bi bi-cpu text-[#58a6ff]"></i>
-            <span class="font-semibold">Motor &amp; Drive Arrangement</span>
-          </span>
-        </div>
-        <div class="p-4 space-y-3.5">
-          <!-- 1. Drive Arrangement -->
+        <div class="p-3.5 space-y-3">
           <div>
-            <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Drive Arrangement</label>
-            <select name="drive_type" id="driveTypeSel" class="form-select form-control-dark w-full text-xs">
-              <option value="direct" {{ 'selected' if form_data.get('drive_type', 'direct') == 'direct' else '' }}>Direct Coupled (1:1 Ratio)</option>
-              <option value="belt" disabled>Belt Driven (Coming Soon)</option>
-              <option value="gearbox" disabled>Gearbox (Coming Soon)</option>
-            </select>
-            <span class="text-[10px] text-[#8b949e] block mt-0.5">Relates motor speed to pump duty speed</span>
-          </div>
-
-          <!-- 2. Motor Frequency -->
-          <div>
-            <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Motor Supply Frequency</label>
-            <div class="grid grid-cols-2 gap-2">
-              <label class="flex items-center gap-2 p-1.5 rounded bg-[#161b22] border border-[#30363d] cursor-pointer hover:border-[#58a6ff] transition-colors text-xs">
-                <input type="radio" name="motor_freq_hz" value="50" class="accent-[#58a6ff]"
-                       {{ 'checked' if form_data.get('motor_freq_hz', 50)|int == 50 else '' }}
-                       onchange="onMotorSpecChange()">
-                <span class="text-white font-medium">50 Hz</span>
-                <span class="text-[10px] text-[#8b949e] ml-auto">400V</span>
-              </label>
-              <label class="flex items-center gap-2 p-1.5 rounded bg-[#161b22] border border-[#30363d] cursor-pointer hover:border-[#58a6ff] transition-colors text-xs">
-                <input type="radio" name="motor_freq_hz" value="60" class="accent-[#58a6ff]"
-                       {{ 'checked' if form_data.get('motor_freq_hz')|int == 60 else '' }}
-                       onchange="onMotorSpecChange()">
-                <span class="text-white font-medium">60 Hz</span>
-                <span class="text-[10px] text-[#8b949e] ml-auto">460V</span>
-              </label>
-            </div>
-          </div>
-
-          <!-- 3. Number of Poles with Dynamic Speed Labels -->
-          <div>
-            <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Number of Poles</label>
-            <select name="motor_poles" id="motorPolesSel" class="form-select form-control-dark w-full text-xs" onchange="onMotorSpecChange()">
-              <option value="2" {{ 'selected' if form_data.get('motor_poles')|int == 2 else '' }}>
-                2 Poles ({% if form_data.get('motor_freq_hz')|int == 60 %}~3600 RPM{% else %}~3000 RPM{% endif %})
-              </option>
-              <option value="4" {{ 'selected' if form_data.get('motor_poles', 4)|int == 4 else '' }}>
-                4 Poles ({% if form_data.get('motor_freq_hz')|int == 60 %}~1800 RPM{% else %}~1500 RPM{% endif %})
-              </option>
-              <option value="6" {{ 'selected' if form_data.get('motor_poles')|int == 6 else '' }}>
-                6 Poles ({% if form_data.get('motor_freq_hz')|int == 60 %}~1200 RPM{% else %}~1000 RPM{% endif %})
-              </option>
-              <option value="8" {{ 'selected' if form_data.get('motor_poles')|int == 8 else '' }}>
-                8 Poles ({% if form_data.get('motor_freq_hz')|int == 60 %}~900 RPM{% else %}~750 RPM{% endif %})
-              </option>
-            </select>
-            <span class="text-[10px] text-[#8b949e] block mt-0.5">Motor actual rated speed comes from database</span>
-          </div>
-
-          <!-- 4. Motor Sizing Margin & Basis -->
-          <div class="pt-2 border-t border-[#30363d]/50">
-            <span class="text-xs font-semibold text-[#c9d1d9] block mb-1.5">
-              <i class="bi bi-shield-check text-[#3fb950] mr-1"></i>Motor Power Sizing &amp; Safety Margin
-            </span>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Sizing Basis</label>
-                <select name="motor_margin_basis" id="motorMarginBasis" class="form-select form-control-dark w-full text-xs">
-                  <option value="duty" {{ 'selected' if form_data.get('motor_margin_basis', 'duty') == 'duty' else '' }}>Duty Point Power</option>
-                  <option value="bep" {{ 'selected' if form_data.get('motor_margin_basis') == 'bep' else '' }}>BEP Power</option>
-                  <option value="shutoff" {{ 'selected' if form_data.get('motor_margin_basis') == 'shutoff' else '' }}>Shutoff Power (Q = 0)</option>
-                  <option value="eoc" {{ 'selected' if form_data.get('motor_margin_basis') == 'eoc' else '' }}>End Of Curve (Runout)</option>
-                </select>
-              </div>
-              <div>
-                <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Safety Margin (%)</label>
-                <div class="flex items-center gap-1">
-                  <input type="number" name="motor_margin_pct" id="motorMarginPct"
-                         class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
-                         value="{{ form_data.get('motor_margin_pct', '15.0') }}" step="1" min="0" max="100">
-                  <span class="text-xs font-mono text-[#8b949e]">%</span>
-                </div>
-              </div>
-            </div>
-            <span class="text-[10px] text-[#8b949e] block mt-1">Calculates motor target kW = Base Power × (1 + Margin%)</span>
-          </div>
-
-          <!-- 5. Motor Catalogue Filters (Supplier, Standard, Efficiency Class) -->
-          <div class="pt-2 border-t border-[#30363d]/50">
-            <span class="text-xs font-semibold text-[#c9d1d9] block mb-1.5">
-              <i class="bi bi-funnel text-[#58a6ff] mr-1"></i>Motor Specifications &amp; Filters
-            </span>
-            <div class="grid grid-cols-3 gap-2">
-              <div>
-                <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Standard</label>
-                <select name="motor_standard" id="motorStandardSel" class="form-select form-control-dark w-full text-xs" onchange="onMotorSpecChange()">
-                  <option value="all">All Standards</option>
-                  <option value="IEC" {{ 'selected' if form_data.get('motor_standard') == 'IEC' else '' }}>IEC</option>
-                  <option value="NEMA" {{ 'selected' if form_data.get('motor_standard') == 'NEMA' else '' }}>NEMA</option>
-                </select>
-              </div>
-              <div>
-                <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Efficiency</label>
-                <select name="motor_efficiency" id="motorEfficiencySel" class="form-select form-control-dark w-full text-xs" onchange="onMotorSpecChange()">
-                  <option value="all">All Classes</option>
-                  <option value="IE2" {{ 'selected' if form_data.get('motor_efficiency') == 'IE2' else '' }}>IE2 (High)</option>
-                  <option value="IE3" {{ 'selected' if form_data.get('motor_efficiency') == 'IE3' else '' }}>IE3 (Premium)</option>
-                  <option value="IE4" {{ 'selected' if form_data.get('motor_efficiency') == 'IE4' else '' }}>IE4 (Super Prem)</option>
-                  <option value="NEMA Premium" {{ 'selected' if form_data.get('motor_efficiency') == 'NEMA Premium' else '' }}>NEMA Premium</option>
-                </select>
-              </div>
-              <div>
-                <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Supplier</label>
-                <select name="motor_supplier" id="motorSupplierSel" class="form-select form-control-dark w-full text-xs" onchange="onMotorSpecChange()">
-                  <option value="all">All Suppliers</option>
-                  {% for sup in (motor_filter_options.suppliers if motor_filter_options else ['Standard IEC', 'WEG', 'ABB', 'Siemens', 'Baldor-Reliance']) %}
-                  <option value="{{ sup }}" {{ 'selected' if form_data.get('motor_supplier') == sup else '' }}>{{ sup }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <!-- 6. Motor Selection Mode (Auto vs Manual Speed Input) -->
-          <div class="pt-2 border-t border-[#30363d]/50">
-            <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Motor Selection Mode</label>
-            <div class="space-y-2">
-              <label class="flex items-center gap-2 text-xs cursor-pointer hover:text-white transition-colors">
-                <input type="radio" name="motor_selection_mode" value="auto" id="motorSelectAuto" class="accent-[#58a6ff]"
-                       {{ 'checked' if form_data.get('motor_selection_mode', 'auto') == 'auto' else '' }}
-                       onchange="onMotorSelectionModeChange()">
-                <span class="text-white font-medium">Automatic Sizing</span>
-                <span class="text-[10px] text-[#8b949e] ml-1">(Database motor matching target power &amp; specs)</span>
-              </label>
-              <label class="flex items-center gap-2 text-xs cursor-pointer hover:text-white transition-colors">
-                <input type="radio" name="motor_selection_mode" value="manual" id="motorSelectManual" class="accent-[#58a6ff]"
-                       {{ 'checked' if form_data.get('motor_selection_mode') == 'manual' else '' }}
-                       onchange="onMotorSelectionModeChange()">
-                <span class="text-white font-medium">Manual Speed Specification</span>
-              </label>
-
-              <!-- Manual Speed & Tolerance Controls -->
-              <div id="manualMotorGroup" class="ml-5 p-2.5 rounded bg-[#161b22] border border-[#30363d] space-y-2"
-                   style="{{ '' if form_data.get('motor_selection_mode') == 'manual' else 'display:none;' }}">
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Required Motor Speed</label>
-                    <div class="flex items-center gap-1">
-                      <input type="number" name="manual_motor_speed_rpm" id="manualMotorSpeedRpm"
-                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
-                             value="{{ form_data.get('manual_motor_speed_rpm', '') }}"
-                             placeholder="e.g. 1450" step="10" min="100" max="6000">
-                      <span class="text-xs font-mono text-[#8b949e]">RPM</span>
-                    </div>
-                  </div>
-                  <div>
-                    <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Speed Tolerance (±%)</label>
-                    <div class="flex items-center gap-1">
-                      <input type="number" name="manual_speed_tolerance_pct" id="manualSpeedTolerancePct"
-                             class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
-                             value="{{ form_data.get('manual_speed_tolerance_pct', '5.0') }}"
-                             step="0.5" min="0" max="50">
-                      <span class="text-xs font-mono text-[#8b949e]">%</span>
-                    </div>
-                  </div>
-                </div>
-                <span class="text-[10px] text-[#8b949e] block">
-                  Checks direct-drive suitability by verifying whether entered motor speed matches calculated pump speed within tolerance.
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 7. VSD Frequency Limits (Visible only when in VSD mode) -->
-          <div id="vsdFrequencyLimitsGroup" class="pt-2 border-t border-[#30363d]/50"
-               style="{{ '' if form_data.get('operation_mode') == 'vsd' else 'display:none;' }}">
-            <span class="text-xs font-semibold text-[#58a6ff] block mb-1">
-              <i class="bi bi-sliders mr-1"></i>VSD Frequency Bounds
-            </span>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Min Frequency</label>
-                <div class="flex items-center gap-1">
-                  <input type="number" name="vsd_f_min" id="inputVsdFMin"
-                         class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
-                         value="{{ form_data.get('vsd_f_min', '30.0') }}" step="0.5" min="10" max="100">
-                  <span class="text-xs font-mono text-[#8b949e]">Hz</span>
-                </div>
-              </div>
-              <div>
-                <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Max Frequency</label>
-                <div class="flex items-center gap-1">
-                  <input type="number" name="vsd_f_max" id="inputVsdFMax"
-                         class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
-                         value="{{ form_data.get('vsd_f_max', '50.0') }}" step="0.5" min="20" max="120">
-                  <span class="text-xs font-mono text-[#8b949e]">Hz</span>
-                </div>
-              </div>
-            </div>
-            <span class="text-[10px] text-[#8b949e] block mt-1">Allowable VSD output frequency limits</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Liquid options card -->
-      <!-- Beginners Note: Liquid type selection affects curve derating (slurry/viscous corrections) -->
-      <div class="card-dark mb-3">
-        <div class="card-header-dark">
-          <i class="bi bi-droplet mr-2"></i>Liquid Options
-        </div>
-        <div class="p-4">
-          <div class="mb-3">
             <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Liquid Type</label>
-            <select name="liquid" id="liquidSel" class="form-select form-control-dark w-full">
+            <select name="liquid" id="liquidSel" class="form-select form-control-dark w-full text-xs">
               <option value="water" {{ 'selected' if form_data.get('liquid','water') == 'water' }}>Clean Water</option>
               <option value="viscous" {{ 'selected' if form_data.get('liquid') == 'viscous' }}>Viscous Fluid</option>
               <option value="slurry" {{ 'selected' if form_data.get('liquid') == 'slurry' }}>Slurry</option>
@@ -591,221 +152,321 @@
 
           <!-- Water params -->
           <div id="waterParams">
-            <div>
-              <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Liquid Density ρ</label>
-              <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
-                <input type="number" name="rho" id="input_rho_water" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-2 text-sm text-white"
-                       value="{{ form_data.rho or 1000 }}" step="1" data-unit-cat="density">
-                <select name="unit_rho" id="select_unit_rho" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_rho_water" data-unit-cat="density" data-prev="{{ unit_rho or 'kgm3' }}">
-                  {% for k, u in units_tables.density.items() %}
-                    <option value="{{ k }}" {{ 'selected' if unit_rho == k else '' }}>{{ u.name }}</option>
-                  {% endfor %}
-                </select>
-              </div>
+            <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Liquid Density ρ</label>
+            <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
+              <input type="number" name="rho" id="input_rho_water" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-1.5 text-xs text-white font-mono"
+                     value="{{ form_data.rho or 1000 }}" step="any" data-unit-cat="density">
+              <select name="unit_rho" id="select_unit_rho" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_rho_water" data-unit-cat="density" data-prev="{{ unit_rho or 'kgm3' }}">
+                {% for k, u in units_tables.density.items() %}
+                  <option value="{{ k }}" {{ 'selected' if unit_rho == k else '' }}>{{ u.name }}</option>
+                {% endfor %}
+              </select>
             </div>
           </div>
 
           <!-- Viscous params -->
-          <div id="viscousParams" style="display:none">
+          <div id="viscousParams" style="display:none" class="space-y-2">
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="form-label">Density ρ (kg/m³)</label>
-                <input type="number" name="rho" class="form-control form-control-dark w-full"
-                       value="{{ form_data.rho or 900 }}" step="1">
+                <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Density (kg/m³)</label>
+                <input type="number" name="rho" class="form-control form-control-dark w-full text-xs"
+                       value="{{ form_data.rho or 900 }}" step="any">
               </div>
               <div>
-                <label class="form-label">Viscosity (cSt)</label>
-                <input type="number" name="viscosity_cSt" class="form-control form-control-dark w-full"
-                       value="{{ form_data.viscosity_cSt or 50 }}" step="1" min="1">
+                <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Viscosity (cSt)</label>
+                <input type="number" name="viscosity_cSt" class="form-control form-control-dark w-full text-xs"
+                       value="{{ form_data.viscosity_cSt or 50 }}" step="any" min="0.01">
               </div>
             </div>
-            <div class="alert-info-dark text-sm mt-2 p-2 rounded">
-              HI correction factors (CH, CQ, CE) will be applied automatically.
+            <div class="text-[11px] text-[#58a6ff] bg-[#58a6ff]/10 p-2 rounded border border-[#58a6ff]/20">
+              HI correction factors (CH, CQ, CE) applied automatically.
             </div>
           </div>
 
           <!-- Slurry params -->
-          <div id="slurryParams" style="display:none">
-            <div class="grid grid-cols-2 gap-4">
-              <!-- Liquid Properties -->
-              <div class="border border-[#30363d] p-3 rounded">
-                <h6 class="text-xs text-gray-400 font-bold mb-2 uppercase">Liquid Properties</h6>
-                <div class="mb-2">
-                  <label class="flex items-center gap-2 form-label cursor-pointer hover:text-white">
-                    <input type="checkbox" name="cb_L" value="1" class="slurry-cb accent-[#d29922]" data-param="L" {{ 'checked' if form_data.cb_L == '1' or (not form_data and True) else '' }}> 
-                    Density ρ<sub>l</sub> (kg/m³)
-                  </label>
-                  <input type="number" name="rho_l" id="rho_l" class="form-control form-control-dark w-full slurry-input" value="{{ form_data.rho_l or 1000 }}" step="1">
-                </div>
-                <div>
-                  <label class="form-label">SG<sub>liquid</sub></label>
-                  <input type="number" name="sg_l" id="sg_l" class="form-control form-control-dark w-full slurry-input" value="{{ form_data.sg_l or 1.0 }}" step="0.01">
-                </div>
-              </div>
-
-              <!-- Solid Properties -->
-              <div class="border border-[#30363d] p-3 rounded">
-                <h6 class="text-xs text-gray-400 font-bold mb-2 uppercase">Solid Properties</h6>
-                <div class="mb-2">
-                  <label class="flex items-center gap-2 form-label cursor-pointer hover:text-white">
-                    <input type="checkbox" name="cb_S" value="1" class="slurry-cb accent-[#d29922]" data-param="S" {{ 'checked' if form_data.cb_S == '1' or (not form_data and True) else '' }}> 
-                    Density ρ<sub>s</sub> (kg/m³)
-                  </label>
-                  <input type="number" name="rho_solid" id="rho_s" class="form-control form-control-dark w-full slurry-input" value="{{ form_data.rho_solid or 2650 }}" step="10">
-                </div>
-                <div>
-                  <label class="form-label">SG<sub>solid</sub></label>
-                  <input type="number" name="sg_s" id="sg_s" class="form-control form-control-dark w-full slurry-input" value="{{ form_data.sg_s or 2.65 }}" step="0.01">
-                </div>
-              </div>
-
-              <!-- Concentration -->
-              <div class="border border-[#30363d] p-3 rounded col-span-2">
-                <h6 class="text-xs text-gray-400 font-bold mb-2 uppercase">Concentration / Mixture</h6>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <div>
-                    <label class="flex items-center gap-2 form-label cursor-pointer hover:text-white">
-                      <input type="checkbox" name="cb_Cv" value="1" class="slurry-cb accent-[#d29922]" data-param="Cv" {{ 'checked' if form_data.cb_Cv == '1' or (not form_data and True) else '' }}> 
-                      C<sub>v</sub> (vol. frac)
-                    </label>
-                    <input type="number" name="slurry_cv" id="slurry_cv" class="form-control form-control-dark w-full slurry-input" value="{{ form_data.slurry_cv or 0.20 }}" step="0.01" min="0" max="0.6">
-                  </div>
-                  <div>
-                    <label class="flex items-center gap-2 form-label cursor-pointer hover:text-white">
-                      <input type="checkbox" name="cb_Cw" value="1" class="slurry-cb accent-[#d29922]" data-param="Cw" {{ 'checked' if form_data.cb_Cw == '1' else '' }}> 
-                      C<sub>w</sub> (wt. frac)
-                    </label>
-                    <input type="number" name="slurry_cw" id="slurry_cw" class="form-control form-control-dark w-full slurry-input" value="{{ form_data.slurry_cw or '' }}" step="0.01" min="0" max="1.0" readonly>
-                  </div>
-                  <div class="col-span-2">
-                    <label class="flex items-center gap-2 form-label cursor-pointer hover:text-white">
-                      <input type="checkbox" name="cb_M" value="1" class="slurry-cb accent-[#d29922]" data-param="M" {{ 'checked' if form_data.cb_M == '1' else '' }}> 
-                      Mixture Properties
-                    </label>
-                    <div class="grid grid-cols-2 gap-2">
-                      <div>
-                        <label class="text-xs text-gray-400">ρ<sub>m</sub> (kg/m³)</label>
-                        <input type="number" name="rho_m" id="rho_m" class="form-control form-control-dark w-full slurry-input" value="{{ form_data.rho_m or '' }}" step="1" readonly>
-                      </div>
-                      <div>
-                        <label class="text-xs text-gray-400">SG<sub>m</sub></label>
-                        <input type="number" name="sg_m" id="sg_m" class="form-control form-control-dark w-full slurry-input" value="{{ form_data.sg_m or '' }}" step="0.01" readonly>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Particle Properties -->
-              <div class="border border-[#30363d] p-3 rounded col-span-2">
-                <h6 class="text-xs text-gray-400 font-bold mb-2 uppercase">Particle Sizing</h6>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">d<sub>50</sub> (Median Size)</label>
-                    <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
-                      <input type="number" name="slurry_d50" id="input_slurry_d50" class="form-control form-control-dark w-full border-0 focus:ring-0 px-3 py-1.5 text-xs text-white" value="{{ form_data.slurry_d50 or 0.3 }}" step="0.01" data-unit-cat="size">
-                      <select name="unit_d50" id="select_unit_d50" class="unit-select bg-[#161b22] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer" data-target="input_slurry_d50" data-unit-cat="size" data-prev="{{ unit_d50 or 'mm' }}">
-                        {% for k, u in units_tables.size.items() %}
-                          <option value="{{ k }}" {{ 'selected' if unit_d50 == k else '' }}>{{ u.name }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">d<sub>85</sub> (Top Size)</label>
-                    <input type="number" name="slurry_d85" class="form-control form-control-dark w-full" value="{{ form_data.slurry_d85 or '' }}" step="0.05" placeholder="Optional">
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="alert-info-dark text-sm mt-3 p-2 rounded">
-              <i class="bi bi-info-circle mr-1"></i>
-              Check the boxes next to the properties you want to enter manually. The disabled properties will be calculated automatically based on your inputs.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── CARD: PUMP ATTRIBUTES SELECTION FILTERS (ORGANISATION DEFINED) ─────── -->
-      <!-- Beginners Note:
-           Displays organisation-enabled custom pump attributes (e.g. Impeller Type, Design Standard,
-           Impeller Material, No of Vanes) directly on the Pump Selection view.
-           Allows engineers to shortlist pumps matching specific design criteria directly
-           from the primary selection panel (e.g. selecting 'Open' impellers only).
-      -->
-      {% if filter_options and filter_options.custom_attributes and filter_options.custom_attributes|length > 0 %}
-      <div class="card-dark mb-3" id="pumpAttributesCard">
-        <div class="card-header-dark flex items-center justify-between">
-          <span class="flex items-center gap-2">
-            <i class="bi bi-tags text-[#58a6ff]"></i>
-            <span class="font-semibold">Pump Attribute Filters</span>
-            <span class="text-xs text-[#8b949e] font-normal font-mono">({{ current_org.name if current_org else 'Organisation' }})</span>
-          </span>
-          <span class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-[#58a6ff]/15 border border-[#58a6ff]/30 text-[#58a6ff]">
-            {{ filter_options.custom_attributes|length }} enabled
-          </span>
-        </div>
-        <div class="p-4">
-          <p class="text-xs text-[#8b949e] mb-3">
-            Select specifications to filter pumps (e.g. choose <strong class="text-[#58a6ff]">Impeller Type: Open</strong> to shortlist only open impeller pumps).
-          </p>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {% for attr in filter_options.custom_attributes %}
-            <div class="bg-[#0d1117] border border-[#30363d] rounded-lg p-2.5 space-y-1 hover:border-[#58a6ff]/40 transition-colors">
-              <div class="flex items-center justify-between">
-                <label class="block text-xs font-semibold text-[#c9d1d9] truncate" title="{{ attr.name }}">
-                  {{ attr.name }}
+          <div id="slurryParams" style="display:none" class="space-y-2">
+            <!-- Liquid Properties -->
+            <div class="border border-[#30363d] p-2.5 rounded bg-[#0d1117]">
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="flex items-center gap-1.5 text-xs text-white font-semibold cursor-pointer">
+                  <input type="checkbox" name="cb_L" value="1" class="slurry-cb accent-[#58a6ff]" data-param="L" {{ 'checked' if form_data.cb_L == '1' or (not form_data and True) else '' }}> 
+                  Liquid: ρ<sub>l</sub>
                 </label>
-                <span class="text-[10px] font-mono text-[#8b949e]">#{{ attr.index }}</span>
+                <input type="number" name="rho_l" id="rho_l" class="form-control form-control-dark w-24 text-xs py-1 px-1.5 font-mono text-right" value="{{ form_data.rho_l or 1000 }}" step="any">
               </div>
-              {% set cur_val = form_data.get('filter_attribute_' ~ attr.index, '') %}
-              {% if attr.options and attr.options|length > 0 %}
-                <select name="filter_attribute_{{ attr.index }}" class="form-select form-control-dark w-full text-xs py-1.5 focus:border-[#58a6ff]">
-                  <option value="">All {{ attr.name }}</option>
-                  {% for opt in attr.options %}
-                    <option value="{{ opt }}" {{ 'selected' if cur_val == opt or cur_val|lower == opt|lower }}>{{ opt }}</option>
-                  {% endfor %}
-                </select>
-              {% else %}
-                <input type="text" 
-                       name="filter_attribute_{{ attr.index }}" 
-                       class="form-control form-control-dark w-full text-xs py-1.5 focus:border-[#58a6ff]" 
-                       value="{{ cur_val }}" 
-                       placeholder="Filter {{ attr.name }}...">
-              {% endif %}
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-[#8b949e]">SG<sub>liquid</sub></span>
+                <input type="number" name="sg_l" id="sg_l" class="form-control form-control-dark w-24 text-xs py-1 px-1.5 font-mono text-right" value="{{ form_data.sg_l or 1.0 }}" step="any">
+              </div>
             </div>
-            {% endfor %}
+
+            <!-- Solid Properties -->
+            <div class="border border-[#30363d] p-2.5 rounded bg-[#0d1117]">
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="flex items-center gap-1.5 text-xs text-white font-semibold cursor-pointer">
+                  <input type="checkbox" name="cb_S" value="1" class="slurry-cb accent-[#58a6ff]" data-param="S" {{ 'checked' if form_data.cb_S == '1' or (not form_data and True) else '' }}> 
+                  Solid: ρ<sub>s</sub>
+                </label>
+                <input type="number" name="rho_solid" id="rho_s" class="form-control form-control-dark w-24 text-xs py-1 px-1.5 font-mono text-right" value="{{ form_data.rho_solid or 2650 }}" step="any">
+              </div>
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-[#8b949e]">SG<sub>solid</sub></span>
+                <input type="number" name="sg_s" id="sg_s" class="form-control form-control-dark w-24 text-xs py-1 px-1.5 font-mono text-right" value="{{ form_data.sg_s or 2.65 }}" step="any">
+              </div>
+            </div>
+
+            <!-- Concentration & Particle Size -->
+            <div class="border border-[#30363d] p-2.5 rounded bg-[#0d1117] space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="flex items-center gap-1.5 text-xs text-white font-semibold cursor-pointer">
+                  <input type="checkbox" name="cb_Cv" value="1" class="slurry-cb accent-[#58a6ff]" data-param="Cv" {{ 'checked' if form_data.cb_Cv == '1' or (not form_data and True) else '' }}> 
+                  C<sub>v</sub> (vol. frac)
+                </label>
+                <input type="number" name="slurry_cv" id="slurry_cv" class="form-control form-control-dark w-24 text-xs py-1 px-1.5 font-mono text-right" value="{{ form_data.slurry_cv or 0.20 }}" step="0.01" min="0" max="0.6">
+              </div>
+              <div class="flex items-center justify-between">
+                <label class="flex items-center gap-1.5 text-xs text-white font-semibold cursor-pointer">
+                  <input type="checkbox" name="cb_Cw" value="1" class="slurry-cb accent-[#58a6ff]" data-param="Cw" {{ 'checked' if form_data.cb_Cw == '1' else '' }}> 
+                  C<sub>w</sub> (wt. frac)
+                </label>
+                <input type="number" name="slurry_cw" id="slurry_cw" class="form-control form-control-dark w-24 text-xs py-1 px-1.5 font-mono text-right" value="{{ form_data.slurry_cw or '' }}" step="0.01" min="0" max="1.0" readonly>
+              </div>
+              <div>
+                <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">d<sub>50</sub> (Median Particle Size)</label>
+                <div class="flex rounded overflow-hidden border border-[#30363d] bg-[#161b22]">
+                  <input type="number" name="slurry_d50" id="input_slurry_d50" class="form-control form-control-dark w-full border-0 px-2 py-1 text-xs text-white font-mono" value="{{ form_data.slurry_d50 or 0.3 }}" step="0.01" data-unit-cat="size">
+                  <select name="unit_d50" id="select_unit_d50" class="unit-select bg-[#0d1117] text-[#58a6ff] border-l border-[#30363d] px-1.5 py-0.5 text-xs font-mono" data-target="input_slurry_d50" data-unit-cat="size" data-prev="{{ unit_d50 or 'mm' }}">
+                    {% for k, u in units_tables.size.items() %}
+                      <option value="{{ k }}" {{ 'selected' if unit_d50 == k else '' }}>{{ u.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      {% endif %}
 
-      <!-- Advanced Filters card (collapsible) -->
-      <!-- Beginners Note: Optional filters to narrow down the pump catalogue before hydraulic evaluation.
-           Includes manufacturer, pump type, operational speed range, and sizing. -->
+      <!-- Primary Action Button: Find Matching Pumps -->
+      <button type="submit" id="btnFindPumps"
+              class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all"
+              style="background:#58a6ff;color:#0d1117;"
+              onmouseover="this.style.background='#79baff';this.style.transform='translateY(-1px)'"
+              onmouseout="this.style.background='#58a6ff';this.style.transform='translateY(0)'">
+        <i class="bi bi-search font-bold"></i>Find Matching Pumps
+      </button>
+
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PANEL 2: Operation Mode, Motor & Specifications (Cols 4-7 on xl, 5-8 on lg)
+         ════════════════════════════════════════════════════════════════════ -->
+    <div class="col-span-12 lg:col-span-4 xl:col-span-4 space-y-3">
+
+      <!-- Card: Operation Mode -->
+      <div class="card-dark">
+        <div class="card-header-dark flex items-center justify-between">
+          <span class="flex items-center gap-1.5 font-bold">
+            <i class="bi bi-speedometer2 text-[#58a6ff]"></i>
+            <span>Operation Mode</span>
+          </span>
+          <span class="text-[11px] font-mono text-[#58a6ff] uppercase">{{ form_data.get('operation_mode', 'fixed') }}</span>
+        </div>
+        <div class="p-3.5 space-y-3">
+          <!-- Radio: Fixed Speed -->
+          <div class="p-2.5 rounded-lg border border-[#30363d] bg-[#0d1117]/60">
+            <label class="flex items-center gap-2 text-xs cursor-pointer hover:text-white transition-colors">
+              <input type="radio" name="operation_mode" value="fixed" id="opModeFixed" class="accent-[#58a6ff]" 
+                     {{ 'checked' if form_data.get('operation_mode', 'fixed') == 'fixed' else '' }}
+                     onchange="onOperationModeChange()">
+              <span class="font-bold text-white text-sm">Fixed Speed</span>
+            </label>
+            <span class="text-[11px] text-[#8b949e] block mt-1 ml-5">Constant duty speed evaluated against motor rating.</span>
+
+            <!-- Sub-options for Fixed Speed -->
+            <div id="fixedSpeedSubOptions" class="mt-2 ml-5 space-y-1.5"
+                 style="{{ '' if form_data.get('operation_mode', 'fixed') == 'fixed' else 'display:none;' }}">
+              <label class="flex items-center gap-2 text-xs text-[#c9d1d9] cursor-pointer">
+                <input type="radio" name="fixed_speed_mode" value="auto" id="fixedSpeedAuto" class="accent-[#58a6ff]"
+                       {{ 'checked' if form_data.get('fixed_speed_mode', 'auto') == 'auto' else '' }}
+                       onchange="onFixedSpeedModeChange()">
+                <span>Automatic Speed Calculation (Full Dia)</span>
+              </label>
+              <label class="flex items-center gap-2 text-xs text-[#c9d1d9] cursor-pointer">
+                <input type="radio" name="fixed_speed_mode" value="manual" id="fixedSpeedManual" class="accent-[#58a6ff]"
+                       {{ 'checked' if form_data.get('fixed_speed_mode') == 'manual' else '' }}
+                       onchange="onFixedSpeedModeChange()">
+                <span>Manual Speed (Trim Diameter Evaluated)</span>
+              </label>
+              <div id="fixedSpeedManualInputGroup" class="p-2 rounded bg-[#161b22] border border-[#30363d]"
+                   style="{{ '' if form_data.get('fixed_speed_mode') == 'manual' else 'display:none;' }}">
+                <div class="flex items-center gap-1.5">
+                  <label class="text-[11px] text-[#8b949e] whitespace-nowrap">Pump RPM:</label>
+                  <input type="number" name="manual_pump_speed_rpm" id="manualPumpSpeedRpm"
+                         class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
+                         value="{{ form_data.get('manual_pump_speed_rpm', '') or form_data.get('manual_speed_rpm', '') }}"
+                         placeholder="e.g. 1450" step="10">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Radio: VSD Mode -->
+          <div class="p-2.5 rounded-lg border border-[#30363d] bg-[#0d1117]/60">
+            <label class="flex items-center gap-2 text-xs cursor-pointer hover:text-white transition-colors">
+              <input type="radio" name="operation_mode" value="vsd" id="opModeVsd" class="accent-[#58a6ff]"
+                     {{ 'checked' if form_data.get('operation_mode') == 'vsd' else '' }}
+                     onchange="onOperationModeChange()">
+              <span class="font-bold text-white text-sm">Variable Speed Drive (VSD)</span>
+            </label>
+            <span class="text-[11px] text-[#8b949e] block mt-1 ml-5">Continuous frequency modulation to hit exact duty point.</span>
+
+            <!-- Sub-options for VSD -->
+            <div id="vsdSubOptions" class="mt-2 ml-5 space-y-2"
+                 style="{{ '' if form_data.get('operation_mode') == 'vsd' else 'display:none;' }}">
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <label class="text-[10px] text-[#8b949e] block mb-0.5">Min Freq (Hz)</label>
+                  <input type="number" name="vsd_f_min" class="form-control form-control-dark text-xs py-1 px-2 font-mono"
+                         value="{{ form_data.get('vsd_f_min', '30.0') }}" step="0.5">
+                </div>
+                <div>
+                  <label class="text-[10px] text-[#8b949e] block mb-0.5">Max Freq (Hz)</label>
+                  <input type="number" name="vsd_f_max" class="form-control form-control-dark text-xs py-1 px-2 font-mono"
+                         value="{{ form_data.get('vsd_f_max', '50.0') }}" step="0.5">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card: Motor Specifications & Margins -->
+      <div class="card-dark">
+        <div class="card-header-dark flex items-center justify-between">
+          <span class="flex items-center gap-1.5 font-bold">
+            <i class="bi bi-cpu text-[#58a6ff]"></i>
+            <span>Motor &amp; Drive Specifications</span>
+          </span>
+          <span class="text-[11px] font-mono text-[#8b949e]">{{ form_data.get('motor_margin_pct', '15') }}% Margin</span>
+        </div>
+        <div class="p-3.5 space-y-3">
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="text-[10px] text-[#8b949e] block mb-0.5">Standard</label>
+              <select name="motor_standard" class="form-select form-control-dark w-full text-xs">
+                <option value="all">All</option>
+                <option value="IEC" {{ 'selected' if form_data.get('motor_standard') == 'IEC' else '' }}>IEC</option>
+                <option value="NEMA" {{ 'selected' if form_data.get('motor_standard') == 'NEMA' else '' }}>NEMA</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] text-[#8b949e] block mb-0.5">Efficiency</label>
+              <select name="motor_efficiency" class="form-select form-control-dark w-full text-xs">
+                <option value="all">All</option>
+                <option value="IE2" {{ 'selected' if form_data.get('motor_efficiency') == 'IE2' else '' }}>IE2</option>
+                <option value="IE3" {{ 'selected' if form_data.get('motor_efficiency') == 'IE3' else '' }}>IE3</option>
+                <option value="IE4" {{ 'selected' if form_data.get('motor_efficiency') == 'IE4' else '' }}>IE4</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] text-[#8b949e] block mb-0.5">Supplier</label>
+              <select name="motor_supplier" class="form-select form-control-dark w-full text-xs">
+                <option value="all">All</option>
+                {% for sup in (motor_filter_options.suppliers if motor_filter_options else ['Standard IEC', 'WEG', 'ABB', 'Siemens']) %}
+                <option value="{{ sup }}" {{ 'selected' if form_data.get('motor_supplier') == sup else '' }}>{{ sup }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="text-[10px] text-[#8b949e] block mb-0.5">Frequency</label>
+              <select name="motor_freq_hz" class="form-select form-control-dark w-full text-xs font-mono">
+                <option value="50" {{ 'selected' if form_data.get('motor_freq_hz', '50') == '50' else '' }}>50 Hz</option>
+                <option value="60" {{ 'selected' if form_data.get('motor_freq_hz') == '60' else '' }}>60 Hz</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] text-[#8b949e] block mb-0.5">Poles</label>
+              <select name="motor_poles" class="form-select form-control-dark w-full text-xs font-mono">
+                <option value="2" {{ 'selected' if form_data.get('motor_poles') == '2' else '' }}>2 Pole</option>
+                <option value="4" {{ 'selected' if form_data.get('motor_poles', '4') == '4' else '' }}>4 Pole</option>
+                <option value="6" {{ 'selected' if form_data.get('motor_poles') == '6' else '' }}>6 Pole</option>
+                <option value="8" {{ 'selected' if form_data.get('motor_poles') == '8' else '' }}>8 Pole</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] text-[#8b949e] block mb-0.5">Drive Type</label>
+              <select name="drive_type" class="form-select form-control-dark w-full text-xs">
+                <option value="direct" {{ 'selected' if form_data.get('drive_type', 'direct') == 'direct' else '' }}>Direct</option>
+                <option value="belt" {{ 'selected' if form_data.get('drive_type') == 'belt' else '' }}>Belt / Gear</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Sizing Margin & Basis -->
+          <div class="grid grid-cols-2 gap-2 pt-2 border-t border-[#30363d]/50">
+            <div>
+              <label class="text-[10px] text-[#8b949e] block mb-0.5">Sizing Margin Basis</label>
+              <select name="motor_margin_basis" class="form-select form-control-dark w-full text-xs">
+                <option value="duty" {{ 'selected' if form_data.get('motor_margin_basis', 'duty') == 'duty' else '' }}>Duty Point</option>
+                <option value="bep" {{ 'selected' if form_data.get('motor_margin_basis') == 'bep' else '' }}>BEP Point</option>
+                <option value="end_of_curve" {{ 'selected' if form_data.get('motor_margin_basis') == 'end_of_curve' else '' }}>End of Curve</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] text-[#8b949e] block mb-0.5">Margin (%)</label>
+              <div class="flex items-center gap-1">
+                <input type="number" name="motor_margin_pct"
+                       class="form-control form-control-dark text-xs py-1 px-2 w-full text-white font-mono"
+                       value="{{ form_data.get('motor_margin_pct', '15.0') }}" step="1" min="0" max="100">
+                <span class="text-xs font-mono text-[#8b949e]">%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Card: Pump Specifications & Catalogue Filters (Combined Card) ───── -->
+      {#
+        Beginners Note:
+        Unified card combining standard catalogue filters (Manufacturer, Pump Type, Size match)
+        and organisation custom attributes (e.g. Casing Material, Impeller Type, Application)
+        into a single, clean collapsible filter panel to reduce vertical clutter in Panel 2.
+      #}
       {% set active_filters_count = namespace(value=0) %}
       {% if form_data.get('filter_manufacturer') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
       {% if form_data.get('filter_pump_type') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
       {% if form_data.get('filter_size') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
+      {% if filter_options and filter_options.custom_attributes %}
+        {% for attr in filter_options.custom_attributes %}
+          {% if form_data.get('filter_attribute_' ~ attr.index) %}
+            {% set active_filters_count.value = active_filters_count.value + 1 %}
+          {% endif %}
+        {% endfor %}
+      {% endif %}
 
-      <div class="card-dark mb-3">
+      <div class="card-dark" id="combinedFilterCard">
         <div class="card-header-dark cursor-pointer flex items-center justify-between" onclick="toggleFilterPanel()" id="filterToggleBtn">
-          <div class="flex items-center gap-2">
-            <span><i class="bi bi-funnel mr-1"></i>Advanced Filters</span>
+          <span class="flex items-center gap-1.5 font-bold">
+            <i class="bi bi-funnel text-[#58a6ff]"></i>
+            <span>Pump Specifications &amp; Filters</span>
             {% if active_filters_count.value > 0 %}
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/35">
+              <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-[#58a6ff]/20 text-[#58a6ff]">
                 {{ active_filters_count.value }} active
               </span>
             {% endif %}
-          </div>
-          <i class="bi bi-chevron-down text-sm transition-transform" id="filterChevron" style="{{ 'transform: rotate(180deg);' if active_filters_count.value > 0 else '' }}"></i>
+          </span>
+          <i class="bi bi-chevron-down text-xs transition-transform" id="filterChevron" style="{{ 'transform: rotate(180deg);' if active_filters_count.value > 0 else '' }}"></i>
         </div>
-        <div id="filterPanel" class="p-4 border-t border-[#30363d]" style="{{ '' if active_filters_count.value > 0 else 'display:none' }}">
-          <div class="grid grid-cols-2 gap-3">
-            <!-- Manufacturer filter -->
+        <div id="filterPanel" class="p-3.5 space-y-3 border-t border-[#30363d]" style="{{ '' if active_filters_count.value > 0 else 'display:none' }}">
+          
+          <!-- Standard Catalogue Properties -->
+          <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="form-label">Manufacturer</label>
+              <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Manufacturer</label>
               <select name="filter_manufacturer" class="form-select form-control-dark w-full text-xs">
                 <option value="">All Manufacturers</option>
                 {% if filter_options and filter_options.manufacturers %}
@@ -815,10 +476,8 @@
                 {% endif %}
               </select>
             </div>
-
-            <!-- Pump type filter -->
             <div>
-              <label class="form-label">Pump Type</label>
+              <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Pump Type</label>
               <select name="filter_pump_type" class="form-select form-control-dark w-full text-xs">
                 <option value="">All Types</option>
                 {% if filter_options and filter_options.pump_types %}
@@ -828,390 +487,305 @@
                 {% endif %}
               </select>
             </div>
-
-            <!-- Size filter -->
             <div class="col-span-2">
-              <label class="form-label">Size (partial match)</label>
+              <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Size Match</label>
               <input type="text" name="filter_size" class="form-control form-control-dark w-full text-xs"
-                     value="{{ form_data.get('filter_size', '') }}" placeholder="e.g. 6/4">
+                     value="{{ form_data.get('filter_size', '') }}" placeholder="e.g. 6/4 or 100-250">
             </div>
-
-            <!-- Clear filters button if active -->
-            {% if active_filters_count.value > 0 %}
-            <div class="col-span-2 flex justify-end pt-1">
-              <button type="button" onclick="clearAllFilters()" class="text-xs text-[#f85149] hover:text-[#ff7b72] flex items-center gap-1.5 py-1 px-2 rounded hover:bg-[#f85149]/10 transition-colors">
-                <i class="bi bi-x-circle"></i> Clear advanced filters
-              </button>
-            </div>
-            {% endif %}
           </div>
+
+          <!-- Organisation Custom Pump Attributes -->
+          {% if filter_options and filter_options.custom_attributes and filter_options.custom_attributes|length > 0 %}
+          <div class="pt-2 border-t border-[#30363d]/60 space-y-2">
+            <span class="text-[11px] font-semibold text-[#8b949e] flex items-center gap-1.5">
+              <i class="bi bi-tags text-[#58a6ff]"></i> Custom Pump Attributes
+            </span>
+            <div class="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+              {% for attr in filter_options.custom_attributes %}
+              <div class="bg-[#0d1117] border border-[#30363d] rounded p-2 space-y-1">
+                <div class="flex items-center justify-between">
+                  <label class="block text-xs font-semibold text-[#c9d1d9] truncate">{{ attr.name }}</label>
+                </div>
+                {% set cur_val = form_data.get('filter_attribute_' ~ attr.index, '') %}
+                {% if attr.options and attr.options|length > 0 %}
+                  <select name="filter_attribute_{{ attr.index }}" class="form-select form-control-dark w-full text-xs py-1">
+                    <option value="">All {{ attr.name }}</option>
+                    {% for opt in attr.options %}
+                      <option value="{{ opt }}" {{ 'selected' if cur_val == opt or cur_val|lower == opt|lower }}>{{ opt }}</option>
+                    {% endfor %}
+                  </select>
+                {% else %}
+                  <input type="text" name="filter_attribute_{{ attr.index }}" 
+                         class="form-control form-control-dark w-full text-xs py-1 font-mono" 
+                         value="{{ cur_val }}" placeholder="Filter {{ attr.name }}...">
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if active_filters_count.value > 0 %}
+          <div class="flex justify-end pt-1">
+            <button type="button" onclick="clearAllFilters()" class="text-xs text-[#f85149] hover:text-[#ff7b72] flex items-center gap-1 py-0.5 px-1.5 rounded hover:bg-[#f85149]/10 transition-colors">
+              <i class="bi bi-x-circle"></i> Clear filters
+            </button>
+          </div>
+          {% endif %}
         </div>
       </div>
 
-      <!-- Sort control (hidden input — updated by JS) -->
-      <input type="hidden" name="sort_by" id="sortByInput" value="{{ sort_by or 'rating' }}">
+    </div>
 
-      <!-- Submit button -->
-      <!-- Beginners Note: Submits the form to run the selection engine and display matching pumps -->
-      <button type="submit" id="btnFindPumps"
-              class="w-full flex items-center justify-center gap-2 py-2.5 rounded font-semibold text-sm transition-colors"
-              style="background:#58a6ff;color:#0d1117;"
-              onmouseover="this.style.background='#79baff'" onmouseout="this.style.background='#58a6ff'">
-        <i class="bi bi-search"></i>Find Matching Pumps
-      </button>
-    </form>
-  </div>
+    <!-- ════════════════════════════════════════════════════════════════════
+         PANEL 3: Shortlist Results (Minimal Information) (Cols 9-12 on lg and xl)
+         ════════════════════════════════════════════════════════════════════ -->
+    <div class="col-span-12 lg:col-span-4 xl:col-span-4 flex flex-col gap-3">
 
-  <!-- ── Right Panel: Shortlist Results (3/5 width on xl) ────────────── -->
-  <div class="xl:col-span-3">
-    {% if results is not none %}
-      {% if results %}
-        <!-- Results header with count and duty summary -->
-        <!-- Beginners Note: Shows how many pumps matched and repeats the duty point for reference with active units -->
-        <div class="flex items-center mb-3 gap-3 flex-wrap justify-between">
-          <div class="flex items-center gap-3">
-            <h5 class="mb-0 flex items-center gap-2" style="color:#e6edf3;font-size:1rem;font-weight:700;">
-              <i class="bi bi-check-circle" style="color:#3fb950;"></i>
-              {{ results|length }} pump{{ 's' if results|length != 1 else '' }} found
-            </h5>
-            <span class="text-muted text-sm">
-              Duty: Q = {{ form_data.q_duty }} {{ units_tables.flow[unit_q].name }} &bull; H = {{ form_data.h_duty }} {{ units_tables.head[unit_h].name }}
-              {% if form_data.liquid != 'water' %}&bull; {{ form_data.liquid|capitalize }}{% endif %}
-            </span>
-          </div>
+      {% if results is not none %}
+        {% if results %}
+          <!-- Shortlist Header & Controls Toolbar -->
+          <div class="card-dark p-3.5 space-y-3">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div class="flex items-center gap-2">
+                <h5 class="mb-0 flex items-center gap-1.5 font-bold text-white text-base">
+                  <i class="bi bi-check-circle-fill text-[#3fb950]"></i>
+                  <span id="shortlistCountDisplay">{{ results|length }}</span> matching pump{{ 's' if results|length != 1 else '' }}
+                </h5>
+                <span class="text-xs text-[#8b949e]">
+                  (Q={{ form_data.q_duty }}, H={{ form_data.h_duty }})
+                </span>
+              </div>
+              
+              <!-- Quick Navigation to Comparison Tab with active selection parameters -->
+              <div class="flex items-center gap-2">
+                <a id="compareLink" href="{{ url_for('pump_comparison', q_duty=form_data.q_duty, h_duty=form_data.h_duty, liquid=form_data.get('liquid', 'water'), operation_mode=form_data.get('operation_mode', 'fixed')) }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border border-[#39d3c0]/40 text-[#39d3c0] bg-[#39d3c0]/10 hover:bg-[#39d3c0]/20 transition-colors pointer-events-none opacity-50"
+                   title="Compare checked pumps in the Comparison Tab">
+                  <i class="bi bi-bar-chart-line"></i>Compare (<span id="compareCount">0</span>)
+                </a>
+                <a href="{{ url_for('pump_comparison', q_duty=form_data.q_duty, h_duty=form_data.h_duty, liquid=form_data.get('liquid', 'water'), operation_mode=form_data.get('operation_mode', 'fixed')) }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-[#58a6ff]/15 hover:bg-[#58a6ff]/25 text-[#58a6ff] border border-[#58a6ff]/35 transition-colors"
+                   title="Open detailed shortlisted comparison page">
+                  <span>Detailed View</span>
+                  <i class="bi bi-arrow-right"></i>
+                </a>
+              </div>
+            </div>
 
-          <!-- Sort controls -->
-          <!-- Beginners Note: Buttons to re-sort results by different criteria. Uses JS to update hidden input and resubmit. -->
-          <div class="flex items-center gap-1">
-            <span class="text-muted text-xs mr-1">Sort:</span>
-            <button type="button" class="sort-btn {{ 'sort-active' if sort_by == 'rating' or not sort_by }}"
-                    data-sort="rating" onclick="setSortAndSubmit('rating')">Rating</button>
-            <button type="button" class="sort-btn {{ 'sort-active' if sort_by == 'efficiency' }}"
-                    data-sort="efficiency" onclick="setSortAndSubmit('efficiency')">Efficiency</button>
-            <button type="button" class="sort-btn {{ 'sort-active' if sort_by == 'power' }}"
-                    data-sort="power" onclick="setSortAndSubmit('power')">Power</button>
-            <button type="button" class="sort-btn {{ 'sort-active' if sort_by == 'bep' }}"
-                    data-sort="bep" onclick="setSortAndSubmit('bep')">BEP %</button>
-          </div>
-        </div>
+            <!-- Instant Live Search & Client-Side Sort Toolbar (No Page Reload) -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2 border-t border-[#30363d]">
+              <!-- Live Search Filter -->
+              <div class="relative flex-1">
+                <i class="bi bi-search absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8b949e] text-xs"></i>
+                <input type="text" id="shortlistSearch" oninput="filterShortlistItems()"
+                       placeholder="Filter shortlist by name, size..."
+                       class="form-control form-control-dark w-full pl-8 pr-3 py-1 text-xs text-white rounded-lg border border-[#30363d] focus:border-[#58a6ff]">
+              </div>
 
-        <!-- Shortlist result cards -->
-        <!-- Beginners Note: Each matching pump is displayed as an interactive card with:
-             - Pump identity (name, model, manufacturer, size, speed)
-             - Suitability rating badge
-             - Key performance metrics at duty point in user units
-             - Mini H-Q sparkline SVG showing the pump's envelope with duty point
-             - Trim/speed information
-             - BEP proximity bar
-             - NPSH status
-             - Action buttons (View Curves, Details, Compare checkbox) -->
-        {% for r in results %}
-        <div class="sel-card mb-3 {{ 'sel-excellent' if r.rating >= 80 else ('sel-good' if r.rating >= 65 else ('sel-acceptable' if r.rating >= 50 else 'sel-marginal')) }}">
-          <!-- Card Header: Pump identity + rating -->
-          <div class="sel-card-header">
-            <div class="flex items-start gap-3 w-full">
-              <!-- Compare checkbox -->
-              <input type="checkbox" class="form-check-input pump-compare-cb mt-1"
-                     value="{{ r.pump_id }}" title="Add to comparison"
-                     style="width:1rem;height:1rem;accent-color:#58a6ff;">
-              <div class="flex-1 min-w-0">
-                <div class="flex justify-between items-start flex-wrap gap-2">
-                  <!-- Pump name & specs -->
-                  <div>
-                    <h5 class="sel-card-title mb-0">{{ r.pump_name }}</h5>
-                    <div class="text-muted text-sm mt-0.5">
-                      {{ r.manufacturer }} &bull; {{ r.size }} &bull; {{ r.optimal_speed_rpm|int if r.optimal_speed_rpm else r.speed_rpm|int }} rpm
-                      {% if r.is_vsd %}
-                        <span class="inline-flex items-center ml-1 px-1.5 py-0 rounded text-[10px] font-semibold" style="background:rgba(88,166,255,0.15);color:#58a6ff;">VSD</span>
-                      {% else %}
-                        <span class="inline-flex items-center ml-1 px-1.5 py-0 rounded text-[10px] font-semibold" style="background:rgba(63,185,80,0.15);color:#3fb950;">Fixed Speed</span>
-                      {% endif %}
-                    </div>
-                    {% if r.attributes_display and r.attributes_display|length > 0 %}
-                    <div class="flex items-center gap-1.5 flex-wrap mt-1.5">
-                      {% for attr in r.attributes_display %}
-                      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#0d1117] text-[#c9d1d9] border border-[#30363d]" title="{{ attr.name }}: {{ attr.value }}">
-                        <span class="text-[#8b949e]">{{ attr.name }}:</span> <strong class="text-[#58a6ff]">{{ attr.value }}</strong>
-                      </span>
-                      {% endfor %}
-                    </div>
-                    {% endif %}
-                  </div>
-                  <!-- Rating badge -->
-                  <div class="flex items-center gap-2 shrink-0">
-                    <div class="rating-badge {{ 'excellent' if r.rating >= 80 else ('good' if r.rating >= 65 else ('acceptable' if r.rating >= 50 else 'marginal')) }}">
-                      {{ r.rating_label }}
-                    </div>
-                    <div class="rating-score">{{ r.rating }}</div>
-                  </div>
-                </div>
+              <!-- Rating Category Filter Pills -->
+              <div class="inline-flex rounded-lg p-0.5 bg-[#0d1117] border border-[#30363d] text-[11px] shrink-0">
+                <button type="button" class="rating-filter-pill px-2 py-0.5 rounded font-semibold text-[#58a6ff] bg-[#21262d]" data-filter="all" onclick="applyRatingFilter('all', this)">
+                  All (<span id="countPillAll">{{ results|length }}</span>)
+                </button>
+                <button type="button" class="rating-filter-pill px-2 py-0.5 rounded font-semibold text-[#8b949e] hover:text-white" data-filter="excellent" onclick="applyRatingFilter('excellent', this)">
+                  Exc
+                </button>
+                <button type="button" class="rating-filter-pill px-2 py-0.5 rounded font-semibold text-[#8b949e] hover:text-white" data-filter="good" onclick="applyRatingFilter('good', this)">
+                  Good
+                </button>
+                <button type="button" class="rating-filter-pill px-2 py-0.5 rounded font-semibold text-[#8b949e] hover:text-white" data-filter="acceptable" onclick="applyRatingFilter('acceptable', this)">
+                  Acc
+                </button>
+              </div>
+
+              <!-- Client-Side Sort Dropdown & Sort Order Direction Toggle -->
+              <div class="flex items-center gap-1 shrink-0">
+                <span class="text-[11px] text-[#8b949e]">Sort:</span>
+                <select id="clientSortSel" onchange="applyClientSort()" class="form-select form-control-dark text-xs py-1 px-2 border border-[#30363d] rounded cursor-pointer bg-[#0d1117] text-white">
+                  <option value="rating">Rating</option>
+                  <option value="efficiency">Efficiency</option>
+                  <option value="power">Shaft Power</option>
+                  <option value="bep">BEP %</option>
+                  <option value="name">Name</option>
+                </select>
+                <!-- Up/Down arrow button for toggling sort order (asc / desc) -->
+                <button type="button" id="btnSortDirection" onclick="toggleSortDirection()"
+                        class="p-1 px-1.5 rounded border border-[#30363d] bg-[#0d1117] hover:bg-[#21262d] text-[#58a6ff] hover:text-white transition-colors flex items-center justify-center"
+                        title="Toggle Sort Order: High to Low (Desc) / Low to High (Asc)">
+                  <i class="bi bi-sort-down" id="sortDirectionIcon"></i>
+                </button>
               </div>
             </div>
           </div>
 
-          <!-- Card Body: Metrics + Mini-chart side by side -->
-          <div class="sel-card-body">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          <!-- Minimal Shortlist Items Container (High Density, 100s of pumps capable) -->
+          <div class="space-y-2.5 max-h-[calc(100vh-230px)] overflow-y-auto custom-scrollbar pr-1" id="shortlistItemsContainer">
+            {% for r in results %}
+            {% set r_cat = 'excellent' if r.rating >= 80 else ('good' if r.rating >= 65 else ('acceptable' if r.rating >= 50 else 'marginal')) %}
+            <div class="sel-mini-card p-3 rounded-xl border border-[#30363d] bg-[#161b22]/95 hover:border-[#58a6ff]/50 hover:bg-[#161b22] transition-all flex flex-col gap-2.5 group shadow-sm"
+                 data-name="{{ r.pump_name|lower }}"
+                 data-size="{{ r.size|lower }}"
+                 data-rating="{{ r.rating }}"
+                 data-efficiency="{{ r.op_eta }}"
+                 data-power="{{ (r.disp_power|round(2)) if r.disp_power is not none else (r.op_power|round(2) if r.op_power else 0) }}"
+                 data-bep="{{ r.bep_proximity_pct or (r.bep_flow_pct|abs if r.bep_flow_pct else 0) }}"
+                 data-rating-cat="{{ r_cat }}">
+              
+              <!-- ── Row 1 (Header): Checkbox + Rating Score + Pump Name & Size + Action Buttons ── -->
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0 flex-1">
+                  <!-- Compare Checkbox -->
+                  <input type="checkbox" class="form-check-input pump-compare-cb shrink-0 cursor-pointer"
+                         value="{{ r.pump_id }}" title="Select to compare"
+                         style="width:1.1rem;height:1.1rem;accent-color:#58a6ff;">
 
-              <!-- Performance metrics (7 cols) -->
-              <div class="lg:col-span-7">
-                <!-- Key metrics grid -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
-                  <!-- Head at duty -->
-                  <div class="perf-metric">
-                    <div class="perf-label">Head at Duty</div>
-                    <div class="perf-value">{{ r.disp_h_duty }} <span class="perf-unit">{{ r.disp_unit_h }}</span></div>
-                    <div class="text-xs" style="color:{% if r.head_surplus_pct > 15 %}#d29922{% else %}#8b949e{% endif %}">
-                      +{{ r.head_surplus_pct }}% surplus
-                    </div>
-                  </div>
-                  <!-- Efficiency -->
-                  <div class="perf-metric">
-                    <div class="perf-label">Efficiency</div>
-                    <div class="perf-value" style="color:{% if r.op_eta >= 70 %}#3fb950{% elif r.op_eta >= 55 %}#d29922{% else %}#f85149{% endif %}">
-                      {{ r.op_eta }} <span class="perf-unit">%</span>
-                    </div>
-                    <div class="text-xs text-muted">BEP: {{ r.bep_eta }}%</div>
-                  </div>
-                  <!-- Power -->
-                  <div class="perf-metric">
-                    <div class="perf-label">Power</div>
-                    <div class="perf-value">{{ (r.disp_power|round(1)) if r.disp_power is not none else r.op_power }} <span class="perf-unit">{{ r.disp_unit_pow }}</span></div>
-                    <div class="text-xs text-muted">BEP: {{ r.bep_power }} kW</div>
-                  </div>
-                  <!-- NPSHr -->
-                  <div class="perf-metric">
-                    <div class="perf-label">NPSHr</div>
-                    <div class="perf-value" style="{% if not r.npsh_ok %}color:#f85149;{% endif %}">
-                      {{ (r.disp_npshr|round(1)) if r.disp_npshr is not none else r.op_npsh }} <span class="perf-unit">{{ r.disp_unit_npsh }}</span>
-                    </div>
-                    {% if r.npsh_margin is not none %}
-                      <div class="text-xs" style="color:{% if r.npsh_margin > 0 %}#3fb950{% else %}#f85149{% endif %}">
-                        Margin: {{ r.npsh_margin }} m
-                      </div>
-                    {% endif %}
-                  </div>
-                </div>
-
-                <!-- Motor & Drive Arrangement Strip -->
-                <!-- Beginners Note: Shows selected motor sizing, rated RPM from DB, standard, efficiency, and direct-drive suitability or VSD frequency -->
-                {% if r.motor and not r.motor.error %}
-                <div class="p-2 rounded mb-2 text-xs flex flex-col md:flex-row md:items-center justify-between gap-2"
-                     style="background:rgba(22,27,34,0.85);border:1px solid #30363d;">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span class="font-semibold text-white flex items-center gap-1.5">
-                      <i class="bi bi-cpu text-[#58a6ff]"></i>
-                      <span>Motor:</span>
-                      <strong class="text-[#58a6ff]">{{ r.motor.rated_power_kw }} kW</strong>
-                      <span class="text-[#8b949e]">({{ r.motor.poles }}P &bull; {{ r.motor.rated_speed_rpm|int }} RPM &bull; {{ r.motor.frequency_hz }}Hz)</span>
-                    </span>
-                    <span class="px-1.5 py-0.5 rounded text-[10px] bg-[#0d1117] text-[#8b949e] border border-[#30363d]">
-                      {{ r.motor.manufacturer }} &bull; {{ r.motor.standard }} {{ r.motor.efficiency_class }}
-                    </span>
-                    {% if r.motor.basis_label %}
-                    <span class="px-1.5 py-0.5 rounded text-[10px] bg-[#0d1117] text-[#3fb950] border border-[#3fb950]/30" title="Base: {{ r.motor.base_power_kw }} kW + {{ r.motor.motor_margin_pct }}% margin = {{ r.motor.target_power_kw }} kW target">
-                      {{ r.motor.basis_label }} +{{ r.motor.motor_margin_pct|int }}%
-                    </span>
-                    {% endif %}
-                    {% if r.motor.is_manual %}
-                    <span class="px-1.5 py-0.5 rounded text-[10px] bg-[#0d1117] text-[#d29922] border border-[#d29922]/40 font-mono">
-                      Manual: {{ r.motor.rated_speed_rpm|int }} RPM (±{{ r.motor.manual_speed_tolerance_pct }}%)
-                    </span>
-                    {% endif %}
-                    {% if r.motor.frame_size %}
-                    <span class="px-1.5 py-0.5 rounded text-[10px] bg-[#0d1117] text-[#8b949e] border border-[#30363d]">
-                      Frame: {{ r.motor.frame_size }}
-                    </span>
-                    {% endif %}
+                  <!-- Rating score badge -->
+                  <div class="shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-md border font-mono font-bold text-center {{ 'border-[#3fb950]/30 bg-[#3fb950]/15 text-[#3fb950]' if r.rating >= 80 else ('border-[#58a6ff]/30 bg-[#58a6ff]/15 text-[#58a6ff]' if r.rating >= 65 else ('border-[#d29922]/30 bg-[#d29922]/15 text-[#d29922]' if r.rating >= 50 else 'border-[#f85149]/30 bg-[#f85149]/15 text-[#f85149]')) }}">
+                    <span class="text-xs leading-none">{{ r.rating }}</span>
+                    <span class="text-[9px] font-sans font-semibold uppercase tracking-wider opacity-90">{{ r.rating_label }}</span>
                   </div>
 
-                  <div class="flex items-center gap-2 flex-wrap">
+                  <!-- Pump Name, Mode & Size -->
+                  <div class="flex items-center gap-1.5 min-w-0 flex-1 truncate">
+                    <a href="{{ url_for('selection.pump_selection_details', pump_id=r.pump_id) }}" 
+                       class="font-bold text-xs text-white hover:text-[#58a6ff] transition-colors truncate"
+                       title="{{ r.pump_name }}">
+                      {{ r.pump_name }}
+                    </a>
                     {% if r.is_vsd %}
-                      {% if r.motor.vsd_freq_status == 'suitable' %}
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold" style="background:rgba(63,185,80,0.15);color:#3fb950;border:1px solid rgba(63,185,80,0.3);">
-                          <i class="bi bi-check-circle-fill"></i> VSD Freq: {{ r.motor.vsd_required_freq_hz }} Hz ({{ r.motor.vsd_f_min|int }}–{{ r.motor.vsd_f_max|int }} Hz)
-                        </span>
-                      {% else %}
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold" style="background:rgba(248,81,73,0.15);color:#f85149;border:1px solid rgba(248,81,73,0.3);" title="{{ r.motor.match_message }}">
-                          <i class="bi bi-exclamation-triangle-fill"></i> VSD Freq: {{ r.motor.vsd_required_freq_hz }} Hz (Out of bounds)
-                        </span>
-                      {% endif %}
+                      <span class="shrink-0 inline-flex items-center px-1 py-0.2 rounded text-[8px] font-semibold bg-[#58a6ff]/15 text-[#58a6ff] border border-[#58a6ff]/30">VSD</span>
                     {% else %}
-                      {% if r.motor.speed_match_status == 'suitable' %}
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold" style="background:rgba(63,185,80,0.15);color:#3fb950;border:1px solid rgba(63,185,80,0.3);" title="{{ r.motor.match_message }}">
-                          <i class="bi bi-check-circle-fill"></i> Direct Coupled Match ({{ r.motor.speed_deviation_pct }}% dev)
-                        </span>
-                      {% elif r.motor.speed_match_status == 'marginal' %}
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold" style="background:rgba(210,153,34,0.15);color:#d29922;border:1px solid rgba(210,153,34,0.3);" title="{{ r.motor.match_message }}">
-                          <i class="bi bi-exclamation-circle-fill"></i> Acceptable Match ({{ r.motor.speed_deviation_pct }}% dev)
-                        </span>
-                      {% else %}
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold" style="background:rgba(248,81,73,0.15);color:#f85149;border:1px solid rgba(248,81,73,0.3);" title="{{ r.motor.match_message }}">
-                          <i class="bi bi-exclamation-triangle-fill"></i> Speed Mismatch (Motor {{ r.motor.rated_speed_rpm|int }} vs Pump {{ r.optimal_speed_rpm|int }} RPM, {{ r.motor.speed_deviation_pct }}% dev)
-                        </span>
-                      {% endif %}
+                      <span class="shrink-0 inline-flex items-center px-1 py-0.2 rounded text-[8px] font-semibold bg-[#3fb950]/15 text-[#3fb950] border border-[#3fb950]/30">Fixed</span>
+                    {% endif %}
+                    {% if r.size and r.size != '0' and r.size|string|trim != '' %}
+                      <span class="shrink-0 text-[11px] text-[#8b949e]">({{ r.size }})</span>
                     {% endif %}
                   </div>
                 </div>
-                {% endif %}
 
-                <!-- Trim / Speed information -->
-                <!-- Beginners Note: Shows the optimal impeller diameter or speed to meet the duty exactly -->
-                <div class="flex items-center gap-3 mb-2 text-xs flex-wrap">
-                  {% if r.is_vsd %}
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.25);color:#58a6ff;">
-                    <i class="bi bi-speedometer2"></i> VSD Speed: {{ r.optimal_speed_rpm|int }} RPM ({{ (r.speed_ratio * 100)|round(1) }}%)
-                  </span>
-                  {% if r.vsd_trim_mode and r.vsd_trim_mode != 'auto' and r.optimal_trim_ratio < 0.999 %}
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(210,153,34,0.1);border:1px solid rgba(210,153,34,0.25);color:#d29922;">
-                    <i class="bi bi-disc"></i> Trim: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
-                  </span>
-                  {% else %}
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.25);color:#3fb950;">
-                    <i class="bi bi-disc"></i> Full Impeller: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm
-                  </span>
-                  {% endif %}
-                  {% elif r.fixed_speed_mode == 'auto' %}
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.25);color:#58a6ff;">
-                    <i class="bi bi-calculator"></i> Calculated Speed: {{ r.optimal_speed_rpm|int }} RPM ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
-                  </span>
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.25);color:#3fb950;">
-                    <i class="bi bi-disc"></i> Full Impeller: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm
-                  </span>
-                  {% elif r.fixed_speed_mode == 'manual' %}
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(210,153,34,0.1);border:1px solid rgba(210,153,34,0.25);color:#d29922;">
-                    <i class="bi bi-speedometer"></i> Fixed Speed: {{ r.optimal_speed_rpm|int }} RPM (Manual)
-                  </span>
-                  {% if r.optimal_trim_ratio < 0.995 %}
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.25);color:#3fb950;">
-                    <i class="bi bi-disc"></i> Trim: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
-                  </span>
-                  {% endif %}
-                  {% elif r.fixed_speed_mode == 'range' %}
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.25);color:#58a6ff;">
-                    <i class="bi bi-speedometer2"></i> Speed: {{ r.optimal_speed_rpm|int }} RPM (Within Range)
-                  </span>
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.25);color:#3fb950;">
-                    <i class="bi bi-disc"></i> Trim: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
-                  </span>
-                  {% else %}
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.25);color:#3fb950;">
-                    <i class="bi bi-disc"></i> Trim: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
-                  </span>
-                  {% endif %}
-                  {% if r.duty_in_envelope %}
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded" style="background:rgba(63,185,80,0.08);border:1px solid rgba(63,185,80,0.2);color:#3fb950;">
-                    <i class="bi bi-check-circle-fill"></i> Within envelope
-                  </span>
-                  {% endif %}
+                <!-- Action Buttons (Right) -->
+                <div class="flex items-center gap-1 shrink-0">
+                  <a href="{{ url_for('selection.pump_selection_details', pump_id=r.pump_id) }}"
+                     class="px-2 py-0.5 rounded text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] hover:text-white border border-[#30363d] transition-colors flex items-center gap-1"
+                     title="View Full Graphs & Pump Details">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    <span>Details</span>
+                  </a>
+                  <a href="{{ url_for('reports.view_report', report_id=r.default_report_id, pump_id=r.pump_id, q_duty=form_data.q_duty, h_duty=form_data.h_duty, dia=r.optimal_trim_dia_mm, rpm=r.optimal_speed_rpm, unit_q=unit_q, unit_h=unit_h, unit_pow=unit_pow, unit_npsh=unit_npsh, operation_mode=form_data.get('operation_mode', 'fixed'), source='selection') }}"
+                     target="_blank"
+                     class="p-1 px-1.5 rounded text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-[#d29922] hover:text-[#e3b341] border border-[#30363d] transition-colors flex items-center"
+                     title="Datasheet PDF Report">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                  </a>
                 </div>
-
-                <!-- BEP proximity bar -->
-                <!-- Beginners Note: Visual bar showing how close the duty flow is to BEP (best efficiency point) -->
-                <div class="mb-2">
-                  <div class="flex justify-between text-xs mb-0.5">
-                    <span class="text-muted">Operating point (% of BEP flow: {{ r.bep_q }} m³/h)</span>
-                    <span style="color:{% if r.in_preferred_range %}#3fb950{% elif r.in_acceptable_range %}#d29922{% else %}#f85149{% endif %}">
-                      {{ (r.q_ratio * 100)|round|int }}% of BEP
-                    </span>
-                  </div>
-                  <div class="bep-bar">
-                    <div class="bep-zones">
-                      <div class="bep-zone marginal-lo" title="Below acceptable range (< 65% BEP)"></div>
-                      <div class="bep-zone acceptable-lo" title="Acceptable range (65–80% BEP)"></div>
-                      <div class="bep-zone preferred" title="Preferred range (80–120% BEP)"></div>
-                      <div class="bep-zone acceptable-hi" title="Acceptable range (120–135% BEP)"></div>
-                      <div class="bep-zone marginal-hi" title="Above acceptable range (> 135% BEP)"></div>
-                    </div>
-                    <div class="bep-marker" style="left: {{ [0, [100, (r.q_ratio * 100 / 2)|int]|min]|max }}%"></div>
-                  </div>
-                  <div class="flex justify-between mt-0.5" style="font-size:0.6rem;color:#666;">
-                    <span>0%</span><span>65%</span><span>80%</span><span style="font-weight:700">100% BEP</span><span>120%</span><span>135%</span><span>200%</span>
-                  </div>
-                </div>
-
-                <!-- NPSH warning (if applicable) -->
-                {% if not r.npsh_ok %}
-                <div class="text-xs p-1.5 rounded mb-2" style="background:rgba(248,81,73,0.1);border:1px solid rgba(248,81,73,0.3);color:#f85149;">
-                  <i class="bi bi-exclamation-triangle-fill mr-1"></i>
-                  NPSH margin insufficient (NPSHa must be &ge; 1.1 × NPSHr = {{ (r.op_npsh * 1.1)|round(1) }} m)
-                </div>
-                {% endif %}
               </div>
 
-              <!-- Mini H-Q sparkline chart (5 cols) -->
-              <!-- Beginners Note: Inline SVG sparkline showing the pump's H-Q envelope with the duty point.
-                   Data is embedded in a data attribute and rendered by pump_selection.js on page load. -->
-              <div class="lg:col-span-5 flex items-center justify-center">
-                <div class="sparkline-container"
+              <!-- ── Row 2 (Body): Tombstone Graph & Hydraulic Performance Metrics ── -->
+              <div class="flex items-center justify-between gap-3 pt-2 border-t border-[#30363d]/50">
+                <!-- Tombstone Graph (SVG H-Q Envelope Curve with Duty Crosshair) -->
+                {% if r.mini_chart %}
+                <div class="sparkline-container shrink-0 rounded-lg bg-[#0d1117] p-1 border border-[#30363d] flex items-center justify-center shadow-inner"
                      data-chart='{{ r.mini_chart | tojson }}'
-                     id="sparkline-{{ r.pump_id }}">
-                  <!-- SVG will be rendered here by JavaScript -->
-                  <div class="text-center text-muted text-xs py-8">Loading chart...</div>
+                     id="sparkline-{{ r.pump_id }}"
+                     title="Tombstone H-Q Envelope & Duty Point"
+                     style="width: 130px; height: 50px;">
+                </div>
+                {% endif %}
+
+                <!-- Metrics: Speed/Motor + Eff + Power + NPSHr -->
+                <div class="flex items-center justify-end gap-1.5 flex-1 flex-wrap">
+                  <!-- Speed & Motor kW -->
+                  <div class="px-2 py-0.5 rounded bg-[#0d1117] border border-[#30363d] text-center shrink-0">
+                    <div class="text-[8px] font-sans text-[#8b949e] uppercase leading-none">Speed / kW</div>
+                    <div class="font-bold text-[11px] text-white font-mono mt-0.5 whitespace-nowrap">
+                      {{ r.optimal_speed_rpm|int if r.optimal_speed_rpm else r.speed_rpm|int }}<span class="text-[9px] text-[#8b949e] font-normal">rpm</span>
+                      {% if r.motor and not r.motor.error %}
+                        <span class="text-[#8b949e]">&bull;</span> {{ r.motor.rated_power_kw }}<span class="text-[9px] text-[#8b949e] font-normal">kW</span>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <!-- Efficiency -->
+                  <div class="px-2 py-0.5 rounded bg-[#0d1117] border border-[#30363d] text-center shrink-0">
+                    <div class="text-[8px] font-sans text-[#8b949e] uppercase leading-none">Eff</div>
+                    <div class="font-bold text-[11px] font-mono mt-0.5 {{ 'text-[#3fb950]' if r.op_eta >= 70 else ('text-[#d29922]' if r.op_eta >= 55 else 'text-[#f85149]') }}">
+                      {{ r.op_eta }}<span class="text-[9px] font-normal">%</span>
+                    </div>
+                  </div>
+
+                  <!-- Power -->
+                  <div class="px-2 py-0.5 rounded bg-[#0d1117] border border-[#30363d] text-center shrink-0">
+                    <div class="text-[8px] font-sans text-[#8b949e] uppercase leading-none">Power</div>
+                    <div class="font-bold text-[11px] font-mono text-white mt-0.5 whitespace-nowrap">
+                      {{ (r.disp_power|round(1)) if r.disp_power is not none else r.op_power }} <span class="text-[9px] text-[#8b949e] font-normal">{{ r.disp_unit_pow }}</span>
+                    </div>
+                  </div>
+
+                  <!-- NPSHr -->
+                  <div class="px-2 py-0.5 rounded bg-[#0d1117] border border-[#30363d] text-center shrink-0">
+                    <div class="text-[8px] font-sans text-[#8b949e] uppercase leading-none">NPSHr</div>
+                    <div class="font-bold text-[11px] font-mono mt-0.5 whitespace-nowrap {{ 'text-[#f85149]' if not r.npsh_ok else 'text-white' }}">
+                      {{ (r.disp_npshr|round(1)) if r.disp_npshr is not none else r.op_npsh }} <span class="text-[9px] text-[#8b949e] font-normal">{{ r.disp_unit_npsh }}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
+            {% endfor %}
 
-            <!-- Action buttons row -->
-            <!-- Beginners Note: Quick links to view curves, pump details, or generate a report for this pump -->
-            <div class="flex gap-2 flex-wrap mt-2 pt-2" style="border-top:1px solid #21262d;">
-              <a href="{{ url_for('selection.pump_selection_details', pump_id=r.pump_id) }}"
-                 class="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-colors"
-                 style="border:1px solid rgba(88,166,255,0.4);color:#58a6ff;"
-                 onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
-                <i class="bi bi-graph-up-arrow"></i>View Details &amp; Graphs
-              </a>
-              <a href="{{ url_for('reports.view_report', report_id=r.default_report_id, pump_id=r.pump_id, q_duty=form_data.q_duty, h_duty=form_data.h_duty, dia=r.optimal_trim_dia_mm, rpm=r.optimal_speed_rpm, unit_q=unit_q, unit_h=unit_h, unit_pow=unit_pow, unit_npsh=unit_npsh, operation_mode=form_data.get('operation_mode', 'fixed'), source='selection') }}"
-                 target="_blank"
-                 class="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-colors"
-                 style="border:1px solid rgba(210,153,34,0.4);color:#d29922;"
-                 onmouseover="this.style.background='rgba(210,153,34,0.1)'" onmouseout="this.style.background='transparent'">
-                <i class="bi bi-file-earmark-pdf"></i>Report
-              </a>
+            <!-- No results matching live filter message -->
+            <div id="noFilterMatchesNotice" class="p-8 text-center text-[#8b949e] border border-dashed border-[#30363d] rounded-xl" style="display:none;">
+              <i class="bi bi-search text-2xl mb-2 block text-[#8b949e]"></i>
+              <p class="text-sm font-semibold text-white mb-1">No shortlisted pumps match your filter</p>
+              <p class="text-xs">Try clearing the search query or selecting a different rating pill.</p>
+              <button type="button" onclick="clearShortlistFilter()" class="mt-3 px-3 py-1 rounded text-xs text-[#58a6ff] bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 border border-[#58a6ff]/30">
+                Reset Filter
+              </button>
             </div>
           </div>
-        </div>
-        {% endfor %}
 
-        <!-- Compare selected button -->
-        <!-- Beginners Note: Builds a comparison URL from checked pumps and navigates to the comparison page -->
-        <div class="flex gap-3 mt-3">
-          <a id="compareLink" href="{{ url_for('pump_comparison') }}"
-             class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium opacity-50 pointer-events-none"
-             style="border:1px solid rgba(57,211,192,0.4);color:#39d3c0;">
-            <i class="bi bi-bar-chart-line"></i>Compare Selected (<span id="compareCount">0</span>)
-          </a>
-        </div>
+        {% else %}
+          <!-- No matches from search -->
+          <div class="card-dark empty-state p-8 text-center">
+            <i class="bi bi-search text-4xl text-[#8b949e] mb-3 block"></i>
+            <h4 class="text-white font-bold text-base mb-1">No matching pumps found</h4>
+            <p class="text-xs text-[#8b949e] mb-4">
+              No pumps satisfy Q = {{ form_data.q_duty }} at H = {{ form_data.h_duty }}.<br>
+              Try reducing duty requirements or relaxing the motor/catalogue filters.
+            </p>
+            <a href="{{ url_for('pump_new') }}"
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs bg-[#58a6ff] text-[#0d1117]">
+              <i class="bi bi-plus-lg"></i>Add Pump
+            </a>
+          </div>
+        {% endif %}
 
       {% else %}
-        <!-- No matches state -->
-        <!-- Beginners Note: Shown when the selection engine returns zero matches for the given duty point -->
-        <div class="empty-state">
-          <i class="bi bi-search"></i>
-          <h4>No matching pumps found</h4>
-          <p>
-            No pumps in the catalogue can satisfy Q = {{ form_data.q_duty }} m³/h at H = {{ form_data.h_duty }} m.<br>
-            Try reducing the duty requirements, relaxing the filters, or add more pumps to the catalogue.
+        <!-- Initial state: Ready to search -->
+        <div class="card-dark empty-state p-8 text-center">
+          <i class="bi bi-bullseye text-4xl text-[#58a6ff] mb-3 block animate-pulse"></i>
+          <h4 class="text-white font-bold text-base mb-1">Ready for Selection</h4>
+          <p class="text-xs text-[#8b949e] mb-3">
+            Enter your required Flow Rate Q and Total Head H in Panel 1, configure any specifications in Panel 2, then click <strong class="text-white">Find Matching Pumps</strong>.
           </p>
-          <a href="{{ url_for('pump_new') }}"
-             class="inline-flex items-center gap-1 px-4 py-2 rounded font-semibold text-sm"
-             style="background:#58a6ff;color:#0d1117;">
-            <i class="bi bi-plus-lg"></i>Add Pump
-          </a>
+          <div class="inline-flex items-center gap-2 p-2 rounded-lg bg-[#0d1117] border border-[#30363d] text-xs text-[#8b949e]">
+            <i class="bi bi-info-circle text-[#58a6ff]"></i>
+            <span>Detailed comparison and side-by-side curves will appear in the Comparison Tab</span>
+          </div>
         </div>
       {% endif %}
 
-    {% else %}
-      <!-- Initial state (no search submitted yet) -->
-      <!-- Beginners Note: Shown on GET when no duty point has been searched yet -->
-      <div class="empty-state">
-        <i class="bi bi-bullseye"></i>
-        <h4>Enter duty point</h4>
-        <p>Fill in the form on the left and click <strong>Find Matching Pumps</strong>.</p>
-      </div>
-    {% endif %}
-  </div>
-</div>
+    </div>
 
-<script src="{{ url_for('static', filename='js/pump_selection.js') }}"></script>
+  </div>
+</form>
+
+<script src="{{ url_for('static', filename='js/pump_selection.js') }}?v=20260905_1340"></script>
+<script>
+  // Immediate fail-safe execution to ensure sparkline curves render under all circumstances
+  if (typeof initSparklines === 'function') {
+    initSparklines();
+  }
+</script>
 {% endblock %}

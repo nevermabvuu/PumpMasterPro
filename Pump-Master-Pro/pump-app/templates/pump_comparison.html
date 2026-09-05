@@ -2,36 +2,96 @@
 {% block title %}Pump Comparison — PumpSelect Pro{% endblock %}
 
 {% block content %}
-<div class="page-header mb-4">
-  <h1 class="page-title"><i class="bi bi-bar-chart-line text-accent mr-2"></i>Pump Comparison</h1>
-  <p class="page-subtitle">Compare up to 4 pumps side-by-side on shared axes</p>
+{#
+  Beginners Note:
+  This is the Pump Comparison view.
+  It hosts:
+  1. Top Duty Context & Summary Banner
+  2. Multi-Pump Overlay Curves (Plotly H-Q, Efficiency, Power, NPSHr, All 4)
+  3. The Detailed Shortlisted List (capable of handling hundreds of pumps)
+     with Detailed Cards View and Comparison Matrix Table View,
+     search filter, rating pills, sorting, and dynamic plot selection.
+#}
+
+<!-- Page Header & Duty Context Banner -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+  <div class="page-header mb-0">
+    <h1 class="page-title"><i class="bi bi-bar-chart-line text-accent mr-2"></i>Pump Comparison</h1>
+    <p class="page-subtitle">Multi-pump performance curve overlay and detailed engineering evaluation</p>
+  </div>
+  <div class="flex items-center gap-2">
+    <a href="{{ url_for('selection.pump_selection') }}"
+       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-white border border-[#30363d] transition-colors shadow-sm">
+      <i class="bi bi-arrow-left"></i>
+      <span>Back to Selection</span>
+    </a>
+  </div>
 </div>
 
-<!-- Comparison settings card -->
-<div class="card-dark mb-4">
-  <div class="card-header-dark">
-    <i class="bi bi-sliders mr-2"></i>Comparison Settings
+<!-- Active Duty Context Bar -->
+<div class="card-dark p-3 mb-4 border border-[#30363d] bg-[#161b22]/90 flex flex-col md:flex-row md:items-center justify-between gap-3">
+  <div class="flex items-center gap-3 flex-wrap text-xs">
+    <span class="font-bold text-white flex items-center gap-1.5">
+      <i class="bi bi-crosshair text-[#58a6ff]"></i>
+      <span>Active Duty:</span>
+    </span>
+    {% if q_duty and h_duty %}
+      <span class="px-2 py-0.5 rounded bg-[#0d1117] border border-[#30363d] text-[#58a6ff] font-mono font-bold">
+        Q = {{ q_duty }} {{ ctx.unit_q if ctx else 'm³/h' }}
+      </span>
+      <span class="px-2 py-0.5 rounded bg-[#0d1117] border border-[#30363d] text-[#58a6ff] font-mono font-bold">
+        H = {{ h_duty }} {{ ctx.unit_h if ctx else 'm' }}
+      </span>
+      <span class="px-2 py-0.5 rounded bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] capitalize">
+        <i class="bi bi-droplet mr-1 text-[#58a6ff]"></i>{{ liquid }}
+      </span>
+      <span class="px-2 py-0.5 rounded bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] capitalize">
+        <i class="bi bi-speedometer2 mr-1 text-[#3fb950]"></i>{{ operation_mode }} Mode
+      </span>
+    {% else %}
+      <span class="text-[#8b949e] italic">No active duty point loaded from selection</span>
+    {% endif %}
+
+    {% if shortlisted_results %}
+      <span class="px-2 py-0.5 rounded-full bg-[#58a6ff]/15 border border-[#58a6ff]/35 text-[#58a6ff] font-semibold text-[11px]">
+        {{ shortlisted_results|length }} Shortlisted Pumps Available
+      </span>
+    {% endif %}
+  </div>
+
+  <!-- Quick Toggle for Comparison Settings -->
+  <button type="button" onclick="toggleCompSettings()" class="text-xs text-[#8b949e] hover:text-[#58a6ff] flex items-center gap-1">
+    <i class="bi bi-sliders"></i>
+    <span id="compSettingsToggleLabel">Adjust Duty / Catalogue Selector</span>
+    <i class="bi bi-chevron-down text-[10px]" id="compSettingsChevron"></i>
+  </button>
+</div>
+
+<!-- Collapsible Comparison Settings Card (Duty, Liquid & Fallback Catalogue Selector) -->
+<div class="card-dark mb-4" id="compSettingsCard" style="display:none;">
+  <div class="card-header-dark flex items-center justify-between">
+    <span><i class="bi bi-sliders mr-2"></i>Comparison Settings &amp; Catalogue Filter</span>
+    <span class="text-xs text-[#8b949e]">Override duty parameters or select any catalogue pumps</span>
   </div>
   <div class="p-4">
     <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-
       <!-- Pump selector (5 cols) -->
       <div class="md:col-span-5">
-        <label class="form-label">Select Pumps (up to 4)</label>
-        <select id="pumpSelector" class="form-select form-control-dark w-full" multiple size="5">
+        <label class="form-label text-xs">Catalogue Pump Selector (multi-select up to 4)</label>
+        <select id="pumpSelector" class="form-select form-control-dark w-full text-xs font-mono" multiple size="4">
           {% for p in all_pumps %}
           <option value="{{ p.id }}" {{ 'selected' if p.id in pump_ids }}>
-            {{ p.name }} — {{ p.size }}
+            {{ p.name }} — {{ p.manufacturer }} ({{ p.size }})
           </option>
           {% endfor %}
         </select>
-        <div class="form-text">Hold Ctrl/Cmd to select multiple</div>
+        <div class="text-[10px] text-[#8b949e] mt-1">Hold Ctrl/Cmd to select multiple pumps from catalogue</div>
       </div>
 
       <!-- Liquid type (2 cols) -->
       <div class="md:col-span-2">
-        <label class="form-label">Liquid Type</label>
-        <select id="compLiquid" class="form-select form-control-dark w-full">
+        <label class="form-label text-xs">Liquid Type</label>
+        <select id="compLiquid" class="form-select form-control-dark w-full text-xs">
           <option value="water" {{ 'selected' if liquid == 'water' }}>Water</option>
           <option value="viscous" {{ 'selected' if liquid == 'viscous' }}>Viscous</option>
           <option value="slurry" {{ 'selected' if liquid == 'slurry' }}>Slurry</option>
@@ -40,143 +100,566 @@
 
       <!-- Duty Q (2 cols) -->
       <div class="md:col-span-2">
-        <label class="form-label">Duty Q (m³/h)</label>
-        <input type="number" id="compQDuty" class="form-control form-control-dark w-full"
+        <label class="form-label text-xs">Duty Q ({{ ctx.unit_q if ctx else 'm³/h' }})</label>
+        <input type="number" id="compQDuty" class="form-control form-control-dark w-full text-xs font-mono"
                value="{{ q_duty or '' }}" placeholder="Optional">
       </div>
 
       <!-- Duty H (2 cols) -->
       <div class="md:col-span-2">
-        <label class="form-label">Duty H (m)</label>
-        <input type="number" id="compHDuty" class="form-control form-control-dark w-full"
+        <label class="form-label text-xs">Duty H ({{ ctx.unit_h if ctx else 'm' }})</label>
+        <input type="number" id="compHDuty" class="form-control form-control-dark w-full text-xs font-mono"
                value="{{ h_duty or '' }}" placeholder="Optional">
       </div>
 
       <!-- Compare button (1 col) -->
       <div class="md:col-span-1">
         <button id="btnCompare"
-                class="w-full flex items-center justify-center py-2 rounded font-semibold transition-colors"
+                class="w-full flex items-center justify-center py-2 rounded-lg font-semibold transition-colors text-xs"
                 style="background:#58a6ff;color:#0d1117;"
+                title="Refresh Comparison Curves"
                 onmouseover="this.style.background='#79baff'" onmouseout="this.style.background='#58a6ff'">
-          <i class="bi bi-arrow-clockwise"></i>
+          <i class="bi bi-arrow-clockwise text-sm"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 1: Multi-Pump Overlay Curves (Plotly)
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="card-dark mb-6">
+  <div class="card-header-dark flex items-center justify-between flex-wrap gap-2">
+    <div class="flex items-center gap-2">
+      <span class="font-bold text-white"><i class="bi bi-graph-up-arrow text-[#58a6ff] mr-1.5"></i>Curve Comparison Overlay</span>
+      <span id="plottedBadge" class="text-xs px-2 py-0.5 rounded-full font-mono font-semibold bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/35">
+        Plotting <span id="plottedCount">0</span> of 4 max
+      </span>
+    </div>
+
+    <!-- Chart View Toggle Buttons -->
+    <div class="flex items-center gap-1 flex-wrap">
+      <div class="flex rounded-lg overflow-hidden border border-[#30363d] bg-[#0d1117] text-xs">
+        <button class="comp-chart-btn px-3 py-1 font-semibold transition-colors comp-active" data-chart="hq"
+                style="background:rgba(88,166,255,0.15);color:#58a6ff;border-right:1px solid #30363d;">H-Q Curve</button>
+        <button class="comp-chart-btn px-3 py-1 font-semibold transition-colors text-[#8b949e] border-r border-[#30363d]" data-chart="eff">Efficiency</button>
+        <button class="comp-chart-btn px-3 py-1 font-semibold transition-colors text-[#8b949e] border-r border-[#30363d]" data-chart="power">Power</button>
+        <button class="comp-chart-btn px-3 py-1 font-semibold transition-colors text-[#8b949e] border-r border-[#30363d]" data-chart="npsh">NPSHr</button>
+        <button class="comp-chart-btn px-3 py-1 font-semibold transition-colors text-[#8b949e]" data-chart="all">All (4-Panel)</button>
+      </div>
+
+      <!-- Curve Plot Helpers -->
+      <button type="button" onclick="plotTopShortlisted(3)" class="px-2.5 py-1 rounded-lg text-xs font-medium text-[#3fb950] bg-[#3fb950]/10 hover:bg-[#3fb950]/20 border border-[#3fb950]/30 transition-colors" title="Plot top 3 shortlisted pumps">
+        Plot Top 3
+      </button>
+      <button type="button" onclick="clearPlotSelection()" class="px-2.5 py-1 rounded-lg text-xs font-medium text-[#f85149] bg-[#f85149]/10 hover:bg-[#f85149]/20 border border-[#f85149]/30 transition-colors" title="Clear all plotted pumps">
+        Clear Plot
+      </button>
+    </div>
+  </div>
+
+  <div class="p-3">
+    <!-- Loading spinner -->
+    <div id="compLoading" class="text-center py-12 text-muted" style="display:none">
+      <div class="inline-block w-8 h-8 border-4 rounded-full animate-spin mb-3"
+           style="border-color:#58a6ff;border-top-color:transparent;"></div>
+      <p class="mt-2 text-sm text-[#8b949e]">Calculating multi-pump curve overlays…</p>
+    </div>
+
+    <!-- Charts Container -->
+    <div id="compCharts">
+      <!-- Single chart view -->
+      <div id="singleChartPanel">
+        <div id="chartComp" class="chart-container-tall" style="min-height:420px;"></div>
+      </div>
+
+      <!-- All 4-panel view -->
+      <div id="allChartPanel" style="display:none">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="border border-[#30363d] rounded-lg p-2 bg-[#0d1117]">
+            <span class="text-xs font-bold text-[#58a6ff] block mb-1"><i class="bi bi-graph-down-arrow mr-1"></i>Head — Flow</span>
+            <div id="chartAll_hq" class="chart-container" style="min-height:260px;"></div>
+          </div>
+          <div class="border border-[#30363d] rounded-lg p-2 bg-[#0d1117]">
+            <span class="text-xs font-bold text-[#3fb950] block mb-1"><i class="bi bi-speedometer2 mr-1"></i>Efficiency — Flow</span>
+            <div id="chartAll_eff" class="chart-container" style="min-height:260px;"></div>
+          </div>
+          <div class="border border-[#30363d] rounded-lg p-2 bg-[#0d1117]">
+            <span class="text-xs font-bold text-[#f0c040] block mb-1"><i class="bi bi-lightning-fill mr-1"></i>Power — Flow</span>
+            <div id="chartAll_power" class="chart-container" style="min-height:260px;"></div>
+          </div>
+          <div class="border border-[#30363d] rounded-lg p-2 bg-[#0d1117]">
+            <span class="text-xs font-bold text-[#bc8cff] block mb-1"><i class="bi bi-arrow-up-right mr-1"></i>NPSHr — Flow</span>
+            <div id="chartAll_npsh" class="chart-container" style="min-height:260px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 2: Detailed Shortlisted Pumps List (High Capacity: 100s of pumps)
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="card-dark mb-6">
+  <div class="card-header-dark flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h3 class="font-bold text-white text-base flex items-center gap-2 mb-0">
+        <i class="bi bi-list-stars text-[#58a6ff]"></i>
+        <span>Detailed Shortlisted Pumps</span>
+        <span class="text-xs px-2 py-0.5 rounded-full font-mono bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/35" id="shortlistTotalCount">
+          {{ shortlisted_results|length }}
+        </span>
+      </h3>
+      <p class="text-xs text-[#8b949e] mb-0 mt-0.5">
+        Complete hydraulic metrics, motor sizing, impeller trim, and BEP proximity analysis.
+      </p>
+    </div>
+
+    <!-- View Mode Switcher: Detailed Cards vs Comparison Matrix Table -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <div class="inline-flex rounded-lg p-0.5 bg-[#0d1117] border border-[#30363d] text-xs">
+        <button type="button" id="btnViewCards" onclick="switchShortlistView('cards')"
+                class="px-2.5 py-1 rounded font-semibold text-[#58a6ff] bg-[#21262d] flex items-center gap-1.5 transition-all">
+          <i class="bi bi-grid-fill"></i>
+          <span>Detailed Cards</span>
+        </button>
+        <button type="button" id="btnViewTable" onclick="switchShortlistView('table')"
+                class="px-2.5 py-1 rounded font-semibold text-[#8b949e] hover:text-white flex items-center gap-1.5 transition-all">
+          <i class="bi bi-table"></i>
+          <span>Comparison Matrix</span>
         </button>
       </div>
 
-    </div>
-  </div>
-</div>
-
-<!-- Chart view toggle buttons (btn-group replacement) -->
-<div class="flex gap-2 mb-3 flex-wrap items-center">
-  <span class="text-muted text-sm mr-1">SHOW:</span>
-  <!-- Tailwind btn-group: a flex container with border, children share the border -->
-  <div class="flex rounded-lg overflow-hidden" style="border:1px solid #30363d;">
-    <button class="comp-chart-btn px-3 py-1.5 text-sm font-medium transition-colors comp-active" data-chart="hq"
-            style="background:rgba(88,166,255,0.15);color:#58a6ff;border-right:1px solid #30363d;">H-Q Curve</button>
-    <button class="comp-chart-btn px-3 py-1.5 text-sm font-medium transition-colors" data-chart="eff"
-            style="color:#8b949e;border-right:1px solid #30363d;" onmouseover="this.style.background='#1c2330'" onmouseout="if(!this.classList.contains('comp-active'))this.style.background='transparent'">Efficiency</button>
-    <button class="comp-chart-btn px-3 py-1.5 text-sm font-medium transition-colors" data-chart="power"
-            style="color:#8b949e;border-right:1px solid #30363d;" onmouseover="this.style.background='#1c2330'" onmouseout="if(!this.classList.contains('comp-active'))this.style.background='transparent'">Power</button>
-    <button class="comp-chart-btn px-3 py-1.5 text-sm font-medium transition-colors" data-chart="npsh"
-            style="color:#8b949e;border-right:1px solid #30363d;" onmouseover="this.style.background='#1c2330'" onmouseout="if(!this.classList.contains('comp-active'))this.style.background='transparent'">NPSHr</button>
-    <button class="comp-chart-btn px-3 py-1.5 text-sm font-medium transition-colors" data-chart="all"
-            style="color:#8b949e;" onmouseover="this.style.background='#1c2330'" onmouseout="if(!this.classList.contains('comp-active'))this.style.background='transparent'">All (4-panel)</button>
-  </div>
-</div>
-
-<!-- Loading spinner -->
-<div id="compLoading" class="text-center py-12 text-muted" style="display:none">
-  <!-- Tailwind animated spinner (replaces Bootstrap's spinner-border) -->
-  <div class="inline-block w-8 h-8 border-4 rounded-full animate-spin mb-3"
-       style="border-color:#58a6ff;border-top-color:transparent;"></div>
-  <p class="mt-2">Loading comparison data…</p>
-</div>
-
-<!-- Charts -->
-<div id="compCharts">
-
-  <!-- Single chart view -->
-  <div id="singleChartPanel">
-    <div class="card-dark">
-      <div class="p-0">
-        <div id="chartComp" class="chart-container-tall"></div>
+      <!-- Items Per Page Selector -->
+      <div class="flex items-center gap-1 text-xs text-[#8b949e]">
+        <span>Show:</span>
+        <select id="pageSizeSel" onchange="changePageSize(this.value)" class="form-select form-control-dark text-xs py-1 px-1.5 border border-[#30363d] rounded">
+          <option value="10">10</option>
+          <option value="25" selected>25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="all">All ({{ shortlisted_results|length }})</option>
+        </select>
       </div>
     </div>
   </div>
 
-  <!-- All 4-panel view -->
-  <div id="allChartPanel" style="display:none">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div>
-        <div class="card-dark">
-          <div class="card-header-dark">
-            <span class="curve-label hq"><i class="bi bi-graph-down-arrow mr-2"></i>Head — Flow</span>
-          </div>
-          <div class="p-0">
-            <div id="chartAll_hq" class="chart-container"></div>
-          </div>
-        </div>
-      </div>
-      <div>
-        <div class="card-dark">
-          <div class="card-header-dark">
-            <span class="curve-label eff"><i class="bi bi-speedometer2 mr-2"></i>Efficiency — Flow</span>
-          </div>
-          <div class="p-0">
-            <div id="chartAll_eff" class="chart-container"></div>
-          </div>
-        </div>
-      </div>
-      <div>
-        <div class="card-dark">
-          <div class="card-header-dark">
-            <span class="curve-label power"><i class="bi bi-lightning-fill mr-2"></i>Power — Flow</span>
-          </div>
-          <div class="p-0">
-            <div id="chartAll_power" class="chart-container"></div>
-          </div>
-        </div>
-      </div>
-      <div>
-        <div class="card-dark">
-          <div class="card-header-dark">
-            <span class="curve-label npsh"><i class="bi bi-arrow-up-right mr-2"></i>NPSHr — Flow</span>
-          </div>
-          <div class="p-0">
-            <div id="chartAll_npsh" class="chart-container"></div>
-          </div>
-        </div>
-      </div>
+  <!-- Search & Filter Controls Toolbar -->
+  <div class="p-3.5 border-b border-[#30363d] bg-[#161b22]/50 flex flex-col md:flex-row items-stretch md:items-center gap-3 justify-between">
+    <!-- Live Search Input -->
+    <div class="relative flex-1">
+      <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-[#8b949e] text-xs"></i>
+      <input type="text" id="compDetailedSearch" oninput="filterDetailedList()"
+             placeholder="Search detailed shortlist by pump name, manufacturer, size, motor specs..."
+             class="form-control form-control-dark w-full pl-9 pr-3 py-1.5 text-xs text-white rounded-lg border border-[#30363d] focus:border-[#58a6ff]">
+    </div>
+
+    <!-- Rating Category Filter Pills -->
+    <div class="inline-flex rounded-lg p-0.5 bg-[#0d1117] border border-[#30363d] text-xs shrink-0">
+      <button type="button" class="comp-rf-pill px-2.5 py-1 rounded font-semibold text-[#58a6ff] bg-[#21262d]" data-filter="all" onclick="applyCompRatingFilter('all', this)">
+        All (<span id="pillCountAll">{{ shortlisted_results|length }}</span>)
+      </button>
+      <button type="button" class="comp-rf-pill px-2.5 py-1 rounded font-semibold text-[#8b949e] hover:text-white" data-filter="excellent" onclick="applyCompRatingFilter('excellent', this)">
+        Excellent
+      </button>
+      <button type="button" class="comp-rf-pill px-2.5 py-1 rounded font-semibold text-[#8b949e] hover:text-white" data-filter="good" onclick="applyCompRatingFilter('good', this)">
+        Good
+      </button>
+      <button type="button" class="comp-rf-pill px-2.5 py-1 rounded font-semibold text-[#8b949e] hover:text-white" data-filter="acceptable" onclick="applyCompRatingFilter('acceptable', this)">
+        Acceptable
+      </button>
+      <button type="button" class="comp-rf-pill px-2.5 py-1 rounded font-semibold text-[#8b949e] hover:text-white" data-filter="plotted" onclick="applyCompRatingFilter('plotted', this)">
+        <i class="bi bi-check-square mr-1"></i>Plotted
+      </button>
+    </div>
+
+    <!-- Sort Options -->
+    <div class="flex items-center gap-1 shrink-0 text-xs">
+      <span class="text-[#8b949e]">Sort:</span>
+      <select id="detailedSortSel" onchange="sortDetailedList(this.value)" class="form-select form-control-dark text-xs py-1 px-2 border border-[#30363d] rounded">
+        <option value="rating_desc">Rating (High to Low)</option>
+        <option value="eff_desc">Efficiency (High to Low)</option>
+        <option value="power_asc">Power (Lowest First)</option>
+        <option value="head_desc">Head (High to Low)</option>
+        <option value="name_asc">Pump Name (A-Z)</option>
+      </select>
     </div>
   </div>
 
-</div>
+  <div class="p-3.5">
+    {% if shortlisted_results %}
 
-<!-- BEP Comparison table -->
-<div id="compTable" class="mt-4" style="display:none">
-  <div class="card-dark">
-    <div class="card-header-dark">
-      <i class="bi bi-table mr-2"></i>BEP Comparison Table
-    </div>
-    <div class="p-0">
-      <div class="overflow-x-auto">
-        <table class="table-dark w-full text-sm" id="bepTable"
-               style="border-collapse:collapse;width:100%;">
+      <!-- ─────────────────────────────────────────────────────────────
+           VIEW 1: DETAILED CARD VIEW
+           ───────────────────────────────────────────────────────────── -->
+      <div id="detailedCardsContainer" class="space-y-3">
+        {% for r in shortlisted_results %}
+        {% set r_cat = 'excellent' if r.rating >= 80 else ('good' if r.rating >= 65 else ('acceptable' if r.rating >= 50 else 'marginal')) %}
+        {% set is_plotted = (r.pump_id in pump_ids) %}
+        
+        <div class="detailed-pump-card p-4 rounded-xl border {{ 'border-[#58a6ff] bg-[#1c2330]/80' if is_plotted else 'border-[#30363d] bg-[#161b22]/90' }} hover:border-[#58a6ff]/60 transition-all"
+             id="det-card-{{ r.pump_id }}"
+             data-id="{{ r.pump_id }}"
+             data-name="{{ r.pump_name|lower }}"
+             data-mfr="{{ r.manufacturer|lower }}"
+             data-size="{{ r.size|lower }}"
+             data-rating="{{ r.rating }}"
+             data-eff="{{ r.op_eta }}"
+             data-power="{{ r.disp_power or r.op_power or 0 }}"
+             data-head="{{ r.disp_h_duty or 0 }}"
+             data-rating-cat="{{ r_cat }}"
+             data-plotted="{{ 'true' if is_plotted else 'false' }}">
+
+          <!-- Card Header: Checkbox + Name + Mfr + Rating Badge + Quick Action -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-[#30363d]/60">
+            <div class="flex items-center gap-3">
+              <!-- Checkbox to Plot on Curve -->
+              <input type="checkbox" class="form-check-input comp-plot-cb shrink-0 cursor-pointer"
+                     value="{{ r.pump_id }}" id="cb-plot-{{ r.pump_id }}"
+                     {{ 'checked' if is_plotted else '' }}
+                     onchange="togglePumpPlot({{ r.pump_id }}, this.checked)"
+                     title="Check to overlay curve on the chart above"
+                     style="width:1.25rem;height:1.25rem;accent-color:#58a6ff;">
+
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h4 class="font-bold text-base text-white hover:text-[#58a6ff] transition-colors mb-0">
+                    {{ r.pump_name }}
+                  </h4>
+                  {% if r.is_vsd %}
+                    <span class="px-2 py-0.2 rounded text-[10px] font-semibold bg-[#58a6ff]/15 text-[#58a6ff] border border-[#58a6ff]/30">VSD</span>
+                  {% else %}
+                    <span class="px-2 py-0.2 rounded text-[10px] font-semibold bg-[#3fb950]/15 text-[#3fb950] border border-[#3fb950]/30">Fixed Speed</span>
+                  {% endif %}
+                  {% if is_plotted %}
+                    <span class="px-2 py-0.2 rounded text-[10px] font-semibold bg-[#58a6ff] text-[#0d1117] flex items-center gap-1">
+                      <i class="bi bi-graph-up"></i> Plotted on Curves
+                    </span>
+                  {% endif %}
+                </div>
+                <div class="text-xs text-[#8b949e] flex items-center gap-2 flex-wrap mt-0.5">
+                  <span>{{ r.manufacturer }}</span>
+                  <span>&bull;</span>
+                  <span>Size: {{ r.size }}</span>
+                  <span>&bull;</span>
+                  <span><i class="bi bi-speedometer2"></i> {{ r.optimal_speed_rpm|int if r.optimal_speed_rpm else r.speed_rpm|int }} rpm</span>
+                  {% if r.attributes_display %}
+                    {% for attr in r.attributes_display[:3] %}
+                    <span>&bull;</span>
+                    <span class="text-[#c9d1d9]">{{ attr.name }}: <strong class="text-[#58a6ff]">{{ attr.value }}</strong></span>
+                    {% endfor %}
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Rating badge + Quick Details & Report Links -->
+            <div class="flex items-center gap-2 shrink-0">
+              <div class="px-3 py-1 rounded-lg border font-mono font-bold flex items-center gap-2 {{ 'border-[#3fb950]/40 bg-[#3fb950]/15 text-[#3fb950]' if r.rating >= 80 else ('border-[#58a6ff]/40 bg-[#58a6ff]/15 text-[#58a6ff]' if r.rating >= 65 else ('border-[#d29922]/40 bg-[#d29922]/15 text-[#d29922]' if r.rating >= 50 else 'border-[#f85149]/40 bg-[#f85149]/15 text-[#f85149]')) }}">
+                <span class="text-sm">{{ r.rating }}%</span>
+                <span class="text-[10px] font-sans font-semibold uppercase tracking-wider opacity-90">{{ r.rating_label }}</span>
+              </div>
+              <a href="{{ url_for('selection.pump_selection_details', pump_id=r.pump_id) }}"
+                 class="px-2.5 py-1 rounded-lg text-xs font-medium bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] border border-[#30363d] transition-colors flex items-center gap-1"
+                 title="View Full Graphs & Pump Details">
+                <i class="bi bi-graph-up-arrow"></i> Details
+              </a>
+              <a href="{{ url_for('reports.view_report', report_id=r.default_report_id, pump_id=r.pump_id, q_duty=q_duty, h_duty=h_duty, dia=r.optimal_trim_dia_mm, rpm=r.optimal_speed_rpm, unit_q=ctx.unit_q if ctx else 'm3h', unit_h=ctx.unit_h if ctx else 'm', unit_pow=ctx.unit_pow if ctx else 'kw', unit_npsh=ctx.unit_npsh if ctx else 'm', operation_mode=operation_mode, source='comparison') }}"
+                 target="_blank"
+                 class="px-2 py-1 rounded-lg text-xs font-medium bg-[#21262d] hover:bg-[#30363d] text-[#d29922] border border-[#30363d] transition-colors flex items-center gap-1"
+                 title="Datasheet PDF Report">
+                <i class="bi bi-file-earmark-pdf"></i> Report
+              </a>
+            </div>
+          </div>
+
+          <!-- Card Body: Performance Metrics Grid (4 items) -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+            <!-- Head at Duty -->
+            <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d]">
+              <div class="text-[10px] font-sans text-[#8b949e] uppercase tracking-wider">Head at Duty</div>
+              <div class="text-base font-bold text-white font-mono mt-0.5">
+                {{ r.disp_h_duty }} <span class="text-xs text-[#8b949e] font-normal">{{ r.disp_unit_h }}</span>
+              </div>
+              <div class="text-[11px] {{ 'text-[#d29922]' if r.head_surplus_pct > 15 else 'text-[#8b949e]' }}">
+                +{{ r.head_surplus_pct }}% surplus
+              </div>
+            </div>
+
+            <!-- Efficiency -->
+            <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d]">
+              <div class="text-[10px] font-sans text-[#8b949e] uppercase tracking-wider">Operating Efficiency</div>
+              <div class="text-base font-bold font-mono mt-0.5 {{ 'text-[#3fb950]' if r.op_eta >= 70 else ('text-[#d29922]' if r.op_eta >= 55 else 'text-[#f85149]') }}">
+                {{ r.op_eta }} <span class="text-xs font-normal">%</span>
+              </div>
+              <div class="text-[11px] text-[#8b949e]">BEP: {{ r.bep_eta }}%</div>
+            </div>
+
+            <!-- Shaft Power -->
+            <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d]">
+              <div class="text-[10px] font-sans text-[#8b949e] uppercase tracking-wider">Shaft Power</div>
+              <div class="text-base font-bold text-white font-mono mt-0.5">
+                {{ (r.disp_power|round(1)) if r.disp_power is not none else r.op_power }} <span class="text-xs text-[#8b949e] font-normal">{{ r.disp_unit_pow }}</span>
+              </div>
+              <div class="text-[11px] text-[#8b949e]">BEP: {{ r.bep_power }} kW</div>
+            </div>
+
+            <!-- NPSHr -->
+            <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d]">
+              <div class="text-[10px] font-sans text-[#8b949e] uppercase tracking-wider">NPSH Required</div>
+              <div class="text-base font-bold font-mono mt-0.5 {{ 'text-[#f85149]' if not r.npsh_ok else 'text-white' }}">
+                {{ (r.disp_npshr|round(1)) if r.disp_npshr is not none else r.op_npsh }} <span class="text-xs text-[#8b949e] font-normal">{{ r.disp_unit_npsh }}</span>
+              </div>
+              <div class="text-[11px] {{ 'text-[#3fb950]' if r.npsh_ok else 'text-[#f85149]' }}">
+                Margin: {{ r.npsh_margin }} m
+              </div>
+            </div>
+          </div>
+
+          <!-- Motor & Drive Arrangement Strip -->
+          {% if r.motor and not r.motor.error %}
+          <div class="p-2.5 rounded-lg mb-3 text-xs bg-[#0d1117] border border-[#30363d] flex flex-col md:flex-row md:items-center justify-between gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-bold text-white flex items-center gap-1.5">
+                <i class="bi bi-cpu text-[#58a6ff]"></i>
+                <span>Motor:</span>
+                <strong class="text-[#58a6ff]">{{ r.motor.rated_power_kw }} kW</strong>
+                <span class="text-[#8b949e]">({{ r.motor.poles }}P &bull; {{ r.motor.rated_speed_rpm|int }} RPM &bull; {{ r.motor.frequency_hz }}Hz)</span>
+              </span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] bg-[#161b22] text-[#8b949e] border border-[#30363d]">
+                {{ r.motor.manufacturer }} &bull; {{ r.motor.standard }} {{ r.motor.efficiency_class }}
+              </span>
+              {% if r.motor.basis_label %}
+              <span class="px-1.5 py-0.5 rounded text-[10px] bg-[#161b22] text-[#3fb950] border border-[#3fb950]/30">
+                {{ r.motor.basis_label }} +{{ r.motor.motor_margin_pct|int }}%
+              </span>
+              {% endif %}
+              {% if r.motor.frame_size %}
+              <span class="px-1.5 py-0.5 rounded text-[10px] bg-[#161b22] text-[#8b949e] border border-[#30363d]">
+                Frame: {{ r.motor.frame_size }}
+              </span>
+              {% endif %}
+            </div>
+
+            <div class="flex items-center gap-2">
+              {% if r.is_vsd %}
+                {% if r.motor.vsd_freq_status == 'suitable' %}
+                  <span class="px-2 py-0.5 rounded text-xs font-semibold bg-[#3fb950]/15 text-[#3fb950] border border-[#3fb950]/30 flex items-center gap-1">
+                    <i class="bi bi-check-circle-fill"></i> VSD Freq: {{ r.motor.vsd_required_freq_hz }} Hz ({{ r.motor.vsd_f_min|int }}–{{ r.motor.vsd_f_max|int }} Hz)
+                  </span>
+                {% else %}
+                  <span class="px-2 py-0.5 rounded text-xs font-semibold bg-[#f85149]/15 text-[#f85149] border border-[#f85149]/30 flex items-center gap-1">
+                    <i class="bi bi-exclamation-triangle-fill"></i> VSD Freq: {{ r.motor.vsd_required_freq_hz }} Hz (Out of bounds)
+                  </span>
+                {% endif %}
+              {% else %}
+                {% if r.motor.speed_match_status == 'suitable' %}
+                  <span class="px-2 py-0.5 rounded text-xs font-semibold bg-[#3fb950]/15 text-[#3fb950] border border-[#3fb950]/30 flex items-center gap-1">
+                    <i class="bi bi-check-circle-fill"></i> Direct Coupled ({{ r.motor.speed_deviation_pct }}% dev)
+                  </span>
+                {% elif r.motor.speed_match_status == 'marginal' %}
+                  <span class="px-2 py-0.5 rounded text-xs font-semibold bg-[#d29922]/15 text-[#d29922] border border-[#d29922]/30 flex items-center gap-1">
+                    <i class="bi bi-exclamation-circle-fill"></i> Acceptable Match ({{ r.motor.speed_deviation_pct }}% dev)
+                  </span>
+                {% else %}
+                  <span class="px-2 py-0.5 rounded text-xs font-semibold bg-[#f85149]/15 text-[#f85149] border border-[#f85149]/30 flex items-center gap-1">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Speed Mismatch ({{ r.motor.speed_deviation_pct }}% dev)
+                  </span>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Trim & Speed Information + BEP Proximity Graphic -->
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+            <div class="md:col-span-5 flex items-center gap-2 flex-wrap text-xs">
+              {% if r.is_vsd %}
+              <span class="px-2 py-0.5 rounded bg-[#58a6ff]/10 border border-[#58a6ff]/25 text-[#58a6ff]">
+                <i class="bi bi-speedometer2"></i> Speed: {{ r.optimal_speed_rpm|int }} RPM ({{ (r.speed_ratio * 100)|round(1) }}%)
+              </span>
+              {% if r.optimal_trim_ratio < 0.999 %}
+              <span class="px-2 py-0.5 rounded bg-[#d29922]/10 border border-[#d29922]/25 text-[#d29922]">
+                <i class="bi bi-disc"></i> Trim: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
+              </span>
+              {% else %}
+              <span class="px-2 py-0.5 rounded bg-[#3fb950]/10 border border-[#3fb950]/25 text-[#3fb950]">
+                <i class="bi bi-disc"></i> Full Impeller: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm
+              </span>
+              {% endif %}
+              {% else %}
+              <span class="px-2 py-0.5 rounded bg-[#3fb950]/10 border border-[#3fb950]/25 text-[#3fb950]">
+                <i class="bi bi-disc"></i> Impeller: Ø{{ r.optimal_trim_dia_mm|round(0)|int }} mm ({{ (r.optimal_trim_ratio * 100)|round(1) }}%)
+              </span>
+              {% endif %}
+            </div>
+
+            <!-- BEP Proximity Bar -->
+            <div class="md:col-span-7">
+              <div class="flex justify-between text-[11px] mb-1">
+                <span class="text-[#8b949e]">Operating point (% of BEP flow: {{ r.bep_q }} m³/h)</span>
+                <span class="font-bold {{ 'text-[#3fb950]' if r.in_preferred_range else ('text-[#d29922]' if r.in_acceptable_range else 'text-[#f85149]') }}">
+                  {{ (r.q_ratio * 100)|round|int }}% BEP
+                </span>
+              </div>
+              <div class="bep-bar">
+                <div class="bep-zones">
+                  <div class="bep-zone marginal-lo" title="Below acceptable (< 65% BEP)"></div>
+                  <div class="bep-zone acceptable-lo" title="Acceptable (65–80% BEP)"></div>
+                  <div class="bep-zone preferred" title="Preferred range (80–120% BEP)"></div>
+                  <div class="bep-zone acceptable-hi" title="Acceptable (120–135% BEP)"></div>
+                  <div class="bep-zone marginal-hi" title="Above acceptable (> 135% BEP)"></div>
+                </div>
+                <div class="bep-marker" style="left: {{ [0, [100, (r.q_ratio * 100 / 2)|int]|min]|max }}%"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- ─────────────────────────────────────────────────────────────
+           VIEW 2: COMPREHENSIVE COMPARISON MATRIX TABLE VIEW
+           ───────────────────────────────────────────────────────────── -->
+      <div id="detailedTableContainer" class="overflow-x-auto" style="display:none;">
+        <table class="table-dark w-full text-xs" style="border-collapse:collapse;width:100%;">
           <thead>
-            <tr>
-              <th class="text-left px-4 py-3">Pump</th>
-              <th class="text-center px-4 py-3">Speed (rpm)</th>
-              <th class="text-center px-4 py-3">Imp. Dia (mm)</th>
-              <th class="text-center px-4 py-3">Q<sub>BEP</sub> (m³/h)</th>
-              <th class="text-center px-4 py-3">H<sub>BEP</sub> (m)</th>
-              <th class="text-center px-4 py-3">η<sub>BEP</sub> (%)</th>
-              <th class="text-center px-4 py-3">P<sub>BEP</sub> (kW)</th>
+            <tr class="border-b border-[#30363d] bg-[#0d1117] text-[#8b949e] uppercase font-sans">
+              <th class="py-2.5 px-3 text-center" style="width:40px;">Plot</th>
+              <th class="py-2.5 px-3 text-center">Rating</th>
+              <th class="py-2.5 px-3 text-left">Pump Name</th>
+              <th class="py-2.5 px-3 text-left">Manufacturer</th>
+              <th class="py-2.5 px-3 text-center">Speed (rpm)</th>
+              <th class="py-2.5 px-3 text-center">Trim Ø (mm)</th>
+              <th class="py-2.5 px-3 text-center">Head ({{ ctx.unit_h if ctx else 'm' }})</th>
+              <th class="py-2.5 px-3 text-center">Surplus</th>
+              <th class="py-2.5 px-3 text-center">Eff (%)</th>
+              <th class="py-2.5 px-3 text-center">Power ({{ ctx.unit_pow if ctx else 'kW' }})</th>
+              <th class="py-2.5 px-3 text-center">Motor (kW)</th>
+              <th class="py-2.5 px-3 text-center">NPSHr ({{ ctx.unit_npsh if ctx else 'm' }})</th>
+              <th class="py-2.5 px-3 text-center">BEP Flow</th>
+              <th class="py-2.5 px-3 text-center">Actions</th>
             </tr>
           </thead>
-          <tbody id="bepTableBody"></tbody>
+          <tbody id="detailedTableBody" class="divide-y divide-[#30363d]/50 font-mono">
+            {% for r in shortlisted_results %}
+            {% set r_cat = 'excellent' if r.rating >= 80 else ('good' if r.rating >= 65 else ('acceptable' if r.rating >= 50 else 'marginal')) %}
+            {% set is_plotted = (r.pump_id in pump_ids) %}
+            <tr class="hover:bg-[#1c2330] transition-colors {{ 'bg-[#1c2330]/50' if is_plotted else '' }}"
+                id="det-row-{{ r.pump_id }}"
+                data-id="{{ r.pump_id }}"
+                data-name="{{ r.pump_name|lower }}"
+                data-mfr="{{ r.manufacturer|lower }}"
+                data-size="{{ r.size|lower }}"
+                data-rating="{{ r.rating }}"
+                data-eff="{{ r.op_eta }}"
+                data-power="{{ r.disp_power or r.op_power or 0 }}"
+                data-head="{{ r.disp_h_duty or 0 }}"
+                data-rating-cat="{{ r_cat }}"
+                data-plotted="{{ 'true' if is_plotted else 'false' }}">
+              
+              <!-- Plot Checkbox -->
+              <td class="py-2.5 px-3 text-center">
+                <input type="checkbox" class="form-check-input comp-plot-cb cursor-pointer"
+                       value="{{ r.pump_id }}"
+                       {{ 'checked' if is_plotted else '' }}
+                       onchange="togglePumpPlot({{ r.pump_id }}, this.checked)">
+              </td>
+
+              <!-- Rating -->
+              <td class="py-2.5 px-3 text-center">
+                <span class="px-2 py-0.5 rounded text-[11px] font-bold {{ 'bg-[#3fb950]/15 text-[#3fb950]' if r.rating >= 80 else ('bg-[#58a6ff]/15 text-[#58a6ff]' if r.rating >= 65 else ('bg-[#d29922]/15 text-[#d29922]' if r.rating >= 50 else 'bg-[#f85149]/15 text-[#f85149]')) }}">
+                  {{ r.rating }}%
+                </span>
+              </td>
+
+              <!-- Pump Name -->
+              <td class="py-2.5 px-3 text-left font-sans">
+                <a href="{{ url_for('selection.pump_selection_details', pump_id=r.pump_id) }}" class="text-white hover:text-[#58a6ff] font-semibold">
+                  {{ r.pump_name }}
+                </a>
+                <div class="text-[10px] text-[#8b949e]">{{ r.size }}</div>
+              </td>
+
+              <!-- Manufacturer -->
+              <td class="py-2.5 px-3 text-left font-sans text-[#c9d1d9]">{{ r.manufacturer }}</td>
+
+              <!-- Speed -->
+              <td class="py-2.5 px-3 text-center text-white">{{ r.optimal_speed_rpm|int if r.optimal_speed_rpm else r.speed_rpm|int }}</td>
+
+              <!-- Trim Ø -->
+              <td class="py-2.5 px-3 text-center text-[#c9d1d9]">{{ r.optimal_trim_dia_mm|round(0)|int }}</td>
+
+              <!-- Head -->
+              <td class="py-2.5 px-3 text-center text-white font-bold">{{ r.disp_h_duty }}</td>
+
+              <!-- Surplus -->
+              <td class="py-2.5 px-3 text-center text-[#8b949e]">+{{ r.head_surplus_pct }}%</td>
+
+              <!-- Efficiency -->
+              <td class="py-2.5 px-3 text-center font-bold {{ 'text-[#3fb950]' if r.op_eta >= 70 else ('text-[#d29922]' if r.op_eta >= 55 else 'text-[#f85149]') }}">
+                {{ r.op_eta }}%
+              </td>
+
+              <!-- Power -->
+              <td class="py-2.5 px-3 text-center text-white">{{ (r.disp_power|round(1)) if r.disp_power is not none else r.op_power }}</td>
+
+              <!-- Motor kW -->
+              <td class="py-2.5 px-3 text-center text-[#58a6ff]">{{ r.motor.rated_power_kw if (r.motor and not r.motor.error) else '-' }}</td>
+
+              <!-- NPSHr -->
+              <td class="py-2.5 px-3 text-center {{ 'text-[#f85149]' if not r.npsh_ok else 'text-white' }}">
+                {{ (r.disp_npshr|round(1)) if r.disp_npshr is not none else r.op_npsh }}
+              </td>
+
+              <!-- BEP Flow % -->
+              <td class="py-2.5 px-3 text-center {{ 'text-[#3fb950]' if r.in_preferred_range else ('text-[#d29922]' if r.in_acceptable_range else 'text-[#f85149]') }}">
+                {{ (r.q_ratio * 100)|round|int }}%
+              </td>
+
+              <!-- Actions -->
+              <td class="py-2.5 px-3 text-center font-sans">
+                <div class="flex items-center justify-center gap-1.5">
+                  <a href="{{ url_for('selection.pump_selection_details', pump_id=r.pump_id) }}" class="text-[#58a6ff] hover:text-white" title="Details">
+                    <i class="bi bi-graph-up-arrow"></i>
+                  </a>
+                  <a href="{{ url_for('reports.view_report', report_id=r.default_report_id, pump_id=r.pump_id, q_duty=q_duty, h_duty=h_duty, dia=r.optimal_trim_dia_mm, rpm=r.optimal_speed_rpm, unit_q=ctx.unit_q if ctx else 'm3h', unit_h=ctx.unit_h if ctx else 'm', unit_pow=ctx.unit_pow if ctx else 'kw', unit_npsh=ctx.unit_npsh if ctx else 'm', operation_mode=operation_mode, source='comparison') }}" target="_blank" class="text-[#d29922] hover:text-white" title="Report">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
         </table>
       </div>
-    </div>
+
+      <!-- Pagination / Count Footer -->
+      <div class="flex items-center justify-between flex-wrap gap-2 pt-3 mt-3 border-t border-[#30363d] text-xs text-[#8b949e]">
+        <div>
+          Showing <span id="pageShowingCount">{{ [shortlisted_results|length, 25]|min }}</span> of <span id="filteredTotalCount">{{ shortlisted_results|length }}</span> matching pumps
+        </div>
+        <div class="flex items-center gap-1" id="paginationControls">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    {% else %}
+      <!-- Empty state if no shortlisted pumps in session -->
+      <div class="text-center py-10 text-[#8b949e]">
+        <i class="bi bi-bullseye text-4xl mb-2 text-[#58a6ff] block"></i>
+        <h4 class="text-white font-bold text-base mb-1">No Shortlisted Selection Found</h4>
+        <p class="text-xs mb-3">
+          To see the detailed shortlisted pump list, run a search in Pump Selection first, or select catalogue pumps from the Settings above.
+        </p>
+        <a href="{{ url_for('selection.pump_selection') }}" class="btn-primary inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold">
+          <i class="bi bi-search"></i>Go to Pump Selection
+        </a>
+      </div>
+    {% endif %}
   </div>
 </div>
 
@@ -184,20 +667,6 @@
   const INITIAL_IDS = {{ pump_ids | tojson }};
   const INITIAL_Q_DUTY = {{ q_duty or 'null' }};
   const INITIAL_H_DUTY = {{ h_duty or 'null' }};
-
-  /* Beginners Note: Update active state styling on btn-group buttons without Bootstrap */
-  document.querySelectorAll('.comp-chart-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.comp-chart-btn').forEach(b => {
-        b.classList.remove('comp-active');
-        b.style.background = 'transparent';
-        b.style.color = '#8b949e';
-      });
-      btn.classList.add('comp-active');
-      btn.style.background = 'rgba(88,166,255,0.15)';
-      btn.style.color = '#58a6ff';
-    });
-  });
 </script>
 <script src="{{ url_for('static', filename='js/pump_curves.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pump_comparison.js') }}"></script>

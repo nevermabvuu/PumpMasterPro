@@ -70,47 +70,19 @@ def _get_enabled_pump_attributes(current_org, all_pumps):
     return sorted(attr_map.values(), key=lambda a: a['index'])
 
 
-@selection_bp.route('/pump-selection', methods=['GET', 'POST'], endpoint='pump_selection')
-def pump_selection():
+def run_selection_from_form(f, all_pumps=None, current_org=None):
     """
-    Render pump selection search page and display matching pumps filtered by allowed organisations.
-
-    Beginners Note:
-        Supports comprehensive multi-unit engineering conversions (Metric SI vs Imperial US and custom mixed units).
-        User inputs are normalized to base SI units (m³/h, m, kg/m³) for hydraulic evaluation,
-        and results are dynamically presented in the user's selected display units.
-        Custom organisation pump attributes (e.g. Impeller Type: Open/Closed) are loaded and
-        rendered as selection filters.
+    Executes the pump selection engine using the provided form dictionary,
+    evaluating hydraulic performance, trim/speed, and motor specifications,
+    and converts the output metrics to user-selected display units.
     """
-    results   = None
-    form_data = {}
-
-    # ── Active organisation and enabled custom attributes ─────────────────
-    # Beginners Note:
-    # Fetch the active working organisation and determine which custom pump attributes
-    # are enabled. These enabled attributes (e.g., 'Impeller Type', 'Impeller Material')
-    # will be rendered directly in the Pump Selection view as selectable filters.
-    current_org = get_current_organisation()
-    all_pumps = get_visible_pumps_query().all()
+    if current_org is None:
+        current_org = get_current_organisation()
+    if all_pumps is None:
+        all_pumps = get_visible_pumps_query().all()
+        
     enabled_pump_attributes = _get_enabled_pump_attributes(current_org, all_pumps)
 
-    # ── Populate filter options from all visible pumps ─────────────────────
-    # Beginners Note:
-    # get_filter_options extracts distinct catalogue values (e.g., 'Open', 'Closed')
-    # for each enabled custom attribute slot to populate the dropdown selectors.
-    filter_options = get_filter_options(all_pumps, enabled_attributes=enabled_pump_attributes)
-
-    if request.method == 'POST':
-        f = request.form.to_dict()
-        session['selection_form_data'] = f
-        form_data = f
-    else:
-        # GET request - load from session
-        f = session.get('selection_form_data', {})
-        form_data = f
-
-    # ── Unit System & Individual Dropdown Selections ─────────────────────────
-    # Beginners Note: Default to Metric SI if not explicitly specified by user
     unit_system      = f.get('unit_system', 'metric')
     unit_q           = f.get('unit_q', 'm3h')
     unit_h           = f.get('unit_h', 'm')
@@ -120,26 +92,35 @@ def pump_selection():
     unit_d50         = f.get('unit_d50', 'mm')
     unit_pow         = f.get('unit_pow', 'hp' if unit_system == 'imperial' else 'kw')
 
-    # If we have basic duty point, run the selection
+    units_tables = {
+        'flow':    UNITS_FLOW,
+        'head':    UNITS_HEAD,
+        'power':   UNITS_POWER,
+        'density': UNITS_DENSITY,
+        'size':    UNITS_SIZE
+    }
+
+    results = None
+    raw_q_duty = 0.0
+    raw_h_duty = 0.0
+    q_duty = 0.0
+    h_duty = 0.0
+    liquid = f.get('liquid', 'water')
+
     q_duty_str = f.get('q_duty')
     h_duty_str = f.get('h_duty')
     
     if q_duty_str and h_duty_str:
-        # ── Extract raw user-entered numbers ─────────────────────────────────
         raw_q_duty     = _get_float(f, 'q_duty', 0.0)
         raw_h_duty     = _get_float(f, 'h_duty', 0.0)
 
         npsh_val       = f.get('npsh_avail')
         raw_npsh_avail = _get_float(f, 'npsh_avail', 0.0) if (npsh_val is not None and str(npsh_val).strip() != '') else None
 
-        # ── Normalize inputs into Base SI Metric for the Selection Engine ─────
-        # Base units: Q in m³/h, H in m, NPSHa in m, Static Head in m
         q_duty     = convert_unit(raw_q_duty, unit_q, 'm3h', 'flow')
         h_duty     = convert_unit(raw_h_duty, unit_h, 'm', 'head')
         npsh_avail = convert_unit(raw_npsh_avail, unit_npsh, 'm', 'head') if raw_npsh_avail is not None else None
 
-        # ── Extract liquid parameters ──────────────────────────────────────
-        liquid       = f.get('liquid', 'water')
         if liquid == 'slurry':
             raw_rho_l = _get_float(f, 'rho_l', 1000.0)
             rho       = convert_unit(raw_rho_l, unit_rho, 'kgm3', 'density')
@@ -154,7 +135,6 @@ def pump_selection():
         raw_rho_s    = _get_float(f, 'rho_solid', 2650.0)
         rho_s        = convert_unit(raw_rho_s, unit_rho, 'kgm3', 'density')
 
-        # ── Extract filter criteria ────────────────────────────────────────
         filters = {}
         if f.get('filter_manufacturer'): filters['manufacturer'] = f.get('filter_manufacturer')
         if f.get('filter_pump_type'):     filters['pump_type'] = f.get('filter_pump_type')
@@ -163,31 +143,16 @@ def pump_selection():
         if f.get('filter_size'):         filters['size'] = f.get('filter_size')
         if f.get('filter_application'):  filters['application'] = f.get('filter_application')
 
-        # Extract custom organisation pump attribute filters (1 to 30)
         for i in range(1, 31):
             attr_val = f.get(f'filter_attribute_{i}') or f.get(f'filter_PumpAttribute{i}') or f.get(f'PumpAttribute{i}')
             if attr_val and str(attr_val).strip():
                 filters[f'attribute_{i}'] = str(attr_val).strip()
 
-        # ── Fixed Speed Mode (Auto Calculate Pump Speed vs Manual Pump Speed vs Min-Max Speed Range) ──
-        # Beginners Note:
-        # If operation_mode is 'fixed', user chooses:
-        # - 'auto': system automatically calculates pump speed at full impeller diameter
-        # - 'manual': user manually enters pump speed (RPM); impeller trim is evaluated
-        # - 'range': user enters allowable min/max speed range (RPM)
         fixed_speed_mode = f.get('fixed_speed_mode', 'auto')
         manual_pump_speed_rpm = _get_float(f, 'manual_pump_speed_rpm') if (f.get('manual_pump_speed_rpm') and str(f.get('manual_pump_speed_rpm')).strip() != '') else (_get_float(f, 'manual_speed_rpm') if (f.get('manual_speed_rpm') and str(f.get('manual_speed_rpm')).strip() != '') else None)
         fixed_speed_min_rpm = _get_float(f, 'fixed_speed_min_rpm') if (f.get('fixed_speed_min_rpm') and str(f.get('fixed_speed_min_rpm')).strip() != '') else None
         fixed_speed_max_rpm = _get_float(f, 'fixed_speed_max_rpm') if (f.get('fixed_speed_max_rpm') and str(f.get('fixed_speed_max_rpm')).strip() != '') else None
 
-        # ── Variable Speed Drive (VSD) Impeller Trim & Speed Limit Controls ───
-        # Beginners Note:
-        # In VSD mode, user chooses:
-        # - 'auto': system calculates speed at full catalogue diameter (d_max)
-        # - 'manual_mm': exact impeller trim diameter specified in mm
-        # - 'range_mm': impeller trim diameter constrained within [min_mm, max_mm]
-        # - 'range_pct': impeller trim percentage constrained within [min_%, max_%]
-        # - vsd_speed_min_rpm, vsd_speed_max_rpm: optional speed limits (RPM)
         vsd_trim_mode = f.get('vsd_trim_mode', 'auto')
         vsd_trim_dia_mm = _get_float(f, 'vsd_trim_dia_mm') if (f.get('vsd_trim_dia_mm') and str(f.get('vsd_trim_dia_mm')).strip() != '') else None
         vsd_trim_min_mm = _get_float(f, 'vsd_trim_min_mm') if (f.get('vsd_trim_min_mm') and str(f.get('vsd_trim_min_mm')).strip() != '') else None
@@ -197,10 +162,6 @@ def pump_selection():
         vsd_speed_min_rpm = _get_float(f, 'vsd_speed_min_rpm') if (f.get('vsd_speed_min_rpm') and str(f.get('vsd_speed_min_rpm')).strip() != '') else None
         vsd_speed_max_rpm = _get_float(f, 'vsd_speed_max_rpm') if (f.get('vsd_speed_max_rpm') and str(f.get('vsd_speed_max_rpm')).strip() != '') else None
 
-        # ── Motor Selection & Drive Arrangement Controls ─────────────────
-        # Beginners Note:
-        # Motor frequency (50/60 Hz), poles (2, 4, 6, 8), selection mode (auto/manual),
-        # VSD frequency limits, drive arrangement, sizing margin & basis, motor filters, and manual speed/tolerance.
         try:
             motor_freq_hz = int(f.get('motor_freq_hz', 50))
         except (ValueError, TypeError):
@@ -224,7 +185,6 @@ def pump_selection():
         vsd_f_max                  = _get_float(f, 'vsd_f_max', 60.0 if motor_freq_hz == 60 else 50.0)
         drive_type                 = f.get('drive_type', 'direct')
 
-        # ── Run selection engine ───────────────────────────────────────────
         results = select_pumps(all_pumps, q_duty, h_duty, npsh_avail,
                                liquid, rho, vis, cv, d50, rho_s,
                                filters=filters,
@@ -257,8 +217,6 @@ def pump_selection():
                                vsd_f_max=vsd_f_max,
                                drive_type=drive_type)
 
-        # ── Convert result performance metrics into user-selected display units ─
-        # Beginners Note: Attach display values so cards & result tables show native user units
         for r in results:
             r['disp_q_duty']   = raw_q_duty
             r['disp_h_duty']   = raw_h_duty
@@ -267,22 +225,61 @@ def pump_selection():
             r['disp_unit_pow'] = UNITS_POWER.get(unit_pow, {}).get('name', unit_pow)
             r['disp_unit_npsh']= UNITS_HEAD.get(unit_npsh, {}).get('name', unit_npsh)
             
-            # Power in user's unit (kW or hp)
             raw_p = r.get('op_power')
             r['disp_power']    = convert_unit(raw_p, 'kw', unit_pow, 'power') if raw_p is not None else None
             
-            # NPSHr in user's unit (m or ft)
             raw_np = r.get('op_npsh')
             r['disp_npshr']    = convert_unit(raw_np, 'm', unit_npsh, 'head') if raw_np is not None else None
 
-    # ── Unit dictionary bundles for template dropdown rendering ─────────────
-    units_tables = {
-        'flow':    UNITS_FLOW,
-        'head':    UNITS_HEAD,
-        'power':   UNITS_POWER,
-        'density': UNITS_DENSITY,
-        'size':    UNITS_SIZE
+    ctx = {
+        'unit_system': unit_system,
+        'unit_q': unit_q,
+        'unit_h': unit_h,
+        'unit_npsh': unit_npsh,
+        'unit_static_head': unit_static_head,
+        'unit_rho': unit_rho,
+        'unit_d50': unit_d50,
+        'unit_pow': unit_pow,
+        'raw_q_duty': raw_q_duty,
+        'raw_h_duty': raw_h_duty,
+        'q_duty': q_duty,
+        'h_duty': h_duty,
+        'liquid': liquid,
+        'enabled_pump_attributes': enabled_pump_attributes,
+        'units_tables': units_tables,
+        'form_data': f,
     }
+    return results, ctx
+
+
+@selection_bp.route('/pump-selection', methods=['GET', 'POST'], endpoint='pump_selection')
+def pump_selection():
+    """
+    Render pump selection search page and display matching pumps filtered by allowed organisations.
+    """
+    current_org = get_current_organisation()
+    all_pumps = get_visible_pumps_query().all()
+    enabled_pump_attributes = _get_enabled_pump_attributes(current_org, all_pumps)
+    filter_options = get_filter_options(all_pumps, enabled_attributes=enabled_pump_attributes)
+
+    if request.method == 'POST':
+        f = request.form.to_dict()
+        session['selection_form_data'] = f
+        form_data = f
+    else:
+        f = session.get('selection_form_data', {})
+        form_data = f
+
+    results, ctx = run_selection_from_form(form_data, all_pumps=all_pumps, current_org=current_org)
+    unit_system      = ctx['unit_system']
+    unit_q           = ctx['unit_q']
+    unit_h           = ctx['unit_h']
+    unit_npsh        = ctx['unit_npsh']
+    unit_static_head = ctx['unit_static_head']
+    unit_rho         = ctx['unit_rho']
+    unit_d50         = ctx['unit_d50']
+    unit_pow         = ctx['unit_pow']
+    units_tables     = ctx['units_tables']
 
     # ── Available Motors & Filter Options for Selection ─────────────────────
     from motor_models import get_available_motors, get_motor_filter_options
@@ -328,143 +325,23 @@ def pump_selection_details(pump_id):
     
     # Load session data
     f = session.get('selection_form_data', {})
-    
-    unit_system      = f.get('unit_system', 'metric')
-    unit_q           = f.get('unit_q', 'm3h')
-    unit_h           = f.get('unit_h', 'm')
-    unit_npsh        = f.get('unit_npsh', 'm')
-    unit_static_head = f.get('unit_static_head', 'm')
-    unit_rho         = f.get('unit_rho', 'kgm3')
-    unit_d50         = f.get('unit_d50', 'mm')
-    unit_pow         = f.get('unit_pow', 'hp' if unit_system == 'imperial' else 'kw')
-
-    # Run the selection engine to get the shortlist
-    results = []
-    current_org = get_current_organisation()
-    all_pumps = get_visible_pumps_query().all()
-    enabled_pump_attributes = _get_enabled_pump_attributes(current_org, all_pumps)
-    q_duty_str = f.get('q_duty')
-    h_duty_str = f.get('h_duty')
-    
-    if q_duty_str and h_duty_str:
-        raw_q_duty = _get_float(f, 'q_duty', 0.0)
-        raw_h_duty = _get_float(f, 'h_duty', 0.0)
-        npsh_val = f.get('npsh_avail')
-        raw_npsh_avail = _get_float(f, 'npsh_avail', 0.0) if (npsh_val is not None and str(npsh_val).strip() != '') else None
-
-        # Normalize to SI base
-        q_duty     = convert_unit(raw_q_duty, unit_q, 'm3h', 'flow')
-        h_duty     = convert_unit(raw_h_duty, unit_h, 'm', 'head')
-        npsh_avail = convert_unit(raw_npsh_avail, unit_npsh, 'm', 'head') if raw_npsh_avail is not None else None
-
-        liquid = f.get('liquid', 'water')
-        if liquid == 'slurry':
-            raw_rho_l = _get_float(f, 'rho_l', 1000.0)
-            rho       = convert_unit(raw_rho_l, unit_rho, 'kgm3', 'density')
-        else:
-            raw_rho   = _get_float(f, 'rho', 1000.0)
-            rho       = convert_unit(raw_rho, unit_rho, 'kgm3', 'density')
-            
-        vis = _get_float(f, 'viscosity_cSt', 1.0)
-        cv = _get_float(f, 'slurry_cv', 0.0)
-        raw_d50 = _get_float(f, 'slurry_d50', 0.3)
-        d50 = convert_unit(raw_d50, unit_d50, 'mm', 'size')
-        raw_rho_s = _get_float(f, 'rho_solid', 2650.0)
-        rho_s = convert_unit(raw_rho_s, unit_rho, 'kgm3', 'density')
-
-        filters = {}
-        if f.get('filter_manufacturer'): filters['manufacturer'] = f.get('filter_manufacturer')
-        if f.get('filter_pump_type'):     filters['pump_type'] = f.get('filter_pump_type')
-        if f.get('filter_speed_min'):    filters['speed_min'] = f.get('filter_speed_min')
-        if f.get('filter_speed_max'):    filters['speed_max'] = f.get('filter_speed_max')
-        if f.get('filter_size'):         filters['size'] = f.get('filter_size')
-        if f.get('filter_application'):  filters['application'] = f.get('filter_application')
-
-        for i in range(1, 31):
-            attr_val = f.get(f'filter_attribute_{i}') or f.get(f'filter_PumpAttribute{i}') or f.get(f'PumpAttribute{i}')
-            if attr_val and str(attr_val).strip():
-                filters[f'attribute_{i}'] = str(attr_val).strip()
-
-        fixed_speed_mode = f.get('fixed_speed_mode', 'auto')
-        manual_pump_speed_rpm = _get_float(f, 'manual_pump_speed_rpm') if (f.get('manual_pump_speed_rpm') and str(f.get('manual_pump_speed_rpm')).strip() != '') else (_get_float(f, 'manual_speed_rpm') if (f.get('manual_speed_rpm') and str(f.get('manual_speed_rpm')).strip() != '') else None)
-        fixed_speed_min_rpm = _get_float(f, 'fixed_speed_min_rpm') if (f.get('fixed_speed_min_rpm') and str(f.get('fixed_speed_min_rpm')).strip() != '') else None
-        fixed_speed_max_rpm = _get_float(f, 'fixed_speed_max_rpm') if (f.get('fixed_speed_max_rpm') and str(f.get('fixed_speed_max_rpm')).strip() != '') else None
-
-        vsd_trim_mode = f.get('vsd_trim_mode', 'auto')
-        vsd_trim_dia_mm = _get_float(f, 'vsd_trim_dia_mm') if (f.get('vsd_trim_dia_mm') and str(f.get('vsd_trim_dia_mm')).strip() != '') else None
-        vsd_trim_min_mm = _get_float(f, 'vsd_trim_min_mm') if (f.get('vsd_trim_min_mm') and str(f.get('vsd_trim_min_mm')).strip() != '') else None
-        vsd_trim_max_mm = _get_float(f, 'vsd_trim_max_mm') if (f.get('vsd_trim_max_mm') and str(f.get('vsd_trim_max_mm')).strip() != '') else None
-        vsd_trim_min_pct = _get_float(f, 'vsd_trim_min_pct') if (f.get('vsd_trim_min_pct') and str(f.get('vsd_trim_min_pct')).strip() != '') else None
-        vsd_trim_max_pct = _get_float(f, 'vsd_trim_max_pct') if (f.get('vsd_trim_max_pct') and str(f.get('vsd_trim_max_pct')).strip() != '') else None
-        vsd_speed_min_rpm = _get_float(f, 'vsd_speed_min_rpm') if (f.get('vsd_speed_min_rpm') and str(f.get('vsd_speed_min_rpm')).strip() != '') else None
-        vsd_speed_max_rpm = _get_float(f, 'vsd_speed_max_rpm') if (f.get('vsd_speed_max_rpm') and str(f.get('vsd_speed_max_rpm')).strip() != '') else None
-
-        try:
-            motor_freq_hz = int(f.get('motor_freq_hz', 50))
-        except (ValueError, TypeError):
-            motor_freq_hz = 50
-
-        try:
-            motor_poles = int(f.get('motor_poles', 4))
-        except (ValueError, TypeError):
-            motor_poles = 4
-
-        motor_selection_mode       = f.get('motor_selection_mode', 'auto')
-        manual_motor_id            = int(f.get('manual_motor_id')) if (f.get('manual_motor_id') and str(f.get('manual_motor_id')).strip() != '') else None
-        manual_motor_speed_rpm     = _get_float(f, 'manual_motor_speed_rpm') if (f.get('manual_motor_speed_rpm') and str(f.get('manual_motor_speed_rpm')).strip() != '') else None
-        manual_speed_tolerance_pct = _get_float(f, 'manual_speed_tolerance_pct', 5.0)
-        motor_margin_pct           = _get_float(f, 'motor_margin_pct', 15.0)
-        motor_margin_basis         = f.get('motor_margin_basis', 'duty')
-        motor_standard             = f.get('motor_standard', 'all')
-        motor_efficiency           = f.get('motor_efficiency', 'all')
-        motor_supplier             = f.get('motor_supplier', 'all')
-        vsd_f_min                  = _get_float(f, 'vsd_f_min', 30.0)
-        vsd_f_max                  = _get_float(f, 'vsd_f_max', 60.0 if motor_freq_hz == 60 else 50.0)
-        drive_type                 = f.get('drive_type', 'direct')
-
-        results = select_pumps(all_pumps, q_duty, h_duty, npsh_avail,
-                               liquid, rho, vis, cv, d50, rho_s,
-                               filters=filters,
-                               operation_mode=f.get('operation_mode', 'fixed'),
-                               enabled_attributes=enabled_pump_attributes,
-                               fixed_speed_mode=fixed_speed_mode,
-                               manual_pump_speed_rpm=manual_pump_speed_rpm,
-                               fixed_speed_min_rpm=fixed_speed_min_rpm,
-                               fixed_speed_max_rpm=fixed_speed_max_rpm,
-                               vsd_trim_mode=vsd_trim_mode,
-                               vsd_trim_dia_mm=vsd_trim_dia_mm,
-                               vsd_trim_min_mm=vsd_trim_min_mm,
-                               vsd_trim_max_mm=vsd_trim_max_mm,
-                               vsd_trim_min_pct=vsd_trim_min_pct,
-                               vsd_trim_max_pct=vsd_trim_max_pct,
-                               vsd_speed_min_rpm=vsd_speed_min_rpm,
-                               vsd_speed_max_rpm=vsd_speed_max_rpm,
-                               motor_freq_hz=motor_freq_hz,
-                               motor_poles=motor_poles,
-                               motor_selection_mode=motor_selection_mode,
-                               manual_motor_id=manual_motor_id,
-                               manual_motor_speed_rpm=manual_motor_speed_rpm,
-                               manual_speed_tolerance_pct=manual_speed_tolerance_pct,
-                               motor_margin_pct=motor_margin_pct,
-                               motor_margin_basis=motor_margin_basis,
-                               motor_standard=motor_standard,
-                               motor_efficiency=motor_efficiency,
-                               motor_supplier=motor_supplier,
-                               vsd_f_min=vsd_f_min,
-                               vsd_f_max=vsd_f_max,
-                               drive_type=drive_type)
-
-        for r in results:
-            r['disp_q_duty']   = raw_q_duty
-            r['disp_h_duty']   = raw_h_duty
-            r['disp_unit_q']   = UNITS_FLOW.get(unit_q, {}).get('name', unit_q)
-            r['disp_unit_h']   = UNITS_HEAD.get(unit_h, {}).get('name', unit_h)
-            r['disp_unit_pow'] = UNITS_POWER.get(unit_pow, {}).get('name', unit_pow)
-            r['disp_unit_npsh']= UNITS_HEAD.get(unit_npsh, {}).get('name', unit_npsh)
-            raw_p = r.get('op_power')
-            r['disp_power']    = convert_unit(raw_p, 'kw', unit_pow, 'power') if raw_p is not None else None
-            raw_np = r.get('op_npsh')
-            r['disp_npshr']    = convert_unit(raw_np, 'm', unit_npsh, 'head') if raw_np is not None else None
+    results, ctx = run_selection_from_form(f)
+    if results is None:
+        results = []
+        
+    unit_system      = ctx['unit_system']
+    unit_q           = ctx['unit_q']
+    unit_h           = ctx['unit_h']
+    unit_npsh        = ctx['unit_npsh']
+    unit_static_head = ctx['unit_static_head']
+    unit_rho         = ctx['unit_rho']
+    unit_d50         = ctx['unit_d50']
+    unit_pow         = ctx['unit_pow']
+    raw_q_duty       = ctx['raw_q_duty']
+    raw_h_duty       = ctx['raw_h_duty']
+    q_duty           = ctx['q_duty']
+    h_duty           = ctx['h_duty']
+    liquid           = ctx['liquid']
 
     # Sort results
     sort_by = f.get('sort_by', 'rating')

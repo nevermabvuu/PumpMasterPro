@@ -13,11 +13,13 @@
     </p>
   </div>
   <div class="flex items-center gap-2">
+    {% if not current_user or current_user.can_access('organisation_settings') %}
     <a href="{{ url_for('organisations.settings') }}"
        class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs font-semibold border border-[#30363d] bg-[#161b22] text-[#8b949e] hover:text-white transition-colors"
        title="Configure Multi-Organisation View Filters">
       <i class="bi bi-funnel"></i>View Filter
     </a>
+    {% endif %}
     <a href="{{ url_for('pump_new') }}"
        class="inline-flex items-center gap-1 px-4 py-1.5 rounded font-semibold text-xs transition-colors shadow-sm"
        style="background:#58a6ff;color:#0d1117;"

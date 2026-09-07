@@ -22,11 +22,13 @@
       <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#d29922]/15 text-[#d29922] border border-[#d29922]/30">
         {{ pending_requests|length }} Pending Review
       </span>
+      {% if not current_user or current_user.can_access('organisation_settings') %}
       <a href="{{ url_for('organisations.settings') }}"
          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-white border border-[#30363d] transition-colors">
         <i class="bi bi-buildings"></i>
         <span>Organisations</span>
       </a>
+      {% endif %}
     </div>
   </div>
 

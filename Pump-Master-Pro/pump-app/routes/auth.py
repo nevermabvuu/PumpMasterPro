@@ -15,7 +15,7 @@ from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, session, g, current_app, jsonify
 )
-from models import db, User, RegistrationRequest, Organisation, Role
+from models import db, User, RegistrationRequest, Organisation, Role, ACCESS_MODULE_INFO
 from services.email_service import (
     send_registration_request_notification,
     send_registration_decision_notification,
@@ -49,8 +49,12 @@ def get_current_user():
 
 @auth_bp.app_context_processor
 def inject_current_user():
-    """Exposes 'current_user' directly to all Jinja2 templates."""
-    return {'current_user': get_current_user(), 'admin_notification_email': ADMIN_NOTIFICATION_EMAIL}
+    """Exposes 'current_user', 'ACCESS_MODULE_INFO', and admin notification email directly to all templates."""
+    return {
+        'current_user': get_current_user(),
+        'admin_notification_email': ADMIN_NOTIFICATION_EMAIL,
+        'ACCESS_MODULE_INFO': ACCESS_MODULE_INFO
+    }
 
 
 # ── Route Decorators ──────────────────────────────────────────────────────────
@@ -89,6 +93,38 @@ def super_admin_required(f):
             return redirect(url_for('auth.admin_users'))
         return f(*args, **kwargs)
     return decorated_function
+
+
+def require_access(module_key, min_level=1):
+    """
+    Beginners Note: 3-Level Access Control Decorator
+    0 = No Access (denied / redirected)
+    1 = Read Only (view allowed; mutations blocked)
+    2 = Full Access (read/edit/create/delete)
+    Enforces Supreme Organisation Rule: User effective level is capped by their organisation.
+    SuperAdmin bypasses all caps with level 2.
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            user = get_current_user()
+            if not user:
+                flash("Please sign in to access this page.", "warning")
+                return redirect(url_for('auth.login', next=request.url))
+
+            user_level = user.get_access_level(module_key)
+            if user_level < min_level:
+                mod_info = ACCESS_MODULE_INFO.get(module_key, {})
+                mod_label = mod_info.get('label', module_key)
+                if user_level == 0:
+                    flash(f"Access Denied: You do not have access to {mod_label}.", "danger")
+                    return redirect(url_for('index'))
+                else:
+                    flash(f"Permission Denied: You have read-only access to {mod_label} and cannot perform modifications.", "warning")
+                    return redirect(request.referrer or url_for('index'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 
 # ── Authentication Routes ────────────────────────────────────────────────────
@@ -379,23 +415,37 @@ def admin_roles():
             selected_org = (Organisation.query.get(user.organisation_id) if user and user.organisation_id else None) or (organisations[0] if organisations else None)
 
     roles = []
+    org_access_levels = {}
     if selected_org:
         roles = Role.query.filter_by(organisation_id=selected_org.id).order_by(Role.is_system_role.desc(), Role.name.asc()).all()
+        org_access_levels = selected_org.get_all_access_levels()
 
     return render_template(
         'auth/admin_roles.html',
         organisations=organisations,
         selected_org=selected_org,
         roles=roles,
+        org_access_levels=org_access_levels,
         is_super_admin=is_super
     )
+
+
+@auth_bp.route('/api/organisations/<int:org_id>/access-levels', endpoint='api_org_access_levels')
+@login_required
+def api_org_access_levels(org_id):
+    """Returns the organisation's supreme access level ceilings."""
+    org = Organisation.query.get_or_404(org_id)
+    return jsonify(org.get_all_access_levels())
 
 
 @auth_bp.route('/admin/roles/create', methods=['POST'], endpoint='admin_role_create')
 @login_required
 @admin_required
 def admin_role_create():
-    """Create a new custom role scoped to a specific organisation."""
+    """
+    Create a new custom role scoped to a specific organisation with 3-level access controls.
+    Enforces Supreme Rule: A role cannot have a higher access level than its organisation cap.
+    """
     user = get_current_user()
     is_super = user.is_super_admin_user if user else False
 
@@ -412,6 +462,11 @@ def admin_role_create():
         flash("Organisation and Role Name are required.", "warning")
         return redirect(url_for('auth.admin_roles', org_id=org_id))
 
+    target_org = Organisation.query.get(int(org_id))
+    if not target_org:
+        flash("Target organisation not found.", "danger")
+        return redirect(url_for('auth.admin_roles'))
+
     if not code:
         code = name.lower().replace(' ', '_')
 
@@ -421,21 +476,34 @@ def admin_role_create():
         flash(f"A role with code '{code}' already exists for this organisation.", "warning")
         return redirect(url_for('auth.admin_roles', org_id=org_id))
 
+    # Read and validate 3-level access matrix (0=No Access, 1=Read Only, 2=Full Access)
+    access_levels = {}
+    org_caps = target_org.get_all_access_levels()
+    for mod_key in ACCESS_MODULE_INFO.keys():
+        val = request.form.get(f'access_{mod_key}')
+        try:
+            lvl = int(val) if val is not None else 0
+        except (ValueError, TypeError):
+            lvl = 0
+        lvl = max(0, min(2, lvl))
+
+        # Enforce Supreme Organisation Cap: role level cannot exceed org level
+        org_cap = org_caps.get(mod_key, 2)
+        if lvl > org_cap and not is_super:
+            lvl = org_cap
+        access_levels[mod_key] = lvl
+
     new_role = Role(
         organisation_id=int(org_id),
         name=name,
         code=code,
         description=description,
-        can_select_pumps=bool(request.form.get('can_select_pumps')),
-        can_edit_catalogue=bool(request.form.get('can_edit_catalogue')),
-        can_export_reports=bool(request.form.get('can_export_reports')),
-        can_manage_organisation=bool(request.form.get('can_manage_organisation')),
-        can_manage_users=bool(request.form.get('can_manage_users')),
         is_system_role=False
     )
+    new_role.set_all_access_levels(access_levels)
     db.session.add(new_role)
     db.session.commit()
-    flash(f"Role '{name}' successfully created.", "success")
+    flash(f"Role '{name}' successfully created with configured access matrix.", "success")
     return redirect(url_for('auth.admin_roles', org_id=org_id))
 
 
@@ -443,7 +511,10 @@ def admin_role_create():
 @login_required
 @admin_required
 def admin_role_edit(role_id):
-    """Edit permissions and details of an existing role."""
+    """
+    Edit permissions and details of an existing role.
+    Enforces Supreme Rule: Role levels cannot exceed parent organisation ceiling.
+    """
     user = get_current_user()
     is_super = user.is_super_admin_user if user else False
 
@@ -458,21 +529,27 @@ def admin_role_edit(role_id):
     if name:
         role.name = name
     role.description = description
-    
-    # System admin role retains mandatory user and organisation management
-    if role.code == 'admin' and role.is_system_role:
-        role.can_manage_users = True
-        role.can_manage_organisation = True
-        role.can_select_pumps = True
-        role.can_export_reports = True
-        role.can_edit_catalogue = True
-    else:
-        role.can_select_pumps = bool(request.form.get('can_select_pumps'))
-        role.can_edit_catalogue = bool(request.form.get('can_edit_catalogue'))
-        role.can_export_reports = bool(request.form.get('can_export_reports'))
-        role.can_manage_organisation = bool(request.form.get('can_manage_organisation'))
-        role.can_manage_users = bool(request.form.get('can_manage_users'))
 
+    target_org = role.organisation or Organisation.query.get(role.organisation_id)
+    org_caps = target_org.get_all_access_levels() if target_org else {}
+
+    # Read and validate 3-level access matrix (0, 1, 2)
+    access_levels = {}
+    for mod_key in ACCESS_MODULE_INFO.keys():
+        val = request.form.get(f'access_{mod_key}')
+        try:
+            lvl = int(val) if val is not None else 0
+        except (ValueError, TypeError):
+            lvl = 0
+        lvl = max(0, min(2, lvl))
+
+        # Supreme rule: role level cannot exceed org cap
+        org_cap = org_caps.get(mod_key, 2)
+        if lvl > org_cap and not is_super:
+            lvl = org_cap
+        access_levels[mod_key] = lvl
+
+    role.set_all_access_levels(access_levels)
     db.session.commit()
     flash(f"Role '{role.name}' updated successfully.", "success")
     return redirect(url_for('auth.admin_roles', org_id=role.organisation_id))

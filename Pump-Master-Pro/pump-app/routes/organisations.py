@@ -15,11 +15,13 @@ if _app_dir not in sys.path:
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from models import db, Organisation, Pump, ReportConfig, Role
 from utils import CURRENT_ORGANISATION_ID, get_current_organisation, get_visible_pumps_query
+from routes.auth import require_access, get_current_user
 
 organisations_bp = Blueprint('organisations', __name__, url_prefix='/organisations')
 
 
 @organisations_bp.route('/settings', endpoint='settings')
+@require_access('organisation_settings', min_level=1)
 def settings():
     """
     Beginners Note: Displays the Organisation Settings page with active profile defaults,
@@ -66,6 +68,7 @@ def settings():
 
 
 @organisations_bp.route('/catalogue-reports/save', methods=['POST'], endpoint='save_catalogue_reports')
+@require_access('organisation_settings', min_level=2)
 def save_catalogue_reports():
     """
     Beginners Note: Saves which reports should appear in the Pump Catalogue for the active organisation.
@@ -95,6 +98,7 @@ def save_catalogue_reports():
 
 
 @organisations_bp.route('/profile/save', methods=['POST'], endpoint='save_profile')
+@require_access('organisation_settings', min_level=2)
 def save_profile():
     """Save active organisation profile and engineering unit defaults."""
     current_org = get_current_organisation()
@@ -128,6 +132,7 @@ def save_profile():
 
 
 @organisations_bp.route('/attributes/save', methods=['POST'], endpoint='save_attributes')
+@require_access('organisation_settings', min_level=2)
 def save_attributes():
     """
     Beginners Note: Saves custom PumpAttributeNames (1-30) and their enabled/disabled checkbox states
@@ -151,6 +156,7 @@ def save_attributes():
 
 
 @organisations_bp.route('/visibility/save', methods=['POST'], endpoint='save_visibility')
+@require_access('organisation_settings', min_level=2)
 def save_visibility():
     """
     Beginners Note: Saves the SQL pump visibility filter for the active organisation.
@@ -178,6 +184,7 @@ def save_visibility():
 
 
 @organisations_bp.route('/graph-styles/save', methods=['POST'], endpoint='save_graph_styles')
+@require_access('organisation_settings', min_level=2)
 def save_graph_styles():
     """
     Beginners Note: Saves default graph line colors, widths, dash styles, font family,
@@ -195,12 +202,12 @@ def save_graph_styles():
 
 
 @organisations_bp.route('/save', methods=['POST'], endpoint='save_organisation')
+@require_access('organisation_settings', min_level=2)
 def save_organisation():
     """
     Add a new organisation or update an existing one.
     Adding a new organisation is strictly restricted to the Lytrose SuperAdmin.
     """
-    from routes.auth import get_current_user
     current_u = get_current_user()
     is_super = current_u.is_super_admin_user if current_u else False
 
@@ -306,6 +313,36 @@ def delete_organisation(id):
     db.session.delete(org)
     db.session.commit()
     flash(f'Organisation "{name}" removed.', 'info')
+    return redirect(url_for('organisations.settings'))
+
+
+@organisations_bp.route('/<int:org_id>/access-levels/save', methods=['POST'], endpoint='save_access_levels')
+def save_access_levels(org_id):
+    """
+    SuperAdmin Authority Endpoint:
+    Configure supreme access levels (0=No Access, 1=Read Only, 2=Full Access)
+    for an organisation across all 10 modules.
+    """
+    from routes.auth import get_current_user
+    current_u = get_current_user()
+    if not current_u or not current_u.is_super_admin_user:
+        flash('Only the Lytrose Super Administrator has authority to configure organisation access ceilings.', 'danger')
+        return redirect(url_for('organisations.settings'))
+
+    org = Organisation.query.get_or_404(org_id)
+    from models import ACCESS_MODULE_INFO
+    levels_dict = {}
+    for mod_key in ACCESS_MODULE_INFO.keys():
+        val = request.form.get(f'access_{mod_key}')
+        try:
+            lvl = int(val) if val is not None else 2
+        except (ValueError, TypeError):
+            lvl = 2
+        levels_dict[mod_key] = max(0, min(2, lvl))
+
+    org.set_all_access_levels(levels_dict)
+    db.session.commit()
+    flash(f"Supreme access control levels for organisation '{org.name}' updated successfully.", "success")
     return redirect(url_for('organisations.settings'))
 
 

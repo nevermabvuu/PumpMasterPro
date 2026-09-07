@@ -103,25 +103,32 @@
               {{ r.description or 'No specific role description provided.' }}
             </p>
 
-            <!-- Permissions Checklist Badges -->
+            <!-- Access Levels Breakdown (3-Level Matrix) -->
+            {% set r_levels = r.get_all_access_levels() %}
             <div class="space-y-1.5 pt-2 border-t border-[#30363d]/60 mb-3">
-              <div class="text-[10px] font-semibold text-[#8b949e] uppercase tracking-wider">Functional Permissions:</div>
-              <div class="flex flex-wrap gap-1.5">
-                <span class="px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 {{ 'bg-[#238636]/20 text-[#3fb950] border border-[#238636]/40' if r.can_select_pumps else 'bg-[#21262d] text-[#484f58]' }}">
-                  <i class="bi {{ 'bi-check-circle-fill' if r.can_select_pumps else 'bi-x-circle' }}"></i> Pump Selection
-                </span>
-                <span class="px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 {{ 'bg-[#1f6feb]/20 text-[#58a6ff] border border-[#1f6feb]/40' if r.can_edit_catalogue else 'bg-[#21262d] text-[#484f58]' }}">
-                  <i class="bi {{ 'bi-check-circle-fill' if r.can_edit_catalogue else 'bi-x-circle' }}"></i> Edit Catalogue
-                </span>
-                <span class="px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 {{ 'bg-[#388bfd]/20 text-[#79baff] border border-[#388bfd]/40' if r.can_export_reports else 'bg-[#21262d] text-[#484f58]' }}">
-                  <i class="bi {{ 'bi-check-circle-fill' if r.can_export_reports else 'bi-x-circle' }}"></i> PDF Reports
-                </span>
-                <span class="px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 {{ 'bg-[#d29922]/20 text-[#e3b341] border border-[#d29922]/40' if r.can_manage_organisation else 'bg-[#21262d] text-[#484f58]' }}">
-                  <i class="bi {{ 'bi-check-circle-fill' if r.can_manage_organisation else 'bi-x-circle' }}"></i> Manage Org
-                </span>
-                <span class="px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 {{ 'bg-[#a371f7]/20 text-[#d2a8ff] border border-[#a371f7]/40' if r.can_manage_users else 'bg-[#21262d] text-[#484f58]' }}">
-                  <i class="bi {{ 'bi-check-circle-fill' if r.can_manage_users else 'bi-x-circle' }}"></i> Manage Users
-                </span>
+              <div class="flex items-center justify-between text-[10px] font-semibold text-[#8b949e] uppercase tracking-wider">
+                <span>Access Matrix:</span>
+                <span class="font-mono text-[#58a6ff]">10 Modules</span>
+              </div>
+              <div class="grid grid-cols-2 gap-1 max-h-36 overflow-y-auto pe-1 custom-scrollbar">
+                {% for mod_key, mod_info in ACCESS_MODULE_INFO.items() %}
+                  {% set r_lvl = r_levels.get(mod_key, 0) %}
+                  {% set org_cap = org_access_levels.get(mod_key, 2) %}
+                  {% set eff_lvl = [r_lvl, org_cap]|min %}
+                  <div class="flex items-center justify-between px-1.5 py-1 rounded text-[10px] bg-[#0d1117] border border-[#30363d]/60">
+                    <span class="text-[#c9d1d9] truncate me-1 flex items-center gap-1">
+                      <i class="bi {{ mod_info.icon }} text-[#58a6ff]"></i>
+                      <span class="truncate">{{ mod_info.label }}</span>
+                    </span>
+                    {% if eff_lvl == 2 %}
+                      <span class="text-[#3fb950] font-bold font-mono shrink-0">Full</span>
+                    {% elif eff_lvl == 1 %}
+                      <span class="text-[#58a6ff] font-bold font-mono shrink-0">Read</span>
+                    {% else %}
+                      <span class="text-[#8b949e] font-mono shrink-0">None</span>
+                    {% endif %}
+                  </div>
+                {% endfor %}
               </div>
             </div>
           </div>
@@ -159,31 +166,32 @@
 </div>
 
 <!-- ADD ROLE MODAL -->
-<div id="addRoleModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-  <div class="bg-[#161b22] border border-[#30363d] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-fade-up">
-    <div class="px-5 py-4 border-b border-[#30363d] flex items-center justify-between">
+<div id="addRoleModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-[#161b22] border border-[#30363d] rounded-2xl w-full max-w-2xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-fade-up">
+    <div class="px-5 py-4 border-b border-[#30363d] flex items-center justify-between shrink-0 bg-[#1c2330]">
       <div class="flex items-center gap-2">
         <i class="bi bi-shield-plus text-[#58a6ff]"></i>
         <h3 class="text-sm font-bold text-white">Add New Role — {{ selected_org.name if selected_org else '' }}</h3>
       </div>
-      <button type="button" onclick="closeAddRoleModal()" class="text-[#8b949e] hover:text-white">
+      <button type="button" onclick="closeAddRoleModal()" class="text-[#8b949e] hover:text-white cursor-pointer">
         <i class="bi bi-x-lg"></i>
       </button>
     </div>
 
-    <form method="POST" action="{{ url_for('auth.admin_role_create') }}" class="p-5 space-y-4">
+    <form method="POST" action="{{ url_for('auth.admin_role_create') }}" class="p-5 overflow-y-auto space-y-4 custom-scrollbar">
       <input type="hidden" name="organisation_id" value="{{ selected_org.id if selected_org else '' }}">
 
-      <div>
-        <label class="block text-xs font-semibold text-[#8b949e] mb-1">Role Title <span class="text-[#f85149]">*</span></label>
-        <input type="text" name="name" required placeholder="e.g. Senior Hydraulic Engineer"
-               class="form-control-dark w-full px-3 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-white text-xs focus:border-[#58a6ff]">
-      </div>
-
-      <div>
-        <label class="block text-xs font-semibold text-[#8b949e] mb-1">Role Code (identifier)</label>
-        <input type="text" name="code" placeholder="e.g. sr_engineer (optional, auto-generated from title)"
-               class="form-control-dark w-full px-3 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-white text-xs font-mono focus:border-[#58a6ff]">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-[#8b949e] mb-1">Role Title <span class="text-[#f85149]">*</span></label>
+          <input type="text" name="name" required placeholder="e.g. Senior Hydraulic Engineer"
+                 class="form-control-dark w-full px-3 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-white text-xs focus:border-[#58a6ff]">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-[#8b949e] mb-1">Role Code (identifier)</label>
+          <input type="text" name="code" placeholder="e.g. sr_engineer (optional, auto-generated)"
+                 class="form-control-dark w-full px-3 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-white text-xs font-mono focus:border-[#58a6ff]">
+        </div>
       </div>
 
       <div>
@@ -192,40 +200,61 @@
                   class="form-control-dark w-full px-3 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-white text-xs focus:border-[#58a6ff]"></textarea>
       </div>
 
-      <div class="pt-2 border-t border-[#30363d]">
-        <label class="block text-xs font-bold text-white mb-2">Granted Permissions</label>
-        <div class="space-y-2">
-          <label class="flex items-center gap-2 text-xs text-[#c9d1d9] cursor-pointer">
-            <input type="checkbox" name="can_select_pumps" value="1" checked class="rounded border-[#30363d] text-[#58a6ff]">
-            <span><strong>Pump Selection &amp; Sizing:</strong> Allow duty-point search and comparison</span>
-          </label>
-          <label class="flex items-center gap-2 text-xs text-[#c9d1d9] cursor-pointer">
-            <input type="checkbox" name="can_edit_catalogue" value="1" class="rounded border-[#30363d] text-[#58a6ff]">
-            <span><strong>Pump Catalogue Management:</strong> Add, edit, and modify pump curve coefficients</span>
-          </label>
-          <label class="flex items-center gap-2 text-xs text-[#c9d1d9] cursor-pointer">
-            <input type="checkbox" name="can_export_reports" value="1" checked class="rounded border-[#30363d] text-[#58a6ff]">
-            <span><strong>Technical Reports:</strong> Generate and export PDF datasheets</span>
-          </label>
-          <label class="flex items-center gap-2 text-xs text-[#c9d1d9] cursor-pointer">
-            <input type="checkbox" name="can_manage_organisation" value="1" class="rounded border-[#30363d] text-[#58a6ff]">
-            <span><strong>Organisation Settings:</strong> Modify engineering units, branding, and visibility</span>
-          </label>
-          <label class="flex items-center gap-2 text-xs text-[#c9d1d9] cursor-pointer">
-            <input type="checkbox" name="can_manage_users" value="1" class="rounded border-[#30363d] text-[#58a6ff]">
-            <span><strong>User Management:</strong> Add users, assign roles, and manage access</span>
-          </label>
+      <!-- 3-Level Access Matrix Grid (10 Modules) -->
+      <div class="pt-3 border-t border-[#30363d] space-y-3">
+        <div class="flex items-center justify-between">
+          <label class="block text-xs font-bold text-white">Module Access Matrix (Supreme Ceilings Enforced)</label>
+          <span class="text-[11px] text-[#8b949e] font-mono">10 Configurable Modules</span>
+        </div>
+        <p class="text-[11px] text-[#8b949e]">
+          Levels: <strong class="text-[#f85149]">0 - No Access</strong>, <strong class="text-[#58a6ff]">1 - Read Only</strong>, <strong class="text-[#3fb950]">2 - Full Access</strong>.
+          Options exceeding the parent organisation ceiling are automatically disabled.
+        </p>
+
+        <div class="space-y-2.5">
+          {% for mod_key, mod_info in ACCESS_MODULE_INFO.items() %}
+            {% set cap = org_access_levels.get(mod_key, 2) %}
+            <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+              <div class="flex flex-wrap items-center justify-between gap-1 mb-1">
+                <div class="flex items-center gap-2">
+                  <i class="bi {{ mod_info.icon }} text-[#58a6ff]"></i>
+                  <span class="text-xs font-bold text-white">{{ mod_info.label }}</span>
+                </div>
+                <span class="text-[10px] font-mono px-1.5 py-0.2 rounded {% if cap == 2 %}bg-[#238636]/15 text-[#3fb950] border border-[#238636]/30{% elif cap == 1 %}bg-[#1f6feb]/15 text-[#58a6ff] border border-[#1f6feb]/30{% else %}bg-[#da3633]/15 text-[#f85149] border border-[#da3633]/30{% endif %}">
+                  Org Ceiling: {{ 'Full (2)' if cap == 2 else ('Read (1)' if cap == 1 else 'None (0)') }}
+                </span>
+              </div>
+              <p class="text-[11px] text-[#8b949e] mb-2">{{ mod_info.description }}</p>
+
+              <div class="grid grid-cols-3 gap-2">
+                <label class="flex items-center justify-center gap-1.5 p-1.5 rounded bg-[#161b22] border border-[#30363d] hover:border-[#da3633]/50 cursor-pointer text-xs">
+                  <input type="radio" name="access_{{ mod_key }}" value="0" id="add_access_{{ mod_key }}_0" class="accent-[#da3633]" {% if cap == 0 %}checked{% endif %}>
+                  <span class="text-[#f85149] font-medium">0 - None</span>
+                </label>
+
+                <label class="flex items-center justify-center gap-1.5 p-1.5 rounded bg-[#161b22] border border-[#30363d] text-xs {% if cap < 1 %}opacity-40 cursor-not-allowed{% else %}hover:border-[#1f6feb]/50 cursor-pointer{% endif %}">
+                  <input type="radio" name="access_{{ mod_key }}" value="1" id="add_access_{{ mod_key }}_1" class="accent-[#58a6ff]" {% if cap < 1 %}disabled{% endif %} {% if cap == 1 %}checked{% endif %}>
+                  <span class="text-[#58a6ff] font-medium">1 - Read</span>
+                </label>
+
+                <label class="flex items-center justify-center gap-1.5 p-1.5 rounded bg-[#161b22] border border-[#30363d] text-xs {% if cap < 2 %}opacity-40 cursor-not-allowed{% else %}hover:border-[#238636]/50 cursor-pointer{% endif %}">
+                  <input type="radio" name="access_{{ mod_key }}" value="2" id="add_access_{{ mod_key }}_2" class="accent-[#238636]" {% if cap < 2 %}disabled{% endif %} {% if cap >= 2 %}checked{% endif %}>
+                  <span class="text-[#3fb950] font-medium">2 - Full</span>
+                </label>
+              </div>
+            </div>
+          {% endfor %}
         </div>
       </div>
 
-      <div class="pt-4 border-t border-[#30363d] flex items-center justify-end gap-2">
+      <div class="pt-4 border-t border-[#30363d] flex items-center justify-end gap-2 shrink-0">
         <button type="button" onclick="closeAddRoleModal()"
-                class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d]">
+                class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d] border border-[#30363d]">
           Cancel
         </button>
         <button type="submit"
-                class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white shadow-sm">
-          Save Role
+                class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white shadow-sm flex items-center gap-1">
+          <i class="bi bi-shield-check"></i> Create Role
         </button>
       </div>
     </form>
@@ -233,19 +262,19 @@
 </div>
 
 <!-- EDIT ROLE MODAL -->
-<div id="editRoleModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-  <div class="bg-[#161b22] border border-[#30363d] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-fade-up">
-    <div class="px-5 py-4 border-b border-[#30363d] flex items-center justify-between">
+<div id="editRoleModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-[#161b22] border border-[#30363d] rounded-2xl w-full max-w-2xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-fade-up">
+    <div class="px-5 py-4 border-b border-[#30363d] flex items-center justify-between shrink-0 bg-[#1c2330]">
       <div class="flex items-center gap-2">
         <i class="bi bi-pencil-square text-[#58a6ff]"></i>
         <h3 class="text-sm font-bold text-white">Edit Role: <span id="editRoleTitle"></span></h3>
       </div>
-      <button type="button" onclick="closeEditRoleModal()" class="text-[#8b949e] hover:text-white">
+      <button type="button" onclick="closeEditRoleModal()" class="text-[#8b949e] hover:text-white cursor-pointer">
         <i class="bi bi-x-lg"></i>
       </button>
     </div>
 
-    <form id="editRoleForm" method="POST" action="" class="p-5 space-y-4">
+    <form id="editRoleForm" method="POST" action="" class="p-5 overflow-y-auto space-y-4 custom-scrollbar">
       <div>
         <label class="block text-xs font-semibold text-[#8b949e] mb-1">Role Title <span class="text-[#f85149]">*</span></label>
         <input type="text" id="edit_name" name="name" required
@@ -258,40 +287,61 @@
                   class="form-control-dark w-full px-3 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-white text-xs focus:border-[#58a6ff]"></textarea>
       </div>
 
-      <div class="pt-2 border-t border-[#30363d]">
-        <label class="block text-xs font-bold text-white mb-2">Granted Permissions</label>
-        <div class="space-y-2">
-          <label class="flex items-center gap-2 text-xs text-[#c9d1d9] cursor-pointer">
-            <input type="checkbox" id="edit_can_select_pumps" name="can_select_pumps" value="1" class="rounded border-[#30363d] text-[#58a6ff]">
-            <span><strong>Pump Selection &amp; Sizing:</strong> Allow duty-point search and comparison</span>
-          </label>
-          <label class="flex items-center gap-2 text-xs text-[#c9d1d9] cursor-pointer">
-            <input type="checkbox" id="edit_can_edit_catalogue" name="can_edit_catalogue" value="1" class="rounded border-[#30363d] text-[#58a6ff]">
-            <span><strong>Pump Catalogue Management:</strong> Add, edit, and modify pump curve coefficients</span>
-          </label>
-          <label class="flex items-center gap-2 text-xs text-[#c9d1d9] cursor-pointer">
-            <input type="checkbox" id="edit_can_export_reports" name="can_export_reports" value="1" class="rounded border-[#30363d] text-[#58a6ff]">
-            <span><strong>Technical Reports:</strong> Generate and export PDF datasheets</span>
-          </label>
-          <label class="flex items-center gap-2 text-xs text-[#c9d1d9] cursor-pointer">
-            <input type="checkbox" id="edit_can_manage_organisation" name="can_manage_organisation" value="1" class="rounded border-[#30363d] text-[#58a6ff]">
-            <span><strong>Organisation Settings:</strong> Modify engineering units, branding, and visibility</span>
-          </label>
-          <label class="flex items-center gap-2 text-xs text-[#c9d1d9] cursor-pointer">
-            <input type="checkbox" id="edit_can_manage_users" name="can_manage_users" value="1" class="rounded border-[#30363d] text-[#58a6ff]">
-            <span><strong>User Management:</strong> Add users, assign roles, and manage access</span>
-          </label>
+      <!-- 3-Level Access Matrix Grid (10 Modules) -->
+      <div class="pt-3 border-t border-[#30363d] space-y-3">
+        <div class="flex items-center justify-between">
+          <label class="block text-xs font-bold text-white">Module Access Matrix (Supreme Ceilings Enforced)</label>
+          <span class="text-[11px] text-[#8b949e] font-mono">10 Configurable Modules</span>
+        </div>
+        <p class="text-[11px] text-[#8b949e]">
+          Levels: <strong class="text-[#f85149]">0 - No Access</strong>, <strong class="text-[#58a6ff]">1 - Read Only</strong>, <strong class="text-[#3fb950]">2 - Full Access</strong>.
+          Options exceeding the parent organisation ceiling are automatically disabled.
+        </p>
+
+        <div class="space-y-2.5">
+          {% for mod_key, mod_info in ACCESS_MODULE_INFO.items() %}
+            {% set cap = org_access_levels.get(mod_key, 2) %}
+            <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+              <div class="flex flex-wrap items-center justify-between gap-1 mb-1">
+                <div class="flex items-center gap-2">
+                  <i class="bi {{ mod_info.icon }} text-[#58a6ff]"></i>
+                  <span class="text-xs font-bold text-white">{{ mod_info.label }}</span>
+                </div>
+                <span class="text-[10px] font-mono px-1.5 py-0.2 rounded {% if cap == 2 %}bg-[#238636]/15 text-[#3fb950] border border-[#238636]/30{% elif cap == 1 %}bg-[#1f6feb]/15 text-[#58a6ff] border border-[#1f6feb]/30{% else %}bg-[#da3633]/15 text-[#f85149] border border-[#da3633]/30{% endif %}">
+                  Org Ceiling: {{ 'Full (2)' if cap == 2 else ('Read (1)' if cap == 1 else 'None (0)') }}
+                </span>
+              </div>
+              <p class="text-[11px] text-[#8b949e] mb-2">{{ mod_info.description }}</p>
+
+              <div class="grid grid-cols-3 gap-2">
+                <label class="flex items-center justify-center gap-1.5 p-1.5 rounded bg-[#161b22] border border-[#30363d] hover:border-[#da3633]/50 cursor-pointer text-xs">
+                  <input type="radio" name="access_{{ mod_key }}" value="0" id="edit_access_{{ mod_key }}_0" class="accent-[#da3633]">
+                  <span class="text-[#f85149] font-medium">0 - None</span>
+                </label>
+
+                <label class="flex items-center justify-center gap-1.5 p-1.5 rounded bg-[#161b22] border border-[#30363d] text-xs {% if cap < 1 %}opacity-40 cursor-not-allowed{% else %}hover:border-[#1f6feb]/50 cursor-pointer{% endif %}">
+                  <input type="radio" name="access_{{ mod_key }}" value="1" id="edit_access_{{ mod_key }}_1" class="accent-[#58a6ff]" {% if cap < 1 %}disabled{% endif %}>
+                  <span class="text-[#58a6ff] font-medium">1 - Read</span>
+                </label>
+
+                <label class="flex items-center justify-center gap-1.5 p-1.5 rounded bg-[#161b22] border border-[#30363d] text-xs {% if cap < 2 %}opacity-40 cursor-not-allowed{% else %}hover:border-[#238636]/50 cursor-pointer{% endif %}">
+                  <input type="radio" name="access_{{ mod_key }}" value="2" id="edit_access_{{ mod_key }}_2" class="accent-[#238636]" {% if cap < 2 %}disabled{% endif %}>
+                  <span class="text-[#3fb950] font-medium">2 - Full</span>
+                </label>
+              </div>
+            </div>
+          {% endfor %}
         </div>
       </div>
 
-      <div class="pt-4 border-t border-[#30363d] flex items-center justify-end gap-2">
+      <div class="pt-4 border-t border-[#30363d] flex items-center justify-end gap-2 shrink-0">
         <button type="button" onclick="closeEditRoleModal()"
-                class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d]">
+                class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d] border border-[#30363d]">
           Cancel
         </button>
         <button type="submit"
-                class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-[#1f6feb] hover:bg-[#388bfd] text-white shadow-sm">
-          Update Role
+                class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-[#1f6feb] hover:bg-[#388bfd] text-white shadow-sm flex items-center gap-1">
+          <i class="bi bi-check2"></i> Update Role
         </button>
       </div>
     </form>
@@ -310,11 +360,24 @@ function openEditRoleModal(role) {
   document.getElementById('editRoleForm').action = "/admin/roles/" + role.id + "/edit";
   document.getElementById('edit_name').value = role.name;
   document.getElementById('edit_description').value = role.description || '';
-  document.getElementById('edit_can_select_pumps').checked = role.can_select_pumps;
-  document.getElementById('edit_can_edit_catalogue').checked = role.can_edit_catalogue;
-  document.getElementById('edit_can_export_reports').checked = role.can_export_reports;
-  document.getElementById('edit_can_manage_organisation').checked = role.can_manage_organisation;
-  document.getElementById('edit_can_manage_users').checked = role.can_manage_users;
+
+  const levels = role.access_levels || {};
+  for (const key of Object.keys(levels)) {
+    const val = levels[key];
+    const el = document.getElementById('edit_access_' + key + '_' + val);
+    if (el && !el.disabled) {
+      el.checked = true;
+    } else {
+      // If higher level is disabled by org cap, select the highest valid enabled level
+      const el1 = document.getElementById('edit_access_' + key + '_1');
+      const el0 = document.getElementById('edit_access_' + key + '_0');
+      if (val >= 1 && el1 && !el1.disabled) {
+        el1.checked = true;
+      } else if (el0) {
+        el0.checked = true;
+      }
+    }
+  }
   document.getElementById('editRoleModal').classList.remove('hidden');
 }
 function closeEditRoleModal() {

@@ -17,9 +17,11 @@
     </div>
 
     <div class="flex flex-wrap items-center gap-3">
+      {% if not current_user or current_user.can_access('organisation_settings') %}
       <a href="{{ url_for('organisations.settings') }}" class="px-3.5 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#e6edf3] rounded-lg border border-[#30363d] flex items-center gap-1.5 transition-colors">
         <i class="bi bi-buildings text-[#58a6ff]"></i> Organisation Defaults &amp; Visibility
       </a>
+      {% endif %}
       <button onclick="openGraphAreaModal()" class="px-3.5 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#c084fc] rounded-lg border border-[#c084fc]/40 flex items-center gap-1.5 transition-colors shadow-sm">
         <i class="bi bi-aspect-ratio text-[#c084fc]"></i> Graph Area &amp; Layout Settings
       </button>

@@ -71,6 +71,8 @@ with app.app_context():
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN graph_styles_json TEXT DEFAULT '{}'"))
             if 'pump_details_template' not in org_cols:
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN pump_details_template VARCHAR(255) DEFAULT 'details/default_pump_details.html'"))
+            if 'access_levels_json' not in org_cols:
+                conn.execute(text("ALTER TABLE organisations ADD COLUMN access_levels_json TEXT DEFAULT '{}'"))
             for i in range(1, 31):
                 col_name = f'PumpAttributeName{i}'
                 if col_name not in org_cols:
@@ -78,6 +80,13 @@ with app.app_context():
                 col_enabled = f'PumpAttributeEnabled{i}'
                 if col_enabled not in org_cols:
                     conn.execute(text(f"ALTER TABLE organisations ADD COLUMN {col_enabled} INTEGER DEFAULT 1"))
+
+            # Roles table schema migrations
+            role_res = conn.execute(text("PRAGMA table_info(roles)"))
+            role_cols = [row[1] for row in role_res.fetchall()]
+            if 'access_levels_json' not in role_cols:
+                conn.execute(text("ALTER TABLE roles ADD COLUMN access_levels_json TEXT DEFAULT '{}'"))
+            conn.commit()
 
             # 1. Reports table schema migrations
             rep_res = conn.execute(text("PRAGMA table_info(reports)"))
@@ -320,6 +329,20 @@ with app.app_context():
                 )
                 db.session.add(def_rep)
                 db.session.commit()
+
+            # Migration for organisations table: access_levels_json column
+            org_res = conn.execute(text("PRAGMA table_info(organisations)"))
+            org_cols = [row[1] for row in org_res.fetchall()]
+            if 'access_levels_json' not in org_cols:
+                conn.execute(text("ALTER TABLE organisations ADD COLUMN access_levels_json TEXT DEFAULT '{}'"))
+                conn.commit()
+
+            # Migration for roles table: access_levels_json column
+            role_res = conn.execute(text("PRAGMA table_info(roles)"))
+            role_cols = [row[1] for row in role_res.fetchall()]
+            if 'access_levels_json' not in role_cols:
+                conn.execute(text("ALTER TABLE roles ADD COLUMN access_levels_json TEXT DEFAULT '{}'"))
+                conn.commit()
 
             # Migration for users table: role_id and is_super_admin columns
             user_res = conn.execute(text("PRAGMA table_info(users)"))

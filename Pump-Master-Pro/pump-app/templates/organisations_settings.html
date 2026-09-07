@@ -3,6 +3,9 @@
 {% block title %}Organisation Settings &amp; Multi-Company Permissions — Pump Master Pro{% endblock %}
 
 {% block content %}
+{% set org_access_level = current_user.get_access_level('organisation_settings') if current_user else 2 %}
+{% set can_edit_org = (org_access_level >= 2) %}
+
 <div class="space-y-6">
 
   <!-- PAGE HEADER -->
@@ -31,13 +34,28 @@
          class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#c9d1d9] hover:text-white rounded-lg flex items-center gap-1.5 border border-[#30363d] transition-colors">
         <i class="bi bi-people text-[#58a6ff]"></i> Users
       </a>
-      {% if current_user and current_user.is_super_admin_user %}
+      {% if can_edit_org and current_user and current_user.is_super_admin_user %}
       <button onclick="openOrgModal()" class="px-3.5 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-semibold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
         <i class="bi bi-building-add"></i> Add Organisation
       </button>
       {% endif %}
     </div>
   </div>
+
+  {% if not can_edit_org %}
+  <!-- READ-ONLY NOTICE BANNER -->
+  <div class="p-3.5 bg-[#d29922]/10 border border-[#d29922]/40 rounded-xl flex items-center justify-between text-xs text-[#d29922] shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-[#d29922]/20 border border-[#d29922]/30 flex items-center justify-center text-[#d29922] shrink-0">
+        <i class="bi bi-eye text-base"></i>
+      </div>
+      <div>
+        <span class="font-bold text-white">Read-Only Mode:</span> Your role or organisation permits viewing only. All configuration options, unit defaults, and settings are locked.
+      </div>
+    </div>
+    <span class="px-2.5 py-1 rounded text-[10px] font-mono bg-[#d29922]/20 font-bold uppercase border border-[#d29922]/40 shrink-0">Level 1 · Read Only</span>
+  </div>
+  {% endif %}
 
   <!-- STATS OVERVIEW CARDS -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -96,6 +114,7 @@
         </div>
 
         <form action="{{ url_for('organisations.save_profile') }}" method="POST" class="p-4 space-y-4">
+          <fieldset {% if not can_edit_org %}disabled{% endif %} class="contents space-y-4">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Organisation Name *</label>
@@ -188,11 +207,18 @@
             <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Internal Notes</label>
             <input type="text" name="notes" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" value="{{ current_org.notes if current_org else '' }}" placeholder="e.g. Head office division">
           </div>
+          </fieldset>
 
           <div class="pt-2 flex justify-end">
-            <button type="submit" class="px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
+            {% if can_edit_org %}
+            <button type="submit" class="px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
               <i class="bi bi-check-lg"></i> Save Profile &amp; Defaults
             </button>
+            {% else %}
+            <button type="button" disabled class="px-4 py-2 bg-[#21262d] text-xs font-semibold text-[#8b949e] rounded-lg border border-[#30363d] cursor-not-allowed flex items-center gap-1.5 opacity-60">
+              <i class="bi bi-lock-fill"></i> Read-Only (Changes Disabled)
+            </button>
+            {% endif %}
           </div>
         </form>
       </div>
@@ -219,6 +245,7 @@
             Use the checkbox next to each input to enable or disable it. Enabled attributes will automatically appear in the <strong class="text-[#e6edf3]">Pump Data</strong> form.
           </p>
 
+          <fieldset {% if not can_edit_org %}disabled{% endif %} class="contents space-y-2.5">
           <div id="attributes-container" class="space-y-2.5 max-h-[480px] overflow-y-auto pe-1 custom-scrollbar">
             {% for attr in all_attrs %}
               {% set has_content = (attr.name and attr.name|trim|length > 0) %}
@@ -248,27 +275,37 @@
                   <span class="text-[11px] font-medium" id="attr_label_{{ attr.index }}">{% if attr.enabled %}Enabled{% else %}Disabled{% endif %}</span>
                 </label>
 
+                {% if can_edit_org %}
                 <button type="button" 
                         onclick="clearAttributeRow({{ attr.index }})" 
                         class="p-1.5 text-[#8b949e] hover:text-[#f85149] rounded hover:bg-[#21262d] transition-colors shrink-0" 
                         title="Clear attribute slot">
                   <i class="bi bi-trash text-xs"></i>
                 </button>
+                {% endif %}
               </div>
             {% endfor %}
           </div>
+          </fieldset>
 
           <div class="flex items-center justify-between pt-2 border-t border-[#30363d]">
+            {% if can_edit_org %}
             <button type="button" 
                     id="btnAddAttribute" 
                     onclick="addNextAttributeSlot()" 
-                    class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-xs font-semibold text-[#58a6ff] rounded-lg flex items-center gap-1.5 transition-colors">
+                    class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-xs font-semibold text-[#58a6ff] rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer">
               <i class="bi bi-plus-circle"></i> Add Pump Attribute
             </button>
 
-            <button type="submit" class="px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
+            <button type="submit" class="px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
               <i class="bi bi-check-lg"></i> Save Attribute Definitions
             </button>
+            {% else %}
+            <div></div>
+            <button type="button" disabled class="px-4 py-2 bg-[#21262d] text-xs font-semibold text-[#8b949e] rounded-lg border border-[#30363d] cursor-not-allowed flex items-center gap-1.5 opacity-60">
+              <i class="bi bi-lock-fill"></i> Read-Only (Changes Disabled)
+            </button>
+            {% endif %}
           </div>
         </form>
       </div>
@@ -289,6 +326,7 @@
             Set default curve colors, line widths, dash styles, font family, and grid aesthetics. These styling rules will be respected across the <strong class="text-white">Pump Selection Details</strong> view and graph previews.
           </p>
 
+          <fieldset {% if not can_edit_org %}disabled{% endif %} class="contents space-y-4">
           <!-- 1. Per-Graph Curve Styles Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <!-- Head Curve -->
@@ -320,24 +358,24 @@
             <!-- Efficiency Curve -->
             <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-[#3fb950] flex items-center gap-1.5"><i class="bi bi-speedometer"></i> Efficiency (η) Curve</span>
+                <span class="text-xs font-bold text-[#3fb950] flex items-center gap-1.5"><i class="bi bi-percent"></i> Efficiency (η) Curve</span>
               </div>
               <div class="grid grid-cols-3 gap-2">
                 <div>
                   <label class="block text-[10px] text-[#8b949e] mb-0.5">Color</label>
-                  <input type="color" id="org_style_eta_color" value="{{ org_styles.get('eta_color', '#3fb950') }}" class="h-7 w-full bg-[#161b22] border border-[#30363d] rounded p-0.5 cursor-pointer">
+                  <input type="color" id="org_style_eff_color" value="{{ org_styles.get('eff_color', '#3fb950') }}" class="h-7 w-full bg-[#161b22] border border-[#30363d] rounded p-0.5 cursor-pointer">
                 </div>
                 <div>
                   <label class="block text-[10px] text-[#8b949e] mb-0.5">Width (px)</label>
-                  <input type="number" step="0.1" min="0.5" max="8" id="org_style_eta_width" value="{{ org_styles.get('eta_width', 2.5) }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white">
+                  <input type="number" step="0.1" min="0.5" max="8" id="org_style_eff_width" value="{{ org_styles.get('eff_width', 2.0) }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white">
                 </div>
                 <div>
                   <label class="block text-[10px] text-[#8b949e] mb-0.5">Style</label>
-                  <select id="org_style_eta_style" class="w-full bg-[#161b22] border border-[#30363d] rounded px-1.5 py-1 text-xs text-white">
-                    <option value="solid" {% if org_styles.get('eta_style') == 'solid' %}selected{% endif %}>Solid</option>
-                    <option value="dash" {% if org_styles.get('eta_style') in ('dash', 'dashed') %}selected{% endif %}>Dashed</option>
-                    <option value="dot" {% if org_styles.get('eta_style') in ('dot', 'dotted') %}selected{% endif %}>Dotted</option>
-                    <option value="dashdot" {% if org_styles.get('eta_style') == 'dashdot' %}selected{% endif %}>Dash-Dot</option>
+                  <select id="org_style_eff_style" class="w-full bg-[#161b22] border border-[#30363d] rounded px-1.5 py-1 text-xs text-white">
+                    <option value="solid" {% if org_styles.get('eff_style') == 'solid' %}selected{% endif %}>Solid</option>
+                    <option value="dash" {% if org_styles.get('eff_style') in ('dash', 'dashed') %}selected{% endif %}>Dashed</option>
+                    <option value="dot" {% if org_styles.get('eff_style') in ('dot', 'dotted') %}selected{% endif %}>Dotted</option>
+                    <option value="dashdot" {% if org_styles.get('eff_style') == 'dashdot' %}selected{% endif %}>Dash-Dot</option>
                   </select>
                 </div>
               </div>
@@ -346,24 +384,24 @@
             <!-- Power Curve -->
             <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-[#f0c040] flex items-center gap-1.5"><i class="bi bi-lightning-charge"></i> Power (P) Curve</span>
+                <span class="text-xs font-bold text-[#f0883e] flex items-center gap-1.5"><i class="bi bi-lightning-charge"></i> Power (kW) Curve</span>
               </div>
               <div class="grid grid-cols-3 gap-2">
                 <div>
                   <label class="block text-[10px] text-[#8b949e] mb-0.5">Color</label>
-                  <input type="color" id="org_style_pow_color" value="{{ org_styles.get('pow_color', '#f0c040') }}" class="h-7 w-full bg-[#161b22] border border-[#30363d] rounded p-0.5 cursor-pointer">
+                  <input type="color" id="org_style_power_color" value="{{ org_styles.get('power_color', '#f0883e') }}" class="h-7 w-full bg-[#161b22] border border-[#30363d] rounded p-0.5 cursor-pointer">
                 </div>
                 <div>
                   <label class="block text-[10px] text-[#8b949e] mb-0.5">Width (px)</label>
-                  <input type="number" step="0.1" min="0.5" max="8" id="org_style_pow_width" value="{{ org_styles.get('pow_width', 2.5) }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white">
+                  <input type="number" step="0.1" min="0.5" max="8" id="org_style_power_width" value="{{ org_styles.get('power_width', 2.0) }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white">
                 </div>
                 <div>
                   <label class="block text-[10px] text-[#8b949e] mb-0.5">Style</label>
-                  <select id="org_style_pow_style" class="w-full bg-[#161b22] border border-[#30363d] rounded px-1.5 py-1 text-xs text-white">
-                    <option value="solid" {% if org_styles.get('pow_style') == 'solid' %}selected{% endif %}>Solid</option>
-                    <option value="dash" {% if org_styles.get('pow_style') in ('dash', 'dashed') %}selected{% endif %}>Dashed</option>
-                    <option value="dot" {% if org_styles.get('pow_style') in ('dot', 'dotted') %}selected{% endif %}>Dotted</option>
-                    <option value="dashdot" {% if org_styles.get('pow_style') == 'dashdot' %}selected{% endif %}>Dash-Dot</option>
+                  <select id="org_style_power_style" class="w-full bg-[#161b22] border border-[#30363d] rounded px-1.5 py-1 text-xs text-white">
+                    <option value="solid" {% if org_styles.get('power_style') == 'solid' %}selected{% endif %}>Solid</option>
+                    <option value="dash" {% if org_styles.get('power_style') in ('dash', 'dashed') %}selected{% endif %}>Dashed</option>
+                    <option value="dot" {% if org_styles.get('power_style') in ('dot', 'dotted') %}selected{% endif %}>Dotted</option>
+                    <option value="dashdot" {% if org_styles.get('power_style') == 'dashdot' %}selected{% endif %}>Dash-Dot</option>
                   </select>
                 </div>
               </div>
@@ -372,22 +410,22 @@
             <!-- NPSHr Curve -->
             <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-[#bc8cff] flex items-center gap-1.5"><i class="bi bi-water"></i> NPSHr Curve</span>
+                <span class="text-xs font-bold text-[#a371f7] flex items-center gap-1.5"><i class="bi bi-water"></i> NPSHr Curve</span>
               </div>
               <div class="grid grid-cols-3 gap-2">
                 <div>
                   <label class="block text-[10px] text-[#8b949e] mb-0.5">Color</label>
-                  <input type="color" id="org_style_npsh_color" value="{{ org_styles.get('npsh_color', '#bc8cff') }}" class="h-7 w-full bg-[#161b22] border border-[#30363d] rounded p-0.5 cursor-pointer">
+                  <input type="color" id="org_style_npsh_color" value="{{ org_styles.get('npsh_color', '#a371f7') }}" class="h-7 w-full bg-[#161b22] border border-[#30363d] rounded p-0.5 cursor-pointer">
                 </div>
                 <div>
                   <label class="block text-[10px] text-[#8b949e] mb-0.5">Width (px)</label>
-                  <input type="number" step="0.1" min="0.5" max="8" id="org_style_npsh_width" value="{{ org_styles.get('npsh_width', 2.5) }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white">
+                  <input type="number" step="0.1" min="0.5" max="8" id="org_style_npsh_width" value="{{ org_styles.get('npsh_width', 1.8) }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white">
                 </div>
                 <div>
                   <label class="block text-[10px] text-[#8b949e] mb-0.5">Style</label>
                   <select id="org_style_npsh_style" class="w-full bg-[#161b22] border border-[#30363d] rounded px-1.5 py-1 text-xs text-white">
-                    <option value="solid" {% if org_styles.get('npsh_style') == 'solid' %}selected{% endif %}>Solid</option>
                     <option value="dash" {% if org_styles.get('npsh_style') in ('dash', 'dashed') %}selected{% endif %}>Dashed</option>
+                    <option value="solid" {% if org_styles.get('npsh_style') == 'solid' %}selected{% endif %}>Solid</option>
                     <option value="dot" {% if org_styles.get('npsh_style') in ('dot', 'dotted') %}selected{% endif %}>Dotted</option>
                     <option value="dashdot" {% if org_styles.get('npsh_style') == 'dashdot' %}selected{% endif %}>Dash-Dot</option>
                   </select>
@@ -396,7 +434,7 @@
             </div>
           </div>
 
-          <!-- 2. Rated Trim, Typography & Grid Settings -->
+          <!-- 2. Typography, Grids, and Trim Marker Settings -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <!-- Rated / Trimmed Curve -->
             <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
@@ -448,19 +486,81 @@
               </div>
             </div>
           </div>
+          </fieldset>
 
           <div class="pt-2 flex justify-end">
-            <button type="submit" class="px-4 py-2 bg-[#58a6ff] hover:bg-[#79c0ff] text-xs font-bold text-[#0d1117] rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
+            {% if can_edit_org %}
+            <button type="submit" class="px-4 py-2 bg-[#58a6ff] hover:bg-[#79c0ff] text-xs font-bold text-[#0d1117] rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
               <i class="bi bi-palette-fill"></i> Save Graph Visual Styles
             </button>
+            {% else %}
+            <button type="button" disabled class="px-4 py-2 bg-[#21262d] text-xs font-semibold text-[#8b949e] rounded-lg border border-[#30363d] cursor-not-allowed flex items-center gap-1.5 opacity-60">
+              <i class="bi bi-lock-fill"></i> Read-Only (Changes Disabled)
+            </button>
+            {% endif %}
           </div>
         </form>
       </div>
 
     </div>
 
-    <!-- ── RIGHT COLUMN: MULTI-ORGANISATION PUMP VISIBILITY RULES (5 cols) ── -->
+    <!-- ── RIGHT COLUMN: ACCESS CEILINGS & PUMP VISIBILITY (5 cols) ── -->
     <div class="lg:col-span-5 space-y-6">
+
+      <!-- CARD: SUPREME ORGANISATION ACCESS MATRIX (3-LEVEL CONTROL) -->
+      {% set cur_access = current_org.get_all_access_levels() if current_org else {} %}
+      <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
+        <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
+              <i class="bi bi-shield-shaded text-[#d2a8ff]"></i> Supreme Organisation Access Matrix
+            </h2>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-[#a371f7]/10 text-[#d2a8ff] border border-[#a371f7]/30">3-Level Ceilings</span>
+          </div>
+          {% if current_user and current_user.is_super_admin_user %}
+            <button type="button" onclick='openOrgAccessMatrixModal({{ current_org.id if current_org else 2 }}, {{ (current_org.name if current_org else "Active Org")|tojson }}, {{ cur_access|tojson }})'
+                    class="px-2.5 py-1 text-xs font-semibold rounded bg-[#238636] hover:bg-[#2ea043] text-white flex items-center gap-1 shadow-sm transition cursor-pointer">
+              <i class="bi bi-sliders"></i> Edit Ceilings
+            </button>
+          {% endif %}
+        </div>
+
+        <div class="p-4 space-y-3">
+          <p class="text-xs text-[#8b949e]">
+            Configured by <strong class="text-[#e6edf3]">Lytrose SuperAdmin</strong>. These access levels represent the supreme ceilings for <strong class="text-[#58a6ff]">{{ current_org.name if current_org else 'Active Org' }}</strong>. User roles within this company cannot exceed these levels.
+          </p>
+
+          <div class="space-y-2 max-h-[380px] overflow-y-auto pe-1 custom-scrollbar">
+            {% for mod_key, mod_info in ACCESS_MODULE_INFO.items() %}
+              {% set lvl = cur_access.get(mod_key, 2) %}
+              <div class="flex items-center justify-between p-2 rounded-lg bg-[#0d1117] border border-[#30363d]">
+                <div class="flex items-center gap-2 min-w-0">
+                  <i class="bi {{ mod_info.icon }} text-[#58a6ff] text-sm shrink-0"></i>
+                  <div class="min-w-0">
+                    <div class="text-xs font-semibold text-[#e6edf3] truncate">{{ mod_info.label }}</div>
+                    <div class="text-[10px] text-[#8b949e] truncate">{{ mod_info.description }}</div>
+                  </div>
+                </div>
+                <div class="shrink-0 ms-2">
+                  {% if lvl == 2 %}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#238636]/20 text-[#3fb950] border border-[#238636]/40 flex items-center gap-1">
+                      <i class="bi bi-check2-circle"></i> Full Access (2)
+                    </span>
+                  {% elif lvl == 1 %}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#1f6feb]/20 text-[#58a6ff] border border-[#1f6feb]/40 flex items-center gap-1">
+                      <i class="bi bi-eye"></i> Read Only (1)
+                    </span>
+                  {% else %}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#da3633]/20 text-[#f85149] border border-[#da3633]/40 flex items-center gap-1">
+                      <i class="bi bi-slash-circle"></i> No Access (0)
+                    </span>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
 
       <!-- CARD: MULTI-ORGANISATION SQL FILTER SETTINGS -->
       <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
@@ -476,6 +576,7 @@
             Configure which organisations' pump records <strong class="text-white">{{ current_org.name if current_org else 'Lytrose Engineering' }}</strong> can view and search across the Catalogue, Selection Engine, and Comparison module.
           </p>
 
+          <fieldset {% if not can_edit_org %}disabled{% endif %} class="contents space-y-4">
           <div class="space-y-3 bg-[#0d1117] p-3.5 border border-[#30363d] rounded-lg">
             <label class="flex items-start gap-2.5 cursor-pointer">
               <input type="radio" name="visibility_mode" value="all" id="mode_all" class="mt-0.5 accent-[#58a6ff]" {% if view_all_mode %}checked{% endif %} onchange="toggleOrgCheckboxes(false)">
@@ -515,11 +616,18 @@
               {% endfor %}
             </div>
           </div>
+          </fieldset>
 
           <div class="pt-2 flex justify-end">
-            <button type="submit" class="px-4 py-2 bg-[#58a6ff] hover:bg-[#79c0ff] text-xs font-bold text-[#0d1117] rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
+            {% if can_edit_org %}
+            <button type="submit" class="px-4 py-2 bg-[#58a6ff] hover:bg-[#79c0ff] text-xs font-bold text-[#0d1117] rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
               <i class="bi bi-shield-check"></i> Apply Visibility Filter
             </button>
+            {% else %}
+            <button type="button" disabled class="px-4 py-2 bg-[#21262d] text-xs font-semibold text-[#8b949e] rounded-lg border border-[#30363d] cursor-not-allowed flex items-center gap-1.5 opacity-60">
+              <i class="bi bi-lock-fill"></i> Read-Only (Changes Disabled)
+            </button>
+            {% endif %}
           </div>
         </form>
       </div>
@@ -538,6 +646,7 @@
             Choose which report format(s) are available when viewing pumps in the Catalogue for <strong class="text-white">{{ current_org.name if current_org else 'Lytrose Engineering' }}</strong> (e.g. Standard, Standard VSD, Slurry, etc.).
           </p>
 
+          <fieldset {% if not can_edit_org %}disabled{% endif %} class="contents space-y-4">
           <div class="space-y-3 bg-[#0d1117] p-3.5 border border-[#30363d] rounded-lg">
             <label class="flex items-start gap-2.5 cursor-pointer">
               <input type="radio" name="catalogue_report_mode" value="all" id="cat_mode_all" class="mt-0.5 accent-[#c084fc]" {% if cat_all_mode %}checked{% endif %} onchange="toggleReportCheckboxes(false)">
@@ -608,11 +717,18 @@
                </div>
              </div>
           </div>
+          </fieldset>
 
           <div class="pt-2 flex justify-end">
-            <button type="submit" class="px-4 py-2 bg-[#c084fc] hover:bg-[#d8b4fe] text-xs font-bold text-[#0d1117] rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
+            {% if can_edit_org %}
+            <button type="submit" class="px-4 py-2 bg-[#c084fc] hover:bg-[#d8b4fe] text-xs font-bold text-[#0d1117] rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
               <i class="bi bi-check2-circle"></i> Save Catalogue Reports
             </button>
+            {% else %}
+            <button type="button" disabled class="px-4 py-2 bg-[#21262d] text-xs font-semibold text-[#8b949e] rounded-lg border border-[#30363d] cursor-not-allowed flex items-center gap-1.5 opacity-60">
+              <i class="bi bi-lock-fill"></i> Read-Only (Changes Disabled)
+            </button>
+            {% endif %}
           </div>
         </form>
       </div>
@@ -627,7 +743,7 @@
       <h2 class="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
         <i class="bi bi-building text-[#58a6ff]"></i> All Registered Organisations &amp; Manufacturers ({{ all_organisations|length }})
       </h2>
-      {% if current_user and current_user.is_super_admin_user %}
+      {% if can_edit_org and current_user and current_user.is_super_admin_user %}
       <button onclick="openOrgModal()" class="text-xs text-[#58a6ff] hover:underline flex items-center gap-1">
         <i class="bi bi-plus-lg"></i> Add New Profile
       </button>
@@ -645,12 +761,18 @@
               <h3 class="text-sm font-bold text-[#e6edf3]">{{ o.name }}</h3>
             </div>
             <div class="flex items-center gap-1">
-              {% if current_user and (current_user.is_super_admin_user or o.id == current_org.id) %}
+              {% if current_user and current_user.is_super_admin_user %}
+              <button onclick='openOrgAccessMatrixModal({{ o.id }}, {{ o.name|tojson }}, {{ o.get_all_access_levels()|tojson }})'
+                      class="text-xs text-[#8b949e] hover:text-[#d2a8ff] p-1" title="Configure Supreme Access Levels">
+                <i class="bi bi-shield-shaded"></i>
+              </button>
+              {% endif %}
+              {% if can_edit_org and current_user and (current_user.is_super_admin_user or o.id == current_org.id) %}
               <button data-org='{{ o.to_dict()|tojson }}' onclick="editOrg(JSON.parse(this.dataset.org))" class="text-xs text-[#8b949e] hover:text-[#58a6ff] p-1" title="Edit Organisation">
                 <i class="bi bi-pencil"></i>
               </button>
               {% endif %}
-              {% if current_user and current_user.is_super_admin_user and o.id != current_org.id %}
+              {% if can_edit_org and current_user and current_user.is_super_admin_user and o.id != current_org.id %}
               <form action="{{ url_for('organisations.delete_organisation', id=o.id) }}" method="POST" class="inline" onsubmit="return confirm('Delete organisation &quot;{{ o.name }}&quot;?');">
                 <button type="submit" class="text-xs text-[#8b949e] hover:text-[#f85149] p-1" title="Delete Organisation">
                   <i class="bi bi-trash"></i>
@@ -733,7 +855,91 @@
   </div>
 </div>
 
+<!-- ── MODAL: SUPREME ORGANISATION ACCESS MATRIX (SUPERADMIN ONLY) ── -->
+<div id="orgAccessMatrixModal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-[#161b22] border border-[#30363d] rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col animate-fade-up">
+    <div class="px-5 py-4 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between shrink-0">
+      <div>
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="bi bi-shield-shaded text-[#d2a8ff]"></i>
+          <span>Supreme Organisation Access Matrix</span>
+        </h3>
+        <p class="text-xs text-[#8b949e] mt-0.5">
+          Company: <span id="matrix_org_name" class="font-bold text-[#58a6ff]"></span>
+          <span class="text-[#f0883e] ms-2 text-[11px]">(Supreme Rule: User roles cannot exceed these levels)</span>
+        </p>
+      </div>
+      <button onclick="closeOrgAccessMatrixModal()" class="text-[#8b949e] hover:text-white cursor-pointer"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <form id="orgAccessMatrixForm" method="POST" action="" class="p-5 overflow-y-auto space-y-4 custom-scrollbar">
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg text-xs text-[#8b949e] flex items-center gap-2.5">
+        <i class="bi bi-info-circle text-[#58a6ff] text-base shrink-0"></i>
+        <span>
+          As the <strong>Lytrose SuperAdmin</strong>, you set the ceiling permissions for this organisation across all 10 modules.
+          Any role created or edited within this company will be clamped to these supreme levels.
+        </span>
+      </div>
+
+      <div class="space-y-3">
+        {% for mod_key, mod_info in ACCESS_MODULE_INFO.items() %}
+        <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg hover:border-[#58a6ff]/40 transition-colors">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+            <div class="flex items-center gap-2">
+              <i class="bi {{ mod_info.icon }} text-[#58a6ff]"></i>
+              <span class="text-xs font-bold text-[#e6edf3]">{{ mod_info.label }}</span>
+            </div>
+            <span class="text-[10px] font-mono text-[#8b949e]">key: {{ mod_key }}</span>
+          </div>
+          <p class="text-[11px] text-[#8b949e] mb-2.5">{{ mod_info.description }}</p>
+
+          <!-- 3-Level Segmented Radios -->
+          <div class="grid grid-cols-3 gap-2">
+            <label class="flex items-center justify-center gap-1.5 p-2 rounded bg-[#161b22] border border-[#30363d] hover:border-[#da3633]/60 cursor-pointer text-xs transition-colors">
+              <input type="radio" name="access_{{ mod_key }}" value="0" id="matrix_{{ mod_key }}_0" class="accent-[#da3633]">
+              <span class="font-medium text-[#f85149]">0 — No Access</span>
+            </label>
+            <label class="flex items-center justify-center gap-1.5 p-2 rounded bg-[#161b22] border border-[#30363d] hover:border-[#1f6feb]/60 cursor-pointer text-xs transition-colors">
+              <input type="radio" name="access_{{ mod_key }}" value="1" id="matrix_{{ mod_key }}_1" class="accent-[#58a6ff]">
+              <span class="font-medium text-[#58a6ff]">1 — Read Only</span>
+            </label>
+            <label class="flex items-center justify-center gap-1.5 p-2 rounded bg-[#161b22] border border-[#30363d] hover:border-[#238636]/60 cursor-pointer text-xs transition-colors">
+              <input type="radio" name="access_{{ mod_key }}" value="2" id="matrix_{{ mod_key }}_2" class="accent-[#238636]">
+              <span class="font-medium text-[#3fb950]">2 — Full Access</span>
+            </label>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="pt-3 border-t border-[#30363d] flex justify-end gap-2 shrink-0">
+        <button type="button" onclick="closeOrgAccessMatrixModal()" class="px-3.5 py-1.5 bg-[#21262d] text-xs text-[#c9d1d9] rounded-lg border border-[#30363d]">
+          Cancel
+        </button>
+        <button type="submit" class="px-4 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg flex items-center gap-1.5 shadow-sm">
+          <i class="bi bi-check2-circle"></i> Save Supreme Access Levels
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
+  function openOrgAccessMatrixModal(orgId, orgName, accessLevels) {
+    document.getElementById('matrix_org_name').textContent = orgName;
+    document.getElementById('orgAccessMatrixForm').action = "/organisations/" + orgId + "/access-levels/save";
+    const levels = accessLevels || {};
+    for (const key of Object.keys(levels)) {
+      const val = levels[key];
+      const el = document.getElementById('matrix_' + key + '_' + val);
+      if (el) el.checked = true;
+    }
+    document.getElementById('orgAccessMatrixModal').classList.remove('hidden');
+  }
+
+  function closeOrgAccessMatrixModal() {
+    document.getElementById('orgAccessMatrixModal').classList.add('hidden');
+  }
   function syncOrgGraphStyles() {
     const styles = {
       hq_color: document.getElementById('org_style_hq_color')?.value || '#58a6ff',

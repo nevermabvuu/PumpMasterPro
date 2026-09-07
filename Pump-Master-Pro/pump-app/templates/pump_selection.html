@@ -29,7 +29,11 @@
   </div>
 </div>
 
-<form method="post" id="selectionForm" class="w-full">
+{% set liquid_lvl = current_user.get_access_level('selection_liquid') if current_user else 2 %}
+{% set motor_lvl = current_user.get_access_level('selection_motors') if current_user else 2 %}
+{% set filter_lvl = current_user.get_access_level('selection_advanced_filters') if current_user else 2 %}
+
+<form method="post" id="selectionForm" class="w-full" onsubmit="document.querySelectorAll('#selectionForm fieldset[disabled]').forEach(fs => fs.disabled = false);">
   <input type="hidden" name="sort_by" id="sortByInput" value="{{ sort_by or 'rating' }}">
   <input type="hidden" name="unit_system" id="unitSystemInput" value="{{ unit_system or 'metric' }}">
 
@@ -132,14 +136,41 @@
       </div>
 
       <!-- Card: Liquid Options -->
+      {% if liquid_lvl == 0 %}
+      <div class="card-dark border-[#da3633]/30">
+        <div class="card-header-dark flex items-center justify-between">
+          <span class="flex items-center gap-1.5 font-bold text-[#8b949e]">
+            <i class="bi bi-lock-fill text-[#f85149]"></i>
+            <span>Fluid Properties (Locked)</span>
+          </span>
+          <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#da3633]/20 text-[#f85149] border border-[#da3633]/30">
+            No Access (0)
+          </span>
+        </div>
+        <div class="p-4 text-center space-y-1">
+          <p class="text-xs text-[#8b949e]">Fluid &amp; slurry properties are locked by company administrator.</p>
+          <span class="text-[11px] text-[#58a6ff]">Duty evaluation defaults to clean water (ρ = 1000 kg/m³).</span>
+          <input type="hidden" name="liquid" value="water">
+          <input type="hidden" name="rho" value="1000">
+        </div>
+      </div>
+      {% else %}
       <div class="card-dark">
         <div class="card-header-dark flex items-center justify-between">
           <span class="flex items-center gap-1.5 font-bold">
             <i class="bi bi-droplet text-[#58a6ff]"></i>
             <span>Fluid Properties</span>
           </span>
-          <span class="text-[11px] font-mono text-[#8b949e] uppercase">{{ form_data.get('liquid', 'water') }}</span>
+          <div class="flex items-center gap-1.5">
+            {% if liquid_lvl == 1 %}
+            <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#1f6feb]/20 text-[#58a6ff] border border-[#1f6feb]/30">
+              <i class="bi bi-eye me-0.5"></i>Read Only (1)
+            </span>
+            {% endif %}
+            <span class="text-[11px] font-mono text-[#8b949e] uppercase">{{ form_data.get('liquid', 'water') }}</span>
+          </div>
         </div>
+        <fieldset {% if liquid_lvl == 1 %}disabled class="contents opacity-85"{% endif %}>
         <div class="p-3.5 space-y-3">
           <div>
             <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Liquid Type</label>
@@ -245,7 +276,9 @@
             </div>
           </div>
         </div>
+        </fieldset>
       </div>
+      {% endif %}
 
       <!-- Primary Action Button: Find Matching Pumps -->
       <button type="submit" id="btnFindPumps"
@@ -263,15 +296,50 @@
          ════════════════════════════════════════════════════════════════════ -->
     <div class="col-span-12 lg:col-span-4 xl:col-span-4 space-y-3">
 
-      <!-- Card: Operation Mode -->
+      <!-- Card: Operation Mode (Gated by selection_motors access level) -->
+      {% if motor_lvl == 0 %}
+      <div class="card-dark border-[#da3633]/30">
+        <div class="card-header-dark flex items-center justify-between">
+          <span class="flex items-center gap-1.5 font-bold text-[#8b949e]">
+            <i class="bi bi-lock-fill text-[#f85149]"></i>
+            <span>Operation Mode &amp; Motors (Locked)</span>
+          </span>
+          <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#da3633]/20 text-[#f85149] border border-[#da3633]/30">
+            No Access (0)
+          </span>
+        </div>
+        <div class="p-4 text-center space-y-1">
+          <p class="text-xs text-[#8b949e]">Motor specifications &amp; operation modes are locked by company administrator.</p>
+          <span class="text-[11px] text-[#58a6ff]">Defaulting to Fixed Speed, standard 4-Pole 50 Hz motor with 15% margin.</span>
+          <input type="hidden" name="operation_mode" value="fixed">
+          <input type="hidden" name="fixed_speed_mode" value="auto">
+          <input type="hidden" name="motor_standard" value="all">
+          <input type="hidden" name="motor_efficiency" value="all">
+          <input type="hidden" name="motor_supplier" value="all">
+          <input type="hidden" name="motor_poles" value="4">
+          <input type="hidden" name="motor_freq_hz" value="50">
+          <input type="hidden" name="drive_type" value="direct">
+          <input type="hidden" name="motor_margin_basis" value="duty">
+          <input type="hidden" name="motor_margin_pct" value="15.0">
+        </div>
+      </div>
+      {% else %}
       <div class="card-dark">
         <div class="card-header-dark flex items-center justify-between">
           <span class="flex items-center gap-1.5 font-bold">
             <i class="bi bi-speedometer2 text-[#58a6ff]"></i>
             <span>Operation Mode</span>
           </span>
-          <span class="text-[11px] font-mono text-[#58a6ff] uppercase">{{ form_data.get('operation_mode', 'fixed') }}</span>
+          <div class="flex items-center gap-1.5">
+            {% if motor_lvl == 1 %}
+            <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#1f6feb]/20 text-[#58a6ff] border border-[#1f6feb]/30">
+              <i class="bi bi-eye me-0.5"></i>Read Only (1)
+            </span>
+            {% endif %}
+            <span class="text-[11px] font-mono text-[#58a6ff] uppercase">{{ form_data.get('operation_mode', 'fixed') }}</span>
+          </div>
         </div>
+        <fieldset {% if motor_lvl == 1 %}disabled class="contents opacity-85"{% endif %}>
         <div class="p-3.5 space-y-3">
           <!-- Radio: Fixed Speed -->
           <div class="p-2.5 rounded-lg border border-[#30363d] bg-[#0d1117]/60">
@@ -339,6 +407,7 @@
             </div>
           </div>
         </div>
+        </fieldset>
       </div>
 
       <!-- Card: Motor Specifications & Margins -->
@@ -348,8 +417,16 @@
             <i class="bi bi-cpu text-[#58a6ff]"></i>
             <span>Motor &amp; Drive Specifications</span>
           </span>
-          <span class="text-[11px] font-mono text-[#8b949e]">{{ form_data.get('motor_margin_pct', '15') }}% Margin</span>
+          <div class="flex items-center gap-1.5">
+            {% if motor_lvl == 1 %}
+            <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#1f6feb]/20 text-[#58a6ff] border border-[#1f6feb]/30">
+              <i class="bi bi-eye me-0.5"></i>Read Only (1)
+            </span>
+            {% endif %}
+            <span class="text-[11px] font-mono text-[#8b949e]">{{ form_data.get('motor_margin_pct', '15') }}% Margin</span>
+          </div>
         </div>
+        <fieldset {% if motor_lvl == 1 %}disabled class="contents opacity-85"{% endif %}>
         <div class="p-3.5 space-y-3">
           <div class="grid grid-cols-3 gap-2">
             <div>
@@ -427,7 +504,9 @@
             </div>
           </div>
         </div>
+        </fieldset>
       </div>
+      {% endif %}
 
       <!-- ── Card: Pump Specifications & Catalogue Filters (Combined Card) ───── -->
       {#
@@ -448,6 +527,22 @@
         {% endfor %}
       {% endif %}
 
+      {% if filter_lvl == 0 %}
+      <div class="card-dark border-[#da3633]/30">
+        <div class="card-header-dark flex items-center justify-between">
+          <span class="flex items-center gap-1.5 font-bold text-[#8b949e]">
+            <i class="bi bi-lock-fill text-[#f85149]"></i>
+            <span>Pump Specifications &amp; Filters</span>
+          </span>
+          <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#da3633]/20 text-[#f85149] border border-[#da3633]/30">
+            No Access (0)
+          </span>
+        </div>
+        <div class="p-3 text-center text-xs text-[#8b949e]">
+          Catalogue filter specifications are locked by company administrator.
+        </div>
+      </div>
+      {% else %}
       <div class="card-dark" id="combinedFilterCard">
         <div class="card-header-dark cursor-pointer flex items-center justify-between" onclick="toggleFilterPanel()" id="filterToggleBtn">
           <span class="flex items-center gap-1.5 font-bold">
@@ -459,8 +554,16 @@
               </span>
             {% endif %}
           </span>
-          <i class="bi bi-chevron-down text-xs transition-transform" id="filterChevron" style="{{ 'transform: rotate(180deg);' if active_filters_count.value > 0 else '' }}"></i>
+          <div class="flex items-center gap-2">
+            {% if filter_lvl == 1 %}
+            <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#1f6feb]/20 text-[#58a6ff] border border-[#1f6feb]/30">
+              <i class="bi bi-eye me-0.5"></i>Read Only (1)
+            </span>
+            {% endif %}
+            <i class="bi bi-chevron-down text-xs transition-transform" id="filterChevron" style="{{ 'transform: rotate(180deg);' if active_filters_count.value > 0 else '' }}"></i>
+          </div>
         </div>
+        <fieldset {% if filter_lvl == 1 %}disabled class="contents opacity-85"{% endif %}>
         <div id="filterPanel" class="p-3.5 space-y-3 border-t border-[#30363d]" style="{{ '' if active_filters_count.value > 0 else 'display:none' }}">
           
           <!-- Standard Catalogue Properties -->
@@ -533,7 +636,9 @@
           </div>
           {% endif %}
         </div>
+        </fieldset>
       </div>
+      {% endif %}
 
     </div>
 

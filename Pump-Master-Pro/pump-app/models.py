@@ -921,18 +921,87 @@ class Pump(db.Model):
         pump_rep_ids = {int(x.strip()) for x in raw_pump_reps.replace(';', ',').split(',') if x.strip().isdigit()}
         
         # Intersection: only reports present in both Level 1 and Level 2
-        return [r for r in org_reports if r.id in pump_rep_ids]
+# ── Standard 3-Level Access Control Matrix Definitions ────────────────────────
+# Access Levels:
+#   0 = No Access (completely hidden & blocked)
+#   1 = Read Only (can view, browse, inspect; cannot modify/save/delete)
+#   2 = Full Access (read/edit/create/delete)
+# The Organisation access levels are supreme: effective_level = min(org_level, role_level)
+ACCESS_MODULE_INFO = {
+    'organisation_settings': {
+        'key': 'organisation_settings',
+        'label': 'Organisation Settings',
+        'description': 'Configure company profile, engineering defaults, and multi-organisation visibility rules.',
+        'icon': 'bi-buildings'
+    },
+    'pump_data': {
+        'key': 'pump_data',
+        'label': 'Pump Data (Curves & Fitting)',
+        'description': 'View or modify pump curve polynomial coefficients, raw performance tables, and sizing data.',
+        'icon': 'bi-database'
+    },
+    'comparison': {
+        'key': 'comparison',
+        'label': 'Pump Comparison & Analysis',
+        'description': 'Multi-pump duty point comparison, performance ranking, and overlay charts.',
+        'icon': 'bi-bar-chart-line'
+    },
+    'report_settings': {
+        'key': 'report_settings',
+        'label': 'PDF Report Templates',
+        'description': 'Configure technical datasheet formats, engineering reports, and selection output templates.',
+        'icon': 'bi-file-earmark-pdf'
+    },
+    'users_settings': {
+        'key': 'users_settings',
+        'label': 'User Management',
+        'description': 'View user roster, invite engineers, assign roles, and manage access statuses.',
+        'icon': 'bi-people'
+    },
+    'roles': {
+        'key': 'roles',
+        'label': 'Roles & Permissions',
+        'description': 'Manage engineering authority levels and custom access permissions within the organisation.',
+        'icon': 'bi-shield-lock'
+    },
+    'selection_liquid': {
+        'key': 'selection_liquid',
+        'label': 'Selection: Fluid Properties',
+        'description': 'Configure fluid specific gravity (SG), viscosity, and solid-liquid slurry derating models.',
+        'icon': 'bi-droplet'
+    },
+    'selection_advanced_filters': {
+        'key': 'selection_advanced_filters',
+        'label': 'Selection: Specifications & Filters',
+        'description': 'Apply manufacturer filters, pump types, sizes, and custom organisation attributes 1-30.',
+        'icon': 'bi-funnel'
+    },
+    'selection_motors': {
+        'key': 'selection_motors',
+        'label': 'Selection: Motor & Drive Specs',
+        'description': 'Configure motor standards (IEC/NEMA), efficiency classes, poles, frequency, and drive types.',
+        'icon': 'bi-cpu'
+    },
+    'pump_catalogue': {
+        'key': 'pump_catalogue',
+        'label': 'Pump Catalogue & Dashboard',
+        'description': 'Browse registered pump catalogue, search pumps, and inspect manufacturer datasheets.',
+        'icon': 'bi-grid'
+    }
+}
 
 
 class Organisation(db.Model):
     """
     Beginners Note: Organisation Model ('organisations' table)
     Represents an Engineering Organisation or Manufacturer profile, with defaults and multi-organisation visibility rules.
+    Access levels configured here act as the supreme ceiling for all roles and users within this organisation.
     """
     __tablename__ = 'organisations'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
+    access_levels_json = db.Column(db.Text, default='{}')
     logo_url = db.Column(db.String(255), default='')
     contact_email = db.Column(db.String(100), default='')
     phone = db.Column(db.String(50), default='')
@@ -1168,6 +1237,56 @@ class Organisation(db.Model):
         org_reps = ReportConfig.query.filter_by(organisation_id=self.id).all()
         return org_reps if org_reps else ReportConfig.query.all()
 
+    def get_all_access_levels(self):
+        """
+        Beginners Note: Returns the organisation-level access ceiling {module_key: int (0, 1, 2)}.
+        0 = No Access, 1 = Read Only, 2 = Full Access.
+        Defaults to 2 (Full Access) across all modules if unset.
+        """
+        import json
+        levels = {k: 2 for k in ACCESS_MODULE_INFO.keys()}
+        raw = getattr(self, 'access_levels_json', None)
+        if raw and raw.strip():
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, dict):
+                    for k in levels.keys():
+                        if k in parsed:
+                            try:
+                                levels[k] = max(0, min(2, int(parsed[k])))
+                            except (ValueError, TypeError):
+                                pass
+            except Exception:
+                pass
+        return levels
+
+    def get_access_level(self, module_key):
+        """Returns integer access level (0, 1, 2) for a specific module in this organisation."""
+        return self.get_all_access_levels().get(module_key, 2)
+
+    def set_access_level(self, module_key, level):
+        """Sets access level for a single module in this organisation."""
+        cur = self.get_all_access_levels()
+        cur[module_key] = max(0, min(2, int(level)))
+        self.set_all_access_levels(cur)
+
+    def set_all_access_levels(self, levels_dict):
+        """
+        Beginners Note: Configures supreme organisation access ceilings.
+        Exclusively callable by the Lytrose Super Administrator.
+        """
+        import json
+        clean = {}
+        for k in ACCESS_MODULE_INFO.keys():
+            if k in levels_dict:
+                try:
+                    clean[k] = max(0, min(2, int(levels_dict[k])))
+                except (ValueError, TypeError):
+                    clean[k] = 2
+            else:
+                clean[k] = self.get_access_level(k)
+        self.access_levels_json = json.dumps(clean)
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -1190,6 +1309,8 @@ class Organisation(db.Model):
             'default_report_vsd_id': getattr(self, 'default_report_vsd_id', None),
             'graph_styles': self.get_graph_styles(),
             'graph_styles_json': getattr(self, 'graph_styles_json', '') or '{}',
+            'access_levels': self.get_all_access_levels(),
+            'access_levels_json': getattr(self, 'access_levels_json', '') or '{}',
         }
 
 
@@ -1467,8 +1588,9 @@ class Role(db.Model):
     name = db.Column(db.String(80), nullable=False)
     code = db.Column(db.String(50), nullable=False)
     description = db.Column(db.String(255), default='')
+    access_levels_json = db.Column(db.Text, default='{}')
 
-    # Granular functional permissions
+    # Granular functional permissions (maintained for legacy compatibility)
     can_select_pumps = db.Column(db.Boolean, default=True)
     can_edit_catalogue = db.Column(db.Boolean, default=False)
     can_export_reports = db.Column(db.Boolean, default=True)
@@ -1480,6 +1602,94 @@ class Role(db.Model):
 
     # Relationships
     organisation = db.relationship('Organisation', backref=db.backref('roles', lazy=True, cascade='all, delete-orphan'))
+
+    def get_all_access_levels(self):
+        """
+        Beginners Note: Returns configured access levels {module_key: int (0, 1, 2)} for this Role.
+        0 = No Access, 1 = Read Only, 2 = Full Access.
+        Falls back smoothly to role code defaults or legacy booleans if unset.
+        """
+        import json
+        raw = getattr(self, 'access_levels_json', None)
+        if raw and raw.strip():
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, dict) and any(k in parsed for k in ACCESS_MODULE_INFO.keys()):
+                    levels = {}
+                    for k in ACCESS_MODULE_INFO.keys():
+                        try:
+                            levels[k] = max(0, min(2, int(parsed.get(k, 0))))
+                        except (ValueError, TypeError):
+                            levels[k] = 0
+                    return levels
+            except Exception:
+                pass
+
+        # Legacy boolean / role code fallback
+        code = getattr(self, 'code', 'engineer')
+        if code == 'admin':
+            return {k: 2 for k in ACCESS_MODULE_INFO.keys()}
+        elif code == 'viewer':
+            return {
+                'organisation_settings': 0,
+                'pump_data': 1,
+                'comparison': 1,
+                'report_settings': 1,
+                'users_settings': 0,
+                'roles': 0,
+                'selection_liquid': 1,
+                'selection_advanced_filters': 1,
+                'selection_motors': 1,
+                'pump_catalogue': 1
+            }
+        else: # engineer or custom role
+            can_sel = 2 if getattr(self, 'can_select_pumps', True) else 0
+            can_edit_cat = 2 if getattr(self, 'can_edit_catalogue', False) else 1
+            can_exp = 2 if getattr(self, 'can_export_reports', True) else 1
+            can_org = 2 if getattr(self, 'can_manage_organisation', False) else 0
+            can_usr = 2 if getattr(self, 'can_manage_users', False) else 0
+            return {
+                'organisation_settings': can_org,
+                'pump_data': can_edit_cat,
+                'comparison': can_sel,
+                'report_settings': can_exp,
+                'users_settings': can_usr,
+                'roles': can_usr,
+                'selection_liquid': can_sel,
+                'selection_advanced_filters': can_sel,
+                'selection_motors': can_sel,
+                'pump_catalogue': 2
+            }
+
+    def get_access_level(self, module_key):
+        """Returns integer access level (0, 1, 2) configured on this role."""
+        return self.get_all_access_levels().get(module_key, 0)
+
+    def set_access_level(self, module_key, level):
+        """Sets access level for a single module in this role."""
+        cur = self.get_all_access_levels()
+        cur[module_key] = max(0, min(2, int(level)))
+        self.set_all_access_levels(cur)
+
+    def set_all_access_levels(self, levels_dict):
+        """Sets access levels dictionary for this role and syncs legacy booleans."""
+        import json
+        clean = {}
+        for k in ACCESS_MODULE_INFO.keys():
+            if k in levels_dict:
+                try:
+                    clean[k] = max(0, min(2, int(levels_dict[k])))
+                except (ValueError, TypeError):
+                    clean[k] = 0
+            else:
+                clean[k] = self.get_access_level(k)
+        self.access_levels_json = json.dumps(clean)
+        # Keep legacy boolean columns in sync
+        self.can_select_pumps = (clean.get('comparison', 0) > 0) or (clean.get('selection_liquid', 0) > 0)
+        self.can_edit_catalogue = (clean.get('pump_data', 0) >= 2)
+        self.can_export_reports = (clean.get('report_settings', 0) > 0)
+        self.can_manage_organisation = (clean.get('organisation_settings', 0) >= 2)
+        self.can_manage_users = (clean.get('users_settings', 0) >= 2)
 
     def to_dict(self):
         return {
@@ -1494,6 +1704,8 @@ class Role(db.Model):
             'can_manage_organisation': bool(self.can_manage_organisation),
             'can_manage_users': bool(self.can_manage_users),
             'is_system_role': bool(self.is_system_role),
+            'access_levels': self.get_all_access_levels(),
+            'access_levels_json': getattr(self, 'access_levels_json', '') or '{}',
             'created_at': self.created_at.isoformat() if self.created_at else ''
         }
 
@@ -1531,6 +1743,10 @@ class User(db.Model):
     role_rel = db.relationship('Role', foreign_keys=[role_id], backref=db.backref('assigned_users', lazy=True))
 
     @property
+    def org_profile(self):
+        return self.organisation_ref or (Organisation.query.get(self.organisation_id) if self.organisation_id else None)
+
+    @property
     def full_name(self):
         parts = [self.first_name, self.last_name]
         name = ' '.join(p for p in parts if p).strip()
@@ -1565,6 +1781,42 @@ class User(db.Model):
             return True
         return False
 
+    def get_access_level(self, module_key):
+        """
+        Beginners Note: Supreme Organisation Access Rule
+        A user role CANNOT have a higher access level than its organisation.
+        Effective Level = min(Organisation Level, Role Level)
+        0 = No Access, 1 = Read Only, 2 = Full Access
+        Lytrose SuperAdmin always has level 2 (unlimited).
+        """
+        if self.is_super_admin_user:
+            return 2
+
+        if not self.organisation_id:
+            return 0
+
+        org = self.organisation_ref or Organisation.query.get(self.organisation_id)
+        org_cap = org.get_access_level(module_key) if org else 2
+
+        if self.role_rel:
+            role_level = self.role_rel.get_access_level(module_key)
+        else:
+            role_level = 2 if self.role == 'admin' else (1 if self.role == 'viewer' else 2)
+
+        return min(org_cap, role_level)
+
+    def can_access(self, module_key, min_level=1):
+        """Returns True if user has at least min_level access (1=read-only, 2=full access)."""
+        return self.get_access_level(module_key) >= min_level
+
+    def can_edit(self, module_key):
+        """Returns True if user has full access (read/edit/delete, level 2)."""
+        return self.get_access_level(module_key) >= 2
+
+    def can_view(self, module_key):
+        """Returns True if user has view/read access (level >= 1)."""
+        return self.get_access_level(module_key) >= 1
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -1576,23 +1828,17 @@ class User(db.Model):
     def is_admin(self):
         if self.is_super_admin_user:
             return True
-        if self.role_rel:
-            return self.role_rel.can_manage_users or self.role_rel.code == 'admin'
-        return self.role == 'admin'
+        return self.can_edit('users_settings') or self.can_edit('roles') or self.role == 'admin'
 
     def can_select_pumps(self):
         if self.is_super_admin_user:
             return True
-        if self.role_rel:
-            return self.role_rel.can_select_pumps
-        return True
+        return self.can_access('comparison', 1) or self.can_access('selection_liquid', 1) or self.can_access('selection_advanced_filters', 1)
 
     def can_edit_catalogue(self):
         if self.is_super_admin_user:
             return True
-        if self.role_rel:
-            return self.role_rel.can_edit_catalogue or self.is_admin()
-        return self.role in ('admin', 'engineer')
+        return self.can_edit('pump_data')
 
     def is_active(self):
         return self.status == 'active'
@@ -1614,6 +1860,7 @@ class User(db.Model):
             'is_super_admin': self.is_super_admin_user,
             'status': self.status,
             'organisation_id': self.organisation_id,
+            'access_levels': {k: self.get_access_level(k) for k in ACCESS_MODULE_INFO.keys()},
             'created_at': self.created_at.isoformat() if self.created_at else '',
             'last_login_at': self.last_login_at.isoformat() if self.last_login_at else ''
         }

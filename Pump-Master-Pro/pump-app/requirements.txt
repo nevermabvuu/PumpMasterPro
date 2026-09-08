@@ -1,0 +1,44 @@
+# ==============================================================================
+# Pump Master Pro — Python Dependencies
+# ==============================================================================
+# Generated for deployment on Render.com (https://render.com).
+#
+# To install locally:
+#   pip install -r requirements.txt
+#
+# Render will install these automatically during each deploy.
+# ==============================================================================
+
+# ── Web Framework ──────────────────────────────────────────────────────────────
+Flask==3.1.3
+Werkzeug==3.1.8
+
+# ── Database ORM ───────────────────────────────────────────────────────────────
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.51
+
+# ── Security & Token Signing ───────────────────────────────────────────────────
+# itsdangerous is used for signing pump-ID URL tokens (pump_token.py)
+# so that raw database IDs are never exposed in browser URLs.
+itsdangerous==2.2.0
+
+# ── Numerical & Scientific Computing ──────────────────────────────────────────
+numpy==2.5.1
+scipy==1.18.0
+
+# ── PDF Report Generation ─────────────────────────────────────────────────────
+reportlab==4.5.1
+# svglib converts SVG chart output into reportlab-compatible format for PDFs
+svglib==2.0.2
+# Pillow provides image processing used by reportlab (logos, watermarks, etc.)
+Pillow==12.2.0
+
+# ── Environment Variable Management ───────────────────────────────────────────
+# Loads SESSION_SECRET and other config from a .env file in development.
+# On Render, set these via the Environment Variables dashboard instead.
+python-dotenv==1.2.2
+
+# ── Production WSGI Server ─────────────────────────────────────────────────────
+# Render requires a production-grade WSGI server — NOT Flask's built-in dev server.
+# gunicorn is the standard choice for Python web apps on Render.
+gunicorn==26.2.0

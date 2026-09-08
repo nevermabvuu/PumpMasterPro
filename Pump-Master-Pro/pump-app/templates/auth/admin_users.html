@@ -3,7 +3,21 @@
 {% block title %}User Management — Pump Master Pro{% endblock %}
 
 {% block content %}
+{% set users_access_lvl = current_user.get_access_level('users_settings') if current_user else 2 %}
+{% set can_edit_users = (users_access_lvl >= 2) %}
+
 <div class="space-y-6">
+
+  <!-- Beginners Note: Read-Only Alert Banner shown when user has level 1 (Read Only) access to user management -->
+  {% if not can_edit_users %}
+    <div class="p-3.5 rounded-xl bg-[#d29922]/10 border border-[#d29922]/30 flex items-center justify-between gap-3 text-xs text-[#e3b341]">
+      <div class="flex items-center gap-2.5">
+        <i class="bi bi-eye text-base shrink-0"></i>
+        <span><strong>Read-Only Mode:</strong> Your role or organisation grants view-only access to user management. Account creation, profile edits, status toggles, and password resets are disabled.</span>
+      </div>
+      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#d29922]/20 border border-[#d29922]/40 shrink-0">LEVEL 1 &bull; READ ONLY</span>
+    </div>
+  {% endif %}
 
   <!-- PAGE HEADER -->
   <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[#30363d]">
@@ -22,18 +36,26 @@
     </div>
 
     <div class="flex items-center gap-3">
-      <a href="{{ url_for('auth.admin_roles') }}"
-         class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#c9d1d9] hover:text-white rounded-lg flex items-center gap-1.5 border border-[#30363d] transition-colors">
-        <i class="bi bi-shield-lock text-[#58a6ff]"></i> Manage Roles
-      </a>
-      <a href="{{ url_for('auth.admin_requests') }}"
-         class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#c9d1d9] hover:text-white rounded-lg flex items-center gap-1.5 border border-[#30363d] transition-colors">
-        <i class="bi bi-person-check text-[#3fb950]"></i> Access Requests
-      </a>
-      <button type="button" onclick="openAddUserModal()"
-              class="px-3.5 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-semibold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
-        <i class="bi bi-person-plus"></i> Add New User
-      </button>
+      {% if current_user.can_access('roles') %}
+        <a href="{{ url_for('auth.admin_roles') }}"
+           class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#c9d1d9] hover:text-white rounded-lg flex items-center gap-1.5 border border-[#30363d] transition-colors">
+          <i class="bi bi-shield-lock text-[#58a6ff]"></i> Manage Roles
+        </a>
+      {% endif %}
+      {% if can_edit_users %}
+        <a href="{{ url_for('auth.admin_requests') }}"
+           class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#c9d1d9] hover:text-white rounded-lg flex items-center gap-1.5 border border-[#30363d] transition-colors">
+          <i class="bi bi-person-check text-[#3fb950]"></i> Access Requests
+        </a>
+        <button type="button" onclick="openAddUserModal()"
+                class="px-3.5 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-semibold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
+          <i class="bi bi-person-plus"></i> Add New User
+        </button>
+      {% else %}
+        <span class="px-3 py-1.5 bg-[#21262d] text-xs font-semibold text-[#8b949e] rounded-lg border border-[#30363d] flex items-center gap-1.5 cursor-not-allowed">
+          <i class="bi bi-lock"></i> Add User (Disabled)
+        </span>
+      {% endif %}
     </div>
   </div>
 
@@ -208,35 +230,42 @@
 
               <!-- Actions -->
               <td class="py-3 px-4 text-right">
-                <div class="flex items-center justify-end gap-1.5">
-                  <!-- Edit Profile -->
-                  <button type="button"
-                          onclick='openEditUserModal({{ u.to_dict()|tojson }})'
-                          class="p-1.5 rounded text-[#8b949e] hover:text-[#58a6ff] hover:bg-[#21262d] transition-colors"
-                          title="Edit User">
-                    <i class="bi bi-pencil"></i>
-                  </button>
+                {% if can_edit_users %}
+                  <div class="flex items-center justify-end gap-1.5">
+                    <!-- Edit Profile -->
+                    <button type="button"
+                            onclick='openEditUserModal({{ u.to_dict()|tojson }})'
+                            class="p-1.5 rounded text-[#8b949e] hover:text-[#58a6ff] hover:bg-[#21262d] transition-colors"
+                            title="Edit User">
+                      <i class="bi bi-pencil"></i>
+                    </button>
 
-                  <!-- Reset Password -->
-                  <button type="button"
-                          onclick="openResetPasswordModal({{ u.id }}, '{{ u.full_name }}')"
-                          class="p-1.5 rounded text-[#8b949e] hover:text-[#e3b341] hover:bg-[#21262d] transition-colors"
-                          title="Reset Password">
-                    <i class="bi bi-key"></i>
-                  </button>
+                    <!-- Reset Password -->
+                    <button type="button"
+                            onclick="openResetPasswordModal({{ u.id }}, '{{ u.full_name }}')"
+                            class="p-1.5 rounded text-[#8b949e] hover:text-[#e3b341] hover:bg-[#21262d] transition-colors"
+                            title="Reset Password">
+                      <i class="bi bi-key"></i>
+                    </button>
 
-                  <!-- Toggle Active Status -->
-                  {% if u.id != current_user.id %}
-                    <form method="POST" action="{{ url_for('auth.admin_user_toggle_status', user_id=u.id) }}" class="inline"
-                          onsubmit="return confirm('Are you sure you want to {{ 'deactivate' if u.status == 'active' else 'activate' }} access for {{ u.full_name }}?');">
-                      <button type="submit"
-                              class="p-1.5 rounded {{ 'text-[#f85149] hover:bg-[#da3633]/10' if u.status == 'active' else 'text-[#3fb950] hover:bg-[#238636]/10' }} transition-colors cursor-pointer"
-                              title="{{ 'Deactivate Account' if u.status == 'active' else 'Activate Account' }}">
-                        <i class="bi {{ 'bi-person-x' if u.status == 'active' else 'bi-person-check' }}"></i>
-                      </button>
-                    </form>
-                  {% endif %}
-                </div>
+                    <!-- Toggle Active Status -->
+                    {% if u.id != current_user.id %}
+                      <form method="POST" action="{{ url_for('auth.admin_user_toggle_status', user_id=u.id) }}" class="inline"
+                            onsubmit="return confirm('Are you sure you want to {{ 'deactivate' if u.status == 'active' else 'activate' }} access for {{ u.full_name }}?');">
+                        <button type="submit"
+                                class="p-1.5 rounded {{ 'text-[#f85149] hover:bg-[#da3633]/10' if u.status == 'active' else 'text-[#3fb950] hover:bg-[#238636]/10' }} transition-colors cursor-pointer"
+                                title="{{ 'Deactivate Account' if u.status == 'active' else 'Activate Account' }}">
+                          <i class="bi {{ 'bi-person-x' if u.status == 'active' else 'bi-person-check' }}"></i>
+                        </button>
+                      </form>
+                    {% endif %}
+                  </div>
+                {% else %}
+                  <!-- Beginners Note: When in read-only mode, mutation action buttons are replaced with a locked badge -->
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono text-[#8b949e] bg-[#21262d] border border-[#30363d]" title="Account editing is disabled in Read-Only mode">
+                    <i class="bi bi-lock text-[10px]"></i> View Only
+                  </span>
+                {% endif %}
               </td>
             </tr>
           {% else %}
@@ -253,7 +282,10 @@
   </div>
 
 </div>
+{% endblock %}
 
+{% block modals %}
+<!-- Beginners Note: Modals rendered inside block modals directly under <body> to prevent CSS transform traps -->
 <!-- ADD USER MODAL -->
 <div id="addUserModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
   <div class="bg-[#161b22] border border-[#30363d] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-fade-up">
@@ -502,15 +534,22 @@
     </form>
   </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
+// Beginners Note: Opens the Add User modal and prevents background page scrolling
 function openAddUserModal() {
   document.getElementById('addUserModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
 }
+// Beginners Note: Closes the Add User modal and restores background page scrolling
 function closeAddUserModal() {
   document.getElementById('addUserModal').classList.add('hidden');
+  document.body.style.overflow = '';
 }
 
+// Beginners Note: Opens the Edit User modal populated with target user attributes
 function openEditUserModal(user) {
   document.getElementById('editUserTitle').textContent = user.full_name;
   document.getElementById('editUserForm').action = "/admin/users/" + user.id + "/edit";
@@ -527,20 +566,28 @@ function openEditUserModal(user) {
     document.getElementById('edit_role_id').value = user.role_id;
   }
   document.getElementById('editUserModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
 }
+// Beginners Note: Closes the Edit User modal and restores background scrolling
 function closeEditUserModal() {
   document.getElementById('editUserModal').classList.add('hidden');
+  document.body.style.overflow = '';
 }
 
+// Beginners Note: Opens the password reset modal for a specific user ID
 function openResetPasswordModal(userId, userName) {
   document.getElementById('resetUserName').textContent = userName;
   document.getElementById('resetPasswordForm').action = "/admin/users/" + userId + "/reset-password";
   document.getElementById('resetPasswordModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
 }
+// Beginners Note: Closes the password reset modal and restores background scrolling
 function closeResetPasswordModal() {
   document.getElementById('resetPasswordModal').classList.add('hidden');
+  document.body.style.overflow = '';
 }
 
+// Beginners Note: Asynchronously fetches roles belonging to selected organisation
 function loadRolesForOrg(orgId, targetSelectId) {
   if (!orgId) return;
   fetch('/api/organisations/' + orgId + '/roles')

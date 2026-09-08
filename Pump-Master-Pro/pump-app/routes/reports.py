@@ -16,6 +16,7 @@ if _app_dir not in sys.path:
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, Response, make_response, session, abort
 from models import db, Pump, Supplier, ReportConfig
+from routes.auth import login_required, require_access
 
 CURVE_CONVERSIONS = {
     'q': {
@@ -2054,6 +2055,8 @@ def _build_report_curve_context(pump, report, params_override=None):
 
 
 @reports_bp.route('/settings')
+@login_required
+@require_access('report_settings', min_level=1)
 def settings():
     reports = ReportConfig.query.order_by(ReportConfig.id.asc()).all()
     suppliers = Supplier.query.order_by(Supplier.name.asc()).all()
@@ -2070,6 +2073,8 @@ def settings():
 
 
 @reports_bp.route('/settings/supplier/save', methods=['POST'])
+@login_required
+@require_access('report_settings', min_level=2)
 def save_supplier():
     supplier_id = request.form.get('supplier_id')
     name = request.form.get('name', '').strip()
@@ -2097,6 +2102,8 @@ def save_supplier():
 
 
 @reports_bp.route('/settings/report/save_graph_area', methods=['POST'])
+@login_required
+@require_access('report_settings', min_level=2)
 def save_graph_area():
     """Dedicated endpoint to save Graph Area dimensions, order, and height splits."""
     report_id = request.form.get('report_id')
@@ -2118,6 +2125,8 @@ def save_graph_area():
 
 
 @reports_bp.route('/settings/report/save', methods=['POST'])
+@login_required
+@require_access('report_settings', min_level=2)
 def save_report():
     report_id = request.form.get('report_id')
     title = request.form.get('title', '').strip()
@@ -2189,6 +2198,8 @@ def save_report():
 
 
 @reports_bp.route('/settings/report/delete/<int:id>', methods=['POST'])
+@login_required
+@require_access('report_settings', min_level=2)
 def delete_report(id):
     report = ReportConfig.query.get_or_404(id)
     title = report.title

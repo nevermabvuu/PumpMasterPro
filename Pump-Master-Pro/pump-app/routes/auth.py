@@ -389,7 +389,7 @@ def admin_request_action(req_id):
 
 @auth_bp.route('/admin/roles', endpoint='admin_roles')
 @login_required
-@admin_required
+@require_access('roles', min_level=1)
 def admin_roles():
     """
     Beginners Note:
@@ -440,7 +440,7 @@ def api_org_access_levels(org_id):
 
 @auth_bp.route('/admin/roles/create', methods=['POST'], endpoint='admin_role_create')
 @login_required
-@admin_required
+@require_access('roles', min_level=2)
 def admin_role_create():
     """
     Create a new custom role scoped to a specific organisation with 3-level access controls.
@@ -509,7 +509,7 @@ def admin_role_create():
 
 @auth_bp.route('/admin/roles/<int:role_id>/edit', methods=['POST'], endpoint='admin_role_edit')
 @login_required
-@admin_required
+@require_access('roles', min_level=2)
 def admin_role_edit(role_id):
     """
     Edit permissions and details of an existing role.
@@ -557,7 +557,7 @@ def admin_role_edit(role_id):
 
 @auth_bp.route('/admin/roles/<int:role_id>/delete', methods=['POST'], endpoint='admin_role_delete')
 @login_required
-@admin_required
+@require_access('roles', min_level=2)
 def admin_role_delete(role_id):
     """Delete a custom role if not in active use."""
     user = get_current_user()
@@ -604,7 +604,7 @@ def api_org_roles(org_id):
 
 @auth_bp.route('/admin/users', endpoint='admin_users')
 @login_required
-@admin_required
+@require_access('users_settings', min_level=1)
 def admin_users():
     """
     Beginners Note:
@@ -669,7 +669,7 @@ def admin_users():
 
 @auth_bp.route('/admin/users/create', methods=['POST'], endpoint='admin_user_create')
 @login_required
-@admin_required
+@require_access('users_settings', min_level=2)
 def admin_user_create():
     """
     Beginners Note:
@@ -798,7 +798,7 @@ def admin_user_create():
 
 @auth_bp.route('/admin/users/<int:user_id>/edit', methods=['POST'], endpoint='admin_user_edit')
 @login_required
-@admin_required
+@require_access('users_settings', min_level=2)
 def admin_user_edit(user_id):
     """Update user profile, organisation assignment, and role."""
     current_u = get_current_user()
@@ -847,7 +847,7 @@ def admin_user_edit(user_id):
 
 @auth_bp.route('/admin/users/<int:user_id>/toggle-status', methods=['POST'], endpoint='admin_user_toggle_status')
 @login_required
-@admin_required
+@require_access('users_settings', min_level=2)
 def admin_user_toggle_status(user_id):
     """Toggle a user's active/disabled status with self-protection."""
     current_u = get_current_user()
@@ -871,7 +871,7 @@ def admin_user_toggle_status(user_id):
 
 @auth_bp.route('/admin/users/<int:user_id>/reset-password', methods=['POST'], endpoint='admin_user_reset_password')
 @login_required
-@admin_required
+@require_access('users_settings', min_level=2)
 def admin_user_reset_password(user_id):
     """Reset a user's password directly as administrator."""
     current_u = get_current_user()

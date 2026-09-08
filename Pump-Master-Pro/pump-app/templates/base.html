@@ -219,7 +219,7 @@
         </a>
         {% endif %}
 
-        {% if not current_user or current_user.can_access('pump_data') %}
+        {% if current_user and (current_user.can_access('pump_data') or current_user.can_access('pump_catalogue')) %}
         <a class="nav-link-anim {% if 'pump_data' in request.endpoint or 'pump_new' in request.endpoint or 'pump_edit' in request.endpoint %}tw-active{% endif %}"
            href="{{ url_for('pump_data') }}"
            style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 0.75rem;border-radius:6px;font-size:0.9rem;text-decoration:none;color:{% if 'pump_data' in request.endpoint or 'pump_new' in request.endpoint or 'pump_edit' in request.endpoint %}#58a6ff{% else %}#8b949e{% endif %};"
@@ -249,7 +249,7 @@
         </a>
         {% endif %}
 
-        {% if not current_user or current_user.can_access('report_settings') %}
+        {% if current_user and current_user.can_access('report_settings') %}
         <a class="nav-link-anim {% if 'reports' in request.endpoint %}tw-active{% endif %}"
            href="{{ url_for('reports.settings') }}"
            style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 0.75rem;border-radius:6px;font-size:0.9rem;text-decoration:none;color:{% if 'reports' in request.endpoint %}#58a6ff{% else %}#8b949e{% endif %};"
@@ -451,7 +451,7 @@
        style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;font-size:0.9rem;margin-bottom:2px;color:{% if request.endpoint == 'index' %}#58a6ff{% else %}#8b949e{% endif %};">
       <i class="bi bi-house-door"></i>Dashboard</a>
     {% endif %}
-    {% if not current_user or current_user.can_access('pump_data') %}
+    {% if current_user and (current_user.can_access('pump_data') or current_user.can_access('pump_catalogue')) %}
     <a href="{{ url_for('pump_data') }}"
        style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;font-size:0.9rem;margin-bottom:2px;color:{% if 'pump_data' in request.endpoint or 'pump_new' in request.endpoint or 'pump_edit' in request.endpoint %}#58a6ff{% else %}#8b949e{% endif %};">
       <i class="bi bi-database"></i>Pump Catalogue</a>
@@ -466,7 +466,7 @@
        style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;font-size:0.9rem;color:{% if request.endpoint == 'pump_comparison' %}#58a6ff{% else %}#8b949e{% endif %};">
       <i class="bi bi-bar-chart-line"></i>Comparison</a>
     {% endif %}
-    {% if not current_user or current_user.can_access('report_settings') %}
+    {% if current_user and current_user.can_access('report_settings') %}
     <a href="{{ url_for('reports.settings') }}"
        style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;font-size:0.9rem;color:{% if 'reports' in request.endpoint %}#58a6ff{% else %}#8b949e{% endif %};">
       <i class="bi bi-file-earmark-pdf"></i>PDF Reports</a>
@@ -531,6 +531,15 @@
     }
   });
 </script>
+<!-- Beginners Note:
+     Modals block placed directly under <body>, OUTSIDE <main>.
+     Why: <main> has 'animate-fade-up' (CSS animation/transform). According to the CSS spec,
+     any ancestor with a CSS transform/animation acts as the containing block for 'position: fixed'
+     elements. When placed inside <main>, modals center relative to the entire page content height
+     (thousands of pixels tall) instead of the viewport, pushing them far off-screen.
+     Placing modals here guarantees they always attach directly to the browser viewport window. -->
+{% block modals %}{% endblock %}
+
 {% block scripts %}{% endblock %}
 </body>
 </html>

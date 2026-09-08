@@ -1826,9 +1826,18 @@ class User(db.Model):
         return check_password_hash(self.password_hash, password)
 
     def is_admin(self):
+        """
+        Beginners Note:
+        Determines whether the user qualifies for administrative dashboard and management console access.
+        - SuperAdmin: Always True (unlimited privileges across all organisations).
+        - Users with Level 1 (Read Only) or Level 2 (Full Access) on 'users_settings' or 'roles'.
+        - Users with legacy role code 'admin'.
+        Having Level 1 access permits viewing the management interfaces in read-only mode,
+        while mutation routes (create/edit/delete/toggle) are strictly protected by min_level=2.
+        """
         if self.is_super_admin_user:
             return True
-        return self.can_edit('users_settings') or self.can_edit('roles') or self.role == 'admin'
+        return self.can_access('users_settings', 1) or self.can_access('roles', 1) or self.role == 'admin'
 
     def can_select_pumps(self):
         if self.is_super_admin_user:

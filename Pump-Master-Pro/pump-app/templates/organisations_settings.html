@@ -801,9 +801,16 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block modals %}
+<!-- Beginners Note:
+     Modals placed inside block modals outside <main>.
+     This prevents modals from being trapped inside <main>'s CSS transform/animation containing-block,
+     ensuring they always attach to the viewport window and center reliably at any scroll position. -->
 
 <!-- ── MODAL: ADD / EDIT ORGANISATION ── -->
-<div id="orgModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+<div id="orgModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
   <div class="bg-[#161b22] border border-[#30363d] rounded-xl max-w-md w-full overflow-hidden shadow-2xl">
     <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
       <h3 class="text-sm font-bold text-white flex items-center gap-2" id="orgModalTitle">
@@ -856,7 +863,7 @@
 </div>
 
 <!-- ── MODAL: SUPREME ORGANISATION ACCESS MATRIX (SUPERADMIN ONLY) ── -->
-<div id="orgAccessMatrixModal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+<div id="orgAccessMatrixModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
   <div class="bg-[#161b22] border border-[#30363d] rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col animate-fade-up">
     <div class="px-5 py-4 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between shrink-0">
       <div>
@@ -923,8 +930,11 @@
     </form>
   </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
+  // Beginners Note: Opens the Supreme Organisation Access Matrix modal and locks background scrolling
   function openOrgAccessMatrixModal(orgId, orgName, accessLevels) {
     document.getElementById('matrix_org_name').textContent = orgName;
     document.getElementById('orgAccessMatrixForm').action = "/organisations/" + orgId + "/access-levels/save";
@@ -934,11 +944,17 @@
       const el = document.getElementById('matrix_' + key + '_' + val);
       if (el) el.checked = true;
     }
-    document.getElementById('orgAccessMatrixModal').classList.remove('hidden');
+    const modal = document.getElementById('orgAccessMatrixModal');
+    modal.classList.remove('hidden');
+    // Lock background scrolling so the modal stays in the center of the viewport window
+    document.body.style.overflow = 'hidden';
   }
 
+  // Beginners Note: Closes the Supreme Organisation Access Matrix modal and restores scrolling
   function closeOrgAccessMatrixModal() {
-    document.getElementById('orgAccessMatrixModal').classList.add('hidden');
+    const modal = document.getElementById('orgAccessMatrixModal');
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
   }
   function syncOrgGraphStyles() {
     const styles = {
@@ -987,6 +1003,7 @@
     }
   }
 
+  // Beginners Note: Opens Add Organisation modal and locks page scrolling
   function openOrgModal() {
     document.getElementById('modal_org_id').value = '';
     document.getElementById('modal_org_name').value = '';
@@ -997,8 +1014,10 @@
     document.getElementById('modal_org_color').value = '#1e3a8a';
     document.getElementById('orgModalTitle').innerHTML = '<i class="bi bi-building text-[#58a6ff]"></i> Add Organisation';
     document.getElementById('orgModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
   }
 
+  // Beginners Note: Opens Edit Organisation modal prefilled with target org and locks scrolling
   function editOrg(o) {
     document.getElementById('modal_org_id').value = o.id;
     document.getElementById('modal_org_name').value = o.name || '';
@@ -1009,10 +1028,13 @@
     document.getElementById('modal_org_color').value = o.primary_color || '#1e3a8a';
     document.getElementById('orgModalTitle').innerHTML = '<i class="bi bi-pencil text-[#58a6ff]"></i> Edit Organisation';
     document.getElementById('orgModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
   }
 
+  // Beginners Note: Closes Organisation modal and restores scrolling
   function closeOrgModal() {
     document.getElementById('orgModal').classList.add('hidden');
+    document.body.style.overflow = '';
   }
 
   function addNextAttributeSlot() {

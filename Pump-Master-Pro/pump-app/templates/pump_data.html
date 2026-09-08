@@ -20,12 +20,19 @@
       <i class="bi bi-funnel"></i>View Filter
     </a>
     {% endif %}
+    {% if current_user and current_user.can_edit('pump_data') %}
     <a href="{{ url_for('pump_new') }}"
        class="inline-flex items-center gap-1 px-4 py-1.5 rounded font-semibold text-xs transition-colors shadow-sm"
        style="background:#58a6ff;color:#0d1117;"
        onmouseover="this.style.background='#79baff'" onmouseout="this.style.background='#58a6ff'">
       <i class="bi bi-plus-lg"></i>Add Pump
     </a>
+    {% else %}
+    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium bg-[#161b22] text-[#8b949e] border border-[#30363d]"
+          title="You have read-only access to the pump catalogue. Pump data modification requires elevated administrative privileges.">
+      <i class="bi bi-shield-lock text-[#8b949e]"></i>Read-Only Catalogue
+    </span>
+    {% endif %}
   </div>
 </div>
 
@@ -96,6 +103,7 @@
              title="Warman performance map">
             <i class="bi bi-activity"></i>Curves
           </a>
+          {% if current_user and current_user.can_edit('pump_data') %}
           <!-- Edit (blue outline) -->
           <a href="{{ url_for('pump_edit', pump_id=pump.id) }}"
              class="inline-flex items-center justify-center px-2.5 py-1.5 rounded text-sm transition-colors"
@@ -104,6 +112,7 @@
              title="Edit pump data">
             <i class="bi bi-pencil"></i>
           </a>
+          {% endif %}
           <!-- PDF Report (Two-level Organisation & Pump Intersection Filter) -->
           {% set pump_reports = pump.get_effective_catalogue_reports(current_org) %}
           {% if pump_reports and pump_reports|length > 1 %}
@@ -162,6 +171,7 @@
              title="Compare">
             <i class="bi bi-bar-chart-line"></i>
           </a>
+          {% if current_user and current_user.can_edit('pump_data') %}
           <!-- Delete (red outline) -->
           <form method="post" action="{{ url_for('pump_delete', pump_id=pump.id) }}"
                 onsubmit="return confirm('Delete {{ pump.name }}?')" class="inline">
@@ -173,6 +183,7 @@
               <i class="bi bi-trash"></i>
             </button>
           </form>
+          {% endif %}
         </div>
 
       </div>

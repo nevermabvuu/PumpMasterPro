@@ -22,6 +22,7 @@
         <i class="bi bi-buildings text-[#58a6ff]"></i> Organisation Defaults &amp; Visibility
       </a>
       {% endif %}
+      {% if current_user and current_user.can_edit('report_settings') %}
       <button onclick="openGraphAreaModal()" class="px-3.5 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#c084fc] rounded-lg border border-[#c084fc]/40 flex items-center gap-1.5 transition-colors shadow-sm">
         <i class="bi bi-aspect-ratio text-[#c084fc]"></i> Graph Area &amp; Layout Settings
       </button>
@@ -31,8 +32,22 @@
       <button onclick="openReportModal()" class="px-3.5 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-semibold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
         <i class="bi bi-plus-lg"></i> Create Report Setting
       </button>
+      {% endif %}
     </div>
   </div>
+
+  {% if current_user and not current_user.can_edit('report_settings') %}
+  <div class="flex items-center gap-3 p-3.5 rounded-xl border border-[#d29922]/40 bg-[#d29922]/10 text-[#e6edf3]">
+    <i class="bi bi-shield-lock-fill text-lg text-[#d29922]"></i>
+    <div class="flex-1 text-xs">
+      <strong class="text-[#d29922]">Read-Only Mode:</strong>
+      You have permission to inspect PDF report templates and linked organisation profiles. Modifying templates, graph layouts, or manufacturer branding requires administrative full access.
+    </div>
+    <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-[#d29922]/20 text-[#d29922] border border-[#d29922]/40">
+      Restricted View
+    </span>
+  </div>
+  {% endif %}
 
   <!-- SECTION 1: ORGANISATIONS MANAGEMENT CARD -->
   <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
@@ -51,9 +66,11 @@
             <h3 class="text-sm font-bold text-[#e6edf3] flex items-center gap-1.5">
               <i class="bi bi-building text-[#58a6ff]"></i> {{ s.name }}
             </h3>
+            {% if current_user and current_user.can_edit('report_settings') %}
             <button data-supplier='{{ s.to_dict()|tojson }}' onclick="editSupplier(JSON.parse(this.dataset.supplier))" class="text-xs text-[#8b949e] hover:text-[#58a6ff] p-1" title="Edit Supplier">
               <i class="bi bi-pencil"></i>
             </button>
+            {% endif %}
           </div>
           {% if s.contact_email %}<p class="text-xs text-[#8b949e]"><i class="bi bi-envelope me-1"></i>{{ s.contact_email }}</p>{% endif %}
           {% if s.phone %}<p class="text-xs text-[#8b949e]"><i class="bi bi-telephone me-1"></i>{{ s.phone }}</p>{% endif %}
@@ -158,6 +175,7 @@
               <a href="{{ url_for('reports.view_report', report_id=r.id, pump_id=1, source='catalogue') }}" target="_blank" class="px-2.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] rounded border border-[#30363d] font-medium text-xs inline-flex items-center gap-1" title="View Report in Browser">
                 <i class="bi bi-eye"></i> View
               </a>
+              {% if current_user and current_user.can_edit('report_settings') %}
               <button data-report='{{ r.to_dict()|tojson }}' onclick="openGraphAreaModalForReport(JSON.parse(this.dataset.report))" class="px-2.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#c084fc] rounded border border-[#c084fc]/30 font-medium text-xs inline-flex items-center gap-1" title="Configure Graph Area &amp; Layout">
                 <i class="bi bi-aspect-ratio"></i> Graph Layout
               </button>
@@ -165,10 +183,13 @@
                 <i class="bi bi-gear"></i> Configure
               </button>
               <form action="{{ url_for('reports.delete_report', id=r.id) }}" method="POST" class="inline" onsubmit="return confirm('Delete report configuration?');">
-                <button type="submit" class="px-2 py-1 bg-rose-950/60 hover:bg-rose-900 text-rose-300 rounded border border-rose-800 font-medium text-xs">
+                <button type="submit" class="px-2 py-1 bg-rose-950/60 hover:bg-rose-900 text-rose-300 rounded border border-rose-800 font-medium text-xs" title="Delete Report">
                   <i class="bi bi-trash"></i>
                 </button>
               </form>
+              {% else %}
+              <span class="text-[11px] text-[#8b949e] italic font-mono px-2 py-1 rounded bg-[#161b22] border border-[#30363d]">Read-Only</span>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}

@@ -12,16 +12,23 @@ _app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if _app_dir not in sys.path:
     sys.path.insert(0, _app_dir)
 
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import db, Pump, Organisation, ReportConfig
 from utils import _pump_from_form, get_visible_pumps_query, get_current_organisation, CURRENT_ORGANISATION_ID
+from routes.auth import login_required, require_access, get_current_user
 
 pumps_bp = Blueprint('pumps', __name__)
 
 
 @pumps_bp.route('/pump-data', endpoint='pump_data')
+@login_required
 def pump_data():
     """List all pumps visible to the active organisation, sorted by name, with configured catalogue reports."""
+    user = get_current_user()
+    if user and not (user.can_access('pump_catalogue', 1) or user.can_access('pump_data', 1)):
+        flash("Access Denied: You do not have access to the Pump Catalogue.", "danger")
+        return redirect(url_for('index'))
+
     pumps = get_visible_pumps_query().order_by(Pump.name).all()
     pump_dicts = [p.to_dict() for p in pumps]
     current_org = get_current_organisation()
@@ -36,6 +43,8 @@ def pump_data():
 
 
 @pumps_bp.route('/pump-data/new', methods=['GET', 'POST'], endpoint='pump_new')
+@login_required
+@require_access('pump_data', min_level=2)
 def pump_new():
     """Create a new pump record from form data (defaults to active organisation: Lytrose Engineering)."""
     if request.method == 'POST':
@@ -59,6 +68,8 @@ def pump_new():
 
 
 @pumps_bp.route('/pump-data/edit/<int:pump_id>', methods=['GET', 'POST'], endpoint='pump_edit')
+@login_required
+@require_access('pump_data', min_level=2)
 def pump_edit(pump_id):
     """Edit an existing pump record by ID."""
     pump = Pump.query.get_or_404(pump_id)
@@ -82,11 +93,14 @@ def pump_edit(pump_id):
 
 
 @pumps_bp.route('/pump-data/delete/<int:pump_id>', methods=['POST'], endpoint='pump_delete')
+@login_required
+@require_access('pump_data', min_level=2)
 def pump_delete(pump_id):
     """Delete a pump record from the database."""
     pump = Pump.query.get_or_404(pump_id)
     db.session.delete(pump)
     db.session.commit()
+    flash(f"Pump '{pump.name}' was successfully deleted.", "info")
     return redirect(url_for('pump_data'))
 
 

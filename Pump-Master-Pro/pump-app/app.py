@@ -15,6 +15,8 @@ from motor_models import Motor, seed_motors
 from seed_data import seed_pumps
 from routes import main_bp, pumps_bp, curves_bp, selection_bp, comparison_bp, reports_bp, organisations_bp, debug_bp, auth_bp
 from routes.auth import get_current_user
+# Secure URL token helper — used to expose encode_pump_id() to Jinja templates.
+from pump_token import encode_pump_id
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH  = os.path.join(BASE_DIR, 'pumps.db')
@@ -29,6 +31,21 @@ db.init_app(app)
 
 # Expose helper builtins to Jinja templates
 app.jinja_env.globals['getattr'] = getattr
+
+# ── Secure URL token: inject encode_pump_id into every template context ──────
+# Using @app.context_processor is the idiomatic Flask way to expose a Python
+# function to all Jinja2 templates.  It is guaranteed to run on every request,
+# unlike jinja_env.globals which can be missed if the app is created in stages.
+@app.context_processor
+def inject_token_helpers():
+    """
+    Inject encode_pump_id() into the Jinja template context for every request.
+
+    This allows any template to call:
+        {{ url_for('pump_edit', token=encode_pump_id(pump.id)) }}
+    without the raw database integer ID being exposed in the browser URL bar.
+    """
+    return {"encode_pump_id": encode_pump_id}
 
 # ── Database Creation & Auto-Migration ─────────────────────────────────────────
 with app.app_context():

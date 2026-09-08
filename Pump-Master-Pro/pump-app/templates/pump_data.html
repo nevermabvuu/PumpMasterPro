@@ -105,7 +105,8 @@
           </a>
           {% if current_user and current_user.can_edit('pump_data') and current_user.can_edit('pump_catalogue') %}
           <!-- Edit (blue outline) for Level 2 Full Access -->
-          <a href="{{ url_for('pump_edit', pump_id=pump.id) }}"
+          <!-- pump_tokens[pump.id] is a pre-signed URL token computed in the route -->
+          <a href="{{ url_for('pump_edit', token=pump_tokens[pump.id]) }}"
              class="inline-flex items-center justify-center px-2.5 py-1.5 rounded text-sm transition-colors"
              style="border:1px solid rgba(88,166,255,0.35);color:#58a6ff;"
              onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'"
@@ -114,7 +115,8 @@
           </a>
           {% elif current_user and (current_user.can_access('pump_data', 1) or current_user.can_access('pump_catalogue', 1)) %}
           <!-- View (blue outline with eye icon) for Level 1 Read-Only -->
-          <a href="{{ url_for('pump_edit', pump_id=pump.id) }}"
+          <!-- pump_tokens[pump.id] is a pre-signed URL token computed in the route -->
+          <a href="{{ url_for('pump_edit', token=pump_tokens[pump.id]) }}"
              class="inline-flex items-center justify-center px-2.5 py-1.5 rounded text-sm transition-colors"
              style="border:1px solid rgba(88,166,255,0.35);color:#58a6ff;"
              onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'"
@@ -182,7 +184,8 @@
           </a>
           {% if current_user and current_user.can_edit('pump_data') and current_user.can_edit('pump_catalogue') %}
           <!-- Delete (red outline) -->
-          <form method="post" action="{{ url_for('pump_delete', pump_id=pump.id) }}"
+          <!-- Delete form uses a pre-signed token — prevents ID enumeration -->
+          <form method="post" action="{{ url_for('pump_delete', token=pump_tokens[pump.id]) }}"
                 onsubmit="return confirm('Delete {{ pump.name }}?')" class="inline">
             <button type="submit"
                     class="inline-flex items-center justify-center px-2.5 py-1.5 rounded text-sm transition-colors"

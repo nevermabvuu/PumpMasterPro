@@ -262,7 +262,8 @@
           Active Pump Model Instance: <span class="text-[#58a6ff]">{{ pump.name if pump else 'None' }}</span>
         </h2>
         {% if pump %}
-        <a href="{{ url_for('pumps.pump_edit', pump_id=pump.id) }}" target="_blank" class="text-xs text-[#58a6ff] hover:underline flex items-center gap-1">
+        <!-- pump_token is pre-computed in the route as a signed URL token -->
+        <a href="{{ url_for('pumps.pump_edit', token=pump_token) }}" target="_blank" class="text-xs text-[#58a6ff] hover:underline flex items-center gap-1">
           <i class="bi bi-pencil-square"></i> Edit in Catalogue
         </a>
         {% endif %}

@@ -12,6 +12,9 @@ from datetime import datetime
 from flask import Blueprint, render_template, session, jsonify, request, redirect, url_for, flash
 from models import db, Pump, ReportConfig, Organisation
 from utils import get_current_organisation
+# Secure URL token encoder — passed to debug_session.html so it can build
+# signed pump edit URLs instead of exposing raw DB integer IDs.
+from pump_token import encode_pump_id
 
 debug_bp = Blueprint('debug', __name__)
 
@@ -141,7 +144,10 @@ def session_debug_view():
         pump=pump,
         report=report,
         current_org=current_org,
-        evaluated_curves=evaluated_curves_summary
+        evaluated_curves=evaluated_curves_summary,
+        # Pre-compute signed URL token for the pump (if any) so the template
+        # uses a plain string variable instead of calling a Python function.
+        pump_token=encode_pump_id(pump.id) if pump else None,
     )
 
 

@@ -21,6 +21,9 @@ from pump_curves import (
     full_curve_data, bep_point, system_curve_points,
     warman_chart_data, fit_pump_polynomials
 )
+# Secure URL token encoder — used so pump_curve.html can build signed pump URLs
+# without ever embedding a raw DB integer ID in the HTML output.
+from pump_token import encode_pump_id
 
 curves_bp = Blueprint('curves', __name__)
 
@@ -35,7 +38,11 @@ def pump_curve(pump_id):
         return redirect(url_for('index'))
 
     pump = Pump.query.get_or_404(pump_id)
-    return render_template('pump_curve.html', pump=pump)
+    # Pre-compute the signed URL token for this pump so the template does a
+    # simple variable substitution ({{ pump_token }}) rather than calling a
+    # Python function — works regardless of Jinja globals/context processors.
+    pump_token = encode_pump_id(pump.id)
+    return render_template('pump_curve.html', pump=pump, pump_token=pump_token)
 
 
 @curves_bp.route('/papi/fit-curves', methods=['POST'])

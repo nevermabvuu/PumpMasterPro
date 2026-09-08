@@ -45,6 +45,7 @@ def pump_data():
 @pumps_bp.route('/pump-data/new', methods=['GET', 'POST'], endpoint='pump_new')
 @login_required
 @require_access('pump_data', min_level=2)
+@require_access('pump_catalogue', min_level=2)
 def pump_new():
     """Create a new pump record from form data (defaults to active organisation: Lytrose Engineering)."""
     if request.method == 'POST':
@@ -63,19 +64,37 @@ def pump_new():
         organisations=organisations,
         current_org=current_org,
         all_reports=all_reports,
-        default_org_id=CURRENT_ORGANISATION_ID
+        default_org_id=CURRENT_ORGANISATION_ID,
+        can_edit_pump=True
     )
 
 
 @pumps_bp.route('/pump-data/edit/<int:pump_id>', methods=['GET', 'POST'], endpoint='pump_edit')
 @login_required
-@require_access('pump_data', min_level=2)
 def pump_edit(pump_id):
-    """Edit an existing pump record by ID."""
+    """
+    Beginners Note: Pump Specifications & Data Viewer/Editor.
+    - Level 1 (Read Only): Can view pump specifications, fitted polynomials, and motor/fluid properties in view-only mode.
+    - Level 2 (Full Access): Can modify pump specifications, fit new curves, and save changes to the database.
+    - Level 0 (No Access): Completely denied and redirected to index.
+    Enforces Supreme Organisation Rule: Effective level = min(Org Ceiling, Role Level).
+    """
+    user = get_current_user()
+    if user and not (user.can_access('pump_data', 1) or user.can_access('pump_catalogue', 1)):
+        flash("Access Denied: You do not have permission to view pump data.", "danger")
+        return redirect(url_for('index'))
+
     pump = Pump.query.get_or_404(pump_id)
+    can_edit_pump = (user.can_edit('pump_data') and user.can_edit('pump_catalogue')) if user else False
+
     if request.method == 'POST':
+        if not can_edit_pump:
+            flash("Permission Denied: You have read-only access to Pump Data and cannot save modifications.", "warning")
+            return redirect(url_for('pump_edit', pump_id=pump.id))
+
         _pump_from_form(request.form, pump)
         db.session.commit()
+        flash(f"Pump '{pump.name}' specifications updated successfully.", "success")
         return redirect(url_for('pump_edit', pump_id=pump.id))
     
     organisations = Organisation.query.order_by(Organisation.name.asc()).all()
@@ -88,13 +107,15 @@ def pump_edit(pump_id):
         organisations=organisations,
         current_org=current_org,
         all_reports=all_reports,
-        default_org_id=pump.organisation_id or CURRENT_ORGANISATION_ID
+        default_org_id=pump.organisation_id or CURRENT_ORGANISATION_ID,
+        can_edit_pump=can_edit_pump
     )
 
 
 @pumps_bp.route('/pump-data/delete/<int:pump_id>', methods=['POST'], endpoint='pump_delete')
 @login_required
 @require_access('pump_data', min_level=2)
+@require_access('pump_catalogue', min_level=2)
 def pump_delete(pump_id):
     """Delete a pump record from the database."""
     pump = Pump.query.get_or_404(pump_id)

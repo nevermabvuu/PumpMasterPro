@@ -2305,6 +2305,8 @@ def api_sign_report_url():
 
 
 @reports_bp.route('/view')
+@login_required
+@require_access('report_settings', min_level=1)
 def view_report_clean():
     """
     Beginners Note: Zero-Parameter Clean Report Route.
@@ -2415,6 +2417,8 @@ def view_report_token(token=None):
 
 
 @reports_bp.route('/download')
+@login_required
+@require_access('report_settings', min_level=1)
 def download_pdf_clean():
     """
     Beginners Note: PDF download handler using server-side session state with zero parameters.
@@ -2431,6 +2435,8 @@ def download_pdf_clean():
 
 
 @reports_bp.route('/view/<int:report_id>/pump/<int:pump_id>')
+@login_required
+@require_access('report_settings', min_level=1)
 def view_report(report_id, pump_id):
     """
     Beginners Note: Direct report route with multi-tenant access control enforcement.
@@ -2503,6 +2509,8 @@ def download_pdf_token(token):
 
 
 @reports_bp.route('/download/<int:report_id>/pump/<int:pump_id>')
+@login_required
+@require_access('report_settings', min_level=1)
 def download_pdf(report_id, pump_id):
     report = ReportConfig.query.get_or_404(report_id)
     pump = Pump.query.get_or_404(pump_id)

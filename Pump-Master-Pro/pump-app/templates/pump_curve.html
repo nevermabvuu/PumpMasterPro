@@ -11,13 +11,28 @@
       &bull; Ø{{ pump.impeller_dia_mm|int }} mm max impeller
     </p>
   </div>
-  <div class="flex gap-2 flex-wrap">
+  <div class="flex gap-2 flex-wrap items-center">
+    {% if current_user and current_user.can_edit('pump_data') and current_user.can_edit('pump_catalogue') %}
     <a href="{{ url_for('pump_edit', pump_id=pump.id) }}"
        class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium transition-colors"
        style="border:1px solid rgba(88,166,255,0.4);color:#58a6ff;"
        onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
       <i class="bi bi-pencil"></i>Edit
     </a>
+    {% elif current_user and (current_user.can_access('pump_data', 1) or current_user.can_access('pump_catalogue', 1)) %}
+    <a href="{{ url_for('pump_edit', pump_id=pump.id) }}"
+       class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium transition-colors"
+       style="border:1px solid rgba(88,166,255,0.4);color:#58a6ff;"
+       onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'"
+       title="View pump specifications (Read-Only)">
+      <i class="bi bi-eye"></i>View Specs
+    </a>
+    {% else %}
+    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium bg-[#161b22] text-[#8b949e] border border-[#30363d]"
+          title="Read-Only Mode: You do not have full edit permissions for pump data.">
+      <i class="bi bi-shield-lock text-[#8b949e]"></i>Read-Only View
+    </span>
+    {% endif %}
     <a href="{{ url_for('pump_comparison') }}?ids={{ pump.id }}"
        class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium transition-colors"
        style="border:1px solid rgba(57,211,192,0.4);color:#39d3c0;"
@@ -41,12 +56,25 @@
     <p class="text-muted mx-auto mb-4" style="max-width:500px;">
       The graph display on this page has been removed. Content for this page will be decided later.
     </p>
+    {% if current_user and current_user.can_edit('pump_data') and current_user.can_edit('pump_catalogue') %}
     <a href="{{ url_for('pump_edit', pump_id=pump.id) }}"
        class="inline-flex items-center gap-1 px-4 py-2 rounded text-sm font-medium transition-colors"
        style="border:1px solid rgba(88,166,255,0.4);color:#58a6ff;"
        onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
       <i class="bi bi-pencil-square"></i>Edit Pump Data &amp; Preview
     </a>
+    {% elif current_user and (current_user.can_access('pump_data', 1) or current_user.can_access('pump_catalogue', 1)) %}
+    <a href="{{ url_for('pump_edit', pump_id=pump.id) }}"
+       class="inline-flex items-center gap-1.5 px-4 py-2 rounded text-sm font-medium transition-colors"
+       style="border:1px solid rgba(88,166,255,0.4);color:#58a6ff;"
+       onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
+      <i class="bi bi-eye"></i>View Pump Specifications (Read-Only)
+    </a>
+    {% else %}
+    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium text-[#8b949e] bg-[#161b22] border border-[#30363d]">
+      <i class="bi bi-lock-fill text-[#8b949e]"></i>Pump Data Editing Locked (Read-Only)
+    </span>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

@@ -5,6 +5,8 @@
 {% block content %}
 <div class="space-y-6">
 
+{% set can_edit_reports = current_user.can_edit('report_settings') if current_user else False %}
+
   <!-- PAGE HEADER -->
   <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[#30363d]">
     <div>
@@ -22,7 +24,7 @@
         <i class="bi bi-buildings text-[#58a6ff]"></i> Organisation Defaults &amp; Visibility
       </a>
       {% endif %}
-      {% if current_user and current_user.can_edit('report_settings') %}
+      {% if can_edit_reports %}
       <button onclick="openGraphAreaModal()" class="px-3.5 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#c084fc] rounded-lg border border-[#c084fc]/40 flex items-center gap-1.5 transition-colors shadow-sm">
         <i class="bi bi-aspect-ratio text-[#c084fc]"></i> Graph Area &amp; Layout Settings
       </button>
@@ -32,11 +34,23 @@
       <button onclick="openReportModal()" class="px-3.5 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-semibold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
         <i class="bi bi-plus-lg"></i> Create Report Setting
       </button>
+      {% elif current_user and current_user.can_access('report_settings', 1) %}
+      <button onclick="openGraphAreaModal()" class="px-3.5 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#c084fc] rounded-lg border border-[#c084fc]/40 flex items-center gap-1.5 transition-colors shadow-sm">
+        <i class="bi bi-aspect-ratio text-[#c084fc]"></i> View Graph Area &amp; Layout
+      </button>
+      <span class="px-3.5 py-1.5 bg-[#21262d] text-xs font-semibold text-[#d29922] rounded-lg border border-[#d29922]/40 flex items-center gap-1.5"
+            title="Read-Only Mode: Modifying report templates requires elevated administrative authority.">
+        <i class="bi bi-shield-lock text-[#d29922]"></i> Level 1 • Read-Only
+      </span>
+      {% else %}
+      <span class="px-3.5 py-1.5 bg-[#21262d] text-xs font-semibold text-[#8b949e] rounded-lg border border-[#30363d] flex items-center gap-1.5 cursor-not-allowed">
+        <i class="bi bi-shield-lock text-[#8b949e]"></i> Access Denied
+      </span>
       {% endif %}
     </div>
   </div>
 
-  {% if current_user and not current_user.can_edit('report_settings') %}
+  {% if current_user and not can_edit_reports %}
   <div class="flex items-center gap-3 p-3.5 rounded-xl border border-[#d29922]/40 bg-[#d29922]/10 text-[#e6edf3]">
     <i class="bi bi-shield-lock-fill text-lg text-[#d29922]"></i>
     <div class="flex-1 text-xs">
@@ -66,9 +80,13 @@
             <h3 class="text-sm font-bold text-[#e6edf3] flex items-center gap-1.5">
               <i class="bi bi-building text-[#58a6ff]"></i> {{ s.name }}
             </h3>
-            {% if current_user and current_user.can_edit('report_settings') %}
+            {% if can_edit_reports %}
             <button data-supplier='{{ s.to_dict()|tojson }}' onclick="editSupplier(JSON.parse(this.dataset.supplier))" class="text-xs text-[#8b949e] hover:text-[#58a6ff] p-1" title="Edit Supplier">
               <i class="bi bi-pencil"></i>
+            </button>
+            {% elif current_user and current_user.can_access('report_settings', 1) %}
+            <button data-supplier='{{ s.to_dict()|tojson }}' onclick="editSupplier(JSON.parse(this.dataset.supplier))" class="text-xs text-[#8b949e] hover:text-[#58a6ff] p-1" title="View Supplier Details (Read-Only)">
+              <i class="bi bi-eye"></i>
             </button>
             {% endif %}
           </div>
@@ -175,7 +193,7 @@
               <a href="{{ url_for('reports.view_report', report_id=r.id, pump_id=1, source='catalogue') }}" target="_blank" class="px-2.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] rounded border border-[#30363d] font-medium text-xs inline-flex items-center gap-1" title="View Report in Browser">
                 <i class="bi bi-eye"></i> View
               </a>
-              {% if current_user and current_user.can_edit('report_settings') %}
+              {% if can_edit_reports %}
               <button data-report='{{ r.to_dict()|tojson }}' onclick="openGraphAreaModalForReport(JSON.parse(this.dataset.report))" class="px-2.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#c084fc] rounded border border-[#c084fc]/30 font-medium text-xs inline-flex items-center gap-1" title="Configure Graph Area &amp; Layout">
                 <i class="bi bi-aspect-ratio"></i> Graph Layout
               </button>
@@ -187,6 +205,14 @@
                   <i class="bi bi-trash"></i>
                 </button>
               </form>
+              {% elif current_user and current_user.can_access('report_settings', 1) %}
+              <button data-report='{{ r.to_dict()|tojson }}' onclick="openGraphAreaModalForReport(JSON.parse(this.dataset.report))" class="px-2.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#c084fc] rounded border border-[#c084fc]/30 font-medium text-xs inline-flex items-center gap-1" title="View Graph Area &amp; Layout (Read-Only)">
+                <i class="bi bi-eye"></i> Layout
+              </button>
+              <button data-report='{{ r.to_dict()|tojson }}' onclick="editReport(JSON.parse(this.dataset.report))" class="px-2.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#e6edf3] rounded border border-[#30363d] font-medium text-xs inline-flex items-center gap-1" title="View Report Configuration (Read-Only)">
+                <i class="bi bi-eye"></i> Config
+              </button>
+              <span class="text-[10px] text-[#8b949e] italic font-mono px-1.5 py-0.5 rounded bg-[#161b22] border border-[#30363d]"><i class="bi bi-lock-fill"></i> Read-Only</span>
               {% else %}
               <span class="text-[11px] text-[#8b949e] italic font-mono px-2 py-1 rounded bg-[#161b22] border border-[#30363d]">Read-Only</span>
               {% endif %}
@@ -218,6 +244,7 @@
     </div>
 
     <form action="{{ url_for('reports.save_graph_area') }}" method="POST" class="p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+      <fieldset {% if not can_edit_reports %}disabled class="contents space-y-4"{% endif %}>
       <!-- Select Target Report Configuration -->
       <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
         <label class="block text-xs font-semibold text-[#e6edf3] mb-1">Target Report Setting:</label>
@@ -404,9 +431,15 @@
         </div>
       </div>
 
+      </fieldset>
+
       <div class="flex justify-end gap-3 pt-3 border-t border-[#30363d]">
         <button type="button" onclick="closeGraphAreaModal()" class="px-4 py-1.5 text-xs font-semibold text-[#c9d1d9] bg-[#21262d] border border-[#30363d] rounded hover:bg-[#30363d] transition">Cancel</button>
+        {% if can_edit_reports %}
         <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-[#8957e5] border border-[#a371f7] rounded hover:bg-[#a371f7] transition flex items-center gap-1.5"><i class="bi bi-check-lg"></i> Save Graph Area Settings</button>
+        {% else %}
+        <button type="button" disabled class="px-4 py-1.5 text-xs font-semibold text-[#8b949e] bg-[#21262d] border border-[#30363d] rounded cursor-not-allowed opacity-60 flex items-center gap-1.5"><i class="bi bi-lock-fill"></i> Read-Only (Changes Disabled)</button>
+        {% endif %}
       </div>
     </form>
   </div>
@@ -425,6 +458,7 @@
     </div>
     
     <form action="{{ url_for('reports.save_supplier') }}" method="POST" class="p-5 space-y-4">
+      <fieldset {% if not can_edit_reports %}disabled class="contents space-y-4"{% endif %}>
       <input type="hidden" name="supplier_id" id="sup_id">
       
       <div>
@@ -453,9 +487,15 @@
         <textarea name="address" id="sup_address" rows="2" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]"></textarea>
       </div>
 
+      </fieldset>
+
       <div class="flex justify-end gap-3 pt-3 border-t border-[#30363d]">
         <button type="button" onclick="closeSupplierModal()" class="px-4 py-1.5 text-xs font-semibold text-[#c9d1d9] bg-[#21262d] border border-[#30363d] rounded hover:bg-[#30363d] transition">Cancel</button>
+        {% if can_edit_reports %}
         <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-[#238636] border border-[#2ea043] rounded hover:bg-[#2ea043] transition"><i class="bi bi-check-lg"></i> Save Supplier</button>
+        {% else %}
+        <button type="button" disabled class="px-4 py-1.5 text-xs font-semibold text-[#8b949e] bg-[#21262d] border border-[#30363d] rounded cursor-not-allowed opacity-60 flex items-center gap-1.5"><i class="bi bi-lock-fill"></i> Read-Only (Changes Disabled)</button>
+        {% endif %}
       </div>
     </form>
   </div>
@@ -491,6 +531,7 @@
     </div>
 
     <form action="{{ url_for('reports.save_report') }}" method="POST" class="flex flex-col flex-1 min-h-0 overflow-hidden m-0">
+      <fieldset {% if not can_edit_reports %}disabled class="contents flex flex-col flex-1 min-h-0 overflow-hidden m-0"{% endif %}>
       <input type="hidden" name="report_id" id="rep_id">
 
       <!-- Scrollable Modal Body Viewport (Handles vertical scrolling cleanly with zero horizontal bleed) -->
@@ -1242,6 +1283,8 @@
         </div>
       </div>
 
+      </fieldset>
+
       <!-- Modal Bottom Actions Bar (Fixed at bottom of modal) -->
       <div class="px-5 py-3 bg-[#161b22] border-t border-[#30363d] flex justify-between items-center shrink-0">
         <div id="sliderPaneIndicator">
@@ -1249,7 +1292,11 @@
         </div>
         <div class="flex items-center gap-3">
           <button type="button" onclick="closeReportModal()" class="px-4 py-1.5 text-xs font-semibold text-[#c9d1d9] bg-[#21262d] border border-[#30363d] rounded hover:bg-[#30363d] transition">Cancel</button>
+          {% if can_edit_reports %}
           <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-[#238636] border border-[#2ea043] rounded hover:bg-[#2ea043] transition flex items-center gap-1.5"><i class="bi bi-check-lg"></i> Save Configuration</button>
+          {% else %}
+          <button type="button" disabled class="px-4 py-1.5 text-xs font-semibold text-[#8b949e] bg-[#21262d] border border-[#30363d] rounded cursor-not-allowed opacity-60 flex items-center gap-1.5"><i class="bi bi-lock-fill"></i> Read-Only (Changes Disabled)</button>
+          {% endif %}
         </div>
       </div>
     </form>
@@ -1498,6 +1545,8 @@
     document.getElementById('supplierModal').classList.remove('hidden');
   }
 
+  const canEditReports = {{ 'true' if can_edit_reports else 'false' }};
+
   function editSupplier(s) {
     document.getElementById('sup_id').value = s.id;
     document.getElementById('sup_name').value = s.name || '';
@@ -1505,7 +1554,9 @@
     document.getElementById('sup_phone').value = s.phone || '';
     document.getElementById('sup_website').value = s.website || '';
     document.getElementById('sup_address').value = s.address || '';
-    document.getElementById('supplierModalTitle').innerHTML = '<i class="bi bi-pencil text-[#58a6ff]"></i> Edit Supplier';
+    document.getElementById('supplierModalTitle').innerHTML = canEditReports
+      ? '<i class="bi bi-pencil text-[#58a6ff]"></i> Edit Supplier'
+      : '<i class="bi bi-eye text-[#58a6ff]"></i> View Supplier (Read-Only)';
     document.getElementById('supplierModal').classList.remove('hidden');
   }
 
@@ -1626,7 +1677,9 @@
       slideToGeneralSettings();
     }
 
-    document.getElementById('reportModalTitle').innerHTML = '<i class="bi bi-gear text-[#58a6ff]"></i> Configure PDF Report Setting';
+    document.getElementById('reportModalTitle').innerHTML = canEditReports
+      ? '<i class="bi bi-gear text-[#58a6ff]"></i> Configure PDF Report Setting'
+      : '<i class="bi bi-eye text-[#58a6ff]"></i> View PDF Report Setting (Read-Only)';
     document.getElementById('reportModal').classList.remove('hidden');
   }
 

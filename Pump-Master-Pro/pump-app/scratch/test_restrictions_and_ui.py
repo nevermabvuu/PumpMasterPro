@@ -23,28 +23,38 @@ def run_tests():
         assert login_resp.status_code == 200, f"Expected 200 for /login, got {login_resp.status_code}"
         login_html = login_resp.get_data(as_text=True)
         
-        # Verify SEO keywords
-        assert "Industrial Centrifugal" in login_html, "Missing SEO keyword 'Industrial Centrifugal'"
-        assert "Pump Selection Engine" in login_html, "Missing SEO keyword 'Pump Selection Engine'"
+        # Verify SEO keywords & Multi-Pump Coverage
+        assert "Pump Sizing &" in login_html or "Pump Sizing" in login_html, "Missing SEO keyword 'Pump Sizing'"
+        assert "Positive Displacement" in login_html, "Missing multi-discipline coverage 'Positive Displacement'"
+        assert "Multi-Stage" in login_html, "Missing multi-discipline coverage 'Multi-Stage'"
+        assert "Submersible" in login_html, "Missing multi-discipline coverage 'Submersible'"
         assert "ISO 9906" in login_html, "Missing SEO keyword 'ISO 9906'"
         assert "Slurry" in login_html, "Missing SEO keyword 'Slurry'"
-        assert "Affinity" in login_html, "Missing SEO keyword 'Affinity'"
         
+        # Verify NO WARMAN references exist
+        assert "Warman" not in login_html, "Forbidden trademark 'Warman' found in login_html!"
+        
+        # Verify Marketing Slide Carousel
+        assert "marketingSlideContainer" in login_html, "Missing marketing slide container"
+        assert "goToSlide" in login_html, "Missing slide navigation function"
+        assert "slide-0" in login_html, "Missing slide 0 element"
+
         # Verify Mini "Video" Simulator elements
-        assert "Demo: 4-Step Precision Sizing" in login_html, "Missing mini video player title"
         assert "demoSvgChart" in login_html, "Missing SVG curve chart in mini video player"
         assert "setDemoStep" in login_html, "Missing demo step controller script"
         assert "demoPlayBtn" in login_html, "Missing video player play/pause button"
         assert "demoProgressBar" in login_html, "Missing video player progress bar"
 
-        # Verify User-Friendly Inputs
+        # Verify User-Friendly Inputs & Autofill Fix
         assert 'id="inputEmail"' in login_html, "Missing email input"
+        assert 'dark-seamless-input' in login_html, "Missing dark-seamless-input styling"
+        assert '-webkit-box-shadow: 0 0 0 1000px #0d1117 inset' in login_html, "Missing browser autofill dark override CSS"
         assert 'autocomplete="email"' in login_html, "Missing email autocomplete"
         assert 'id="inputPassword"' in login_html, "Missing password input"
         assert 'autocomplete="current-password"' in login_html, "Missing password autocomplete"
         assert 'id="capsLockAlert"' in login_html, "Missing Caps Lock detector"
         assert 'togglePasswordVisibility' in login_html, "Missing password visibility toggle"
-        print("[PASS] Login page rendered successfully with SEO marketing, interactive mini-video demo, and friendly inputs.")
+        print("[PASS] Login page rendered successfully with ZERO Warman references, multi-pump slide deck, interactive mini-video demo, and dark autofill fix.")
 
         print("\n=== 3. SETUP TEST RESTRICTED USER ===")
         # Get or create an organisation

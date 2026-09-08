@@ -20,7 +20,7 @@
       <i class="bi bi-funnel"></i>View Filter
     </a>
     {% endif %}
-    {% if current_user and current_user.can_edit('pump_data') %}
+    {% if current_user and current_user.can_edit('pump_data') and current_user.can_edit('pump_catalogue') %}
     <a href="{{ url_for('pump_new') }}"
        class="inline-flex items-center gap-1 px-4 py-1.5 rounded font-semibold text-xs transition-colors shadow-sm"
        style="background:#58a6ff;color:#0d1117;"
@@ -100,17 +100,26 @@
              class="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded text-sm font-medium transition-colors"
              style="background:rgba(63,185,80,0.15);color:#3fb950;border:1px solid rgba(63,185,80,0.35);"
              onmouseover="this.style.background='rgba(63,185,80,0.25)'" onmouseout="this.style.background='rgba(63,185,80,0.15)'"
-             title="Warman performance map">
+             title="Hydraulic performance curves">
             <i class="bi bi-activity"></i>Curves
           </a>
-          {% if current_user and current_user.can_edit('pump_data') %}
-          <!-- Edit (blue outline) -->
+          {% if current_user and current_user.can_edit('pump_data') and current_user.can_edit('pump_catalogue') %}
+          <!-- Edit (blue outline) for Level 2 Full Access -->
           <a href="{{ url_for('pump_edit', pump_id=pump.id) }}"
              class="inline-flex items-center justify-center px-2.5 py-1.5 rounded text-sm transition-colors"
              style="border:1px solid rgba(88,166,255,0.35);color:#58a6ff;"
              onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'"
              title="Edit pump data">
             <i class="bi bi-pencil"></i>
+          </a>
+          {% elif current_user and (current_user.can_access('pump_data', 1) or current_user.can_access('pump_catalogue', 1)) %}
+          <!-- View (blue outline with eye icon) for Level 1 Read-Only -->
+          <a href="{{ url_for('pump_edit', pump_id=pump.id) }}"
+             class="inline-flex items-center justify-center px-2.5 py-1.5 rounded text-sm transition-colors"
+             style="border:1px solid rgba(88,166,255,0.35);color:#58a6ff;"
+             onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'"
+             title="View pump specifications (Read-Only)">
+            <i class="bi bi-eye"></i>
           </a>
           {% endif %}
           <!-- PDF Report (Two-level Organisation & Pump Intersection Filter) -->
@@ -171,7 +180,7 @@
              title="Compare">
             <i class="bi bi-bar-chart-line"></i>
           </a>
-          {% if current_user and current_user.can_edit('pump_data') %}
+          {% if current_user and current_user.can_edit('pump_data') and current_user.can_edit('pump_catalogue') %}
           <!-- Delete (red outline) -->
           <form method="post" action="{{ url_for('pump_delete', pump_id=pump.id) }}"
                 onsubmit="return confirm('Delete {{ pump.name }}?')" class="inline">
@@ -197,11 +206,17 @@
   <i class="bi bi-database-slash"></i>
   <h4>No pumps in catalogue</h4>
   <p>Add your first pump to get started.</p>
+  {% if current_user and current_user.can_edit('pump_data') and current_user.can_edit('pump_catalogue') %}
   <a href="{{ url_for('pump_new') }}"
      class="inline-flex items-center gap-1 px-4 py-2 rounded font-semibold text-sm"
      style="background:#58a6ff;color:#0d1117;">
     <i class="bi bi-plus-lg"></i>Add Pump
   </a>
+  {% else %}
+  <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs font-semibold bg-[#161b22] text-[#8b949e] border border-[#30363d]">
+    <i class="bi bi-shield-lock"></i>Read-Only Catalogue
+  </span>
+  {% endif %}
 </div>
 {% endif %}
 {% endblock %}

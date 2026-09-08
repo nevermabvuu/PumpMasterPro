@@ -69,6 +69,7 @@ def settings():
 
 @organisations_bp.route('/catalogue-reports/save', methods=['POST'], endpoint='save_catalogue_reports')
 @require_access('organisation_settings', min_level=2)
+@require_access('report_settings', min_level=2)
 def save_catalogue_reports():
     """
     Beginners Note: Saves which reports should appear in the Pump Catalogue for the active organisation.

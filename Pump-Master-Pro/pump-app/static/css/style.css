@@ -22,6 +22,28 @@
 }
 
 /* ── Base ────────────────────────────────────────────────────────── */
+/* Beginners Note: Browser autofill override. Chrome/Edge default to inserting a bright white
+   or pale blue box inside inputs upon password/email autofill. This box-shadow inset rule
+   forces the background to remain dark (#0d1117) and the text to remain clean white (#ffffff). */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #0d1117 inset !important;
+  box-shadow: 0 0 0 1000px #0d1117 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  color: #ffffff !important;
+  caret-color: #58a6ff !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+input:-moz-autofill,
+input:-moz-autofill-preview {
+  filter: grayscale(100%);
+  background-color: #0d1117 !important;
+  color: #ffffff !important;
+}
+
 body {
   background: var(--bg-base);
   color: var(--text-primary);

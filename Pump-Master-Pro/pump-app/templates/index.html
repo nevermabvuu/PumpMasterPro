@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-header mb-4">
   <h1 class="page-title"><i class="bi bi-droplet-fill text-accent mr-2"></i>PumpSelect Pro</h1>
-  <p class="page-subtitle">Interactive pump selection and Warman-style curve visualisation</p>
+  <p class="page-subtitle">Interactive pump selection and multi-curve performance visualisation</p>
 </div>
 
 <!-- Stats row: 4 columns on lg, 2 on sm, 1 on mobile -->
@@ -64,7 +64,7 @@
   <div>
     <div class="feature-card">
       <div class="feature-icon"><i class="bi bi-activity"></i></div>
-      <h5 class="feature-title">Warman Performance Map</h5>
+      <h5 class="feature-title">Hydraulic Performance Map</h5>
       <p class="feature-desc">Full impeller-diameter family curves + closed efficiency isolines + RPM speed lines. Toggle Power Lines and System Curve overlay.</p>
       <a href="{{ url_for('pump_data') }}" class="inline-flex items-center gap-1 mt-auto px-3 py-1.5 rounded border text-sm font-medium transition-colors"
          style="border-color:rgba(88,166,255,0.45);color:#58a6ff;" onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
@@ -113,7 +113,7 @@
       <div class="liquid-card slurry">
         <div class="liquid-icon"><i class="bi bi-layers"></i></div>
         <div>
-          <strong>Slurry (Warman Method)</strong>
+          <strong>Slurry (ANSI/HI Method)</strong>
           <p class="mb-0 text-sm text-muted">HR, QR, ER derating factors. Input volumetric concentration C<sub>v</sub> and particle size d<sub>50</sub>.</p>
         </div>
       </div>

@@ -13,9 +13,10 @@ _app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if _app_dir not in sys.path:
     sys.path.insert(0, _app_dir)
 
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from models import db, Pump
 from utils import _get_float, _get_nullable_float, _get_nullable_int
+from routes.auth import login_required, require_access, get_current_user
 from pump_curves import (
     full_curve_data, bep_point, system_curve_points,
     warman_chart_data, fit_pump_polynomials
@@ -25,8 +26,14 @@ curves_bp = Blueprint('curves', __name__)
 
 
 @curves_bp.route('/pump-curve/<int:pump_id>', endpoint='pump_curve')
+@login_required
 def pump_curve(pump_id):
-    """Render interactive Warman curve viewer page for a pump."""
+    """Render interactive curve viewer page for a pump with role permission gating."""
+    user = get_current_user()
+    if user and not (user.can_access('pump_catalogue', 1) or user.can_access('pump_data', 1)):
+        flash("Access Denied: You do not have access to view pump curves.", "danger")
+        return redirect(url_for('index'))
+
     pump = Pump.query.get_or_404(pump_id)
     return render_template('pump_curve.html', pump=pump)
 
@@ -326,6 +333,9 @@ def api_preview_curve_data():
 
 
 @curves_bp.route('/papi/pump/<int:pump_id>/graph-options', methods=['POST'])
+@login_required
+@require_access('pump_data', min_level=2)
+@require_access('pump_catalogue', min_level=2)
 def api_save_graph_options(pump_id):
     """Save graph options dictionary for a pump ID."""
     pump = Pump.query.get_or_404(pump_id)
@@ -336,6 +346,9 @@ def api_save_graph_options(pump_id):
 
 
 @curves_bp.route('/papi/pump/<int:pump_id>/label-pos', methods=['POST'])
+@login_required
+@require_access('pump_data', min_level=2)
+@require_access('pump_catalogue', min_level=2)
 def api_save_label_pos(pump_id):
     """Save custom label positions for a pump ID."""
     pump = Pump.query.get_or_404(pump_id)

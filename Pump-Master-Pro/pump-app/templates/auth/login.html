@@ -1,46 +1,373 @@
 {% extends "base.html" %}
-{% block title %}Sign In &bull; Industrial Centrifugal Pump Selection &amp; Curve Fitting Suite{% endblock %}
+{% block title %}Sign In &bull; Universal Industrial Pump Selection &amp; Curve Fitting Suite{% endblock %}
 
 {% block content %}
+<!-- ==========================================================================
+     CUSTOM EMBEDDED STYLES: BROWSER AUTOFILL DARK OVERRIDE & ANIMATIONS
+     Beginners Note: When web browsers (especially Google Chrome and Microsoft Edge)
+     autofill saved credentials, they forcibly inject a solid light-blue or white 
+     background into <input> elements using their internal user-agent stylesheet.
+     The CSS rules below use an inset box-shadow trick to ensure the input field
+     remains dark (#0d1117) and text remains crisp white (#ffffff) at all times.
+     ========================================================================== -->
+<style>
+  /* Override Chrome, Edge, Safari, and Opera webkit autofill background */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #0d1117 inset !important;
+    box-shadow: 0 0 0 1000px #0d1117 inset !important;
+    -webkit-text-fill-color: #ffffff !important;
+    color: #ffffff !important;
+    caret-color: #58a6ff !important;
+    transition: background-color 5000s ease-in-out 0s !important;
+    background-color: #0d1117 !important;
+  }
+
+  /* Override Firefox autofill background */
+  input:-moz-autofill,
+  input:-moz-autofill-preview {
+    filter: grayscale(100%);
+    background-color: #0d1117 !important;
+    color: #ffffff !important;
+  }
+
+  /* Ensure inputs have transparent background so the styled container shows through */
+  .dark-seamless-input {
+    background-color: transparent !important;
+    color: #ffffff !important;
+    border: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Horizontal track carousel transition */
+  #carouselTrack {
+    transition: transform 0.5s cubic-bezier(0.2, 1, 0.3, 1);
+    will-change: transform;
+  }
+  .carousel-slide-card {
+    transition: border-color 0.2s ease, transform 0.2s ease;
+  }
+  .carousel-slide-card:hover {
+    transform: translateY(-2px);
+  }
+</style>
+
 <div class="min-h-[calc(100vh-140px)] flex items-center justify-center py-6 sm:py-10 px-4 relative z-10">
   <div class="w-full max-w-7xl mx-auto">
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
 
       <!-- ═══════════════════════════════════════════════════════════════════
-           LEFT COLUMN: Marketing Showcase, SEO Keywords & Interactive Mini-Video
+           LEFT COLUMN: Expanded Marketing Showcase, Multi-Pump Slides & Simulator
            ═══════════════════════════════════════════════════════════════════ -->
       <div class="lg:col-span-7 space-y-6 text-left">
         
-        <!-- Category Pill & ISO Badge -->
+        <!-- Category & Standards Header Badges -->
         <div class="flex flex-wrap items-center gap-2">
           <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#58a6ff]/10 text-[#58a6ff] border border-[#58a6ff]/30 shadow-sm">
-            <i class="bi bi-stars text-[#58a6ff]"></i> Next-Gen Hydraulic Engineering Suite
+            <i class="bi bi-stars text-[#58a6ff]"></i> Universal Hydraulic Engineering Suite
           </span>
           <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#161b22] text-[#8b949e] border border-[#30363d]">
-            <i class="bi bi-patch-check-fill text-[#3fb950]"></i> ISO 9906 &amp; ANSI/HI 14.6
+            <i class="bi bi-patch-check-fill text-[#3fb950]"></i> ISO 9906 &bull; ANSI/HI 14.6 &bull; API 610
           </span>
           <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#161b22] text-[#bc8cff] border border-[#bc8cff]/30">
-            <i class="bi bi-cpu"></i> Warman Slurry Engine
+            <i class="bi bi-sliders"></i> 100% Bespoke Customization
           </span>
         </div>
 
-        <!-- Main High-Impact SEO Headline -->
+        <!-- High-Impact Headline: Beyond Centrifugal — All Pumps & Custom Hydraulic Logic -->
         <div>
           <h1 class="text-3xl sm:text-4xl xl:text-5xl font-extrabold text-white tracking-tight leading-[1.15]">
-            Industrial Centrifugal <br class="hidden sm:inline" />
+            Universal Industrial <br class="hidden sm:inline" />
             <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#58a6ff] via-[#79c0ff] to-[#39d3c0]">
-              Pump Selection Engine
-            </span> &amp; Curve Fitting
+              Pump Sizing &amp; Curve Fitting
+            </span> Suite
           </h1>
-          <p class="text-sm sm:text-base text-[#8b949e] mt-3 leading-relaxed max-w-2xl">
-            Streamline slurry transport, clear water distribution, and process hydraulics.
-            PumpSelect Pro automates polynomial curve derating, affinity law scaling, Best Efficiency Point (BEP) optimization, and generates submittal-ready PDF engineering datasheets in seconds.
+          <p class="text-xs sm:text-sm text-[#8b949e] mt-2.5 leading-relaxed max-w-2xl">
+            Not limited to centrifugal pumps. Size, derate, and fit performance curves across 
+            <strong class="text-white">Centrifugal, Positive Displacement, Multi-Stage, Submersible, and Bespoke OEM fleets</strong>.
+            Tailored polynomial models, slurry solid concentration corrections, and one-click PDF submittals.
           </p>
         </div>
 
         <!-- ─────────────────────────────────────────────────────────────────
-             INTERACTIVE MINI "VIDEO" PLAYER & HYDRAULIC SIMULATOR
+             INTERACTIVE MARKETING SLIDES DECK / FEATURE CAROUSEL
+             Beginners Note: This interactive slide carousel showcases the 4 core
+             pillars of the platform. Users can auto-advance or click controls.
+             ───────────────────────────────────────────────────────────────── -->
+                <!-- ─────────────────────────────────────────────────────────────────
+             INTERACTIVE MARKETING CAROUSEL: 5 ENGINEERING FEATURE PILLARS
+             Beginners Note: Horizontal sliding carousel with smooth CSS transforms,
+             animated progress timer bar, category badges, and rich engineering data.
+             Fully compliant with zero third-party trademark restrictions.
+             ───────────────────────────────────────────────────────────────── -->
+        <div class="rounded-2xl border border-[#30363d] bg-[#161b22]/95 backdrop-blur-md shadow-2xl relative overflow-hidden flex flex-col" id="marketingCarousel">
+          
+          <!-- Top Animated Countdown Timer Progress Bar -->
+          <div class="h-1 w-full bg-[#21262d] overflow-hidden">
+            <div id="carouselProgressBar" class="h-full bg-gradient-to-r from-[#58a6ff] via-[#39d3c0] to-[#a371f7] w-0 transition-all ease-linear"></div>
+          </div>
+
+          <!-- Carousel Navigation Header -->
+          <div class="flex items-center justify-between px-5 py-3 border-b border-[#30363d]/80 bg-[#1c2330]/60">
+            <div class="flex items-center gap-2.5">
+              <span id="slideCategoryBadge" class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-[#58a6ff]/15 text-[#58a6ff] border border-[#58a6ff]/30">
+                MULTI-DISCIPLINE
+              </span>
+              <span id="slideNumberBadge" class="font-mono text-xs text-[#8b949e] font-semibold">
+                SLIDE 01 / 05
+              </span>
+            </div>
+
+            <!-- Slide Arrows & Dots -->
+            <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1.5 me-2" id="carouselDots">
+                <button type="button" onclick="goToCarouselSlide(0)" class="w-6 h-1.5 rounded-full bg-[#58a6ff] transition-all cursor-pointer" id="cdot-0" title="Slide 1: Fleet Coverage"></button>
+                <button type="button" onclick="goToCarouselSlide(1)" class="w-2 h-1.5 rounded-full bg-[#30363d] hover:bg-[#8b949e] transition-all cursor-pointer" id="cdot-1" title="Slide 2: OEM Customization"></button>
+                <button type="button" onclick="goToCarouselSlide(2)" class="w-2 h-1.5 rounded-full bg-[#30363d] hover:bg-[#8b949e] transition-all cursor-pointer" id="cdot-2" title="Slide 3: Slurry Derating"></button>
+                <button type="button" onclick="goToCarouselSlide(3)" class="w-2 h-1.5 rounded-full bg-[#30363d] hover:bg-[#8b949e] transition-all cursor-pointer" id="cdot-3" title="Slide 4: Duty Matching"></button>
+                <button type="button" onclick="goToCarouselSlide(4)" class="w-2 h-1.5 rounded-full bg-[#30363d] hover:bg-[#8b949e] transition-all cursor-pointer" id="cdot-4" title="Slide 5: Security &amp; PDFs"></button>
+              </div>
+              <button type="button" onclick="prevCarouselSlide()" class="w-7 h-7 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-[#30363d]" title="Previous Slide">
+                <i class="bi bi-chevron-left text-xs"></i>
+              </button>
+              <button type="button" onclick="nextCarouselSlide()" class="w-7 h-7 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-[#30363d]" title="Next Slide">
+                <i class="bi bi-chevron-right text-xs"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Carousel Sliding Track Container -->
+          <div class="overflow-hidden w-full">
+            <div id="carouselTrack" class="flex transition-transform duration-500 ease-out">
+              
+              <!-- SLIDE 1: UNIVERSAL MULTI-DISCIPLINE PUMP COVERAGE -->
+              <div class="w-full shrink-0 p-5 space-y-3.5">
+                <div class="flex items-start gap-3">
+                  <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#58a6ff]/20 to-[#39d3c0]/20 text-[#58a6ff] flex items-center justify-center text-lg shrink-0 border border-[#58a6ff]/30 shadow-inner">
+                    <i class="bi bi-diagram-3-fill"></i>
+                  </span>
+                  <div>
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                      Universal Sizing: Centrifugal, PD, Multi-Stage &amp; Submersible
+                      <span class="text-[10px] font-normal px-2 py-0.2 rounded-full bg-[#58a6ff]/10 text-[#58a6ff] border border-[#58a6ff]/30">All Pump Types</span>
+                    </h3>
+                    <p class="text-xs text-[#8b949e] mt-1 leading-relaxed">
+                      Engineered for all fluid dynamics. The solver handles everything from high-volume single-stage end-suction volutes to progressive cavity positive displacement, high-pressure boiler feeds, and heavy slurry sumps.
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Type Badges Grid (4 Pillars) -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                  <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] text-center carousel-slide-card hover:border-[#58a6ff]/40">
+                    <div class="text-[#58a6ff] font-bold text-xs"><i class="bi bi-arrow-repeat"></i> Centrifugal</div>
+                    <div class="text-[10px] text-[#8b949e] mt-0.5 font-mono">ISO, DIN, ANSI B73.1</div>
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] text-center carousel-slide-card hover:border-[#39d3c0]/40">
+                    <div class="text-[#39d3c0] font-bold text-xs"><i class="bi bi-gear-wide-connected"></i> Positive Displ.</div>
+                    <div class="text-[10px] text-[#8b949e] mt-0.5 font-mono">PC, Gear, Screw, Lobe</div>
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] text-center carousel-slide-card hover:border-[#bc8cff]/40">
+                    <div class="text-[#bc8cff] font-bold text-xs"><i class="bi bi-layers-fill"></i> Multi-Stage</div>
+                    <div class="text-[10px] text-[#8b949e] mt-0.5 font-mono">High-Head / Mine Stacks</div>
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] text-center carousel-slide-card hover:border-[#3fb950]/40">
+                    <div class="text-[#3fb950] font-bold text-xs"><i class="bi bi-water"></i> Submersible</div>
+                    <div class="text-[10px] text-[#8b949e] mt-0.5 font-mono">Slurry &amp; Cantilever</div>
+                  </div>
+                </div>
+
+                <!-- Slide Metric Strip -->
+                <div class="flex items-center justify-between text-[11px] text-[#8b949e] pt-1.5 border-t border-[#30363d]/50 font-mono">
+                  <span><i class="bi bi-check2 text-[#3fb950] me-1"></i>400+ Hydraulic Geometries</span>
+                  <span><i class="bi bi-check2 text-[#3fb950] me-1"></i>Dynamic Impeller Trimming</span>
+                  <span class="hidden sm:inline"><i class="bi bi-check2 text-[#3fb950] me-1"></i>Universal Viscosity Support</span>
+                </div>
+              </div>
+
+              <!-- SLIDE 2: 100% BESPOKE OEM CUSTOMIZATION -->
+              <div class="w-full shrink-0 p-5 space-y-3.5">
+                <div class="flex items-start gap-3">
+                  <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#bc8cff]/20 to-[#58a6ff]/20 text-[#bc8cff] flex items-center justify-center text-lg shrink-0 border border-[#bc8cff]/30 shadow-inner">
+                    <i class="bi bi-sliders"></i>
+                  </span>
+                  <div>
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                      100% Bespoke OEM Customization: User-Defined Engines
+                      <span class="text-[10px] font-normal px-2 py-0.2 rounded-full bg-[#bc8cff]/10 text-[#bc8cff] border border-[#bc8cff]/30">OEM Freedom</span>
+                    </h3>
+                    <p class="text-xs text-[#8b949e] mt-1 leading-relaxed">
+                      Full authority over mathematical curve regression and fleet parameters. Configure custom polynomial orders, affinity law scaling exponents, customer safety factors, and up to 30 custom spec fields per organisation.
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Customization Features (3 Pillars) -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-xs">
+                  <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] space-y-1 carousel-slide-card hover:border-[#bc8cff]/40">
+                    <div class="text-[#bc8cff] font-bold flex items-center gap-1.5"><i class="bi bi-graph-up-arrow"></i> Polynomial Orders 2-6</div>
+                    <p class="text-[11px] text-[#8b949e] leading-snug">Least-squares curve regression with exact shutoff head &amp; power curves.</p>
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] space-y-1 carousel-slide-card hover:border-[#58a6ff]/40">
+                    <div class="text-[#58a6ff] font-bold flex items-center gap-1.5"><i class="bi bi-arrow-left-right"></i> Affinity Exponents</div>
+                    <p class="text-[11px] text-[#8b949e] leading-snug">User-calibrated speed scaling exponents (H &prop; N^x, P &prop; N^y) for unique impellers.</p>
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] space-y-1 carousel-slide-card hover:border-[#39d3c0]/40">
+                    <div class="text-[#39d3c0] font-bold flex items-center gap-1.5"><i class="bi bi-tags"></i> 30 Custom Attributes</div>
+                    <p class="text-[11px] text-[#8b949e] leading-snug">API 682 seal plans, exotic alloys (28% Cr, CD4MCu), flange drillings, and notes.</p>
+                  </div>
+                </div>
+
+                <!-- Slide Metric Strip -->
+                <div class="flex items-center justify-between text-[11px] text-[#8b949e] pt-1.5 border-t border-[#30363d]/50 font-mono">
+                  <span><i class="bi bi-check2 text-[#3fb950] me-1"></i>User-Defined Equations</span>
+                  <span><i class="bi bi-check2 text-[#3fb950] me-1"></i>Custom Duty Margins %</span>
+                  <span class="hidden sm:inline"><i class="bi bi-check2 text-[#3fb950] me-1"></i>White-Label Brand Colors</span>
+                </div>
+              </div>
+
+              <!-- SLIDE 3: HEAVY SLURRY & NON-NEWTONIAN VISCOUS DERATING -->
+              <div class="w-full shrink-0 p-5 space-y-3.5">
+                <div class="flex items-start gap-3">
+                  <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d29922]/20 to-[#f0883e]/20 text-[#d29922] flex items-center justify-center text-lg shrink-0 border border-[#d29922]/30 shadow-inner">
+                    <i class="bi bi-droplet-half"></i>
+                  </span>
+                  <div>
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                      Abrasive Slurry &amp; Viscous Fluid Derating Engine
+                      <span class="text-[10px] font-normal px-2 py-0.2 rounded-full bg-[#d29922]/10 text-[#d29922] border border-[#d29922]/30">Severe Media</span>
+                    </h3>
+                    <p class="text-xs text-[#8b949e] mt-1 leading-relaxed">
+                      Predict real-world head, efficiency, and power deratings for dense mineral slurries. Built-in ANSI/HI solid concentration modeling (Cw/Cv), particle size distribution (d50), and Hydraulic Institute viscous correction.
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Slurry Parameters Grid -->
+                <div class="grid grid-cols-3 gap-2.5 pt-1 font-mono text-xs text-center">
+                  <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] carousel-slide-card hover:border-[#d29922]/40">
+                    <div class="text-[#d29922] font-bold text-sm">SG up to 3.8</div>
+                    <div class="text-[10px] text-[#8b949e] mt-0.5">High Specific Gravity</div>
+                    <div class="text-[9px] text-[#d29922]/70 mt-0.5">Dense Tailings &amp; Ores</div>
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] carousel-slide-card hover:border-[#3fb950]/40">
+                    <div class="text-[#3fb950] font-bold text-sm">Cw up to 70%</div>
+                    <div class="text-[10px] text-[#8b949e] mt-0.5">Solids by Weight</div>
+                    <div class="text-[9px] text-[#3fb950]/70 mt-0.5">ANSI/HI HR &amp; ER Derate</div>
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] carousel-slide-card hover:border-[#58a6ff]/40">
+                    <div class="text-[#58a6ff] font-bold text-sm">3,000 cSt</div>
+                    <div class="text-[10px] text-[#8b949e] mt-0.5">Viscous Correction</div>
+                    <div class="text-[9px] text-[#58a6ff]/70 mt-0.5">HI 9.6.7 Model (CH, CQ, C_eta)</div>
+                  </div>
+                </div>
+
+                <!-- Slide Metric Strip -->
+                <div class="flex items-center justify-between text-[11px] text-[#8b949e] pt-1.5 border-t border-[#30363d]/50 font-mono">
+                  <span><i class="bi bi-check2 text-[#3fb950] me-1"></i>d50 Micron Wear Sizing</span>
+                  <span><i class="bi bi-check2 text-[#3fb950] me-1"></i>Tip Speed Limit Check</span>
+                  <span class="hidden sm:inline"><i class="bi bi-check2 text-[#3fb950] me-1"></i>Non-Newtonian Rheology</span>
+                </div>
+              </div>
+
+              <!-- SLIDE 4: REAL-TIME HYDRAULIC SIZING & BEP PROXIMITY -->
+              <div class="w-full shrink-0 p-5 space-y-3.5">
+                <div class="flex items-start gap-3">
+                  <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#3fb950]/20 to-[#58a6ff]/20 text-[#3fb950] flex items-center justify-center text-lg shrink-0 border border-[#3fb950]/30 shadow-inner">
+                    <i class="bi bi-bullseye"></i>
+                  </span>
+                  <div>
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                      Precision Duty Matching &amp; Best Efficiency Point (BEP)
+                      <span class="text-[10px] font-normal px-2 py-0.2 rounded-full bg-[#3fb950]/10 text-[#3fb950] border border-[#3fb950]/30">Lifecycle Optics</span>
+                    </h3>
+                    <p class="text-xs text-[#8b949e] mt-1 leading-relaxed">
+                      Identify the optimal hydraulic match in seconds. Analyze operating regions (POR / ROR), evaluate available NPSH headroom, plot system curves, and automatically configure IEC/NEMA electric motor drives.
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Features Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-xs">
+                  <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] space-y-1 carousel-slide-card hover:border-[#3fb950]/40">
+                    <div class="text-[#3fb950] font-bold flex items-center gap-1.5"><i class="bi bi-check-circle"></i> POR &amp; ROR Compliance</div>
+                    <p class="text-[11px] text-[#8b949e] leading-snug">Evaluates Preferred Operating Region (70%–120% BEP) to prevent shaft fatigue.</p>
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] space-y-1 carousel-slide-card hover:border-[#58a6ff]/40">
+                    <div class="text-[#58a6ff] font-bold flex items-center gap-1.5"><i class="bi bi-signpost-split"></i> System Friction Overlay</div>
+                    <p class="text-[11px] text-[#8b949e] leading-snug">Calculates static head (H_stat) + parabolic pipe resistance (H = H_s + k&middot;Q^2).</p>
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] space-y-1 carousel-slide-card hover:border-[#f0883e]/40">
+                    <div class="text-[#f0883e] font-bold flex items-center gap-1.5"><i class="bi bi-cpu"></i> Motor &amp; VFD Sizing</div>
+                    <p class="text-[11px] text-[#8b949e] leading-snug">Automated IEC/NEMA electric motor kW selection with speed turndown envelopes.</p>
+                  </div>
+                </div>
+
+                <!-- Slide Metric Strip -->
+                <div class="flex items-center justify-between text-[11px] text-[#8b949e] pt-1.5 border-t border-[#30363d]/50 font-mono">
+                  <span><i class="bi bi-check2 text-[#3fb950] me-1"></i>NPSHa vs NPSHr Safety</span>
+                  <span><i class="bi bi-check2 text-[#3fb950] me-1"></i>Parallel &amp; Series Staging</span>
+                  <span class="hidden sm:inline"><i class="bi bi-check2 text-[#3fb950] me-1"></i>Life-Cycle Energy Costing</span>
+                </div>
+              </div>
+
+              <!-- SLIDE 5: ENTERPRISE PDF SUBMITTALS & 3-TIER RBAC -->
+              <div class="w-full shrink-0 p-5 space-y-3.5">
+                <div class="flex items-start gap-3">
+                  <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8957e5]/20 to-[#bc8cff]/20 text-[#a371f7] flex items-center justify-center text-lg shrink-0 border border-[#a371f7]/30 shadow-inner">
+                    <i class="bi bi-shield-lock-fill"></i>
+                  </span>
+                  <div>
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                      Submittal-Ready Vector PDFs &amp; Multi-Tenant RBAC
+                      <span class="text-[10px] font-normal px-2 py-0.2 rounded-full bg-[#a371f7]/10 text-[#a371f7] border border-[#a371f7]/30">Enterprise Security</span>
+                    </h3>
+                    <p class="text-xs text-[#8b949e] mt-1 leading-relaxed">
+                      Publish publication-grade 300 DPI vector datasheets for tender submissions. Restrict proprietary catalogue visibility with strict 3-tier Role-Based Access Control (No Access, Read-Only, Full Access).
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Feature Badges -->
+                <div class="grid grid-cols-3 gap-2.5 pt-1 font-mono text-xs text-center">
+                  <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] carousel-slide-card hover:border-[#3fb950]/40">
+                    <div class="text-[#3fb950] font-bold text-sm"><i class="bi bi-file-earmark-pdf"></i> Vector PDF</div>
+                    <div class="text-[10px] text-[#8b949e] mt-0.5">300 DPI Submittals</div>
+                    <div class="text-[9px] text-[#3fb950]/70 mt-0.5">Multi-Graph Split Layout</div>
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] carousel-slide-card hover:border-[#58a6ff]/40">
+                    <div class="text-[#58a6ff] font-bold text-sm"><i class="bi bi-buildings"></i> Multi-Tenant</div>
+                    <div class="text-[10px] text-[#8b949e] mt-0.5">SQL Scoping Ceilings</div>
+                    <div class="text-[9px] text-[#58a6ff]/70 mt-0.5">Competitor Data Privacy</div>
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] carousel-slide-card hover:border-[#bc8cff]/40">
+                    <div class="text-[#bc8cff] font-bold text-sm"><i class="bi bi-person-lock"></i> 3-Tier RBAC</div>
+                    <div class="text-[10px] text-[#8b949e] mt-0.5">Strict Access Levels</div>
+                    <div class="text-[9px] text-[#bc8cff]/70 mt-0.5">0=None, 1=Read, 2=Full</div>
+                  </div>
+                </div>
+
+                <!-- Slide Metric Strip -->
+                <div class="flex items-center justify-between text-[11px] text-[#8b949e] pt-1.5 border-t border-[#30363d]/50 font-mono">
+                  <span><i class="bi bi-check2 text-[#3fb950] me-1"></i>Pixel-Perfect Branding</span>
+                  <span><i class="bi bi-check2 text-[#3fb950] me-1"></i>Zero URL Parameter Leak</span>
+                  <span class="hidden sm:inline"><i class="bi bi-check2 text-[#3fb950] me-1"></i>10-Module Permission Matrix</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ─────────────────────────────────────────────────────────────────
+             INTERACTIVE MINI "VIDEO" SIMULATOR CONSOLE
+             Beginners Note: Demonstrates the live 4-step curve matching calculation.
+             All brand/trademark references have been cleanly generalized to industrial fleet standards.
              ───────────────────────────────────────────────────────────────── -->
         <div class="rounded-2xl border border-[#30363d] bg-[#0d1117] shadow-2xl overflow-hidden relative group">
           
@@ -52,7 +379,7 @@
               <span class="w-3 h-3 rounded-full bg-[#3fb950]/80 inline-block"></span>
               <span class="ms-2 text-xs font-mono text-[#c9d1d9] flex items-center gap-1.5">
                 <i class="bi bi-play-circle-fill text-[#58a6ff]"></i>
-                <span>Demo: 4-Step Precision Sizing &amp; Curve Fitting</span>
+                <span>Simulation: 4-Step Sizing Across Diverse Pump Fleets</span>
               </span>
             </div>
             <div class="flex items-center gap-2">
@@ -86,14 +413,13 @@
           <!-- Video Viewport / Animated Hydraulic Canvas -->
           <div class="p-4 sm:p-5 relative bg-gradient-to-b from-[#0d1117] via-[#111620] to-[#0d1117]">
             
-            <!-- Graphic Screen Overlay -->
             <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
               
               <!-- Dynamic SVG Animated Curve Visualizer -->
               <div class="md:col-span-8 bg-[#090d13] border border-[#30363d] rounded-xl p-3 relative overflow-hidden shadow-inner">
                 <!-- Watermark / Tag -->
                 <div class="absolute top-2 left-3 text-[10px] font-mono text-[#8b949e] flex items-center gap-2 z-10">
-                  <span class="text-[#58a6ff] font-bold">PUMP: Warman 10/8 E-M (Slurry)</span>
+                  <span class="text-[#58a6ff] font-bold">PUMP: HD Process Fleet 250/200</span>
                   <span>|</span>
                   <span id="demoSpeedLabel">Speed: 1,120 RPM</span>
                 </div>
@@ -101,17 +427,14 @@
                 <!-- Live SVG Graph -->
                 <svg viewBox="0 0 400 200" class="w-full h-44 sm:h-48 overflow-visible" id="demoSvgChart">
                   <defs>
-                    <!-- Cyan Curve Gradient -->
                     <linearGradient id="hqGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%" stop-color="#58a6ff" />
                       <stop offset="100%" stop-color="#39d3c0" />
                     </linearGradient>
-                    <!-- Area Fill Gradient -->
                     <linearGradient id="areaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
                       <stop offset="0%" stop-color="#58a6ff" stop-opacity="0.25" />
                       <stop offset="100%" stop-color="#58a6ff" stop-opacity="0.0" />
                     </linearGradient>
-                    <!-- Efficiency Curve Gradient -->
                     <linearGradient id="etaGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%" stop-color="#238636" />
                       <stop offset="50%" stop-color="#3fb950" />
@@ -149,12 +472,9 @@
                   <g id="dutyPointGroup" transform="translate(195, 78)">
                     <!-- Animated ripple ring around duty point -->
                     <circle cx="0" cy="0" r="14" fill="none" stroke="#58a6ff" stroke-width="1" class="animate-ping opacity-60"></circle>
-                    <!-- Horizontal & Vertical Crosshairs -->
                     <line x1="-155" y1="0" x2="175" y2="0" stroke="#f85149" stroke-width="1" stroke-dasharray="2,2" opacity="0.8"></line>
                     <line x1="0" y1="-58" x2="0" y2="92" stroke="#f85149" stroke-width="1" stroke-dasharray="2,2" opacity="0.8"></line>
-                    <!-- Center Target Node -->
                     <circle cx="0" cy="0" r="5" fill="#f85149" stroke="#ffffff" stroke-width="2"></circle>
-                    <!-- Duty Point Tag -->
                     <rect x="8" y="-18" width="100" height="18" rx="4" fill="#161b22" stroke="#f85149" stroke-width="1"></rect>
                     <text x="14" y="-5" fill="#ffffff" font-size="9" font-family="monospace" font-weight="bold">Q: 185 | H: 42m</text>
                   </g>
@@ -169,10 +489,10 @@
                 <!-- Status Banner at bottom of chart -->
                 <div class="flex items-center justify-between pt-2 border-t border-[#21262d] text-[10px] font-mono">
                   <span class="text-[#3fb950] flex items-center gap-1">
-                    <i class="bi bi-check-circle-fill"></i> ISO 9906 Derate: Optimal
+                    <i class="bi bi-check-circle-fill"></i> Sizing Algorithm: Optimal
                   </span>
                   <span class="text-[#8b949e]">NPSHa margin: <strong class="text-white">+3.4 m</strong></span>
-                  <span class="text-[#58a6ff]">IE3 Motor: <strong class="text-white">37 kW</strong></span>
+                  <span class="text-[#58a6ff]">Motor: <strong class="text-white">37 kW 4P</strong></span>
                 </div>
               </div>
 
@@ -184,7 +504,7 @@
                     <i class="bi bi-sliders text-[#58a6ff]"></i> 1. Exact Duty Matching
                   </div>
                   <p class="text-[11px] text-[#8b949e] mt-1 leading-normal" id="stepDesc">
-                    Input your required Flow rate <span class="text-[#c9d1d9] font-mono">Q</span> and Total Dynamic Head <span class="text-[#c9d1d9] font-mono">TDH</span> to pinpoint valid pumps.
+                    Input required Flow rate <span class="text-[#c9d1d9] font-mono">Q</span> and Total Dynamic Head <span class="text-[#c9d1d9] font-mono">TDH</span> to pinpoint valid pumps.
                   </p>
                 </div>
 
@@ -248,61 +568,6 @@
 
         </div>
 
-        <!-- ─────────────────────────────────────────────────────────────────
-             4 VALUE PILLARS & FEATURES GRID
-             ───────────────────────────────────────────────────────────────── -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-          
-          <div class="p-3.5 rounded-xl border border-[#30363d] bg-[#161b22]/70 backdrop-blur-sm space-y-1 hover:border-[#58a6ff]/40 transition-colors">
-            <div class="flex items-center gap-2 font-bold text-white text-xs">
-              <span class="w-6 h-6 rounded-lg bg-[#58a6ff]/15 text-[#58a6ff] flex items-center justify-center text-xs">
-                <i class="bi bi-lightning-charge-fill"></i>
-              </span>
-              <span>Instant Multi-Catalogue Sizing</span>
-            </div>
-            <p class="text-xs text-[#8b949e] leading-relaxed">
-              Match operating points against hundreds of digitized pump curves across Warman, KSB, Sulzer, and custom fleets.
-            </p>
-          </div>
-
-          <div class="p-3.5 rounded-xl border border-[#30363d] bg-[#161b22]/70 backdrop-blur-sm space-y-1 hover:border-[#39d3c0]/40 transition-colors">
-            <div class="flex items-center gap-2 font-bold text-white text-xs">
-              <span class="w-6 h-6 rounded-lg bg-[#39d3c0]/15 text-[#39d3c0] flex items-center justify-center text-xs">
-                <i class="bi bi-droplet-half"></i>
-              </span>
-              <span>Slurry Solids &amp; Viscosity Derating</span>
-            </div>
-            <p class="text-xs text-[#8b949e] leading-relaxed">
-              Automated ANSI/HI derating for solid concentration <span class="font-mono">Cw/Cv</span>, particle <span class="font-mono">d50</span>, and viscous head loss.
-            </p>
-          </div>
-
-          <div class="p-3.5 rounded-xl border border-[#30363d] bg-[#161b22]/70 backdrop-blur-sm space-y-1 hover:border-[#bc8cff]/40 transition-colors">
-            <div class="flex items-center gap-2 font-bold text-white text-xs">
-              <span class="w-6 h-6 rounded-lg bg-[#bc8cff]/15 text-[#bc8cff] flex items-center justify-center text-xs">
-                <i class="bi bi-file-earmark-check-fill"></i>
-              </span>
-              <span>Submittal-Ready Engineering PDFs</span>
-            </div>
-            <p class="text-xs text-[#8b949e] leading-relaxed">
-              Generate pixel-perfect client datasheets with exact polynomial curves, motor sizing, and custom corporate branding.
-            </p>
-          </div>
-
-          <div class="p-3.5 rounded-xl border border-[#30363d] bg-[#161b22]/70 backdrop-blur-sm space-y-1 hover:border-[#3fb950]/40 transition-colors">
-            <div class="flex items-center gap-2 font-bold text-white text-xs">
-              <span class="w-6 h-6 rounded-lg bg-[#3fb950]/15 text-[#3fb950] flex items-center justify-center text-xs">
-                <i class="bi bi-shield-lock-fill"></i>
-              </span>
-              <span>Enterprise RBAC &amp; Tenant Control</span>
-            </div>
-            <p class="text-xs text-[#8b949e] leading-relaxed">
-              Role-based access ceilings, multi-organisation visibility restrictions, and protected curve engineering parameters.
-            </p>
-          </div>
-
-        </div>
-
         <!-- Social Proof Trust Footer -->
         <div class="pt-2 flex flex-wrap items-center justify-between gap-4 text-xs text-[#8b949e] border-t border-[#30363d]/60">
           <div class="flex items-center gap-4">
@@ -317,7 +582,7 @@
 
 
       <!-- ═══════════════════════════════════════════════════════════════════
-           RIGHT COLUMN: Beautified, User-Friendly Sign In Card
+           RIGHT COLUMN: Beautified, User-Friendly Sign In Card (Dark Autofill Fix)
            ═══════════════════════════════════════════════════════════════════ -->
       <div class="lg:col-span-5 w-full max-w-md mx-auto">
 
@@ -348,27 +613,29 @@
             </span>
           </div>
 
-          <!-- Login Form with Friendly, Accessible Inputs -->
+          <!-- Login Form with Friendly, Accessible Inputs & Seamless Dark Theme -->
           <form method="POST" action="{{ url_for('auth.login', next=request.args.get('next')) }}" class="space-y-4" id="loginForm">
             
-            <!-- Work Email Input -->
+            <!-- Work Email Input (Beautified with Zero White Autofill Artifacts) -->
             <div>
               <label class="block text-xs font-semibold text-[#c9d1d9] mb-1.5" for="inputEmail">
                 Work Email Address <span class="text-[#f85149]">*</span>
               </label>
-              <div class="relative flex items-center rounded-xl border border-[#30363d] focus-within:border-[#58a6ff] focus-within:ring-2 focus-within:ring-[#58a6ff]/20 bg-[#0d1117] transition-all shadow-inner">
-                <span class="pl-3.5 text-[#8b949e]">
+              <!-- Beginners Note: The wrapper div establishes the dark border and rounded pill.
+                   The input inside uses 'dark-seamless-input' which is transparent and has autofill shadow overrides. -->
+              <div class="relative flex items-center rounded-xl border border-[#30363d] focus-within:border-[#58a6ff] focus-within:ring-2 focus-within:ring-[#58a6ff]/20 bg-[#0d1117] transition-all shadow-inner overflow-hidden">
+                <span class="pl-3.5 pr-1 text-[#8b949e] flex items-center shrink-0">
                   <i class="bi bi-envelope text-sm"></i>
                 </span>
                 <input type="email" name="email" id="inputEmail" required autofocus
                        value="{{ email or '' }}"
                        autocomplete="email"
                        placeholder="engineer@company.com"
-                       class="w-full bg-transparent text-sm text-white px-3 py-3 focus:outline-none placeholder-[#6e7681] font-mono">
+                       class="dark-seamless-input w-full px-3 py-3 text-sm text-white font-mono placeholder-[#6e7681] focus:outline-none">
               </div>
             </div>
 
-            <!-- Password Input with Toggle Visibility Button & Caps Lock Alert -->
+            <!-- Password Input (Beautified with Toggle & Caps Lock Alert) -->
             <div>
               <div class="flex items-center justify-between mb-1.5">
                 <label class="block text-xs font-semibold text-[#c9d1d9]" for="inputPassword">
@@ -378,16 +645,16 @@
                   <i class="bi bi-lock-fill text-[10px]"></i> Argon2/Bcrypt
                 </span>
               </div>
-              <div class="relative flex items-center rounded-xl border border-[#30363d] focus-within:border-[#58a6ff] focus-within:ring-2 focus-within:ring-[#58a6ff]/20 bg-[#0d1117] transition-all shadow-inner">
-                <span class="pl-3.5 text-[#8b949e]">
+              <div class="relative flex items-center rounded-xl border border-[#30363d] focus-within:border-[#58a6ff] focus-within:ring-2 focus-within:ring-[#58a6ff]/20 bg-[#0d1117] transition-all shadow-inner overflow-hidden">
+                <span class="pl-3.5 pr-1 text-[#8b949e] flex items-center shrink-0">
                   <i class="bi bi-key text-sm"></i>
                 </span>
                 <input type="password" name="password" id="inputPassword" required
                        autocomplete="current-password"
                        placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
-                       class="w-full bg-transparent text-sm text-white px-3 py-3 focus:outline-none placeholder-[#6e7681] font-mono">
+                       class="dark-seamless-input w-full px-3 py-3 text-sm text-white font-mono placeholder-[#6e7681] focus:outline-none">
                 <button type="button" onclick="togglePasswordVisibility('inputPassword', 'togglePasswordIcon')"
-                        class="pr-3.5 text-[#8b949e] hover:text-white transition-colors cursor-pointer"
+                        class="pr-3.5 pl-1 text-[#8b949e] hover:text-white transition-colors cursor-pointer shrink-0"
                         title="Show or hide password" aria-label="Toggle password visibility">
                   <i class="bi bi-eye text-sm" id="togglePasswordIcon"></i>
                 </button>
@@ -444,9 +711,15 @@
   </div>
 </div>
 
-<!-- Interactive Mini-Video Simulator Script -->
+<!-- ==========================================================================
+     INTERACTIVE JAVASCRIPT CONTROLLERS:
+     1. Password Visibility Toggle
+     2. Caps Lock Detector
+     3. Marketing Carousel / Slide Deck
+     4. Mini "Video" Simulator
+     ========================================================================== -->
 <script>
-  // Password Visibility Toggle
+  // ── 1. Password Visibility Toggle ─────────────────────────────────────────
   function togglePasswordVisibility(inputId, iconId) {
     const input = document.getElementById(inputId);
     const icon = document.getElementById(iconId);
@@ -460,7 +733,7 @@
     }
   }
 
-  // Caps Lock Detection Listener
+  // ── 2. Caps Lock Detection Listener ───────────────────────────────────────
   const pwdInput = document.getElementById('inputPassword');
   const capsAlert = document.getElementById('capsLockAlert');
   if (pwdInput && capsAlert) {
@@ -473,11 +746,116 @@
     });
   }
 
-  // Mini "Video" Simulator Steps Data
+    // ── 3. Marketing Carousel Controller (5-Slide Horizontal Track) ─────────────
+  // Beginners Note: Controls the horizontal track carousel with smooth CSS transforms,
+  // dynamic category badges, dot pagination pills, and an animated progress bar.
+  // Automatically advances every 6 seconds, and pauses when hovered.
+  const carouselMeta = [
+    { category: "MULTI-DISCIPLINE", colorClass: "bg-[#58a6ff]/15 text-[#58a6ff] border-[#58a6ff]/30" },
+    { category: "OEM CUSTOMIZATION", colorClass: "bg-[#bc8cff]/15 text-[#bc8cff] border-[#bc8cff]/30" },
+    { category: "SLURRY & VISCOUS", colorClass: "bg-[#d29922]/15 text-[#d29922] border-[#d29922]/30" },
+    { category: "DUTY MATCHING", colorClass: "bg-[#3fb950]/15 text-[#3fb950] border-[#3fb950]/30" },
+    { category: "SECURITY & EXPORT", colorClass: "bg-[#a371f7]/15 text-[#a371f7] border-[#a371f7]/30" }
+  ];
+
+  let currentCarouselSlide = 0;
+  const totalCarouselSlides = 5;
+  const slideDurationMs = 6000;
+  let carouselTimer = null;
+
+  function goToCarouselSlide(idx) {
+    currentCarouselSlide = (idx + totalCarouselSlides) % totalCarouselSlides;
+    
+    // Slide the track horizontally
+    const track = document.getElementById('carouselTrack');
+    if (track) {
+      track.style.transform = `translateX(-${currentCarouselSlide * 100}%)`;
+    }
+
+    // Update badges
+    const numBadge = document.getElementById('slideNumberBadge');
+    if (numBadge) {
+      numBadge.textContent = `SLIDE 0${currentCarouselSlide + 1} / 0${totalCarouselSlides}`;
+    }
+
+    const catBadge = document.getElementById('slideCategoryBadge');
+    if (catBadge && carouselMeta[currentCarouselSlide]) {
+      const meta = carouselMeta[currentCarouselSlide];
+      catBadge.textContent = meta.category;
+      catBadge.className = `px-2.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border ${meta.colorClass}`;
+    }
+
+    // Update dot pagination indicators
+    for (let i = 0; i < totalCarouselSlides; i++) {
+      const dot = document.getElementById(`cdot-${i}`);
+      if (dot) {
+        if (i === currentCarouselSlide) {
+          dot.className = "w-6 h-1.5 rounded-full bg-[#58a6ff] transition-all cursor-pointer";
+        } else {
+          dot.className = "w-2 h-1.5 rounded-full bg-[#30363d] hover:bg-[#8b949e] transition-all cursor-pointer";
+        }
+      }
+    }
+
+    // Reset progress animation
+    restartProgressBar();
+  }
+
+  function nextCarouselSlide() { goToCarouselSlide(currentCarouselSlide + 1); }
+  function prevCarouselSlide() { goToCarouselSlide(currentCarouselSlide - 1); }
+
+  // Aliases for backwards compatibility
+  function goToSlide(idx) { goToCarouselSlide(idx); }
+  function nextSlide() { nextCarouselSlide(); }
+  function prevSlide() { prevCarouselSlide(); }
+
+  function restartProgressBar() {
+    const bar = document.getElementById('carouselProgressBar');
+    if (bar) {
+      bar.style.transition = 'none';
+      bar.style.width = '0%';
+      void bar.offsetWidth; // trigger reflow
+      bar.style.transition = `width ${slideDurationMs}ms linear`;
+      bar.style.width = '100%';
+    }
+  }
+
+  function startCarouselAutoPlay() {
+    if (carouselTimer) clearInterval(carouselTimer);
+    restartProgressBar();
+    carouselTimer = setInterval(nextCarouselSlide, slideDurationMs);
+  }
+
+  function stopCarouselAutoPlay() {
+    if (carouselTimer) {
+      clearInterval(carouselTimer);
+      carouselTimer = null;
+    }
+    const bar = document.getElementById('carouselProgressBar');
+    if (bar) {
+      const computed = window.getComputedStyle(bar);
+      bar.style.transition = 'none';
+      bar.style.width = computed.width;
+    }
+  }
+
+  // Hook pause on user hover
+  const carouselEl = document.getElementById('marketingCarousel');
+  if (carouselEl) {
+    carouselEl.addEventListener('mouseenter', stopCarouselAutoPlay);
+    carouselEl.addEventListener('mouseleave', startCarouselAutoPlay);
+  }
+
+  // Alias for autoplay start
+  function startSlideAutoPlay() { startCarouselAutoPlay(); }
+
+  // ── 4. Mini "Video" Simulator Steps Data & Playback ───────────────────────
+  // Beginners Note: Demonstrates generic industrial pump performance matching
+  // without referencing any third-party proprietary trademarks.
   const demoSteps = [
     {
-      title: "1. Exact Duty Matching",
-      desc: "Input required Flow Q (185 m³/h) and Head H (42 m). The engine filters viable pumps across multi-manufacturer databases.",
+      title: "1. Multi-Fleet Duty Matching",
+      desc: "Input required Flow Q (185 m³/h) and Head H (42 m). The engine filters viable pumps across multi-discipline manufacturer databases.",
       eff: "79.2%",
       power: "28.4 kW",
       speed: "1,120 RPM",
@@ -489,7 +867,7 @@
     },
     {
       title: "2. Affinity Scaling & Slurry Derate",
-      desc: "Applies Warman ANSI/HI slurry solids correction for SG 1.35 and trims impeller diameter to meet TDH exactly.",
+      desc: "Applies ANSI/HI slurry solids concentration correction (Cw/Cv) for SG 1.35 and trims impeller diameter to meet TDH exactly.",
       eff: "78.0%",
       power: "31.2 kW",
       speed: "1,080 RPM",
@@ -613,8 +991,10 @@
     setDemoStep(stepIdx);
   }
 
-  // Auto-start video walkthrough on page load
+  // Initialize both slide deck and video simulation on page load
   document.addEventListener('DOMContentLoaded', () => {
+    goToCarouselSlide(0);
+    startCarouselAutoPlay();
     setDemoStep(0);
     startDemoPlayback();
   });

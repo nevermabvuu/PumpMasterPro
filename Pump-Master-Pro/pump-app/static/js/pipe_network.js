@@ -106,6 +106,7 @@ function defaultNodeProps(type, count) {
     case 'pump':      return { label: lbl, flow_m3h: 10, elevation_m: 0 };
     case 'tank':      return { label: lbl, elevation_m: 0 };
     case 'junction':  return { label: lbl, elevation_m: 0 };
+    case 'discharge': return { label: lbl, elevation_m: 0 };
     default:          return { label: lbl };
   }
 }
@@ -200,6 +201,43 @@ function renderPipes() {
     t.textContent = `${pipe.props.label || pipe.id}  D${pipe.props.diameter_mm}mm`;
     g.appendChild(t);
 
+    // Draw fittings
+    const fittings = pipe.props.fittings || [];
+    if (fittings.length > 0) {
+      const step = 1.0 / (fittings.length + 1);
+      fittings.forEach((fitKey, i) => {
+        const pct = step * (i + 1);
+        const fx = fn.x + (tn.x - fn.x) * pct;
+        const fy = fn.y + (tn.y - fn.y) * pct;
+        
+        const fg = svgEl.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'g');
+        fg.setAttribute('transform', `translate(${fx},${fy})`);
+        
+        fg.appendChild(mkSVG('circle', {
+          r: 6, fill: '#1e293b', stroke: isSel ? '#f59e0b' : '#60a5fa', 'stroke-width': 1.5
+        }));
+        
+        const fitObj = FITTINGS.find(f => f.key === fitKey);
+        let fitChar = fitKey.charAt(0).toUpperCase();
+        if (fitKey.includes('valve')) fitChar = 'V';
+        else if (fitKey.includes('elbow')) fitChar = 'E';
+        else if (fitKey.includes('tee')) fitChar = 'T';
+        else if (fitKey.includes('reducer') || fitKey.includes('expander')) fitChar = 'R';
+        
+        const ft = mkSVG('text', {
+          x: 0, y: 1, 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+          'font-size': 7, fill: isSel ? '#fcd34d' : '#93c5fd', 'font-family': 'Inter, sans-serif', 'font-weight': 'bold'
+        });
+        ft.textContent = fitChar;
+        fg.appendChild(ft);
+        
+        const title = mkSVG('title', {});
+        title.textContent = fitObj ? fitObj.label : fitKey;
+        fg.appendChild(title);
+        g.appendChild(fg);
+      });
+    }
+
     // Wide transparent hit target
     g.appendChild(mkSVG('line', {
       x1: fn.x, y1: fn.y, x2: tn.x, y2: tn.y,
@@ -213,14 +251,21 @@ function renderPipes() {
 /** Rebuild all node SVG elements */
 function renderNodes() {
   nodesGroup.innerHTML = '';
+  // Find minimum elevation to act as "suction/datum" point
+  let minElev = 0;
+  if (state.nodes.length > 0) {
+    const elevs = state.nodes.map(n => n.props.elevation_m || 0);
+    minElev = Math.min(...elevs);
+  }
+
   state.nodes.forEach(node => {
     const isSel = state.selected?.kind === 'node' && state.selected.id === node.id;
-    nodesGroup.appendChild(buildNodeSVG(node, isSel));
+    nodesGroup.appendChild(buildNodeSVG(node, isSel, minElev));
   });
 }
 
 /** Build the SVG <g> for a node */
-function buildNodeSVG(node, isSel) {
+function buildNodeSVG(node, isSel, minElev) {
   const g = mkSVG('g', { transform: `translate(${node.x},${node.y})` });
   g.style.cursor = 'move';
   g.addEventListener('mousedown', e => onNodeDown(e, node.id));
@@ -232,6 +277,7 @@ function buildNodeSVG(node, isSel) {
     case 'pump':      drawPump(g, isSel);      break;
     case 'tank':      drawTank(g, isSel);      break;
     case 'junction':  drawJunction(g, isSel);  break;
+    case 'discharge': drawDischarge(g, isSel); break;
   }
 
   // Label text below node
@@ -243,6 +289,17 @@ function buildNodeSVG(node, isSel) {
   });
   lbl.textContent = node.props.label || node.id;
   g.appendChild(lbl);
+
+  // Elevation text
+  const z = node.props.elevation_m || 0;
+  const relZ = z - minElev;
+  const elevLbl = mkSVG('text', {
+    x: 0, y: 64,
+    'text-anchor': 'middle', 'font-size': 9,
+    fill: '#64748b', 'font-family': 'Inter, sans-serif',
+  });
+  elevLbl.textContent = `Z: ${z}m (ΔH: +${relZ.toFixed(1)}m)`;
+  g.appendChild(elevLbl);
 
   // Selection ring
   if (isSel) {
@@ -323,6 +380,23 @@ function drawJunction(g, sel) {
     stroke: sel ? '#f59e0b' : '#64748b', 'stroke-width': 2,
   }));
   g.appendChild(svgText(0, 4, 'J', 11, '#94a3b8', 'bold'));
+}
+
+function drawDischarge(g, sel) {
+  g.appendChild(mkSVG('polygon', {
+    points: '-15,-10 15,-10 20,15 -20,15',
+    fill: sel ? '#164e63' : '#083344',
+    stroke: sel ? '#67e8f9' : '#06b6d4', 'stroke-width': 2,
+  }));
+  g.appendChild(mkSVG('path', {
+    d: 'M-10,15 Q0,25 10,15',
+    stroke: '#38bdf8', 'stroke-width': 2, fill: 'none',
+  }));
+  g.appendChild(mkSVG('path', {
+    d: 'M-5,15 Q0,30 5,15',
+    stroke: '#7dd3fc', 'stroke-width': 2, fill: 'none',
+  }));
+  g.appendChild(svgText(0, -18, 'D', 13, '#cffafe', 'bold'));
 }
 
 // SVG element factories ───────────────────────────────────────────────────────
@@ -541,6 +615,7 @@ function setMode(mode) {
     'add-pump':        'Place Pump — click on canvas',
     'add-tank':        'Place Tank — click on canvas',
     'add-junction':    'Place Junction (Tee) — click on canvas',
+    'add-discharge':   'Place Open Discharge — click on canvas',
   };
   setVal('pn-status', labels[mode] || mode);
 
@@ -800,6 +875,7 @@ function init() {
   document.getElementById('btn-add-pump').addEventListener('click', () => setMode('add-pump'));
   document.getElementById('btn-add-tank').addEventListener('click', () => setMode('add-tank'));
   document.getElementById('btn-add-junction').addEventListener('click', () => setMode('add-junction'));
+  document.getElementById('btn-add-discharge').addEventListener('click', () => setMode('add-discharge'));
   document.getElementById('btn-delete').addEventListener('click', deleteSelected);
   document.getElementById('btn-clear').addEventListener('click', clearCanvas);
   document.getElementById('btn-export').addEventListener('click', exportNetwork);

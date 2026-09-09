@@ -18,8 +18,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Databases
-*.db
+# Databases — ignore runtime DBs but keep seed data
 *.sqlite
 *.sqlite3
+pump_app.db
+pump_master.db
+# pumps.db is intentionally tracked — it is the seed database needed for deployment
+# Do NOT add pumps.db here
 

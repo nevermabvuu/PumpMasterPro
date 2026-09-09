@@ -13,7 +13,7 @@ from flask import Flask, request, redirect, url_for, jsonify
 from models import db, Organisation, Supplier, ReportConfig, User, RegistrationRequest, Role
 from motor_models import Motor, seed_motors
 from seed_data import seed_pumps
-from routes import main_bp, pumps_bp, curves_bp, selection_bp, comparison_bp, reports_bp, organisations_bp, debug_bp, auth_bp
+from routes import main_bp, pumps_bp, curves_bp, selection_bp, comparison_bp, reports_bp, organisations_bp, debug_bp, auth_bp, pipe_network_bp
 from routes.auth import get_current_user
 # Secure URL token helper — used to expose encode_pump_id() to Jinja templates.
 from pump_token import encode_pump_id
@@ -474,6 +474,7 @@ app.register_blueprint(reports_bp)
 app.register_blueprint(organisations_bp)
 app.register_blueprint(debug_bp)
 app.register_blueprint(auth_bp)
+app.register_blueprint(pipe_network_bp)  # Pipe network friction-loss designer
 
 
 # ── Global Authentication Gatekeeper ──────────────────────────────────────────

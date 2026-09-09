@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+
+{% block title %}Pipe Network Designer — PumpSelect Pro{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Layout: full-height three-panel design (toolbar | canvas | props) ── */
+  #pn-outer {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 120px);   /* subtract navbar + footer */
+    gap: 0;
+    background: #0d1117;
+  }
+
+  /* Top toolbar strip */
+  #pn-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+  }
+
+  /* Main row: canvas + right panel side by side */
+  #pn-main-row {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* SVG canvas area */
+  #pn-canvas-wrap {
+    flex: 1;
+    position: relative;
+    background: #0d1117;
+    overflow: hidden;
+  }
+
+  #pn-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    user-select: none;
+  }
+
+  /* Grid background pattern for the canvas */
+  #pn-canvas-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(48,54,61,0.5) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(48,54,61,0.5) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+  }
+
+  /* Right properties panel */
+  #pn-props-panel {
+    width: 280px;
+    min-width: 240px;
+    max-width: 320px;
+    background: #161b22;
+    border-left: 1px solid #30363d;
+    overflow-y: auto;
+    flex-shrink: 0;
+    padding: 14px;
+    font-size: 13px;
+  }
+
+  /* Toolbar buttons */
+  .pn-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    background: #21262d;
+    color: #c9d1d9;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .pn-btn:hover { background: #2d333b; color: #e6edf3; border-color: #444c56; }
+  .pn-btn.active-tool {
+    background: rgba(88,166,255,0.15);
+    border-color: #58a6ff;
+    color: #58a6ff;
+  }
+  .pn-btn-danger { border-color: rgba(248,81,73,0.4); color: #f85149; }
+  .pn-btn-danger:hover { background: rgba(248,81,73,0.1); }
+  .pn-btn-success {
+    background: rgba(34,197,94,0.15);
+    border-color: #22c55e;
+    color: #22c55e;
+  }
+  .pn-btn-success:hover { background: rgba(34,197,94,0.25); }
+
+  /* Toolbar separators */
+  .pn-sep {
+    width: 1px;
+    height: 24px;
+    background: #30363d;
+    margin: 0 4px;
+    flex-shrink: 0;
+  }
+
+  /* Properties panel form labels */
+  .pp-label {
+    display: block;
+    font-size: 11px;
+    color: #8b949e;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .pp-input {
+    width: 100%;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e6edf3;
+    padding: 5px 8px;
+    font-size: 12px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+  }
+  .pp-input:focus {
+    outline: none;
+    border-color: #58a6ff;
+    box-shadow: 0 0 0 3px rgba(88,166,255,0.12);
+  }
+  .pp-row { display: flex; gap: 8px; }
+  .pp-row .pp-field { flex: 1; }
+
+  /* Results section below canvas */
+  #pn-results-section {
+    background: #161b22;
+    border-top: 1px solid #30363d;
+    padding: 16px;
+  }
+
+  /* Summary stat cards */
+  .res-card {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 10px 14px;
+    text-align: center;
+    flex: 1;
+  }
+  .res-card-value {
+    font-size: 22px;
+    font-weight: 700;
+    font-family: monospace;
+  }
+  .res-card-label {
+    font-size: 10px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 2px;
+  }
+
+  /* Results table */
+  #pn-results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  #pn-results-table th {
+    padding: 6px 10px;
+    text-align: right;
+    color: #8b949e;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid #30363d;
+    white-space: nowrap;
+  }
+  #pn-results-table th:first-child,
+  #pn-results-table th:nth-child(2) { text-align: left; }
+
+  /* Status bar at bottom of canvas */
+  #pn-statusbar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 4px 12px;
+    background: rgba(22,27,34,0.85);
+    font-size: 11px;
+    color: #8b949e;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    backdrop-filter: blur(4px);
+    border-top: 1px solid #30363d;
+    pointer-events: none;
+  }
+
+  /* Section headings inside the props panel */
+  .pp-section-title {
+    font-size: 10px;
+    font-weight: 600;
+    color: #58a6ff;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #21262d;
+    margin-top: 4px;
+  }
+
+  /* Info chips in props panel */
+  .pp-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: monospace;
+    font-size: 11px;
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    padding: 2px 7px;
+    color: #58a6ff;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:8px;">
+  <h1 style="font-size:1.1rem;font-weight:700;color:#e6edf3;margin:0;display:flex;align-items:center;gap:8px;">
+    <i class="bi bi-diagram-3" style="color:#58a6ff;"></i>
+    Pipe Network System Designer
+    <span style="font-size:11px;color:#64748b;font-weight:400;">— Friction loss calculator for pipe networks</span>
+  </h1>
+</div>
+
+<div id="pn-outer">
+
+  <!-- ─────────────────────────────────────────────────────────────────────
+       TOP TOOLBAR
+       Contains: mode tools | add-node tools | separator | zoom | file ops
+       ──────────────────────────────────────────────────────────────────── -->
+  <div id="pn-toolbar">
+
+    <!-- Mode tools -->
+    <button id="btn-select" class="pn-btn active-tool" data-mode="select" title="Select / Move (S)">
+      <i class="bi bi-cursor"></i> Select
+    </button>
+    <button id="btn-connect" class="pn-btn" data-mode="connect" title="Draw Pipe (C)">
+      <i class="bi bi-arrow-right-short" style="font-size:16px;"></i> Pipe
+    </button>
+
+    <div class="pn-sep"></div>
+
+    <!-- Add node tools -->
+    <span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;">Add:</span>
+    <button id="btn-add-reservoir" class="pn-btn" data-mode="add-reservoir" title="Place Reservoir / Sump">
+      <i class="bi bi-water" style="color:#3b82f6;"></i> Reservoir
+    </button>
+    <button id="btn-add-pump" class="pn-btn" data-mode="add-pump" title="Place Pump">
+      <i class="bi bi-gear-fill" style="color:#a855f7;"></i> Pump
+    </button>
+    <button id="btn-add-tank" class="pn-btn" data-mode="add-tank" title="Place Tank">
+      <i class="bi bi-cup-fill" style="color:#22c55e;"></i> Tank
+    </button>
+    <button id="btn-add-junction" class="pn-btn" data-mode="add-junction" title="Place Junction / Tee">
+      <i class="bi bi-intersect" style="color:#f59e0b;"></i> Junction
+    </button>
+
+    <div class="pn-sep"></div>
+
+    <!-- Delete -->
+    <button id="btn-delete" class="pn-btn pn-btn-danger" title="Delete selected element (Delete key)">
+      <i class="bi bi-trash3"></i>
+    </button>
+
+    <div class="pn-sep"></div>
+
+    <!-- Zoom controls -->
+    <button id="btn-zoom-out" class="pn-btn" title="Zoom out">
+      <i class="bi bi-zoom-out"></i>
+    </button>
+    <button id="btn-zoom-reset" class="pn-btn" title="Reset zoom and pan">
+      <i class="bi bi-fullscreen-exit"></i>
+    </button>
+    <button id="btn-zoom-in" class="pn-btn" title="Zoom in">
+      <i class="bi bi-zoom-in"></i>
+    </button>
+
+    <div class="pn-sep"></div>
+
+    <!-- File operations -->
+    <button id="btn-export" class="pn-btn" title="Export network as JSON">
+      <i class="bi bi-download"></i> Export
+    </button>
+    <button id="btn-import" class="pn-btn" title="Import a saved JSON network">
+      <i class="bi bi-upload"></i> Import
+    </button>
+    <input id="import-file-input" type="file" accept=".json" style="display:none;">
+    <button id="btn-clear" class="pn-btn pn-btn-danger" title="Clear all nodes and pipes">
+      <i class="bi bi-x-circle"></i> Clear
+    </button>
+
+    <div class="pn-sep"></div>
+
+    <!-- Global flow rate for calculation -->
+    <label style="font-size:11px;color:#8b949e;white-space:nowrap;">
+      Flow rate
+      <input id="pn-global-flow" type="number" min="0.1" step="0.5" value="15"
+             class="pp-input" style="width:70px;display:inline-block;margin:0 4px 0 4px;">
+      m³/h
+    </label>
+
+    <!-- Calculate button -->
+    <button id="pn-calc-btn" class="pn-btn pn-btn-success" style="margin-left:auto;">
+      <i class="bi bi-calculator"></i> Calculate Losses
+    </button>
+
+  </div><!-- end toolbar -->
+
+  <!-- ─────────────────────────────────────────────────────────────────────
+       MAIN ROW: SVG Canvas (left) + Properties Panel (right)
+       ──────────────────────────────────────────────────────────────────── -->
+  <div id="pn-main-row">
+
+    <!-- SVG Canvas -->
+    <div id="pn-canvas-wrap">
+      <svg id="pn-svg" xmlns="http://www.w3.org/2000/svg">
+        <!-- Pipes drawn behind nodes -->
+        <g id="pn-pipes"></g>
+        <!-- Nodes drawn on top of pipes -->
+        <g id="pn-nodes"></g>
+        <!-- Draft pipe line injected by JS into root SVG -->
+      </svg>
+
+      <!-- Status bar overlaid at bottom of canvas -->
+      <div id="pn-statusbar">
+        <i class="bi bi-info-circle" style="color:#58a6ff;pointer-events:none;"></i>
+        <span id="pn-status">Select / Move nodes</span>
+        <span style="margin-left:auto;color:#475569;pointer-events:none;">
+          Scroll to zoom &bull; Middle-drag to pan &bull; Delete key to remove
+        </span>
+      </div>
+    </div><!-- end canvas wrap -->
+
+    <!-- ───────────────────────────────────────────────────────────────────
+         RIGHT PROPERTIES PANEL — updates with selection context
+         ─────────────────────────────────────────────────────────────────── -->
+    <div id="pn-props-panel">
+
+      <!-- Empty state — nothing selected -->
+      <div id="pn-props-empty">
+        <div style="text-align:center;padding:40px 10px;color:#475569;">
+          <i class="bi bi-cursor-fill" style="font-size:2rem;display:block;margin-bottom:10px;color:#30363d;"></i>
+          <div style="font-size:12px;line-height:1.6;">
+            Click a <strong style="color:#8b949e;">node</strong> or <strong style="color:#8b949e;">pipe</strong>
+            to edit its properties.
+          </div>
+          <div style="margin-top:20px;font-size:11px;color:#334155;text-align:left;line-height:1.8;">
+            <div><kbd style="background:#21262d;border:1px solid #30363d;border-radius:3px;padding:1px 5px;">S</kbd> Select mode</div>
+            <div><kbd style="background:#21262d;border:1px solid #30363d;border-radius:3px;padding:1px 5px;">C</kbd> Draw pipe</div>
+            <div><kbd style="background:#21262d;border:1px solid #30363d;border-radius:3px;padding:1px 5px;">Del</kbd> Delete selected</div>
+            <div><kbd style="background:#21262d;border:1px solid #30363d;border-radius:3px;padding:1px 5px;">Esc</kbd> Cancel action</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Node properties panel -->
+      <div id="pn-props-node" style="display:none;">
+        <div class="pp-section-title"><i class="bi bi-circle-fill" style="font-size:8px;"></i> Node Properties</div>
+
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+          <span class="pp-chip" id="np-id">N-?</span>
+          <span class="pp-chip" id="np-type" style="color:#a855f7;border-color:#a855f7;background:rgba(168,85,247,0.08);">?</span>
+        </div>
+
+        <label class="pp-label">Label</label>
+        <input id="np-label" type="text" class="pp-input" placeholder="Node label">
+
+        <label class="pp-label">Elevation (m)</label>
+        <input id="np-elev" type="number" step="0.1" class="pp-input" placeholder="0">
+
+        <!-- Pump-only fields -->
+        <div id="np-pump-fields" style="display:none;">
+          <div class="pp-section-title" style="margin-top:8px;">
+            <i class="bi bi-gear-fill"></i> Pump Data
+          </div>
+          <label class="pp-label">Design Flow Rate (m³/h)</label>
+          <input id="np-flow" type="number" step="0.5" min="0" class="pp-input" value="10">
+          <div style="font-size:11px;color:#475569;margin-bottom:8px;">
+            The system TDH is calculated from the sum of all pipe losses from inlet to outlet.
+          </div>
+        </div>
+      </div><!-- end node props -->
+
+      <!-- Pipe (segment) properties panel -->
+      <div id="pn-props-pipe" style="display:none;">
+        <div class="pp-section-title"><i class="bi bi-dash-lg" style="font-size:8px;"></i> Pipe Segment Properties</div>
+
+        <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+          <span class="pp-chip" id="pp-id">P-?</span>
+          <span style="font-size:11px;color:#64748b;">
+            <span id="pp-from" style="color:#3b82f6;font-family:monospace;">?</span>
+            <i class="bi bi-arrow-right" style="font-size:9px;margin:0 2px;"></i>
+            <span id="pp-to" style="color:#3b82f6;font-family:monospace;">?</span>
+          </span>
+        </div>
+
+        <label class="pp-label">Label</label>
+        <input id="pp-label" type="text" class="pp-input" placeholder="Pipe label">
+
+        <div class="pp-row">
+          <div class="pp-field">
+            <label class="pp-label">Diameter (mm)</label>
+            <input id="pp-diameter" type="number" min="10" step="5" class="pp-input" value="100">
+          </div>
+          <div class="pp-field">
+            <label class="pp-label">Length (m)</label>
+            <input id="pp-length" type="number" min="0.1" step="0.5" class="pp-input" value="10">
+          </div>
+        </div>
+
+        <label class="pp-label">Elevation Change (m) <span style="font-weight:400;color:#475569;">+ve = uphill</span></label>
+        <input id="pp-elev-change" type="number" step="0.5" class="pp-input" value="0">
+
+        <label class="pp-label">Pipe Material</label>
+        <select id="pp-material" class="pp-input">
+          <!-- Options populated by JS from MATERIALS array -->
+        </select>
+
+        <!-- Fittings / minor losses -->
+        <div class="pp-section-title" style="margin-top:4px;">
+          <i class="bi bi-tools"></i> Fittings &amp; Valves
+          <span style="float:right;color:#e6edf3;">
+            K<sub>total</sub> = <span id="pp-ktotal">0.00</span>
+          </span>
+        </div>
+        <div id="pp-fittings-list" style="max-height:200px;overflow-y:auto;">
+          <!-- Fitting checkboxes populated by JS from FITTINGS array -->
+        </div>
+
+        <div style="font-size:10px;color:#334155;margin-top:6px;">
+          Minor loss: h<sub>m</sub> = K &times; V&sup2; / (2g)
+        </div>
+      </div><!-- end pipe props -->
+
+    </div><!-- end props panel -->
+
+  </div><!-- end main row -->
+
+</div><!-- end pn-outer -->
+
+<!-- ─────────────────────────────────────────────────────────────────────────
+     RESULTS SECTION — shown below the canvas after calculation
+     ───────────────────────────────────────────────────────────────────────── -->
+<div id="pn-results-section" style="display:none;margin-top:16px;">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <h2 style="font-size:1rem;font-weight:700;color:#e6edf3;margin:0;display:flex;align-items:center;gap:8px;">
+      <i class="bi bi-bar-chart-line" style="color:#22c55e;"></i>
+      Friction Loss Results
+    </h2>
+    <span style="font-size:11px;color:#64748b;">
+      <span id="res-count">0</span> pipe segments analysed
+    </span>
+  </div>
+
+  <!-- Summary stat cards -->
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+    <div class="res-card" style="border-color:rgba(248,113,113,0.3);">
+      <div class="res-card-value" style="color:#f87171;">
+        <span id="res-major">—</span> m
+      </div>
+      <div class="res-card-label">Major Friction Head (Darcy-Weisbach)</div>
+    </div>
+    <div class="res-card" style="border-color:rgba(251,146,60,0.3);">
+      <div class="res-card-value" style="color:#fb923c;">
+        <span id="res-minor">—</span> m
+      </div>
+      <div class="res-card-label">Minor Head (Fittings &amp; Valves)</div>
+    </div>
+    <div class="res-card" style="border-color:rgba(167,139,250,0.3);">
+      <div class="res-card-value" style="color:#a78bfa;">
+        <span id="res-elev">—</span> m
+      </div>
+      <div class="res-card-label">Static Elevation Head</div>
+    </div>
+    <div class="res-card" style="border-color:rgba(251,191,36,0.4);background:rgba(251,191,36,0.04);">
+      <div class="res-card-value" style="color:#fbbf24;">
+        <span id="res-total">—</span> m
+      </div>
+      <div class="res-card-label" style="color:#d97706;font-weight:700;">Total System Head Required</div>
+    </div>
+  </div>
+
+  <!-- Per-segment table -->
+  <div style="overflow-x:auto;border:1px solid #30363d;border-radius:8px;">
+    <table id="pn-results-table">
+      <thead>
+        <tr style="background:#161b22;">
+          <th style="text-align:left;">ID</th>
+          <th style="text-align:left;">Label</th>
+          <th>D (mm)</th>
+          <th>L (m)</th>
+          <th>Velocity (m/s)</th>
+          <th>Regime / Re</th>
+          <th>f</th>
+          <th>hf Major (m)</th>
+          <th>hf Minor (m)</th>
+          <th>Elev (m)</th>
+          <th>h Total (m)</th>
+        </tr>
+      </thead>
+      <tbody id="res-table-body"></tbody>
+    </table>
+  </div>
+
+  <!-- Formula reference -->
+  <div style="margin-top:12px;padding:10px 14px;background:#161b22;border:1px solid #21262d;border-radius:8px;font-size:11px;color:#64748b;line-height:1.9;">
+    <strong style="color:#8b949e;">Calculation methods:</strong>
+    Major losses: <code style="color:#58a6ff;">hf = f (L/D) V&sup2;/2g</code> &mdash;
+    Friction factor: <code style="color:#58a6ff;">Swamee-Jain approximation to Colebrook-White</code> &mdash;
+    Minor losses: <code style="color:#58a6ff;">hm = K V&sup2;/2g</code> (K-factor method, Crane TP-410) &mdash;
+    Fluid: <code style="color:#58a6ff;">water at 20&deg;C</code>
+  </div>
+
+</div><!-- end results section -->
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pipe_network.js') }}"></script>
+{% endblock %}

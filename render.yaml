@@ -1,0 +1,48 @@
+# ==============================================================================
+# render.yaml — Render.com deployment configuration for Pump Master Pro
+# ==============================================================================
+# Docs: https://render.com/docs/yaml-spec
+#
+# HOW TO USE:
+#   1. Push this repo (including render.yaml and requirements.txt) to GitHub.
+#   2. Go to https://dashboard.render.com → New → Web Service → Connect Repo.
+#   3. Render will auto-detect this file and use it to configure the service.
+#   4. Add the environment variables listed below in the Render dashboard under
+#      Environment → Add Secret File or Environment Variables.
+# ==============================================================================
+
+services:
+  - type: web
+    name: pump-master-pro
+    runtime: python
+    # Root directory of the Flask app (relative to the repo root)
+    rootDir: Pump-Master-Pro/pump-app
+    # Install Python dependencies from requirements.txt
+    buildCommand: pip install -r requirements.txt
+    # Start with gunicorn — 2 workers is a good baseline for Render free tier.
+    # Increase workers for paid plans: --workers 4
+    startCommand: gunicorn app:app --workers 2 --bind 0.0.0.0:$PORT --timeout 120
+    # Render's free tier uses port 10000, but $PORT is injected automatically.
+    plan: free
+
+    envVars:
+      # REQUIRED — Change this to a long random string before deploying.
+      # Generate one with: python -c "import secrets; print(secrets.token_hex(32))"
+      - key: SESSION_SECRET
+        generateValue: true   # Render will auto-generate a secure random value
+
+      # SQLite is used by default (pumps.db inside the container).
+      # NOTE: Render's free tier does NOT have persistent disk.
+      # Every deploy will reset the database back to seed data.
+      # For persistent storage, attach a Render PostgreSQL database and
+      # update SQLALCHEMY_DATABASE_URI below.
+      - key: SQLALCHEMY_DATABASE_URI
+        value: sqlite:///pumps.db   # Replace with postgres:// URL for persistence
+
+      # Flask environment — use 'production' on Render, 'development' locally.
+      - key: FLASK_ENV
+        value: production
+
+      # Optional: set to 0 to disable Flask debug mode in production.
+      - key: FLASK_DEBUG
+        value: "0"

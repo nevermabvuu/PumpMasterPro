@@ -123,6 +123,31 @@ function defaultPipeProps(id) {
 }
 
 // ============================================================================
+// LOCAL STORAGE PERSISTENCE
+// ============================================================================
+
+function saveNetworkToStorage() {
+  const data = { nodes: state.nodes, pipes: state.pipes, nextId: state.nextId };
+  localStorage.setItem('pmpro_pipe_network', JSON.stringify(data));
+}
+
+function loadNetworkFromStorage() {
+  const saved = localStorage.getItem('pmpro_pipe_network');
+  if (saved) {
+    try {
+      const d = JSON.parse(saved);
+      if (d.nodes && d.pipes) {
+        state.nodes = d.nodes;
+        state.pipes = d.pipes;
+        state.nextId = d.nextId || Math.max(0, ...[...d.nodes, ...d.pipes].map(x => parseInt(x.id.split('-')[1]) || 0)) + 1;
+        return true;
+      }
+    } catch (e) { console.error('Failed to load pipe network from storage:', e); }
+  }
+  return false;
+}
+
+// ============================================================================
 // RENDERING
 // ============================================================================
 
@@ -130,6 +155,7 @@ function renderAll() {
   renderPipes();
   renderNodes();
   updateDraftLine();
+  saveNetworkToStorage();
 }
 
 /** Rebuild all pipe SVG elements */
@@ -828,7 +854,13 @@ function init() {
   setMode('select');
   showPropsPanel('none');
   applyTransform();
-  loadDemoNetwork();
+  
+  // Load from local storage, or fall back to demo network
+  if (!loadNetworkFromStorage()) {
+    loadDemoNetwork();
+  } else {
+    renderAll();
+  }
 }
 
 /** Pre-load a simple demo network: Reservoir -> Pump -> Junction -> Tank */

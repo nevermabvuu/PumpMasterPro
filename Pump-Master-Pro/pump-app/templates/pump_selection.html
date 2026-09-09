@@ -11,23 +11,38 @@
   Detailed engineering analysis cards, motor strips, BEP graphics, and multi-curve overlays are housed in the Comparison Tab.
 #}
 
-<div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+<!-- ── Page header + tab switcher ──────────────────────────────────────────── -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-0">
   <div class="page-header mb-0">
     <h1 class="page-title"><i class="bi bi-bullseye text-accent mr-2"></i>Pump Selection</h1>
-    <p class="page-subtitle">Configure operating duty and specifications to find matching pumps</p>
+    <p class="page-subtitle">Configure duty point, find matching pumps, or design a pipe network</p>
   </div>
   <div class="flex items-center gap-2">
-    <!-- Quick navigation to comparison tab with active duty parameters -->
     <a href="{{ url_for('pump_comparison', q_duty=form_data.q_duty, h_duty=form_data.h_duty, liquid=form_data.get('liquid', 'water'), operation_mode=form_data.get('operation_mode', 'fixed')) if form_data.q_duty else url_for('pump_comparison') }}"
        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] hover:text-white border border-[#30363d] transition-colors shadow-sm">
       <i class="bi bi-bar-chart-line"></i>
-      <span>Comparison Tab</span>
+      <span>Comparison</span>
       {% if results %}
       <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-[#58a6ff]/20 font-mono">{{ results|length }}</span>
       {% endif %}
     </a>
   </div>
 </div>
+
+<!-- ── Tab bar ──────────────────────────────────────────────────────────────── -->
+<div style="display:flex;align-items:center;gap:0;border-bottom:1px solid #30363d;margin-bottom:16px;margin-top:12px;">
+  <button id="tab-btn-selection" onclick="switchSelectionTab('selection')"
+    style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;font-size:13px;font-weight:600;border:none;background:transparent;cursor:pointer;border-bottom:2px solid #58a6ff;color:#58a6ff;transition:all .2s;">
+    <i class="bi bi-bullseye"></i> Pump Selection
+  </button>
+  <button id="tab-btn-pipenet" onclick="switchSelectionTab('pipenet')"
+    style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;font-size:13px;font-weight:600;border:none;background:transparent;cursor:pointer;border-bottom:2px solid transparent;color:#8b949e;transition:all .2s;">
+    <i class="bi bi-diagram-3"></i> Pipe Network
+  </button>
+</div>
+
+<!-- ── Tab panels ───────────────────────────────────────────────────────────── -->
+<div id="tab-panel-selection">
 
 {% set liquid_lvl = current_user.get_access_level('selection_liquid') if current_user else 2 %}
 {% set motor_lvl = current_user.get_access_level('selection_motors') if current_user else 2 %}
@@ -886,11 +901,299 @@
   </div>
 </form>
 
+</div><!-- end #tab-panel-selection -->
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     TAB 2: Pipe Network System Designer
+     Embedded inline — same JS as /pipe-network but scoped to this page.
+     Network state is saved to localStorage on every change and restored
+     automatically when the user returns to this tab.
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-panel-pipenet" style="display:none;">
+
+  <!-- Toolbar -->
+  <div id="pn-toolbar" style="display:flex;align-items:center;gap:6px;padding:8px 0;flex-wrap:wrap;">
+
+    <!-- Mode buttons -->
+    <button id="btn-select" class="pn-btn active-tool" data-mode="select" title="Select / Move (S)">
+      <i class="bi bi-cursor"></i> Select
+    </button>
+    <button id="btn-connect" class="pn-btn" data-mode="connect" title="Draw Pipe (C)">
+      <i class="bi bi-arrow-right-short" style="font-size:16px;"></i> Pipe
+    </button>
+
+    <div class="pn-sep"></div>
+
+    <!-- Add nodes -->
+    <span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;">Add:</span>
+    <button id="btn-add-reservoir" class="pn-btn" data-mode="add-reservoir" title="Place Reservoir / Sump">
+      <i class="bi bi-water" style="color:#3b82f6;"></i> Reservoir
+    </button>
+    <button id="btn-add-pump" class="pn-btn" data-mode="add-pump" title="Place Pump">
+      <i class="bi bi-gear-fill" style="color:#a855f7;"></i> Pump
+    </button>
+    <button id="btn-add-tank" class="pn-btn" data-mode="add-tank" title="Place Tank">
+      <i class="bi bi-cup-fill" style="color:#22c55e;"></i> Tank
+    </button>
+    <button id="btn-add-junction" class="pn-btn" data-mode="add-junction" title="Place Junction / Tee">
+      <i class="bi bi-intersect" style="color:#f59e0b;"></i> Junction
+    </button>
+
+    <div class="pn-sep"></div>
+
+    <button id="btn-delete" class="pn-btn pn-btn-danger" title="Delete selected (Del)">
+      <i class="bi bi-trash3"></i>
+    </button>
+
+    <div class="pn-sep"></div>
+
+    <button id="btn-zoom-out"   class="pn-btn" title="Zoom out"><i class="bi bi-zoom-out"></i></button>
+    <button id="btn-zoom-reset" class="pn-btn" title="Reset zoom"><i class="bi bi-fullscreen-exit"></i></button>
+    <button id="btn-zoom-in"    class="pn-btn" title="Zoom in"><i class="bi bi-zoom-in"></i></button>
+
+    <div class="pn-sep"></div>
+
+    <button id="btn-export" class="pn-btn" title="Export JSON"><i class="bi bi-download"></i> Export</button>
+    <button id="btn-import" class="pn-btn" title="Import JSON"><i class="bi bi-upload"></i> Import</button>
+    <input id="import-file-input" type="file" accept=".json" style="display:none;">
+    <button id="btn-clear" class="pn-btn pn-btn-danger" title="Clear canvas"><i class="bi bi-x-circle"></i> Clear</button>
+
+    <div class="pn-sep"></div>
+
+    <!-- Global flow rate -->
+    <label style="font-size:11px;color:#8b949e;white-space:nowrap;">
+      Flow
+      <input id="pn-global-flow" type="number" min="0.1" step="0.5" value="15"
+             class="pp-input" style="width:65px;display:inline-block;margin:0 4px;">
+      m&#179;/h
+    </label>
+
+    <!-- Calculate -->
+    <button id="pn-calc-btn" class="pn-btn pn-btn-success" style="margin-left:auto;">
+      <i class="bi bi-calculator"></i> Calculate Losses
+    </button>
+  </div>
+
+  <!-- Canvas + Properties side by side -->
+  <div style="display:flex;height:560px;border:1px solid #30363d;border-radius:8px;overflow:hidden;">
+
+    <!-- SVG canvas -->
+    <div id="pn-canvas-wrap" style="flex:1;position:relative;background:#0d1117;overflow:hidden;">
+      <!-- Grid pattern background -->
+      <div style="position:absolute;inset:0;pointer-events:none;
+                  background-image:linear-gradient(rgba(48,54,61,0.5) 1px,transparent 1px),linear-gradient(90deg,rgba(48,54,61,0.5) 1px,transparent 1px);
+                  background-size:50px 50px;"></div>
+      <svg id="pn-svg" style="width:100%;height:100%;display:block;user-select:none;">
+        <g id="pn-pipes"></g>
+        <g id="pn-nodes"></g>
+      </svg>
+      <!-- Status bar -->
+      <div id="pn-statusbar" style="position:absolute;bottom:0;left:0;right:0;padding:4px 12px;
+           background:rgba(22,27,34,0.85);font-size:11px;color:#8b949e;
+           display:flex;align-items:center;gap:10px;border-top:1px solid #30363d;pointer-events:none;">
+        <i class="bi bi-info-circle" style="color:#58a6ff;"></i>
+        <span id="pn-status">Select / Move nodes</span>
+        <span style="margin-left:auto;color:#475569;">Scroll=zoom &bull; Middle-drag=pan &bull; Del=delete</span>
+      </div>
+    </div>
+
+    <!-- Right properties panel -->
+    <div id="pn-props-panel" style="width:270px;min-width:230px;background:#161b22;
+         border-left:1px solid #30363d;overflow-y:auto;padding:14px;font-size:13px;">
+
+      <!-- Empty state -->
+      <div id="pn-props-empty">
+        <div style="text-align:center;padding:30px 8px;color:#475569;">
+          <i class="bi bi-cursor-fill" style="font-size:2rem;color:#21262d;display:block;margin-bottom:10px;"></i>
+          <div style="font-size:12px;color:#475569;line-height:1.7;">
+            Click a <strong style="color:#8b949e;">node</strong> or <strong style="color:#8b949e;">pipe</strong> to edit.<br>
+            <span style="font-size:10px;color:#334155;">
+              S = select &bull; C = draw pipe &bull; Del = delete
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Node properties -->
+      <div id="pn-props-node" style="display:none;">
+        <div class="pp-section-title"><i class="bi bi-circle-fill" style="font-size:8px;"></i> Node Properties</div>
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+          <span class="pp-chip" id="np-id">N-?</span>
+          <span class="pp-chip" id="np-type" style="color:#a855f7;border-color:#a855f7;">?</span>
+        </div>
+        <label class="pp-label">Label</label>
+        <input id="np-label" type="text" class="pp-input" placeholder="Node label">
+        <label class="pp-label">Elevation (m)</label>
+        <input id="np-elev" type="number" step="0.1" class="pp-input" placeholder="0">
+        <div id="np-pump-fields" style="display:none;">
+          <div class="pp-section-title" style="margin-top:8px;"><i class="bi bi-gear-fill"></i> Pump Data</div>
+          <label class="pp-label">Design Flow Rate (m&#179;/h)</label>
+          <input id="np-flow" type="number" step="0.5" min="0" class="pp-input" value="10">
+        </div>
+      </div>
+
+      <!-- Pipe properties -->
+      <div id="pn-props-pipe" style="display:none;">
+        <div class="pp-section-title"><i class="bi bi-dash-lg" style="font-size:8px;"></i> Pipe Segment</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+          <span class="pp-chip" id="pp-id">P-?</span>
+          <span style="font-size:11px;color:#64748b;">
+            <span id="pp-from" style="color:#3b82f6;font-family:monospace;">?</span>
+            <i class="bi bi-arrow-right" style="font-size:9px;margin:0 2px;"></i>
+            <span id="pp-to" style="color:#3b82f6;font-family:monospace;">?</span>
+          </span>
+        </div>
+        <label class="pp-label">Label</label>
+        <input id="pp-label" type="text" class="pp-input">
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;">
+            <label class="pp-label">Diameter (mm)</label>
+            <input id="pp-diameter" type="number" min="10" step="5" class="pp-input" value="100">
+          </div>
+          <div style="flex:1;">
+            <label class="pp-label">Length (m)</label>
+            <input id="pp-length" type="number" min="0.1" step="0.5" class="pp-input" value="10">
+          </div>
+        </div>
+        <label class="pp-label">Elevation Change (m) <span style="color:#475569;font-weight:400;">+ve=uphill</span></label>
+        <input id="pp-elev-change" type="number" step="0.5" class="pp-input" value="0">
+        <label class="pp-label">Material</label>
+        <select id="pp-material" class="pp-input"></select>
+        <div class="pp-section-title" style="margin-top:4px;">
+          <i class="bi bi-tools"></i> Fittings
+          <span style="float:right;">K<sub>total</sub>=<span id="pp-ktotal">0.00</span></span>
+        </div>
+        <div id="pp-fittings-list" style="max-height:180px;overflow-y:auto;"></div>
+      </div>
+    </div><!-- end props panel -->
+  </div><!-- end canvas+props row -->
+
+  <!-- Results section -->
+  <div id="pn-results-section" style="display:none;margin-top:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h2 style="font-size:1rem;font-weight:700;color:#e6edf3;margin:0;display:flex;align-items:center;gap:8px;">
+        <i class="bi bi-bar-chart-line" style="color:#22c55e;"></i> Friction Loss Results
+      </h2>
+      <span style="font-size:11px;color:#64748b;"><span id="res-count">0</span> pipe segments</span>
+    </div>
+    <!-- Summary cards -->
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+      <div class="res-card" style="border-color:rgba(248,113,113,0.3);">
+        <div class="res-card-value" style="color:#f87171;"><span id="res-major">—</span> m</div>
+        <div class="res-card-label">Major Friction (Darcy-Weisbach)</div>
+      </div>
+      <div class="res-card" style="border-color:rgba(251,146,60,0.3);">
+        <div class="res-card-value" style="color:#fb923c;"><span id="res-minor">—</span> m</div>
+        <div class="res-card-label">Minor (Fittings &amp; Valves)</div>
+      </div>
+      <div class="res-card" style="border-color:rgba(167,139,250,0.3);">
+        <div class="res-card-value" style="color:#a78bfa;"><span id="res-elev">—</span> m</div>
+        <div class="res-card-label">Static Elevation Head</div>
+      </div>
+      <div class="res-card" style="border-color:rgba(251,191,36,0.4);background:rgba(251,191,36,0.04);">
+        <div class="res-card-value" style="color:#fbbf24;"><span id="res-total">—</span> m</div>
+        <div class="res-card-label" style="color:#d97706;font-weight:700;">Total System Head</div>
+      </div>
+    </div>
+    <!-- Results table -->
+    <div style="overflow-x:auto;border:1px solid #30363d;border-radius:8px;">
+      <table id="pn-results-table" style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#161b22;">
+            <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">ID</th>
+            <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Label</th>
+            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">D (mm)</th>
+            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">L (m)</th>
+            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">V (m/s)</th>
+            <th style="padding:6px 10px;text-align:center;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Regime</th>
+            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">f</th>
+            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">hf Major</th>
+            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">hf Minor</th>
+            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Elev</th>
+            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Total (m)</th>
+          </tr>
+        </thead>
+        <tbody id="res-table-body"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:#475569;">
+      Darcy-Weisbach &bull; Swamee-Jain friction factor &bull; K-factor method (Crane TP-410) &bull; Water at 20&#8451;
+    </div>
+  </div>
+
+</div><!-- end #tab-panel-pipenet -->
+
+<!-- Shared styles for the pipe network designer -->
+<style>
+  /* Toolbar button styles (scoped to this page) */
+  .pn-btn {
+    display:inline-flex;align-items:center;gap:5px;
+    padding:5px 10px;border-radius:6px;
+    border:1px solid #30363d;background:#21262d;
+    color:#c9d1d9;font-size:12px;cursor:pointer;
+    transition:all .15s;white-space:nowrap;
+  }
+  .pn-btn:hover { background:#2d333b;color:#e6edf3;border-color:#444c56; }
+  .pn-btn.active-tool { background:rgba(88,166,255,.15);border-color:#58a6ff;color:#58a6ff; }
+  .pn-btn-danger { border-color:rgba(248,81,73,.4);color:#f85149; }
+  .pn-btn-danger:hover { background:rgba(248,81,73,.1); }
+  .pn-btn-success { background:rgba(34,197,94,.15);border-color:#22c55e;color:#22c55e; }
+  .pn-btn-success:hover { background:rgba(34,197,94,.25); }
+  .pn-sep { width:1px;height:24px;background:#30363d;margin:0 4px;flex-shrink:0; }
+  /* Properties panel helpers */
+  .pp-label { display:block;font-size:11px;color:#8b949e;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em; }
+  .pp-input { width:100%;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;padding:5px 8px;font-size:12px;margin-bottom:10px;box-sizing:border-box; }
+  .pp-input:focus { outline:none;border-color:#58a6ff;box-shadow:0 0 0 3px rgba(88,166,255,.12); }
+  .pp-section-title { font-size:10px;font-weight:600;color:#58a6ff;text-transform:uppercase;letter-spacing:.1em;padding-bottom:6px;margin-bottom:8px;border-bottom:1px solid #21262d;margin-top:4px; }
+  .pp-chip { display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:11px;background:#21262d;border:1px solid #30363d;border-radius:4px;padding:2px 7px;color:#58a6ff; }
+  /* Results cards */
+  .res-card { background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;text-align:center;flex:1; }
+  .res-card-value { font-size:20px;font-weight:700;font-family:monospace; }
+  .res-card-label { font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-top:2px; }
+</style>
+
+<!-- Tab switching JS (inline, lightweight) -->
+<script>
+  /**
+   * switchSelectionTab(tab)
+   * Shows the requested tab panel ('selection' or 'pipenet') and updates
+   * the tab button active states. The active tab name is stored in
+   * sessionStorage so it survives page reloads within the same session.
+   */
+  function switchSelectionTab(tab) {
+    // Show/hide panels
+    document.getElementById('tab-panel-selection').style.display = tab === 'selection' ? '' : 'none';
+    document.getElementById('tab-panel-pipenet').style.display   = tab === 'pipenet'   ? '' : 'none';
+
+    // Update tab button styles
+    const sel = document.getElementById('tab-btn-selection');
+    const pn  = document.getElementById('tab-btn-pipenet');
+    if (tab === 'selection') {
+      sel.style.borderBottom = '2px solid #58a6ff'; sel.style.color = '#58a6ff';
+      pn.style.borderBottom  = '2px solid transparent'; pn.style.color  = '#8b949e';
+    } else {
+      pn.style.borderBottom  = '2px solid #22c55e'; pn.style.color  = '#22c55e';
+      sel.style.borderBottom = '2px solid transparent'; sel.style.color = '#8b949e';
+      // Trigger SVG resize when tab becomes visible
+      if (typeof applyTransform === 'function') applyTransform();
+    }
+
+    // Remember the active tab for this browser session
+    sessionStorage.setItem('pmpro_active_tab', tab);
+  }
+
+  // Restore the last active tab on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    const savedTab = sessionStorage.getItem('pmpro_active_tab') || 'selection';
+    switchSelectionTab(savedTab);
+  });
+</script>
+
 <script src="{{ url_for('static', filename='js/pump_selection.js') }}?v=20260905_1340"></script>
 <script>
-  // Immediate fail-safe execution to ensure sparkline curves render under all circumstances
-  if (typeof initSparklines === 'function') {
-    initSparklines();
-  }
+  if (typeof initSparklines === 'function') { initSparklines(); }
 </script>
+
+<!-- Load the pipe network JS after the DOM elements above are in place -->
+<script src="{{ url_for('static', filename='js/pipe_network.js') }}?v=2"></script>
 {% endblock %}

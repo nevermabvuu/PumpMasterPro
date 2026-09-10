@@ -74,6 +74,8 @@ const state = {
   zoom: 1.0,
   panDrag:  null,   // middle-mouse pan state
   nodeDrag: null,   // node move state
+  viewMode: 'industrial', // 'schematic' | 'industrial'
+  canvasTheme: 'dark',    // 'dark' | 'light'
 };
 
 // SVG element references (set in init())
@@ -98,15 +100,74 @@ function toSVG(e) {
 function findNode(id) { return state.nodes.find(n => n.id === id); }
 function findPipe(id) { return state.pipes.find(p => p.id === id); }
 
+function getNodeRadius(node, viewMode) {
+  if (!node) return 0;
+  if (viewMode === 'industrial') {
+    switch (node.type) {
+      case 'elbow': return 18;
+      case 'valve': return 22;
+      case 'pump':  return 24;
+      case 'junction': return 16;
+      case 'tank': return 30;
+      case 'reservoir': return 36;
+      case 'discharge': return 16;
+      default: return 0;
+    }
+  } else {
+    switch (node.type) {
+      case 'elbow': return 16;
+      case 'valve': return 18;
+      case 'pump':  return 34;
+      case 'junction': return 14;
+      case 'tank': return 28;
+      case 'reservoir': return 40;
+      case 'discharge': return 15;
+      default: return 0;
+    }
+  }
+}
+
+/** Proportional visual thickness for pipes matching water distribution systems */
+function getPipeVisualThickness(diameter_mm) {
+  const d = diameter_mm || 25;
+  if (d <= 16) return 8;       // 1/2" branch pipe
+  if (d <= 22) return 12;      // 3/4" distribution pipe
+  if (d <= 32) return 16;      // 1" main pipe
+  if (d <= 45) return 20;      // 1 1/4" - 1 1/2"
+  if (d <= 65) return 24;      // 2"
+  return Math.min(36, Math.round(24 + (d - 65) * 0.12));
+}
+
+/** Formatted trade size callout (e.g. 1", 3/4", 1/2") */
+function formatPipeSizeLabel(pipe) {
+  const d = pipe.props.diameter_mm || 25;
+  let sizeStr = '';
+  if (d >= 13 && d <= 17) sizeStr = '1/2"';
+  else if (d >= 18 && d <= 23) sizeStr = '3/4"';
+  else if (d >= 24 && d <= 30) sizeStr = '1"';
+  else if (d >= 31 && d <= 38) sizeStr = '1¼"';
+  else if (d >= 39 && d <= 45) sizeStr = '1½"';
+  else if (d >= 48 && d <= 58) sizeStr = '2"';
+  else if (d >= 60 && d <= 73) sizeStr = '2½"';
+  else if (d >= 74 && d <= 88) sizeStr = '3"';
+  else if (d >= 90 && d <= 110) sizeStr = '4"';
+  else sizeStr = `D${d}mm`;
+
+  const lbl = pipe.props.label || pipe.id;
+  return `${sizeStr} (${lbl})`;
+}
+
 /** Default props for each node type */
 function defaultNodeProps(type, count) {
-  const lbl = `${type.charAt(0).toUpperCase()}${type.slice(1)} ${count + 1}`;
+  const lbl = type === 'discharge' ? `Faucet ${count + 1}` : `${type.charAt(0).toUpperCase()}${type.slice(1)} ${count + 1}`;
   switch (type) {
     case 'reservoir': return { label: lbl, elevation_m: 0 };
     case 'pump':      return { label: lbl, flow_m3h: 10, elevation_m: 0 };
     case 'tank':      return { label: lbl, elevation_m: 0 };
     case 'junction':  return { label: lbl, elevation_m: 0 };
     case 'discharge': return { label: lbl, elevation_m: 0 };
+    case 'valve':     return { label: lbl, elevation_m: 0, fitting_key: 'ball_valve_open' };
+    case 'elbow':     return { label: lbl, elevation_m: 0, fitting_key: 'elbow_90_standard' };
     default:          return { label: lbl };
   }
 }
@@ -115,9 +176,9 @@ function defaultNodeProps(type, count) {
 function defaultPipeProps(id) {
   return {
     label: id,
-    diameter_mm:   100,
-    length_m:      10.0,
-    material:      'commercial_steel',
+    diameter_mm:   25,
+    length_m:      5.0,
+    material:      'pvc',
     elev_change_m: 0.0,
     fittings:      [],
   };
@@ -172,76 +233,91 @@ function renderPipes() {
     g.style.cursor = 'pointer';
     g.addEventListener('click', e => { e.stopPropagation(); selectItem('pipe', pipe.id); });
 
-    // Pipe line
-    const ln = mkSVG('line', {
-      x1: fn.x, y1: fn.y, x2: tn.x, y2: tn.y,
-      stroke: isSel ? '#f59e0b' : '#3b82f6',
-      'stroke-width': isSel ? 4 : 3,
-      'stroke-linecap': 'round',
-      ...(isSel ? { 'stroke-dasharray': '8 4' } : {}),
-    });
-    g.appendChild(ln);
+    const fnRadius = getNodeRadius(fn, state.viewMode);
+    const tnRadius = getNodeRadius(tn, state.viewMode);
+    
+    const dx = tn.x - fn.x;
+    const dy = tn.y - fn.y;
+    const fullDist = Math.hypot(dx, dy);
+    
+    // Prevent overlapping if nodes are placed too close
+    const safeFnRadius = Math.min(fnRadius, Math.max(0, fullDist / 2 - 2));
+    const safeTnRadius = Math.min(tnRadius, Math.max(0, fullDist / 2 - 2));
+    
+    const ux = dx / (fullDist || 1);
+    const uy = dy / (fullDist || 1);
+    
+    const px1 = fn.x + ux * safeFnRadius;
+    const py1 = fn.y + uy * safeFnRadius;
+    
+    const px2 = tn.x - ux * safeTnRadius;
+    const py2 = tn.y - uy * safeTnRadius;
+    
+    const mx = (px1 + px2) / 2, my = (py1 + py2) / 2;
+    const ang = Math.atan2(py2 - py1, px2 - px1) * 180 / Math.PI;
+    const dist = Math.hypot(px2 - px1, py2 - py1);
 
-    // Flow-direction arrow at midpoint
-    const mx = (fn.x + tn.x) / 2, my = (fn.y + tn.y) / 2;
-    const ang = Math.atan2(tn.y - fn.y, tn.x - fn.x) * 180 / Math.PI;
-    const ar = mkSVG('polygon', {
-      points: '0,-5 10,0 0,5',
-      fill:   isSel ? '#f59e0b' : '#60a5fa',
-      transform: `translate(${mx},${my}) rotate(${ang})`,
-    });
-    g.appendChild(ar);
+    if (state.viewMode === 'industrial') {
+      const thickness = getPipeVisualThickness(pipe.props.diameter_mm);
+      
+      let fillUrl = 'url(#grad-water-pipe)';
+      if (pipe.props.material === 'commercial_steel' || pipe.props.material === 'stainless_steel') {
+        fillUrl = 'url(#grad-steel)';
+      } else if (pipe.props.material === 'hdpe') {
+        fillUrl = 'url(#grad-hdpe)';
+      } else if (pipe.props.material === 'cast_iron' || pipe.props.material === 'copper') {
+        fillUrl = 'url(#grad-iron)';
+      }
+      
+      // Draw rotated rect for pipe body
+      const pipeRect = mkSVG('rect', {
+        x: px1, y: py1 - thickness/2,
+        width: Math.max(1, dist), height: thickness,
+        fill: fillUrl,
+        stroke: isSel ? '#f59e0b' : '#0369a1',
+        'stroke-width': isSel ? 3 : 1,
+        rx: 1,
+        transform: `rotate(${ang}, ${px1}, ${py1})`
+      });
+      g.appendChild(pipeRect);
+
+    } else {
+      // Schematic Mode
+      const ln = mkSVG('line', {
+        x1: px1, y1: py1, x2: px2, y2: py2,
+        stroke: isSel ? '#f59e0b' : '#3b82f6',
+        'stroke-width': isSel ? 4 : 3,
+        'stroke-linecap': 'round',
+        ...(isSel ? { 'stroke-dasharray': '8 4' } : {}),
+      });
+      g.appendChild(ln);
+
+      // Flow-direction arrow at midpoint
+      const ar = mkSVG('polygon', {
+        points: '0,-5 10,0 0,5',
+        fill:   isSel ? '#f59e0b' : '#60a5fa',
+        transform: `translate(${mx},${my}) rotate(${ang})`,
+      });
+      g.appendChild(ar);
+    }
 
     // Label
+    const thickness = state.viewMode === 'industrial' ? getPipeVisualThickness(pipe.props.diameter_mm) : 4;
     const t = mkSVG('text', {
-      x: mx + 6, y: my - 9,
-      'font-size': 10, fill: '#64748b',
+      x: mx, y: my - (state.viewMode === 'industrial' ? (thickness / 2 + 7) : 9),
+      'font-size': 10,
+      fill: isSel ? '#f59e0b' : (state.canvasTheme === 'light' ? '#1e293b' : '#94a3b8'),
       'font-family': 'Inter, sans-serif',
+      'font-weight': '600',
+      'text-anchor': 'middle'
     });
-    t.textContent = `${pipe.props.label || pipe.id}  D${pipe.props.diameter_mm}mm`;
+    t.textContent = formatPipeSizeLabel(pipe);
     g.appendChild(t);
-
-    // Draw fittings
-    const fittings = pipe.props.fittings || [];
-    if (fittings.length > 0) {
-      const step = 1.0 / (fittings.length + 1);
-      fittings.forEach((fitKey, i) => {
-        const pct = step * (i + 1);
-        const fx = fn.x + (tn.x - fn.x) * pct;
-        const fy = fn.y + (tn.y - fn.y) * pct;
-        
-        const fg = svgEl.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'g');
-        fg.setAttribute('transform', `translate(${fx},${fy})`);
-        
-        fg.appendChild(mkSVG('circle', {
-          r: 6, fill: '#1e293b', stroke: isSel ? '#f59e0b' : '#60a5fa', 'stroke-width': 1.5
-        }));
-        
-        const fitObj = FITTINGS.find(f => f.key === fitKey);
-        let fitChar = fitKey.charAt(0).toUpperCase();
-        if (fitKey.includes('valve')) fitChar = 'V';
-        else if (fitKey.includes('elbow')) fitChar = 'E';
-        else if (fitKey.includes('tee')) fitChar = 'T';
-        else if (fitKey.includes('reducer') || fitKey.includes('expander')) fitChar = 'R';
-        
-        const ft = mkSVG('text', {
-          x: 0, y: 1, 'text-anchor': 'middle', 'dominant-baseline': 'middle',
-          'font-size': 7, fill: isSel ? '#fcd34d' : '#93c5fd', 'font-family': 'Inter, sans-serif', 'font-weight': 'bold'
-        });
-        ft.textContent = fitChar;
-        fg.appendChild(ft);
-        
-        const title = mkSVG('title', {});
-        title.textContent = fitObj ? fitObj.label : fitKey;
-        fg.appendChild(title);
-        g.appendChild(fg);
-      });
-    }
 
     // Wide transparent hit target
     g.appendChild(mkSVG('line', {
-      x1: fn.x, y1: fn.y, x2: tn.x, y2: tn.y,
-      stroke: 'transparent', 'stroke-width': 14,
+      x1: px1, y1: py1, x2: px2, y2: py2,
+      stroke: 'transparent', 'stroke-width': state.viewMode === 'industrial' ? 36 : 14,
     }));
 
     pipesGroup.appendChild(g);
@@ -273,19 +349,23 @@ function buildNodeSVG(node, isSel, minElev) {
 
   // Shape
   switch (node.type) {
-    case 'reservoir': drawReservoir(g, isSel); break;
-    case 'pump':      drawPump(g, isSel);      break;
-    case 'tank':      drawTank(g, isSel);      break;
-    case 'junction':  drawJunction(g, isSel);  break;
-    case 'discharge': drawDischarge(g, isSel); break;
+    case 'reservoir': drawReservoir(g, isSel, node); break;
+    case 'pump':      drawPump(g, isSel, node);      break;
+    case 'tank':      drawTank(g, isSel, node);      break;
+    case 'junction':  drawJunction(g, isSel, node);  break;
+    case 'discharge': drawDischarge(g, isSel, node); break;
+    case 'valve':     drawValveNode(g, isSel, node); break;
+    case 'elbow':     drawElbowNode(g, isSel, node); break;
   }
 
   // Label text below node
+  const lblY = (node.type === 'tank' ? 62 : 46);
   const lbl = mkSVG('text', {
-    x: 0, y: 50,
+    x: 0, y: lblY,
     'text-anchor': 'middle', 'font-size': 11,
-    fill: isSel ? '#f59e0b' : '#94a3b8',
+    fill: isSel ? '#f59e0b' : (state.canvasTheme === 'light' ? '#0f172a' : '#cbd5e1'),
     'font-family': 'Inter, sans-serif',
+    'font-weight': '600'
   });
   lbl.textContent = node.props.label || node.id;
   g.appendChild(lbl);
@@ -294,9 +374,10 @@ function buildNodeSVG(node, isSel, minElev) {
   const z = node.props.elevation_m || 0;
   const relZ = z - minElev;
   const elevLbl = mkSVG('text', {
-    x: 0, y: 64,
+    x: 0, y: lblY + 14,
     'text-anchor': 'middle', 'font-size': 9,
-    fill: '#64748b', 'font-family': 'Inter, sans-serif',
+    fill: state.canvasTheme === 'light' ? '#64748b' : '#94a3b8',
+    'font-family': 'Inter, sans-serif',
   });
   elevLbl.textContent = `Z: ${z}m (ΔH: +${relZ.toFixed(1)}m)`;
   g.appendChild(elevLbl);
@@ -304,7 +385,7 @@ function buildNodeSVG(node, isSel, minElev) {
   // Selection ring
   if (isSel) {
     g.appendChild(mkSVG('circle', {
-      r: 46, fill: 'none',
+      r: (node.type === 'tank' ? 52 : 44), fill: 'none',
       stroke: '#f59e0b', 'stroke-width': 2,
       'stroke-dasharray': '6 3', opacity: 0.6,
     }));
@@ -327,76 +408,418 @@ function buildNodeSVG(node, isSel, minElev) {
 // Node shape drawing helpers ─────────────────────────────────────────────────
 
 function drawReservoir(g, sel) {
-  g.appendChild(mkSVG('rect', {
-    x: -40, y: -30, width: 80, height: 60, rx: 6,
-    fill: sel ? '#1e3a5f' : '#0f2744',
-    stroke: sel ? '#60a5fa' : '#3b82f6', 'stroke-width': 2.5,
-  }));
-  // Water waves
-  for (let i = 0; i < 2; i++) {
-    const wp = mkSVG('path', {
-      d: `M-28,${-6+i*12} Q-14,${-13+i*12} 0,${-6+i*12} Q14,${1+i*12} 28,${-6+i*12}`,
-      stroke: '#7dd3fc', 'stroke-width': 1.5, fill: 'none', opacity: 0.8,
-    });
-    g.appendChild(wp);
+  if (state.viewMode === 'industrial') {
+    // Sump / Reservoir basin
+    g.appendChild(mkSVG('path', {
+      d: 'M -46,-12 L -38,20 L 38,20 L 46,-12 Z',
+      fill: '#475569', stroke: sel ? '#f59e0b' : '#1e293b', 'stroke-width': 2
+    }));
+    // Water surface
+    g.appendChild(mkSVG('path', {
+      d: 'M -38,15 L 38,15 L 42,-2 L -42,-2 Z',
+      fill: 'url(#grad-water-pipe)', opacity: 0.85
+    }));
+    // Wave lines
+    g.appendChild(mkSVG('path', {
+      d: 'M -25,5 Q -12,0 0,5 Q 12,10 25,5',
+      stroke: '#e0f2fe', 'stroke-width': 1.5, fill: 'none', opacity: 0.7
+    }));
+    g.appendChild(svgText(0, -4, 'RESERVOIR', 8, '#ffffff', 'bold'));
+  } else {
+    g.appendChild(mkSVG('rect', {
+      x: -40, y: -30, width: 80, height: 60, rx: 6,
+      fill: sel ? '#1e3a5f' : '#0f2744',
+      stroke: sel ? '#60a5fa' : '#3b82f6', 'stroke-width': 2.5,
+    }));
+    for (let i = 0; i < 2; i++) {
+      g.appendChild(mkSVG('path', {
+        d: `M-28,${-6+i*12} Q-14,${-13+i*12} 0,${-6+i*12} Q14,${1+i*12} 28,${-6+i*12}`,
+        stroke: '#7dd3fc', 'stroke-width': 1.5, fill: 'none', opacity: 0.8,
+      }));
+    }
+    g.appendChild(svgText(0, -16, 'R', 18, '#93c5fd', 'bold'));
   }
-  g.appendChild(svgText(0, -16, 'R', 18, '#93c5fd', 'bold'));
 }
 
 function drawPump(g, sel) {
-  g.appendChild(mkSVG('circle', {
-    r: 34, fill: sel ? '#4c1d95' : '#2e1065',
-    stroke: sel ? '#c084fc' : '#a855f7', 'stroke-width': 2.5,
-  }));
-  // Three impeller spokes
-  for (let i = 0; i < 3; i++) {
-    const a = (i * 120 - 90) * Math.PI / 180;
-    g.appendChild(mkSVG('line', {
-      x1: 0, y1: 0,
-      x2: Math.cos(a) * 20, y2: Math.sin(a) * 20,
-      stroke: '#d8b4fe', 'stroke-width': 3, 'stroke-linecap': 'round',
+  if (state.viewMode === 'industrial') {
+    // Volute casing (centrifugal pump in industrial blue)
+    g.appendChild(mkSVG('circle', {
+      r: 22, fill: 'url(#grad-water-pipe)', stroke: sel ? '#f59e0b' : '#0369a1', 'stroke-width': 2
     }));
+    g.appendChild(mkSVG('circle', {
+      r: 10, fill: '#0f172a', stroke: '#38bdf8', 'stroke-width': 1.5
+    }));
+    // Base mounting plate
+    g.appendChild(mkSVG('rect', {
+      x: -28, y: 18, width: 56, height: 8, rx: 2,
+      fill: '#334155', stroke: '#1e293b', 'stroke-width': 1.5
+    }));
+    // Electric motor block
+    g.appendChild(mkSVG('rect', {
+      x: 18, y: -14, width: 28, height: 28, rx: 3,
+      fill: 'url(#grad-steel)', stroke: '#334155', 'stroke-width': 1.5
+    }));
+    // Motor cooling fins
+    for (let fy = -10; fy <= 10; fy += 5) {
+      g.appendChild(mkSVG('line', {
+        x1: 22, y1: fy, x2: 42, y2: fy,
+        stroke: '#64748b', 'stroke-width': 2
+      }));
+    }
+    // Terminal box
+    g.appendChild(mkSVG('rect', {
+      x: 24, y: -19, width: 16, height: 5, rx: 1.5,
+      fill: '#1e293b', stroke: '#475569', 'stroke-width': 1
+    }));
+  } else {
+    g.appendChild(mkSVG('circle', {
+      r: 34, fill: sel ? '#4c1d95' : '#2e1065',
+      stroke: sel ? '#c084fc' : '#a855f7', 'stroke-width': 2.5,
+    }));
+    for (let i = 0; i < 3; i++) {
+      const a = (i * 120 - 90) * Math.PI / 180;
+      g.appendChild(mkSVG('line', {
+        x1: 0, y1: 0,
+        x2: Math.cos(a) * 20, y2: Math.sin(a) * 20,
+        stroke: '#d8b4fe', 'stroke-width': 3, 'stroke-linecap': 'round',
+      }));
+    }
+    g.appendChild(mkSVG('circle', { r: 6, fill: '#c084fc' }));
+    g.appendChild(svgText(0, -18, 'P', 13, '#e9d5ff', 'bold'));
   }
-  g.appendChild(mkSVG('circle', { r: 6, fill: '#c084fc' }));
-  g.appendChild(svgText(0, -18, 'P', 13, '#e9d5ff', 'bold'));
 }
 
 function drawTank(g, sel) {
-  g.appendChild(mkSVG('rect', {
-    x: -28, y: -44, width: 56, height: 88, rx: 4,
-    fill: sel ? '#1f3a1f' : '#14291e',
-    stroke: sel ? '#4ade80' : '#22c55e', 'stroke-width': 2,
-  }));
-  g.appendChild(mkSVG('rect', {
-    x: -24, y: 4, width: 48, height: 34, rx: 3,
-    fill: '#166534', opacity: 0.85,
-  }));
-  g.appendChild(svgText(0, -22, 'T', 16, '#86efac', 'bold'));
+  if (state.viewMode === 'industrial') {
+    // Structural stand / platform (brown timber/metal stand)
+    g.appendChild(mkSVG('rect', {
+      x: -28, y: 25, width: 56, height: 7, rx: 1.5,
+      fill: '#854d0e', stroke: '#713f12', 'stroke-width': 1.5
+    }));
+    g.appendChild(mkSVG('line', { x1: -22, y1: 32, x2: -22, y2: 44, stroke: '#854d0e', 'stroke-width': 4 }));
+    g.appendChild(mkSVG('line', { x1: 22, y1: 32, x2: 22, y2: 44, stroke: '#854d0e', 'stroke-width': 4 }));
+    g.appendChild(mkSVG('line', { x1: -22, y1: 42, x2: 22, y2: 42, stroke: '#854d0e', 'stroke-width': 2.5 }));
+    
+    // Poly tank cylinder in tan/sand
+    g.appendChild(mkSVG('rect', {
+      x: -25, y: -35, width: 50, height: 60, rx: 4,
+      fill: 'url(#grad-tank)', stroke: sel ? '#f59e0b' : '#b45309', 'stroke-width': 2
+    }));
+    
+    // Horizontal reinforcement hoop rings
+    [-20, -6, 8].forEach(yPos => {
+      g.appendChild(mkSVG('line', {
+        x1: -25, y1: yPos, x2: 25, y2: yPos,
+        stroke: '#b45309', 'stroke-width': 1.5, opacity: 0.5
+      }));
+    });
+    
+    // Conical roof
+    g.appendChild(mkSVG('path', {
+      d: 'M -25,-35 Q 0,-48 25,-35 Z',
+      fill: 'url(#grad-tank)', stroke: sel ? '#f59e0b' : '#b45309', 'stroke-width': 2
+    }));
+    
+    // Inspection cap / manhole lid
+    g.appendChild(mkSVG('ellipse', {
+      cx: 0, cy: -45, rx: 11, ry: 4,
+      fill: '#92400e', stroke: '#78350f', 'stroke-width': 1.5
+    }));
+    
+    // Bottom outlet connection stub
+    g.appendChild(mkSVG('rect', {
+      x: 23, y: 12, width: 8, height: 10, rx: 1.5,
+      fill: '#475569', stroke: '#334155', 'stroke-width': 1
+    }));
+  } else {
+    g.appendChild(mkSVG('rect', {
+      x: -28, y: -44, width: 56, height: 88, rx: 4,
+      fill: sel ? '#1f3a1f' : '#14291e',
+      stroke: sel ? '#4ade80' : '#22c55e', 'stroke-width': 2,
+    }));
+    g.appendChild(mkSVG('rect', {
+      x: -24, y: 4, width: 48, height: 34, rx: 3,
+      fill: '#166534', opacity: 0.85,
+    }));
+    g.appendChild(svgText(0, -22, 'T', 16, '#86efac', 'bold'));
+  }
 }
 
-function drawJunction(g, sel) {
-  g.appendChild(mkSVG('circle', {
-    r: 14, fill: sel ? '#334155' : '#1e293b',
-    stroke: sel ? '#f59e0b' : '#64748b', 'stroke-width': 2,
-  }));
-  g.appendChild(svgText(0, 4, 'J', 11, '#94a3b8', 'bold'));
+function drawJunction(g, sel, node) {
+  if (state.viewMode === 'industrial') {
+    const connected = state.pipes.filter(p => p.fromNodeId === node.id || p.toNodeId === node.id);
+    const d_mm = connected.length > 0 ? Math.max(...connected.map(p => p.props.diameter_mm || 25)) : 25;
+    const thickness = getPipeVisualThickness(d_mm);
+    const collarThick = thickness + 6;
+    const collarLen = 8;
+    const r = 16;
+    
+    // Central hub body
+    g.appendChild(mkSVG('circle', {
+      r: thickness/2 + 3,
+      fill: 'url(#grad-fitting)',
+      stroke: sel ? '#f59e0b' : '#475569',
+      'stroke-width': 1.5
+    }));
+    
+    if (connected.length >= 2) {
+      connected.forEach(pipe => {
+        const other = pipe.fromNodeId === node.id ? findNode(pipe.toNodeId) : findNode(pipe.fromNodeId);
+        if (!other) return;
+        const ang = Math.atan2(other.y - node.y, other.x - node.x);
+        const bx = Math.cos(ang) * r;
+        const by = Math.sin(ang) * r;
+        
+        // Branch pipe nub
+        g.appendChild(mkSVG('line', {
+          x1: 0, y1: 0, x2: bx, y2: by,
+          stroke: 'url(#grad-fitting)',
+          'stroke-width': thickness,
+          'stroke-linecap': 'butt'
+        }));
+        
+        // Socket collar at tip
+        const col = mkSVG('rect', {
+          x: bx - collarLen/2, y: by - collarThick/2,
+          width: collarLen, height: collarThick,
+          rx: 2,
+          fill: 'url(#grad-fitting)', stroke: sel ? '#f59e0b' : '#475569', 'stroke-width': 1.5,
+          transform: `rotate(${ang * 180 / Math.PI}, ${bx}, ${by})`
+        });
+        g.appendChild(col);
+      });
+    } else {
+      // Standalone Tee representation: horizontal run + branch down
+      g.appendChild(mkSVG('line', { x1: -r, y1: 0, x2: r, y2: 0, stroke: 'url(#grad-fitting)', 'stroke-width': thickness }));
+      g.appendChild(mkSVG('line', { x1: 0, y1: 0, x2: 0, y2: r, stroke: 'url(#grad-fitting)', 'stroke-width': thickness }));
+      g.appendChild(mkSVG('rect', { x: -r - 4, y: -collarThick/2, width: 6, height: collarThick, rx: 1.5, fill: 'url(#grad-fitting)', stroke: '#475569', 'stroke-width': 1.2 }));
+      g.appendChild(mkSVG('rect', { x: r - 2, y: -collarThick/2, width: 6, height: collarThick, rx: 1.5, fill: 'url(#grad-fitting)', stroke: '#475569', 'stroke-width': 1.2 }));
+      g.appendChild(mkSVG('rect', { x: -collarThick/2, y: r - 2, width: collarThick, height: 6, rx: 1.5, fill: 'url(#grad-fitting)', stroke: '#475569', 'stroke-width': 1.2 }));
+    }
+  } else {
+    g.appendChild(mkSVG('circle', {
+      r: 14, fill: sel ? '#334155' : '#1e293b',
+      stroke: sel ? '#f59e0b' : '#64748b', 'stroke-width': 2,
+    }));
+    g.appendChild(svgText(0, 4, 'J', 11, '#94a3b8', 'bold'));
+  }
 }
 
 function drawDischarge(g, sel) {
-  g.appendChild(mkSVG('polygon', {
-    points: '-15,-10 15,-10 20,15 -20,15',
-    fill: sel ? '#164e63' : '#083344',
-    stroke: sel ? '#67e8f9' : '#06b6d4', 'stroke-width': 2,
-  }));
-  g.appendChild(mkSVG('path', {
-    d: 'M-10,15 Q0,25 10,15',
-    stroke: '#38bdf8', 'stroke-width': 2, fill: 'none',
-  }));
-  g.appendChild(mkSVG('path', {
-    d: 'M-5,15 Q0,30 5,15',
-    stroke: '#7dd3fc', 'stroke-width': 2, fill: 'none',
-  }));
-  g.appendChild(svgText(0, -18, 'D', 13, '#cffafe', 'bold'));
+  if (state.viewMode === 'industrial') {
+    // Bibcock Faucet with chrome body, red lever handle, and blue water droplet
+    // Wall mount / inlet connection
+    g.appendChild(mkSVG('rect', {
+      x: -16, y: -7, width: 6, height: 14, rx: 1.5,
+      fill: '#64748b', stroke: '#334155', 'stroke-width': 1
+    }));
+    // Tap body
+    g.appendChild(mkSVG('rect', {
+      x: -10, y: -5, width: 16, height: 10, rx: 2,
+      fill: 'url(#grad-faucet)', stroke: sel ? '#f59e0b' : '#475569', 'stroke-width': 1.5
+    }));
+    // Vertical bonnet / stem
+    g.appendChild(mkSVG('rect', {
+      x: -2, y: -13, width: 5, height: 8, rx: 1,
+      fill: '#64748b', stroke: '#334155', 'stroke-width': 1
+    }));
+    // Red lever handle on top
+    g.appendChild(mkSVG('rect', {
+      x: -14, y: -16, width: 22, height: 4, rx: 2,
+      fill: '#ef4444', stroke: '#991b1b', 'stroke-width': 1
+    }));
+    g.appendChild(mkSVG('circle', { cx: 0, cy: -14, r: 2, fill: '#cbd5e1' }));
+    // Downward curving spout
+    g.appendChild(mkSVG('path', {
+      d: 'M 4,-2 Q 10,2 10,12 L 5,12 Q 5,4 2,2 Z',
+      fill: 'url(#grad-faucet)', stroke: sel ? '#f59e0b' : '#475569', 'stroke-width': 1.2
+    }));
+    // Aerator nozzle tip
+    g.appendChild(mkSVG('rect', {
+      x: 4.5, y: 11, width: 6, height: 3, rx: 1,
+      fill: '#94a3b8', stroke: '#475569', 'stroke-width': 1
+    }));
+    // Falling blue water droplet (💧)
+    g.appendChild(mkSVG('path', {
+      d: 'M 7.5,18 C 5,23 4,26 4,28 A 3.5,3.5 0 0,0 11,28 C 11,26 10,23 7.5,18 Z',
+      fill: 'url(#grad-droplet)', stroke: '#0284c7', 'stroke-width': 0.8
+    }));
+  } else {
+    g.appendChild(mkSVG('polygon', {
+      points: '-15,-10 15,-10 20,15 -20,15',
+      fill: sel ? '#164e63' : '#083344',
+      stroke: sel ? '#67e8f9' : '#06b6d4', 'stroke-width': 2,
+    }));
+    g.appendChild(mkSVG('path', { d: 'M-10,15 Q0,25 10,15', stroke: '#38bdf8', 'stroke-width': 2, fill: 'none' }));
+    g.appendChild(mkSVG('path', { d: 'M-5,15 Q0,30 5,15', stroke: '#7dd3fc', 'stroke-width': 2, fill: 'none' }));
+    g.appendChild(svgText(0, -18, 'D', 13, '#cffafe', 'bold'));
+  }
+}
+
+function drawValveNode(g, sel) {
+  if (state.viewMode === 'industrial') {
+    // Ball Valve: dark cylindrical body with blue lever handle
+    // Valve body
+    g.appendChild(mkSVG('rect', {
+      x: -16, y: -8, width: 32, height: 16, rx: 3,
+      fill: '#1e293b', stroke: sel ? '#f59e0b' : '#0f172a', 'stroke-width': 1.5
+    }));
+    // Central ball housing
+    g.appendChild(mkSVG('circle', {
+      r: 9, fill: '#0f172a', stroke: sel ? '#f59e0b' : '#334155', 'stroke-width': 1.5
+    }));
+    // Connection collars on both ends
+    g.appendChild(mkSVG('rect', {
+      x: -20, y: -10, width: 5, height: 20, rx: 1.5,
+      fill: '#334155', stroke: '#1e293b', 'stroke-width': 1
+    }));
+    g.appendChild(mkSVG('rect', {
+      x: 15, y: -10, width: 5, height: 20, rx: 1.5,
+      fill: '#334155', stroke: '#1e293b', 'stroke-width': 1
+    }));
+    // Upright stem
+    g.appendChild(mkSVG('rect', {
+      x: -3, y: -17, width: 6, height: 9, rx: 1,
+      fill: '#475569', stroke: '#1e293b', 'stroke-width': 1
+    }));
+    // Blue lever handle
+    g.appendChild(mkSVG('path', {
+      d: 'M -4,-17 L 22,-22 L 24,-18 L -2,-14 Z',
+      fill: 'url(#grad-valve-lever)', stroke: '#1d4ed8', 'stroke-width': 1
+    }));
+    // Grip tip on lever
+    g.appendChild(mkSVG('circle', {
+      cx: 23, cy: -20, r: 3.5,
+      fill: '#0284c7', stroke: '#1e40af', 'stroke-width': 1
+    }));
+    // Center pivot bolt
+    g.appendChild(mkSVG('circle', {
+      cx: 0, cy: -15.5, r: 2.5,
+      fill: '#cbd5e1', stroke: '#475569', 'stroke-width': 1
+    }));
+  } else {
+    g.appendChild(mkSVG('polygon', {
+      points: '-18,-15 18,15 18,-15 -18,15',
+      fill: sel ? '#7f1d1d' : '#450a0a',
+      stroke: sel ? '#fca5a5' : '#ef4444', 'stroke-width': 2.5,
+    }));
+    g.appendChild(mkSVG('circle', { r: 6, fill: '#ef4444' }));
+  }
+}
+
+function drawElbowNode(g, sel, node) {
+  const connected = state.pipes.filter(p => p.fromNodeId === node.id || p.toNodeId === node.id);
+  
+  if (state.viewMode === 'industrial') {
+    if (connected.length === 2) {
+      const p1 = connected[0];
+      const p2 = connected[1];
+      const o1 = p1.fromNodeId === node.id ? findNode(p1.toNodeId) : findNode(p1.fromNodeId);
+      const o2 = p2.fromNodeId === node.id ? findNode(p2.toNodeId) : findNode(p2.fromNodeId);
+      
+      if (o1 && o2) {
+        const a1 = Math.atan2(o1.y - node.y, o1.x - node.x);
+        const a2 = Math.atan2(o2.y - node.y, o2.x - node.x);
+        const r = 18;
+        const x1 = Math.cos(a1) * r;
+        const y1 = Math.sin(a1) * r;
+        const x2 = Math.cos(a2) * r;
+        const y2 = Math.sin(a2) * r;
+        
+        const d_mm = Math.max(p1.props.diameter_mm || 25, p2.props.diameter_mm || 25);
+        const thickness = getPipeVisualThickness(d_mm);
+        const collarThick = thickness + 6;
+        const collarLen = 8;
+        
+        // Arc sweep
+        const cp = (x1 * y2) - (x2 * y1);
+        const sweep = cp > 0 ? 1 : 0;
+        const d = `M ${x1},${y1} A ${r},${r} 0 0,${sweep} ${x2},${y2}`;
+        
+        // Fitting body
+        g.appendChild(mkSVG('path', {
+          d, fill: 'none', stroke: sel ? '#f59e0b' : '#475569',
+          'stroke-width': thickness + 2, 'stroke-linecap': 'round'
+        }));
+        g.appendChild(mkSVG('path', {
+          d, fill: 'none', stroke: 'url(#grad-fitting)',
+          'stroke-width': thickness, 'stroke-linecap': 'round'
+        }));
+        
+        // Socket Collar 1
+        const col1 = mkSVG('rect', {
+          x: x1 - collarLen/2, y: y1 - collarThick/2,
+          width: collarLen, height: collarThick,
+          rx: 2,
+          fill: 'url(#grad-fitting)', stroke: sel ? '#f59e0b' : '#475569', 'stroke-width': 1.5,
+          transform: `rotate(${a1 * 180 / Math.PI}, ${x1}, ${y1})`
+        });
+        g.appendChild(col1);
+        
+        // Socket Collar 2
+        const col2 = mkSVG('rect', {
+          x: x2 - collarLen/2, y: y2 - collarThick/2,
+          width: collarLen, height: collarThick,
+          rx: 2,
+          fill: 'url(#grad-fitting)', stroke: sel ? '#f59e0b' : '#475569', 'stroke-width': 1.5,
+          transform: `rotate(${a2 * 180 / Math.PI}, ${x2}, ${y2})`
+        });
+        g.appendChild(col2);
+        return;
+      }
+    }
+    
+    // Standalone / default 90° slip elbow
+    const r = 18;
+    const thickness = 14;
+    const collarThick = thickness + 6;
+    const d = `M 0,-18 A 18,18 0 0,1 18,0`;
+    g.appendChild(mkSVG('path', {
+      d, fill: 'none', stroke: sel ? '#f59e0b' : '#475569',
+      'stroke-width': thickness + 2, 'stroke-linecap': 'round'
+    }));
+    g.appendChild(mkSVG('path', {
+      d, fill: 'none', stroke: 'url(#grad-fitting)',
+      'stroke-width': thickness, 'stroke-linecap': 'round'
+    }));
+    // Collars
+    g.appendChild(mkSVG('rect', {
+      x: -collarThick/2, y: -22, width: collarThick, height: 8, rx: 2,
+      fill: 'url(#grad-fitting)', stroke: sel ? '#f59e0b' : '#475569', 'stroke-width': 1.5
+    }));
+    g.appendChild(mkSVG('rect', {
+      x: 14, y: -collarThick/2, width: 8, height: collarThick, rx: 2,
+      fill: 'url(#grad-fitting)', stroke: sel ? '#f59e0b' : '#475569', 'stroke-width': 1.5
+    }));
+  } else {
+    // Schematic mode
+    if (connected.length === 2) {
+      const p1 = connected[0];
+      const p2 = connected[1];
+      const o1 = p1.fromNodeId === node.id ? findNode(p1.toNodeId) : findNode(p1.fromNodeId);
+      const o2 = p2.fromNodeId === node.id ? findNode(p2.toNodeId) : findNode(p2.fromNodeId);
+      if (o1 && o2) {
+        const a1 = Math.atan2(o1.y - node.y, o1.x - node.x);
+        const a2 = Math.atan2(o2.y - node.y, o2.x - node.x);
+        const r = 16;
+        const x1 = Math.cos(a1) * r;
+        const y1 = Math.sin(a1) * r;
+        const x2 = Math.cos(a2) * r;
+        const y2 = Math.sin(a2) * r;
+        const cp = (x1 * y2) - (x2 * y1);
+        const sweep = cp > 0 ? 1 : 0;
+        const d = `M ${x1},${y1} A ${r},${r} 0 0,${sweep} ${x2},${y2}`;
+        g.appendChild(mkSVG('path', { d, fill: 'none', stroke: sel ? '#f9a8d4' : '#ec4899', 'stroke-width': 4, 'stroke-linecap': 'round' }));
+      }
+    } else {
+      g.appendChild(mkSVG('circle', {
+        r: 16, fill: 'none', stroke: sel ? '#f9a8d4' : '#ec4899', 'stroke-width': 4,
+        'stroke-dasharray': '50 100'
+      }));
+    }
+    g.appendChild(svgText(0, 4, 'E', 11, '#fbcfe8', 'bold'));
+  }
 }
 
 // SVG element factories ───────────────────────────────────────────────────────
@@ -559,9 +982,18 @@ function showNodeProps(node) {
   setVal('np-type',  node.type);
   setVal('np-label', node.props.label || '');
   setVal('np-elev',  node.props.elevation_m ?? 0);
+  
   const pumpDiv = document.getElementById('np-pump-fields');
   pumpDiv.style.display = node.type === 'pump' ? '' : 'none';
   if (node.type === 'pump') setVal('np-flow', node.props.flow_m3h ?? 10);
+  
+  const fittingDiv = document.getElementById('np-fitting-fields');
+  if (fittingDiv) {
+    fittingDiv.style.display = (node.type === 'valve' || node.type === 'elbow') ? '' : 'none';
+    if (node.type === 'valve' || node.type === 'elbow') {
+      setVal('np-fitting-key', node.props.fitting_key);
+    }
+  }
 }
 
 function showPipeProps(pipe) {
@@ -615,7 +1047,9 @@ function setMode(mode) {
     'add-pump':        'Place Pump — click on canvas',
     'add-tank':        'Place Tank — click on canvas',
     'add-junction':    'Place Junction (Tee) — click on canvas',
-    'add-discharge':   'Place Open Discharge — click on canvas',
+    'add-discharge':   'Place Faucet / Discharge — click on canvas',
+    'add-valve':       'Place Ball Valve — click on canvas',
+    'add-elbow':       'Place 90° Elbow Fitting — click on canvas',
   };
   setVal('pn-status', labels[mode] || mode);
 
@@ -639,6 +1073,12 @@ function onPumpFlowChange() {
   const node = state.selected?.kind === 'node' ? findNode(state.selected.id) : null;
   if (node && node.type === 'pump')
     node.props.flow_m3h = parseFloat(document.getElementById('np-flow').value) || 10;
+}
+function onNodeFittingChange() {
+  const node = state.selected?.kind === 'node' ? findNode(state.selected.id) : null;
+  if (node && (node.type === 'valve' || node.type === 'elbow')) {
+    node.props.fitting_key = document.getElementById('np-fitting-key').value;
+  }
 }
 
 function onPipePropChange() {
@@ -666,17 +1106,33 @@ async function runCalculation() {
     toast('Add at least one pipe segment before calculating.', 'warn'); return;
   }
   const globalFlow = parseFloat(document.getElementById('pn-global-flow').value) || 10;
+  
   const payload = {
     flow_m3h: globalFlow,
-    pipes: state.pipes.map(pipe => ({
-      id:            pipe.id,
-      label:         pipe.props.label || pipe.id,
-      diameter_mm:   pipe.props.diameter_mm,
-      length_m:      pipe.props.length_m,
-      material:      pipe.props.material,
-      elev_change_m: pipe.props.elev_change_m,
-      fittings:      pipe.props.fittings || [],
-    })),
+    pipes: state.pipes.map(pipe => {
+      // Collect fittings from the pipe and the adjacent nodes (valves, elbows)
+      const allFittings = [...(pipe.props.fittings || [])];
+      
+      const toNode = findNode(pipe.toNodeId);
+      if (toNode && toNode.props.fitting_key) {
+        allFittings.push(toNode.props.fitting_key);
+      }
+      
+      const fromNode = findNode(pipe.fromNodeId);
+      // Optional: also grab fitting from start node if it's a fitting (though normally flow goes into it, we don't want to double count).
+      // If we only count the destination node, it prevents double counting when pipes are chained: NodeA -> Elbow -> NodeB
+      // The elbow applies to the pipe arriving at it.
+      
+      return {
+        id:            pipe.id,
+        label:         pipe.props.label || pipe.id,
+        diameter_mm:   pipe.props.diameter_mm,
+        length_m:      pipe.props.length_m,
+        material:      pipe.props.material,
+        elev_change_m: pipe.props.elev_change_m,
+        fittings:      allFittings,
+      };
+    }),
   };
 
   const btn = document.getElementById('pn-calc-btn');
@@ -812,6 +1268,81 @@ function init() {
   draftPipeLine.style.pointerEvents = 'none';
   svgEl.appendChild(draftPipeLine);
 
+  // Inject Gradients for Industrial View
+  const defs = mkSVG('defs', {});
+  defs.innerHTML = `
+    <!-- Water Pipe Gradient (Vibrant Blue with 3D cylindrical specular highlight) -->
+    <linearGradient id="grad-water-pipe" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="25%" stop-color="#0ea5e9" />
+      <stop offset="60%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#0369a1" />
+    </linearGradient>
+    <!-- PVC / PPR Slip Fitting Gradient (Clean Grey Fitting) -->
+    <linearGradient id="grad-fitting" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="25%" stop-color="#e2e8f0" />
+      <stop offset="65%" stop-color="#cbd5e1" />
+      <stop offset="100%" stop-color="#94a3b8" />
+    </linearGradient>
+    <!-- Poly Water Tank Gradient (Tan / Sand Poly) -->
+    <linearGradient id="grad-tank" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#d4b996" />
+      <stop offset="20%" stop-color="#fdf4e3" />
+      <stop offset="55%" stop-color="#ecdcc2" />
+      <stop offset="100%" stop-color="#c4a57b" />
+    </linearGradient>
+    <!-- Ball Valve Blue Lever Handle -->
+    <linearGradient id="grad-valve-lever" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa" />
+      <stop offset="45%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <!-- Chrome Faucet Tap Body -->
+    <linearGradient id="grad-faucet" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="35%" stop-color="#e2e8f0" />
+      <stop offset="70%" stop-color="#94a3b8" />
+      <stop offset="100%" stop-color="#64748b" />
+    </linearGradient>
+    <!-- Falling Blue Water Droplet -->
+    <radialGradient id="grad-droplet" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#bae6fd" />
+      <stop offset="50%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </radialGradient>
+    <!-- Steel Pipe Gradient -->
+    <linearGradient id="grad-steel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#94a3b8" />
+      <stop offset="20%" stop-color="#cbd5e1" />
+      <stop offset="50%" stop-color="#64748b" />
+      <stop offset="80%" stop-color="#334155" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <!-- PVC White Gradient -->
+    <linearGradient id="grad-pvc" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="30%" stop-color="#ffffff" />
+      <stop offset="70%" stop-color="#e2e8f0" />
+      <stop offset="100%" stop-color="#cbd5e1" />
+    </linearGradient>
+    <!-- HDPE Pipe Gradient -->
+    <linearGradient id="grad-hdpe" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#334155" />
+      <stop offset="30%" stop-color="#475569" />
+      <stop offset="80%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <!-- Copper/Cast Iron Gradient -->
+    <linearGradient id="grad-iron" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#78350f" />
+      <stop offset="30%" stop-color="#b45309" />
+      <stop offset="70%" stop-color="#451a03" />
+      <stop offset="100%" stop-color="#210800" />
+    </linearGradient>
+  `;
+  svgEl.appendChild(defs);
+
   // Canvas mouse events
   svgEl.addEventListener('click', onCanvasClick);
 
@@ -869,38 +1400,101 @@ function init() {
   });
 
   // Toolbar buttons
-  document.getElementById('btn-select').addEventListener('click', () => setMode('select'));
-  document.getElementById('btn-connect').addEventListener('click', () => setMode('connect'));
-  document.getElementById('btn-add-reservoir').addEventListener('click', () => setMode('add-reservoir'));
-  document.getElementById('btn-add-pump').addEventListener('click', () => setMode('add-pump'));
-  document.getElementById('btn-add-tank').addEventListener('click', () => setMode('add-tank'));
-  document.getElementById('btn-add-junction').addEventListener('click', () => setMode('add-junction'));
-  document.getElementById('btn-add-discharge').addEventListener('click', () => setMode('add-discharge'));
-  document.getElementById('btn-delete').addEventListener('click', deleteSelected);
-  document.getElementById('btn-clear').addEventListener('click', clearCanvas);
-  document.getElementById('btn-export').addEventListener('click', exportNetwork);
-  document.getElementById('btn-import').addEventListener('click', () =>
-    document.getElementById('import-file-input').click());
-  document.getElementById('import-file-input').addEventListener('change', e => {
+  document.getElementById('btn-select')?.addEventListener('click', () => setMode('select'));
+  document.getElementById('btn-connect')?.addEventListener('click', () => setMode('connect'));
+  document.getElementById('btn-add-reservoir')?.addEventListener('click', () => setMode('add-reservoir'));
+  document.getElementById('btn-add-pump')?.addEventListener('click', () => setMode('add-pump'));
+  document.getElementById('btn-add-tank')?.addEventListener('click', () => setMode('add-tank'));
+  document.getElementById('btn-add-junction')?.addEventListener('click', () => setMode('add-junction'));
+  document.getElementById('btn-add-discharge')?.addEventListener('click', () => setMode('add-discharge'));
+  document.getElementById('btn-add-valve')?.addEventListener('click', () => setMode('add-valve'));
+  document.getElementById('btn-add-elbow')?.addEventListener('click', () => setMode('add-elbow'));
+  document.getElementById('btn-delete')?.addEventListener('click', deleteSelected);
+  document.getElementById('btn-clear')?.addEventListener('click', clearCanvas);
+  document.getElementById('btn-export')?.addEventListener('click', exportNetwork);
+  
+  // View Toggle
+  document.getElementById('btn-view-schematic')?.addEventListener('click', () => {
+    state.viewMode = 'schematic';
+    localStorage.setItem('pmpro_view_mode', 'schematic');
+    document.getElementById('btn-view-schematic')?.classList.add('active-tool');
+    document.getElementById('btn-view-industrial')?.classList.remove('active-tool');
+    renderAll();
+  });
+  document.getElementById('btn-view-industrial')?.addEventListener('click', () => {
+    state.viewMode = 'industrial';
+    localStorage.setItem('pmpro_view_mode', 'industrial');
+    document.getElementById('btn-view-industrial')?.classList.add('active-tool');
+    document.getElementById('btn-view-schematic')?.classList.remove('active-tool');
+    renderAll();
+  });
+
+  // Canvas Theme Toggle (Dark / Light CAD)
+  document.getElementById('btn-theme-toggle')?.addEventListener('click', () => {
+    state.canvasTheme = state.canvasTheme === 'light' ? 'dark' : 'light';
+    localStorage.setItem('pmpro_canvas_theme', state.canvasTheme);
+    const wrap = document.getElementById('pn-canvas-wrap');
+    if (state.canvasTheme === 'light') {
+      wrap?.classList.add('pn-light-theme');
+      document.getElementById('btn-theme-toggle')?.classList.add('active-tool');
+    } else {
+      wrap?.classList.remove('pn-light-theme');
+      document.getElementById('btn-theme-toggle')?.classList.remove('active-tool');
+    }
+    renderAll();
+  });
+
+  // Toggle Legend
+  document.getElementById('btn-toggle-legend')?.addEventListener('click', () => {
+    const leg = document.getElementById('pn-legend-overlay');
+    if (leg) {
+      const isHidden = leg.style.display === 'none';
+      leg.style.display = isHidden ? 'block' : 'none';
+      document.getElementById('btn-toggle-legend')?.classList.toggle('active-tool', isHidden);
+    }
+  });
+
+  // Restore saved theme & viewMode
+  const savedTheme = localStorage.getItem('pmpro_canvas_theme') || 'dark';
+  state.canvasTheme = savedTheme;
+  if (savedTheme === 'light') {
+    document.getElementById('pn-canvas-wrap')?.classList.add('pn-light-theme');
+    document.getElementById('btn-theme-toggle')?.classList.add('active-tool');
+  }
+  const savedViewMode = localStorage.getItem('pmpro_view_mode') || 'industrial';
+  state.viewMode = savedViewMode;
+  if (state.viewMode === 'industrial') {
+    document.getElementById('btn-view-industrial')?.classList.add('active-tool');
+    document.getElementById('btn-view-schematic')?.classList.remove('active-tool');
+  } else {
+    document.getElementById('btn-view-schematic')?.classList.add('active-tool');
+    document.getElementById('btn-view-industrial')?.classList.remove('active-tool');
+  }
+  
+  const importInput = document.getElementById('import-file-input');
+  document.getElementById('btn-import')?.addEventListener('click', () => importInput?.click());
+  importInput?.addEventListener('change', e => {
     if (e.target.files[0]) importNetwork(e.target.files[0]);
     e.target.value = '';
   });
-  document.getElementById('btn-zoom-in').addEventListener('click', () => {
+  
+  document.getElementById('btn-zoom-in')?.addEventListener('click', () => {
     state.zoom = Math.min(3, state.zoom * 1.2); applyTransform();
   });
-  document.getElementById('btn-zoom-out').addEventListener('click', () => {
+  document.getElementById('btn-zoom-out')?.addEventListener('click', () => {
     state.zoom = Math.max(0.2, state.zoom / 1.2); applyTransform();
   });
-  document.getElementById('btn-zoom-reset').addEventListener('click', () => {
+  document.getElementById('btn-zoom-reset')?.addEventListener('click', () => {
     state.zoom = 1; state.pan = { x: 0, y: 0 }; applyTransform();
   });
 
-  document.getElementById('pn-calc-btn').addEventListener('click', runCalculation);
+  document.getElementById('pn-calc-btn')?.addEventListener('click', runCalculation);
 
   // Node property inputs
-  document.getElementById('np-label').addEventListener('input', onNodeLabelChange);
-  document.getElementById('np-elev').addEventListener('change', onNodeElevChange);
-  document.getElementById('np-flow').addEventListener('change', onPumpFlowChange);
+  document.getElementById('np-label')?.addEventListener('input', onNodeLabelChange);
+  document.getElementById('np-elev')?.addEventListener('change', onNodeElevChange);
+  document.getElementById('np-flow')?.addEventListener('change', onPumpFlowChange);
+  document.getElementById('np-fitting-key')?.addEventListener('change', onNodeFittingChange);
 
   // Pipe property inputs — all trigger the same handler
   ['pp-label','pp-diameter','pp-length','pp-elev-change','pp-material'].forEach(id =>
@@ -918,12 +1512,23 @@ function init() {
 
   // Build fitting checkboxes dynamically
   const fList = document.getElementById('pp-fittings-list');
+  const nFitSel = document.getElementById('np-fitting-key');
   FITTINGS.forEach(f => {
-    const lbl = document.createElement('label');
-    lbl.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:5px;cursor:pointer;font-size:12px;color:#94a3b8;';
-    lbl.innerHTML = `<input type="checkbox" class="pp-fitting-cb" value="${f.key}" style="accent-color:#58a6ff;cursor:pointer;flex-shrink:0;">
-      <span>${f.label} <span style="color:#475569">(K=${f.K})</span></span>`;
-    fList.appendChild(lbl);
+    // For pipe checkbox list
+    if (fList) {
+      const lbl = document.createElement('label');
+      lbl.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:5px;cursor:pointer;font-size:12px;color:#94a3b8;';
+      lbl.innerHTML = `<input type="checkbox" class="pp-fitting-cb" value="${f.key}" style="accent-color:#58a6ff;cursor:pointer;flex-shrink:0;">
+        <span>${f.label} <span style="color:#475569">(K=${f.K})</span></span>`;
+      fList.appendChild(lbl);
+    }
+    
+    // For node fitting select dropdown
+    if (nFitSel) {
+      const opt = document.createElement('option');
+      opt.value = f.key; opt.textContent = `${f.label} (K=${f.K})`;
+      nFitSel.appendChild(opt);
+    }
   });
 
   // Initial state
@@ -939,33 +1544,140 @@ function init() {
   }
 }
 
-/** Pre-load a simple demo network: Reservoir -> Pump -> Junction -> Tank */
+/** Pre-load a comprehensive demo: Water Distribution System matching the reference diagram */
 function loadDemoNetwork() {
+  // ── Nodes ──────────────────────────────────────────────────────────────
+  //
+  //  Tank → Pump → Elbow → vertical rise → Elbow → horizontal main
+  //  Main splits via Tees into left and right branches with elbows,
+  //  valves, and faucet endpoints at different pipe sizes.
+  //
   state.nodes = [
-    { id: 'N-1', type: 'reservoir', x: 150, y: 280,
-      props: { label: 'Sump',          elevation_m: 0 } },
-    { id: 'N-2', type: 'pump',      x: 350, y: 280,
-      props: { label: 'Pump 1',        flow_m3h: 15,  elevation_m: 0 } },
-    { id: 'N-3', type: 'junction',  x: 530, y: 280,
-      props: { label: 'Tee',           elevation_m: 2 } },
-    { id: 'N-4', type: 'tank',      x: 700, y: 160,
-      props: { label: 'Overhead Tank', elevation_m: 12 } },
+    // Source
+    { id: 'N-1',  type: 'tank',      x: 150,  y: 550,  props: { label: 'Water Tank',    elevation_m: 0 } },
+    { id: 'N-2',  type: 'pump',      x: 350,  y: 550,  props: { label: 'Pump 1',        flow_m3h: 15, elevation_m: 0 } },
+    // Vertical rise
+    { id: 'N-3',  type: 'elbow',     x: 500,  y: 550,  props: { label: 'E1',  elevation_m: 0,  fitting_key: 'elbow_90_standard' } },
+    { id: 'N-4',  type: 'elbow',     x: 500,  y: 200,  props: { label: 'E2',  elevation_m: 7,  fitting_key: 'elbow_90_standard' } },
+    // Horizontal main tee
+    { id: 'N-5',  type: 'junction',  x: 650,  y: 200,  props: { label: 'Main Tee',      elevation_m: 7 } },
+    // ── Left branch ──
+    { id: 'N-6',  type: 'elbow',     x: 650,  y: 350,  props: { label: 'E3',  elevation_m: 4,  fitting_key: 'elbow_90_standard' } },
+    { id: 'N-7',  type: 'junction',  x: 450,  y: 350,  props: { label: 'Tee L1',        elevation_m: 4 } },
+    { id: 'N-8',  type: 'valve',     x: 300,  y: 350,  props: { label: 'Valve L1',      elevation_m: 4, fitting_key: 'ball_valve_open' } },
+    { id: 'N-9',  type: 'discharge', x: 200,  y: 350,  props: { label: 'Faucet L1',     elevation_m: 4 } },
+    { id: 'N-10', type: 'elbow',     x: 450,  y: 450,  props: { label: 'E4',  elevation_m: 2,  fitting_key: 'elbow_90_standard' } },
+    { id: 'N-11', type: 'valve',     x: 300,  y: 450,  props: { label: 'Valve L2',      elevation_m: 2, fitting_key: 'ball_valve_open' } },
+    { id: 'N-12', type: 'discharge', x: 200,  y: 450,  props: { label: 'Faucet L2',     elevation_m: 2 } },
+    // ── Right branch ──
+    { id: 'N-13', type: 'elbow',     x: 850,  y: 200,  props: { label: 'E5',  elevation_m: 7,  fitting_key: 'elbow_90_standard' } },
+    { id: 'N-14', type: 'junction',  x: 850,  y: 350,  props: { label: 'Tee R1',        elevation_m: 4 } },
+    { id: 'N-15', type: 'valve',     x: 1000, y: 350,  props: { label: 'Valve R1',      elevation_m: 4, fitting_key: 'ball_valve_open' } },
+    { id: 'N-16', type: 'discharge', x: 1100, y: 350,  props: { label: 'Faucet R1',     elevation_m: 4 } },
+    { id: 'N-17', type: 'elbow',     x: 850,  y: 450,  props: { label: 'E6',  elevation_m: 2,  fitting_key: 'elbow_90_standard' } },
+    { id: 'N-18', type: 'valve',     x: 1000, y: 450,  props: { label: 'Valve R2',      elevation_m: 2, fitting_key: 'ball_valve_open' } },
+    { id: 'N-19', type: 'discharge', x: 1100, y: 450,  props: { label: 'Faucet R2',     elevation_m: 2 } },
   ];
+
+  // ── Pipes ──────────────────────────────────────────────────────────────
   state.pipes = [
-    { id: 'P-1', fromNodeId: 'N-1', toNodeId: 'N-2',
-      props: { label: 'Suction',   diameter_mm: 150, length_m: 4,
-               material: 'commercial_steel', elev_change_m: 0,
-               fittings: ['entry_sharp', 'gate_valve_open'] } },
-    { id: 'P-2', fromNodeId: 'N-2', toNodeId: 'N-3',
-      props: { label: 'Discharge', diameter_mm: 100, length_m: 18,
-               material: 'commercial_steel', elev_change_m: 2,
-               fittings: ['check_valve_swing', 'elbow_90_standard'] } },
-    { id: 'P-3', fromNodeId: 'N-3', toNodeId: 'N-4',
-      props: { label: 'Riser',     diameter_mm: 80,  length_m: 14,
-               material: 'commercial_steel', elev_change_m: 10,
-               fittings: ['elbow_90_standard', 'exit_abrupt'] } },
+    // Tank → Pump (1" main)
+    { id: 'P-1',  fromNodeId: 'N-1',  toNodeId: 'N-2',
+      props: { label: 'Suction',       diameter_mm: 25, length_m: 4,
+               material: 'pvc', elev_change_m: 0,
+               fittings: ['entry_rounded'] } },
+    // Pump → Elbow E1 (1" main)
+    { id: 'P-2',  fromNodeId: 'N-2',  toNodeId: 'N-3',
+      props: { label: 'Discharge',     diameter_mm: 25, length_m: 3,
+               material: 'pvc', elev_change_m: 0,
+               fittings: ['check_valve_swing'] } },
+    // E1 → E2 vertical riser (1" main)
+    { id: 'P-3',  fromNodeId: 'N-3',  toNodeId: 'N-4',
+      props: { label: 'Riser',         diameter_mm: 25, length_m: 7,
+               material: 'pvc', elev_change_m: 7,
+               fittings: [] } },
+    // E2 → Main Tee (1" main)
+    { id: 'P-4',  fromNodeId: 'N-4',  toNodeId: 'N-5',
+      props: { label: 'Main Horiz',    diameter_mm: 25, length_m: 3,
+               material: 'pvc', elev_change_m: 0,
+               fittings: [] } },
+
+    // ── Left branch ──
+    // Main Tee → Elbow E3 down (3/4" distribution)
+    { id: 'P-5',  fromNodeId: 'N-5',  toNodeId: 'N-6',
+      props: { label: 'Left Drop',     diameter_mm: 20, length_m: 3,
+               material: 'pvc', elev_change_m: -3,
+               fittings: ['reducer_gradual'] } },
+    // E3 → Tee L1 left (3/4" distribution)
+    { id: 'P-6',  fromNodeId: 'N-6',  toNodeId: 'N-7',
+      props: { label: 'Left Dist',     diameter_mm: 20, length_m: 4,
+               material: 'pvc', elev_change_m: 0,
+               fittings: [] } },
+    // Tee L1 → Valve L1 (1/2" branch)
+    { id: 'P-7',  fromNodeId: 'N-7',  toNodeId: 'N-8',
+      props: { label: 'Branch L1',     diameter_mm: 15, length_m: 3,
+               material: 'pvc', elev_change_m: 0,
+               fittings: [] } },
+    // Valve L1 → Faucet L1 (1/2" branch)
+    { id: 'P-8',  fromNodeId: 'N-8',  toNodeId: 'N-9',
+      props: { label: 'To Faucet L1',  diameter_mm: 15, length_m: 2,
+               material: 'pvc', elev_change_m: 0,
+               fittings: ['exit_abrupt'] } },
+    // Tee L1 → E4 down (3/4" distribution)
+    { id: 'P-9',  fromNodeId: 'N-7',  toNodeId: 'N-10',
+      props: { label: 'Left Dist 2',   diameter_mm: 20, length_m: 2,
+               material: 'pvc', elev_change_m: -2,
+               fittings: [] } },
+    // E4 → Valve L2 (1/2" branch)
+    { id: 'P-10', fromNodeId: 'N-10', toNodeId: 'N-11',
+      props: { label: 'Branch L2',     diameter_mm: 15, length_m: 3,
+               material: 'pvc', elev_change_m: 0,
+               fittings: [] } },
+    // Valve L2 → Faucet L2 (1/2" branch)
+    { id: 'P-11', fromNodeId: 'N-11', toNodeId: 'N-12',
+      props: { label: 'To Faucet L2',  diameter_mm: 15, length_m: 2,
+               material: 'pvc', elev_change_m: 0,
+               fittings: ['exit_abrupt'] } },
+
+    // ── Right branch ──
+    // Main Tee → Elbow E5 right (3/4" distribution)
+    { id: 'P-12', fromNodeId: 'N-5',  toNodeId: 'N-13',
+      props: { label: 'Right Horiz',   diameter_mm: 20, length_m: 4,
+               material: 'pvc', elev_change_m: 0,
+               fittings: [] } },
+    // E5 → Tee R1 down (3/4" distribution)
+    { id: 'P-13', fromNodeId: 'N-13', toNodeId: 'N-14',
+      props: { label: 'Right Drop',    diameter_mm: 20, length_m: 3,
+               material: 'pvc', elev_change_m: -3,
+               fittings: [] } },
+    // Tee R1 → Valve R1 (1/2" branch)
+    { id: 'P-14', fromNodeId: 'N-14', toNodeId: 'N-15',
+      props: { label: 'Branch R1',     diameter_mm: 15, length_m: 3,
+               material: 'pvc', elev_change_m: 0,
+               fittings: [] } },
+    // Valve R1 → Faucet R1 (1/2" branch)
+    { id: 'P-15', fromNodeId: 'N-15', toNodeId: 'N-16',
+      props: { label: 'To Faucet R1',  diameter_mm: 15, length_m: 2,
+               material: 'pvc', elev_change_m: 0,
+               fittings: ['exit_abrupt'] } },
+    // Tee R1 → E6 down (3/4" distribution)
+    { id: 'P-16', fromNodeId: 'N-14', toNodeId: 'N-17',
+      props: { label: 'Right Dist 2',  diameter_mm: 20, length_m: 2,
+               material: 'pvc', elev_change_m: -2,
+               fittings: [] } },
+    // E6 → Valve R2 (1/2" branch)
+    { id: 'P-17', fromNodeId: 'N-17', toNodeId: 'N-18',
+      props: { label: 'Branch R2',     diameter_mm: 15, length_m: 3,
+               material: 'pvc', elev_change_m: 0,
+               fittings: [] } },
+    // Valve R2 → Faucet R2 (1/2" branch)
+    { id: 'P-18', fromNodeId: 'N-18', toNodeId: 'N-19',
+      props: { label: 'To Faucet R2',  diameter_mm: 15, length_m: 2,
+               material: 'pvc', elev_change_m: 0,
+               fittings: ['exit_abrupt'] } },
   ];
-  state.nextId = 10;
+
+  state.nextId = 30;
   renderAll();
 }
 

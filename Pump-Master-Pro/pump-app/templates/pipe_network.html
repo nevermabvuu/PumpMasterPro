@@ -62,6 +62,69 @@
     pointer-events: none;
   }
 
+  #pn-canvas-wrap.pn-light-theme {
+    background: #f8fafc !important;
+  }
+  #pn-canvas-wrap.pn-light-theme::before {
+    background-image:
+      linear-gradient(rgba(203,213,225,0.65) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(203,213,225,0.65) 1px, transparent 1px) !important;
+  }
+
+  /* Legend Overlay matching typical installation diagram */
+  #pn-legend-overlay {
+    position: absolute;
+    bottom: 28px;
+    left: 14px;
+    background: rgba(15, 23, 42, 0.94);
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: #cbd5e1;
+    z-index: 5;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    backdrop-filter: blur(6px);
+    transition: opacity 0.2s ease;
+    user-select: none;
+    min-width: 170px;
+  }
+  #pn-canvas-wrap.pn-light-theme #pn-legend-overlay {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #cbd5e1;
+    color: #1e293b;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  }
+  .pn-legend-title {
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #38bdf8;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  #pn-canvas-wrap.pn-light-theme .pn-legend-title {
+    color: #0284c7;
+  }
+  .pn-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 11px;
+  }
+  .pn-legend-swatch {
+    width: 20px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
   /* Right properties panel */
   #pn-props-panel {
     width: 280px;
@@ -276,12 +339,38 @@
     <button id="btn-add-junction" class="pn-btn" data-mode="add-junction" title="Place Junction / Tee">
       <i class="bi bi-intersect" style="color:#f59e0b;"></i> Junction
     </button>
+    <button id="btn-add-discharge" class="pn-btn" data-mode="add-discharge" title="Place Faucet / Discharge Tap">
+      <i class="bi bi-droplet-fill" style="color:#0284c7;"></i> Faucet
+    </button>
+    <div class="pn-sep"></div>
+    <button id="btn-add-valve" class="pn-btn" data-mode="add-valve" title="Place Ball Valve">
+      <i class="bi bi-heptagon-half" style="color:#ef4444;"></i> Valve
+    </button>
+    <button id="btn-add-elbow" class="pn-btn" data-mode="add-elbow" title="Place 90° Elbow Fitting">
+      <i class="bi bi-arrow-return-right" style="color:#ec4899;"></i> Elbow
+    </button>
 
     <div class="pn-sep"></div>
 
     <!-- Delete -->
     <button id="btn-delete" class="pn-btn pn-btn-danger" title="Delete selected element (Delete key)">
       <i class="bi bi-trash3"></i>
+    </button>
+
+    <div class="pn-sep"></div>
+    
+    <span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-right:-2px;">View:</span>
+    <button id="btn-view-schematic" class="pn-btn" title="Schematic View">
+      <i class="bi bi-bezier2"></i> Schematic
+    </button>
+    <button id="btn-view-industrial" class="pn-btn active-tool" title="Industrial Installation View">
+      <i class="bi bi-water" style="color:#38bdf8;"></i> Visual
+    </button>
+    <button id="btn-theme-toggle" class="pn-btn" title="Toggle Canvas Theme (Light CAD / Dark)">
+      <i class="bi bi-sun"></i> Theme
+    </button>
+    <button id="btn-toggle-legend" class="pn-btn active-tool" title="Show / Hide Legend">
+      <i class="bi bi-card-list"></i> Legend
     </button>
 
     <div class="pn-sep"></div>
@@ -343,6 +432,56 @@
         <!-- Draft pipe line injected by JS into root SVG -->
       </svg>
 
+      <!-- Legend Overlay Matching Reference Diagram -->
+      <div id="pn-legend-overlay">
+        <div class="pn-legend-title">
+          <span>Water System</span>
+          <span style="cursor:pointer;font-size:12px;opacity:0.6;" onclick="document.getElementById('pn-legend-overlay').style.display='none'">&times;</span>
+        </div>
+        <div class="pn-legend-row">
+          <div class="pn-legend-swatch"><div style="width:18px;height:4px;background:#0284c7;border-radius:1px;"></div></div>
+          <span>1" Main Pipe</span>
+        </div>
+        <div class="pn-legend-row">
+          <div class="pn-legend-swatch"><div style="width:18px;height:3px;background:#0284c7;border-radius:1px;"></div></div>
+          <span>3/4" Distribution Pipe</span>
+        </div>
+        <div class="pn-legend-row">
+          <div class="pn-legend-swatch"><div style="width:18px;height:2px;background:#0284c7;border-radius:1px;"></div></div>
+          <span>1/2" Branch Pipe</span>
+        </div>
+        <div class="pn-legend-row">
+          <div class="pn-legend-swatch">
+            <svg width="16" height="14" viewBox="0 0 16 14"><path d="M 2,12 L 2,4 A 4,4 0 0,1 6,0 L 14,0" fill="none" stroke="#cbd5e1" stroke-width="3"/><circle cx="2" cy="12" r="2.5" fill="#94a3b8"/><circle cx="14" cy="0" r="2.5" fill="#94a3b8"/></svg>
+          </div>
+          <span>Elbow Fitting</span>
+        </div>
+        <div class="pn-legend-row">
+          <div class="pn-legend-swatch">
+            <svg width="16" height="14" viewBox="0 0 16 14"><line x1="1" y1="3" x2="15" y2="3" stroke="#cbd5e1" stroke-width="3"/><line x1="8" y1="3" x2="8" y2="13" stroke="#cbd5e1" stroke-width="3"/><circle cx="8" cy="12" r="2" fill="#94a3b8"/></svg>
+          </div>
+          <span>Tee Fitting</span>
+        </div>
+        <div class="pn-legend-row">
+          <div class="pn-legend-swatch">
+            <svg width="16" height="14" viewBox="0 0 16 14"><rect x="1" y="4" width="14" height="6" rx="1.5" fill="#1e293b"/><line x1="4" y1="2" x2="14" y2="0" stroke="#0284c7" stroke-width="2.5"/></svg>
+          </div>
+          <span>Ball Valve</span>
+        </div>
+        <div class="pn-legend-row">
+          <div class="pn-legend-swatch">
+            <svg width="16" height="14" viewBox="0 0 16 14"><path d="M 2,5 L 10,5 L 10,10 L 8,10" fill="none" stroke="#94a3b8" stroke-width="2"/><line x1="6" y1="2" x2="14" y2="2" stroke="#ef4444" stroke-width="2"/><circle cx="9" cy="12" r="1.5" fill="#0284c7"/></svg>
+          </div>
+          <span>Faucet (Tap)</span>
+        </div>
+        <div class="pn-legend-row">
+          <div class="pn-legend-swatch">
+            <svg width="16" height="14" viewBox="0 0 16 14"><rect x="3" y="3" width="10" height="9" rx="2" fill="#ecdcc2" stroke="#b45309" stroke-width="1"/><ellipse cx="8" cy="3" rx="3.5" ry="1.5" fill="#92400e"/></svg>
+          </div>
+          <span>Water Tank</span>
+        </div>
+      </div>
+
       <!-- Status bar overlaid at bottom of canvas -->
       <div id="pn-statusbar">
         <i class="bi bi-info-circle" style="color:#58a6ff;pointer-events:none;"></i>
@@ -392,14 +531,16 @@
 
         <!-- Pump-only fields -->
         <div id="np-pump-fields" style="display:none;">
-          <div class="pp-section-title" style="margin-top:8px;">
-            <i class="bi bi-gear-fill"></i> Pump Data
-          </div>
+          <div class="pp-section-title" style="margin-top:8px;"><i class="bi bi-gear-fill"></i> Pump Data</div>
           <label class="pp-label">Design Flow Rate (m³/h)</label>
           <input id="np-flow" type="number" step="0.5" min="0" class="pp-input" value="10">
-          <div style="font-size:11px;color:#475569;margin-bottom:8px;">
-            The system TDH is calculated from the sum of all pipe losses from inlet to outlet.
-          </div>
+        </div>
+        <div id="np-fitting-fields" style="display:none;">
+          <div class="pp-section-title" style="margin-top:8px;"><i class="bi bi-tools"></i> Fitting Type</div>
+          <select id="np-fitting-key" class="pp-input"></select>
+        </div>
+        <div id="np-pump-desc" style="display:none;font-size:11px;color:#475569;margin-bottom:8px;">
+          The system TDH is calculated from the sum of all pipe losses from inlet to outlet.
         </div>
       </div><!-- end node props -->
 

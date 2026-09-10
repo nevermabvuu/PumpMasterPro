@@ -8,7 +8,8 @@
   #pn-outer {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 120px);   /* subtract navbar + footer */
+    height: calc(100vh - 120px);
+    /* subtract navbar + footer */
     gap: 0;
     background: #0d1117;
   }
@@ -56,8 +57,8 @@
     position: absolute;
     inset: 0;
     background-image:
-      linear-gradient(rgba(48,54,61,0.5) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(48,54,61,0.5) 1px, transparent 1px);
+      linear-gradient(rgba(48, 54, 61, 0.5) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(48, 54, 61, 0.5) 1px, transparent 1px);
     background-size: 50px 50px;
     pointer-events: none;
   }
@@ -65,10 +66,11 @@
   #pn-canvas-wrap.pn-light-theme {
     background: #f8fafc !important;
   }
+
   #pn-canvas-wrap.pn-light-theme::before {
     background-image:
-      linear-gradient(rgba(203,213,225,0.65) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(203,213,225,0.65) 1px, transparent 1px) !important;
+      linear-gradient(rgba(203, 213, 225, 0.65) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(203, 213, 225, 0.65) 1px, transparent 1px) !important;
   }
 
   /* Legend Overlay matching typical installation diagram */
@@ -83,18 +85,20 @@
     font-size: 11px;
     color: #cbd5e1;
     z-index: 5;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(6px);
     transition: opacity 0.2s ease;
     user-select: none;
     min-width: 170px;
   }
+
   #pn-canvas-wrap.pn-light-theme #pn-legend-overlay {
     background: rgba(255, 255, 255, 0.95);
     border: 1px solid #cbd5e1;
     color: #1e293b;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   }
+
   .pn-legend-title {
     font-weight: 700;
     font-size: 10px;
@@ -106,9 +110,11 @@
     align-items: center;
     justify-content: space-between;
   }
+
   #pn-canvas-wrap.pn-light-theme .pn-legend-title {
     color: #0284c7;
   }
+
   .pn-legend-row {
     display: flex;
     align-items: center;
@@ -116,6 +122,7 @@
     margin-bottom: 4px;
     font-size: 11px;
   }
+
   .pn-legend-swatch {
     width: 20px;
     height: 14px;
@@ -153,20 +160,37 @@
     transition: all 0.15s;
     white-space: nowrap;
   }
-  .pn-btn:hover { background: #2d333b; color: #e6edf3; border-color: #444c56; }
+
+  .pn-btn:hover {
+    background: #2d333b;
+    color: #e6edf3;
+    border-color: #444c56;
+  }
+
   .pn-btn.active-tool {
-    background: rgba(88,166,255,0.15);
+    background: rgba(88, 166, 255, 0.15);
     border-color: #58a6ff;
     color: #58a6ff;
   }
-  .pn-btn-danger { border-color: rgba(248,81,73,0.4); color: #f85149; }
-  .pn-btn-danger:hover { background: rgba(248,81,73,0.1); }
+
+  .pn-btn-danger {
+    border-color: rgba(248, 81, 73, 0.4);
+    color: #f85149;
+  }
+
+  .pn-btn-danger:hover {
+    background: rgba(248, 81, 73, 0.1);
+  }
+
   .pn-btn-success {
-    background: rgba(34,197,94,0.15);
+    background: rgba(34, 197, 94, 0.15);
     border-color: #22c55e;
     color: #22c55e;
   }
-  .pn-btn-success:hover { background: rgba(34,197,94,0.25); }
+
+  .pn-btn-success:hover {
+    background: rgba(34, 197, 94, 0.25);
+  }
 
   /* Toolbar separators */
   .pn-sep {
@@ -186,6 +210,7 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
+
   .pp-input {
     width: 100%;
     background: #0d1117;
@@ -197,13 +222,21 @@
     margin-bottom: 10px;
     box-sizing: border-box;
   }
+
   .pp-input:focus {
     outline: none;
     border-color: #58a6ff;
-    box-shadow: 0 0 0 3px rgba(88,166,255,0.12);
+    box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.12);
   }
-  .pp-row { display: flex; gap: 8px; }
-  .pp-row .pp-field { flex: 1; }
+
+  .pp-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .pp-row .pp-field {
+    flex: 1;
+  }
 
   /* Results section below canvas */
   #pn-results-section {
@@ -221,11 +254,13 @@
     text-align: center;
     flex: 1;
   }
+
   .res-card-value {
     font-size: 22px;
     font-weight: 700;
     font-family: monospace;
   }
+
   .res-card-label {
     font-size: 10px;
     color: #64748b;
@@ -240,6 +275,7 @@
     border-collapse: collapse;
     font-size: 12px;
   }
+
   #pn-results-table th {
     padding: 6px 10px;
     text-align: right;
@@ -250,15 +286,20 @@
     border-bottom: 1px solid #30363d;
     white-space: nowrap;
   }
+
   #pn-results-table th:first-child,
-  #pn-results-table th:nth-child(2) { text-align: left; }
+  #pn-results-table th:nth-child(2) {
+    text-align: left;
+  }
 
   /* Status bar at bottom of canvas */
   #pn-statusbar {
     position: absolute;
-    bottom: 0; left: 0; right: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
     padding: 4px 12px;
-    background: rgba(22,27,34,0.85);
+    background: rgba(22, 27, 34, 0.85);
     font-size: 11px;
     color: #8b949e;
     display: flex;
@@ -358,8 +399,9 @@
     </button>
 
     <div class="pn-sep"></div>
-    
-    <span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-right:-2px;">View:</span>
+
+    <span
+      style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-right:-2px;">View:</span>
     <button id="btn-view-schematic" class="pn-btn" title="Schematic View">
       <i class="bi bi-bezier2"></i> Schematic
     </button>
@@ -405,8 +447,8 @@
     <!-- Global flow rate for calculation -->
     <label style="font-size:11px;color:#8b949e;white-space:nowrap;">
       Flow rate
-      <input id="pn-global-flow" type="number" min="0.1" step="0.5" value="15"
-             class="pp-input" style="width:70px;display:inline-block;margin:0 4px 0 4px;">
+      <input id="pn-global-flow" type="number" min="0.1" step="0.5" value="15" class="pp-input"
+        style="width:70px;display:inline-block;margin:0 4px 0 4px;">
       m³/h
     </label>
 
@@ -436,47 +478,72 @@
       <div id="pn-legend-overlay">
         <div class="pn-legend-title">
           <span>Water System</span>
-          <span style="cursor:pointer;font-size:12px;opacity:0.6;" onclick="document.getElementById('pn-legend-overlay').style.display='none'">&times;</span>
+          <span style="cursor:pointer;font-size:12px;opacity:0.6;"
+            onclick="document.getElementById('pn-legend-overlay').style.display='none'">&times;</span>
         </div>
         <div class="pn-legend-row">
-          <div class="pn-legend-swatch"><div style="width:18px;height:4px;background:#0284c7;border-radius:1px;"></div></div>
+          <div class="pn-legend-swatch">
+            <div style="width:18px;height:4px;background:#0284c7;border-radius:1px;"></div>
+          </div>
           <span>1" Main Pipe</span>
         </div>
         <div class="pn-legend-row">
-          <div class="pn-legend-swatch"><div style="width:18px;height:3px;background:#0284c7;border-radius:1px;"></div></div>
+          <div class="pn-legend-swatch">
+            <div style="width:18px;height:3px;background:#0284c7;border-radius:1px;"></div>
+          </div>
           <span>3/4" Distribution Pipe</span>
         </div>
         <div class="pn-legend-row">
-          <div class="pn-legend-swatch"><div style="width:18px;height:2px;background:#0284c7;border-radius:1px;"></div></div>
+          <div class="pn-legend-swatch">
+            <div style="width:18px;height:2px;background:#0284c7;border-radius:1px;"></div>
+          </div>
           <span>1/2" Branch Pipe</span>
         </div>
         <div class="pn-legend-row">
           <div class="pn-legend-swatch">
-            <svg width="16" height="14" viewBox="0 0 16 14"><path d="M 2,12 L 2,4 A 4,4 0 0,1 6,0 L 14,0" fill="none" stroke="#cbd5e1" stroke-width="3"/><circle cx="2" cy="12" r="2.5" fill="#94a3b8"/><circle cx="14" cy="0" r="2.5" fill="#94a3b8"/></svg>
+            <svg width="16" height="14" viewBox="0 0 16 14">
+              <path d="M 2,12 L 2,4 A 4,4 0 0,1 6,0 L 14,0" fill="none" stroke="#cbd5e1" stroke-width="3" />
+              <circle cx="2" cy="12" r="2.5" fill="#94a3b8" />
+              <circle cx="14" cy="0" r="2.5" fill="#94a3b8" />
+            </svg>
           </div>
           <span>Elbow Fitting</span>
         </div>
         <div class="pn-legend-row">
           <div class="pn-legend-swatch">
-            <svg width="16" height="14" viewBox="0 0 16 14"><line x1="1" y1="3" x2="15" y2="3" stroke="#cbd5e1" stroke-width="3"/><line x1="8" y1="3" x2="8" y2="13" stroke="#cbd5e1" stroke-width="3"/><circle cx="8" cy="12" r="2" fill="#94a3b8"/></svg>
+            <svg width="16" height="14" viewBox="0 0 16 14">
+              <line x1="1" y1="3" x2="15" y2="3" stroke="#cbd5e1" stroke-width="3" />
+              <line x1="8" y1="3" x2="8" y2="13" stroke="#cbd5e1" stroke-width="3" />
+              <circle cx="8" cy="12" r="2" fill="#94a3b8" />
+            </svg>
           </div>
           <span>Tee Fitting</span>
         </div>
         <div class="pn-legend-row">
           <div class="pn-legend-swatch">
-            <svg width="16" height="14" viewBox="0 0 16 14"><rect x="1" y="4" width="14" height="6" rx="1.5" fill="#1e293b"/><line x1="4" y1="2" x2="14" y2="0" stroke="#0284c7" stroke-width="2.5"/></svg>
+            <svg width="16" height="14" viewBox="0 0 16 14">
+              <rect x="1" y="4" width="14" height="6" rx="1.5" fill="#1e293b" />
+              <line x1="4" y1="2" x2="14" y2="0" stroke="#0284c7" stroke-width="2.5" />
+            </svg>
           </div>
           <span>Ball Valve</span>
         </div>
         <div class="pn-legend-row">
           <div class="pn-legend-swatch">
-            <svg width="16" height="14" viewBox="0 0 16 14"><path d="M 2,5 L 10,5 L 10,10 L 8,10" fill="none" stroke="#94a3b8" stroke-width="2"/><line x1="6" y1="2" x2="14" y2="2" stroke="#ef4444" stroke-width="2"/><circle cx="9" cy="12" r="1.5" fill="#0284c7"/></svg>
+            <svg width="16" height="14" viewBox="0 0 16 14">
+              <path d="M 2,5 L 10,5 L 10,10 L 8,10" fill="none" stroke="#94a3b8" stroke-width="2" />
+              <line x1="6" y1="2" x2="14" y2="2" stroke="#ef4444" stroke-width="2" />
+              <circle cx="9" cy="12" r="1.5" fill="#0284c7" />
+            </svg>
           </div>
           <span>Faucet (Tap)</span>
         </div>
         <div class="pn-legend-row">
           <div class="pn-legend-swatch">
-            <svg width="16" height="14" viewBox="0 0 16 14"><rect x="3" y="3" width="10" height="9" rx="2" fill="#ecdcc2" stroke="#b45309" stroke-width="1"/><ellipse cx="8" cy="3" rx="3.5" ry="1.5" fill="#92400e"/></svg>
+            <svg width="16" height="14" viewBox="0 0 16 14">
+              <rect x="3" y="3" width="10" height="9" rx="2" fill="#ecdcc2" stroke="#b45309" stroke-width="1" />
+              <ellipse cx="8" cy="3" rx="3.5" ry="1.5" fill="#92400e" />
+            </svg>
           </div>
           <span>Water Tank</span>
         </div>
@@ -506,10 +573,14 @@
             to edit its properties.
           </div>
           <div style="margin-top:20px;font-size:11px;color:#334155;text-align:left;line-height:1.8;">
-            <div><kbd style="background:#21262d;border:1px solid #30363d;border-radius:3px;padding:1px 5px;">S</kbd> Select mode</div>
-            <div><kbd style="background:#21262d;border:1px solid #30363d;border-radius:3px;padding:1px 5px;">C</kbd> Draw pipe</div>
-            <div><kbd style="background:#21262d;border:1px solid #30363d;border-radius:3px;padding:1px 5px;">Del</kbd> Delete selected</div>
-            <div><kbd style="background:#21262d;border:1px solid #30363d;border-radius:3px;padding:1px 5px;">Esc</kbd> Cancel action</div>
+            <div><kbd style="background:#21262d;border:1px solid #30363d;border-radius:3px;padding:1px 5px;">S</kbd>
+              Select mode</div>
+            <div><kbd style="background:#21262d;border:1px solid #30363d;border-radius:3px;padding:1px 5px;">C</kbd>
+              Draw pipe</div>
+            <div><kbd style="background:#21262d;border:1px solid #30363d;border-radius:3px;padding:1px 5px;">Del</kbd>
+              Delete selected</div>
+            <div><kbd style="background:#21262d;border:1px solid #30363d;border-radius:3px;padding:1px 5px;">Esc</kbd>
+              Cancel action</div>
           </div>
         </div>
       </div>
@@ -520,7 +591,8 @@
 
         <div style="display:flex;gap:6px;margin-bottom:10px;">
           <span class="pp-chip" id="np-id">N-?</span>
-          <span class="pp-chip" id="np-type" style="color:#a855f7;border-color:#a855f7;background:rgba(168,85,247,0.08);">?</span>
+          <span class="pp-chip" id="np-type"
+            style="color:#a855f7;border-color:#a855f7;background:rgba(168,85,247,0.08);">?</span>
         </div>
 
         <label class="pp-label">Label</label>
@@ -571,13 +643,23 @@
           </div>
         </div>
 
-        <label class="pp-label">Elevation Change (m) <span style="font-weight:400;color:#475569;">+ve = uphill</span></label>
+        <label class="pp-label">Elevation Change (m) <span style="font-weight:400;color:#475569;">+ve =
+            uphill</span></label>
         <input id="pp-elev-change" type="number" step="0.5" class="pp-input" value="0">
 
         <label class="pp-label">Pipe Material</label>
         <select id="pp-material" class="pp-input">
           <!-- Options populated by JS from MATERIALS array -->
         </select>
+
+        <!-- ▼▼▼ NEW: ROUTING SELECTOR ▼▼▼ -->
+        <label class="pp-label">Routing</label>
+        <select id="pp-routing" class="pp-input">
+          <option value="auto">Auto (bends if needed)</option>
+          <option value="straight">Straight diagonal</option>
+          <option value="orthogonal">Orthogonal (L-shape)</option>
+        </select>
+        <!-- ▲▲▲ END NEW ▲▲▲ -->
 
         <!-- Fittings / minor losses -->
         <div class="pp-section-title" style="margin-top:4px;">
@@ -667,7 +749,8 @@
   </div>
 
   <!-- Formula reference -->
-  <div style="margin-top:12px;padding:10px 14px;background:#161b22;border:1px solid #21262d;border-radius:8px;font-size:11px;color:#64748b;line-height:1.9;">
+  <div
+    style="margin-top:12px;padding:10px 14px;background:#161b22;border:1px solid #21262d;border-radius:8px;font-size:11px;color:#64748b;line-height:1.9;">
     <strong style="color:#8b949e;">Calculation methods:</strong>
     Major losses: <code style="color:#58a6ff;">hf = f (L/D) V&sup2;/2g</code> &mdash;
     Friction factor: <code style="color:#58a6ff;">Swamee-Jain approximation to Colebrook-White</code> &mdash;

@@ -444,6 +444,11 @@
 
     <div class="pn-sep"></div>
 
+    <!-- Manage Reference Data -->
+    <button id="btn-manage-data" class="pn-btn" title="Manage Fittings & Materials" onclick="toggleManageModal()">
+      <i class="bi bi-database-gear" style="color:#a78bfa;"></i> Manage Data
+    </button>
+
     <!-- Global flow rate for calculation -->
     <label style="font-size:11px;color:#8b949e;white-space:nowrap;">
       Flow rate
@@ -759,8 +764,361 @@
   </div>
 
 </div><!-- end results section -->
+<!-- ─────────────────────────────────────────────────────────────────────────
+     MANAGE FITTINGS & MATERIALS MODAL
+     ───────────────────────────────────────────────────────────────────────── -->
+<div id="manage-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;backdrop-filter:blur(3px);" onclick="if(event.target===this)toggleManageModal()">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(860px,92vw);max-height:85vh;background:#161b22;border:1px solid #30363d;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+
+    <!-- Modal header -->
+    <div style="display:flex;align-items:center;padding:14px 20px;border-bottom:1px solid #21262d;flex-shrink:0;">
+      <i class="bi bi-database-gear" style="color:#a78bfa;font-size:1.1rem;margin-right:10px;"></i>
+      <h3 style="margin:0;font-size:.95rem;font-weight:700;color:#e6edf3;">Manage Reference Data</h3>
+      <div style="margin-left:auto;display:flex;gap:6px;">
+        <button class="pn-btn manage-tab-btn active" data-tab="fittings" onclick="switchManageTab('fittings')" style="font-size:11px;padding:3px 10px;">
+          <i class="bi bi-tools"></i> Fittings
+        </button>
+        <button class="pn-btn manage-tab-btn" data-tab="materials" onclick="switchManageTab('materials')" style="font-size:11px;padding:3px 10px;">
+          <i class="bi bi-bricks"></i> Materials
+        </button>
+      </div>
+      <button onclick="toggleManageModal()" style="background:none;border:none;color:#8b949e;cursor:pointer;font-size:1.2rem;margin-left:12px;" title="Close">&times;</button>
+    </div>
+
+    <!-- Fittings Tab -->
+    <div id="manage-tab-fittings" style="flex:1;overflow-y:auto;padding:16px 20px;">
+      <div style="display:flex;align-items:center;margin-bottom:12px;gap:8px;">
+        <span style="font-size:12px;color:#8b949e;">K-factors for minor loss calculations</span>
+        <button class="pn-btn pn-btn-success" onclick="showAddFittingForm()" style="margin-left:auto;font-size:11px;padding:3px 10px;">
+          <i class="bi bi-plus-lg"></i> Add Fitting
+        </button>
+      </div>
+
+      <!-- Add fitting form (hidden by default) -->
+      <div id="add-fitting-form" style="display:none;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px;margin-bottom:12px;">
+        <div style="display:grid;grid-template-columns:1fr 1.5fr .8fr .8fr;gap:8px;align-items:end;">
+          <div>
+            <label class="pp-label" style="margin-bottom:4px;">Key (ID)</label>
+            <input id="new-fit-key" type="text" class="pp-input" placeholder="e.g. strainer_basket" style="font-size:11px;">
+          </div>
+          <div>
+            <label class="pp-label" style="margin-bottom:4px;">Label</label>
+            <input id="new-fit-label" type="text" class="pp-input" placeholder="e.g. Strainer Basket" style="font-size:11px;">
+          </div>
+          <div>
+            <label class="pp-label" style="margin-bottom:4px;">K Factor</label>
+            <input id="new-fit-k" type="number" step="0.01" min="0" class="pp-input" placeholder="e.g. 2.5" style="font-size:11px;">
+          </div>
+          <div>
+            <label class="pp-label" style="margin-bottom:4px;">Category</label>
+            <select id="new-fit-cat" class="pp-input" style="font-size:11px;">
+              <option value="valve">Valve</option>
+              <option value="elbow">Elbow</option>
+              <option value="tee">Tee</option>
+              <option value="entry_exit">Entry / Exit</option>
+              <option value="transition">Transition</option>
+              <option value="general" selected>General</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end;">
+          <button class="pn-btn" onclick="hideAddFittingForm()" style="font-size:11px;">Cancel</button>
+          <button class="pn-btn pn-btn-success" onclick="saveNewFitting()" style="font-size:11px;"><i class="bi bi-check-lg"></i> Save</button>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;border:1px solid #21262d;border-radius:8px;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="background:#0d1117;">
+              <th style="text-align:left;padding:8px 10px;color:#8b949e;font-weight:600;">Key</th>
+              <th style="text-align:left;padding:8px 10px;color:#8b949e;font-weight:600;">Label</th>
+              <th style="text-align:center;padding:8px 10px;color:#8b949e;font-weight:600;">K Factor</th>
+              <th style="text-align:center;padding:8px 10px;color:#8b949e;font-weight:600;">Category</th>
+              <th style="text-align:center;padding:8px 10px;color:#8b949e;font-weight:600;width:100px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="manage-fittings-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Materials Tab -->
+    <div id="manage-tab-materials" style="display:none;flex:1;overflow-y:auto;padding:16px 20px;">
+      <div style="display:flex;align-items:center;margin-bottom:12px;gap:8px;">
+        <span style="font-size:12px;color:#8b949e;">Roughness values (ε mm) for Darcy-Weisbach friction calculations</span>
+        <button class="pn-btn pn-btn-success" onclick="showAddMaterialForm()" style="margin-left:auto;font-size:11px;padding:3px 10px;">
+          <i class="bi bi-plus-lg"></i> Add Material
+        </button>
+      </div>
+
+      <!-- Add material form (hidden by default) -->
+      <div id="add-material-form" style="display:none;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px;margin-bottom:12px;">
+        <div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:8px;align-items:end;">
+          <div>
+            <label class="pp-label" style="margin-bottom:4px;">Key (ID)</label>
+            <input id="new-mat-key" type="text" class="pp-input" placeholder="e.g. copper" style="font-size:11px;">
+          </div>
+          <div>
+            <label class="pp-label" style="margin-bottom:4px;">Label</label>
+            <input id="new-mat-label" type="text" class="pp-input" placeholder="e.g. Copper Tubing (e = 0.0015 mm)" style="font-size:11px;">
+          </div>
+          <div>
+            <label class="pp-label" style="margin-bottom:4px;">Roughness (mm)</label>
+            <input id="new-mat-rough" type="number" step="0.001" min="0" class="pp-input" placeholder="e.g. 0.0015" style="font-size:11px;">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end;">
+          <button class="pn-btn" onclick="hideAddMaterialForm()" style="font-size:11px;">Cancel</button>
+          <button class="pn-btn pn-btn-success" onclick="saveNewMaterial()" style="font-size:11px;"><i class="bi bi-check-lg"></i> Save</button>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;border:1px solid #21262d;border-radius:8px;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="background:#0d1117;">
+              <th style="text-align:left;padding:8px 10px;color:#8b949e;font-weight:600;">Key</th>
+              <th style="text-align:left;padding:8px 10px;color:#8b949e;font-weight:600;">Label</th>
+              <th style="text-align:center;padding:8px 10px;color:#8b949e;font-weight:600;">Roughness (mm)</th>
+              <th style="text-align:center;padding:8px 10px;color:#8b949e;font-weight:600;width:100px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="manage-materials-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
+<!-- Inject database-driven reference data as inline JSON (zero-RTT, no extra API call) -->
+<script>
+  window.__PMP_FITTINGS  = {{ fittings_json  | safe }};
+  window.__PMP_MATERIALS = {{ materials_json | safe }};
+</script>
 <script src="{{ url_for('static', filename='js/pipe_network.js') }}"></script>
+<script>
+// ── Manage Reference Data Modal Logic ──────────────────────────────────────
+
+function toggleManageModal() {
+  const overlay = document.getElementById('manage-modal-overlay');
+  if (overlay.style.display === 'none') {
+    overlay.style.display = 'block';
+    refreshManageFittings();
+  } else {
+    overlay.style.display = 'none';
+  }
+}
+
+function switchManageTab(tab) {
+  document.querySelectorAll('.manage-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.manage-tab-btn[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById('manage-tab-fittings').style.display = tab === 'fittings' ? 'block' : 'none';
+  document.getElementById('manage-tab-materials').style.display = tab === 'materials' ? 'block' : 'none';
+  if (tab === 'fittings') refreshManageFittings();
+  else refreshManageMaterials();
+}
+
+// ── Fittings CRUD ────────────────────────────────────────────────────────────
+
+async function refreshManageFittings() {
+  const res = await fetch('/api/pipe-network/fittings');
+  const data = await res.json();
+  const tbody = document.getElementById('manage-fittings-tbody');
+  tbody.innerHTML = '';
+  data.forEach(f => {
+    const tr = document.createElement('tr');
+    tr.style.cssText = 'border-top:1px solid #21262d;';
+    tr.innerHTML = `
+      <td style="padding:7px 10px;color:#58a6ff;font-family:monospace;font-size:11px;">${f.key}</td>
+      <td style="padding:7px 10px;color:#e6edf3;">${f.label}</td>
+      <td style="padding:7px 10px;text-align:center;color:#fbbf24;font-weight:600;">${f.K}</td>
+      <td style="padding:7px 10px;text-align:center;color:#8b949e;font-size:11px;">${f.category || '—'}</td>
+      <td style="padding:7px 10px;text-align:center;">
+        <button class="pn-btn" onclick="editFitting(${f.id}, '${f.key}', '${f.label.replace(/'/g, "\\'") }', ${f.K}, '${f.category}')" style="font-size:10px;padding:2px 6px;" title="Edit">
+          <i class="bi bi-pencil"></i>
+        </button>
+        <button class="pn-btn pn-btn-danger" onclick="deleteFitting(${f.id}, '${f.label.replace(/'/g, "\\'") }')" style="font-size:10px;padding:2px 6px;" title="Delete">
+          <i class="bi bi-trash"></i>
+        </button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function showAddFittingForm() { document.getElementById('add-fitting-form').style.display = 'block'; }
+function hideAddFittingForm() { document.getElementById('add-fitting-form').style.display = 'none'; }
+
+async function saveNewFitting() {
+  const key = document.getElementById('new-fit-key').value.trim();
+  const label = document.getElementById('new-fit-label').value.trim();
+  const K = document.getElementById('new-fit-k').value;
+  const category = document.getElementById('new-fit-cat').value;
+  if (!key || !label || !K) return alert('All fields are required.');
+  const res = await fetch('/api/pipe-network/fittings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, label, K: parseFloat(K), category })
+  });
+  const result = await res.json();
+  if (!res.ok) return alert(result.error || 'Failed to save');
+  // Update in-memory arrays
+  FITTINGS.push(result);
+  rebuildFittingUI();
+  hideAddFittingForm();
+  document.getElementById('new-fit-key').value = '';
+  document.getElementById('new-fit-label').value = '';
+  document.getElementById('new-fit-k').value = '';
+  refreshManageFittings();
+}
+
+async function editFitting(id, key, label, K, category) {
+  const newLabel = prompt('Label:', label);
+  if (newLabel === null) return;
+  const newK = prompt('K Factor:', K);
+  if (newK === null) return;
+  const res = await fetch(`/api/pipe-network/fittings/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ label: newLabel, K: parseFloat(newK) })
+  });
+  if (!res.ok) { const e = await res.json(); return alert(e.error || 'Failed'); }
+  const updated = await res.json();
+  const idx = FITTINGS.findIndex(f => f.key === key);
+  if (idx >= 0) FITTINGS[idx] = updated;
+  rebuildFittingUI();
+  refreshManageFittings();
+}
+
+async function deleteFitting(id, label) {
+  if (!confirm(`Delete fitting "${label}"?`)) return;
+  const res = await fetch(`/api/pipe-network/fittings/${id}`, { method: 'DELETE' });
+  if (!res.ok) { const e = await res.json(); return alert(e.error || 'Failed'); }
+  const result = await res.json();
+  // Remove from in-memory array
+  const idx = FITTINGS.findIndex(f => f.id === id);
+  if (idx >= 0) FITTINGS.splice(idx, 1);
+  rebuildFittingUI();
+  refreshManageFittings();
+}
+
+// ── Materials CRUD ───────────────────────────────────────────────────────────
+
+async function refreshManageMaterials() {
+  const res = await fetch('/api/pipe-network/materials');
+  const data = await res.json();
+  const tbody = document.getElementById('manage-materials-tbody');
+  tbody.innerHTML = '';
+  data.forEach(m => {
+    const tr = document.createElement('tr');
+    tr.style.cssText = 'border-top:1px solid #21262d;';
+    tr.innerHTML = `
+      <td style="padding:7px 10px;color:#58a6ff;font-family:monospace;font-size:11px;">${m.key}</td>
+      <td style="padding:7px 10px;color:#e6edf3;">${m.label}</td>
+      <td style="padding:7px 10px;text-align:center;color:#fbbf24;font-weight:600;">${m.roughness_mm}</td>
+      <td style="padding:7px 10px;text-align:center;">
+        <button class="pn-btn" onclick="editMaterial(${m.id}, '${m.key}', '${m.label.replace(/'/g, "\\'") }', ${m.roughness_mm})" style="font-size:10px;padding:2px 6px;" title="Edit">
+          <i class="bi bi-pencil"></i>
+        </button>
+        <button class="pn-btn pn-btn-danger" onclick="deleteMaterial(${m.id}, '${m.label.replace(/'/g, "\\'") }')" style="font-size:10px;padding:2px 6px;" title="Delete">
+          <i class="bi bi-trash"></i>
+        </button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function showAddMaterialForm() { document.getElementById('add-material-form').style.display = 'block'; }
+function hideAddMaterialForm() { document.getElementById('add-material-form').style.display = 'none'; }
+
+async function saveNewMaterial() {
+  const key = document.getElementById('new-mat-key').value.trim();
+  const label = document.getElementById('new-mat-label').value.trim();
+  const roughness_mm = document.getElementById('new-mat-rough').value;
+  if (!key || !label || !roughness_mm) return alert('All fields are required.');
+  const res = await fetch('/api/pipe-network/materials', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, label, roughness_mm: parseFloat(roughness_mm) })
+  });
+  const result = await res.json();
+  if (!res.ok) return alert(result.error || 'Failed to save');
+  MATERIALS.push(result);
+  rebuildMaterialUI();
+  hideAddMaterialForm();
+  document.getElementById('new-mat-key').value = '';
+  document.getElementById('new-mat-label').value = '';
+  document.getElementById('new-mat-rough').value = '';
+  refreshManageMaterials();
+}
+
+async function editMaterial(id, key, label, roughness_mm) {
+  const newLabel = prompt('Label:', label);
+  if (newLabel === null) return;
+  const newRough = prompt('Roughness (mm):', roughness_mm);
+  if (newRough === null) return;
+  const res = await fetch(`/api/pipe-network/materials/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ label: newLabel, roughness_mm: parseFloat(newRough) })
+  });
+  if (!res.ok) { const e = await res.json(); return alert(e.error || 'Failed'); }
+  const updated = await res.json();
+  const idx = MATERIALS.findIndex(m => m.key === key);
+  if (idx >= 0) MATERIALS[idx] = updated;
+  rebuildMaterialUI();
+  refreshManageMaterials();
+}
+
+async function deleteMaterial(id, label) {
+  if (!confirm(`Delete material "${label}"?`)) return;
+  const res = await fetch(`/api/pipe-network/materials/${id}`, { method: 'DELETE' });
+  if (!res.ok) { const e = await res.json(); return alert(e.error || 'Failed'); }
+  const idx = MATERIALS.findIndex(m => m.id === id);
+  if (idx >= 0) MATERIALS.splice(idx, 1);
+  rebuildMaterialUI();
+  refreshManageMaterials();
+}
+
+// ── Rebuild UI helpers (re-populate dropdowns/checkboxes after CRUD) ─────────
+
+function rebuildFittingUI() {
+  // Rebuild pipe fittings checklist
+  const fList = document.getElementById('pp-fittings-list');
+  const nFitSel = document.getElementById('np-fitting-key');
+  if (fList) fList.innerHTML = '';
+  if (nFitSel) nFitSel.innerHTML = '';
+  FITTINGS.forEach(f => {
+    if (fList) {
+      const lbl = document.createElement('label');
+      lbl.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:5px;cursor:pointer;font-size:12px;color:#94a3b8;';
+      lbl.innerHTML = `<input type="checkbox" class="pp-fitting-cb" value="${f.key}" style="accent-color:#58a6ff;cursor:pointer;flex-shrink:0;">
+        <span>${f.label} <span style="color:#475569">(K=${f.K})</span></span>`;
+      fList.appendChild(lbl);
+    }
+    if (nFitSel) {
+      const opt = document.createElement('option');
+      opt.value = f.key; opt.textContent = `${f.label} (K=${f.K})`;
+      nFitSel.appendChild(opt);
+    }
+  });
+  // Re-attach change listener
+  document.getElementById('pp-fittings-list')?.addEventListener('change', onPipePropChange);
+}
+
+function rebuildMaterialUI() {
+  const matSel = document.getElementById('pp-material');
+  if (!matSel) return;
+  matSel.innerHTML = '';
+  MATERIALS.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.key; opt.textContent = m.label;
+    matSel.appendChild(opt);
+  });
+}
+</script>
 {% endblock %}

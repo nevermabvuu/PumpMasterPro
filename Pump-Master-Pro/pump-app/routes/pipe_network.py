@@ -1,11 +1,13 @@
-﻿"""
+"""
 pipe_network.py — Flask Blueprint for the Pipe Network System Designer.
 
-Provides two endpoints:
-  - GET  /pipe-network           -> serves the interactive visual designer page
-  - POST /api/pipe-network/calc  -> accepts a JSON network graph and returns
-                                   friction-loss calculations for every pipe
-                                   segment in the network.
+Provides:
+  - GET  /pipe-network               -> serves the interactive visual designer page
+  - POST /api/pipe-network/calculate  -> accepts a JSON network graph and returns
+                                         friction-loss calculations for every pipe
+                                         segment in the network.
+  - CRUD /api/pipe-network/fittings   -> manage pipe fittings (K-factors)
+  - CRUD /api/pipe-network/materials  -> manage pipe materials (roughness)
 
 Friction Loss Models Used
 --------------------------
@@ -24,8 +26,11 @@ Friction Loss Models Used
       H = hf_major + hf_minor + hstatic
 """
 
+import json
 import math
-from flask import Blueprint, render_template, request, jsonify
+import re
+from flask import Blueprint, render_template, request, jsonify, g
+from models import db, PipeFitting, PipeMaterial
 
 # -- Blueprint registration --------------------------------------------------
 pipe_network_bp = Blueprint('pipe_network', __name__)
@@ -34,63 +39,31 @@ pipe_network_bp = Blueprint('pipe_network', __name__)
 GRAVITY = 9.81           # gravitational acceleration (m/s^2)
 KINEMATIC_VISCOSITY = 1.004e-6   # water at 20 C (m^2/s)
 
-# -- Pipe material roughness values (mm) -------------------------------------
-# Absolute roughness (e) in millimetres for common pipe materials.
-PIPE_ROUGHNESS_MM = {
-    'smooth':           0.0015,
-    'commercial_steel': 0.046,
-    'galvanised_steel': 0.150,
-    'cast_iron':        0.260,
-    'concrete':         1.000,
-    'pvc':              0.0015,
-    'hdpe':             0.007,
-    'stainless_steel':  0.015,
-}
 
-# -- K-factors for common pipe fittings --------------------------------------
-# Source: Crane TP-410 / Idelchik handbook
-# hm = K * V^2 / (2g)
-FITTING_K = {
-    'elbow_90_standard':    0.90,
-    'elbow_90_long_radius': 0.60,
-    'elbow_45':             0.40,
-    'gate_valve_open':      0.20,
-    'gate_valve_half':      5.60,
-    'globe_valve_open':     10.0,
-    'check_valve_swing':    2.50,
-    'check_valve_ball':     4.50,
-    'ball_valve_open':      0.05,
-    'butterfly_valve_open': 0.30,
-    'tee_run_through':      0.40,
-    'tee_branch_flow':      1.80,
-    'entry_sharp':          0.50,
-    'entry_rounded':        0.20,
-    'exit_abrupt':          1.00,
-    'reducer_gradual':      0.10,
-    'reducer_sudden':       0.50,
-    'expander_gradual':     0.30,
-}
+# -- Database-backed lookup helpers (cached per-request via Flask g) ----------
 
-FITTING_LABELS = {
-    'elbow_90_standard':    '90 Elbow (Standard)',
-    'elbow_90_long_radius': '90 Elbow (Long Radius)',
-    'elbow_45':             '45 Elbow',
-    'gate_valve_open':      'Gate Valve (Open)',
-    'gate_valve_half':      'Gate Valve (50% Open)',
-    'globe_valve_open':     'Globe Valve (Open)',
-    'check_valve_swing':    'Check Valve (Swing)',
-    'check_valve_ball':     'Check Valve (Ball)',
-    'ball_valve_open':      'Ball Valve (Open)',
-    'butterfly_valve_open': 'Butterfly Valve (Open)',
-    'tee_run_through':      'Tee (Run Through)',
-    'tee_branch_flow':      'Tee (Branch Flow)',
-    'entry_sharp':          'Pipe Entry (Sharp)',
-    'entry_rounded':        'Pipe Entry (Rounded)',
-    'exit_abrupt':          'Pipe Exit (Abrupt)',
-    'reducer_gradual':      'Reducer (Gradual)',
-    'reducer_sudden':       'Reducer (Sudden)',
-    'expander_gradual':     'Expander (Gradual)',
-}
+def get_fitting_k_map():
+    """Return {key: k_factor} dict for all active fittings, cached per request."""
+    if not hasattr(g, '_fitting_k'):
+        fittings = PipeFitting.query.filter_by(is_active=True).order_by(PipeFitting.sort_order).all()
+        g._fitting_k = {f.key: f.k_factor for f in fittings}
+    return g._fitting_k
+
+
+def get_fitting_label_map():
+    """Return {key: label} dict for all active fittings, cached per request."""
+    if not hasattr(g, '_fitting_labels'):
+        fittings = PipeFitting.query.filter_by(is_active=True).order_by(PipeFitting.sort_order).all()
+        g._fitting_labels = {f.key: f.label for f in fittings}
+    return g._fitting_labels
+
+
+def get_roughness_map():
+    """Return {key: roughness_mm} dict for all active materials, cached per request."""
+    if not hasattr(g, '_roughness'):
+        materials = PipeMaterial.query.filter_by(is_active=True).order_by(PipeMaterial.sort_order).all()
+        g._roughness = {m.key: m.roughness_mm for m in materials}
+    return g._roughness
 
 
 def friction_factor(Re, epsilon_mm, diameter_m):
@@ -129,6 +102,9 @@ def calculate_segment(seg, global_flow_m3h):
     Optional:
         flow_m3h  (overrides global_flow_m3h for this segment)
     """
+    fitting_k = get_fitting_k_map()
+    roughness_map = get_roughness_map()
+
     seg_id   = seg.get('id', 'pipe')
     D_mm     = float(seg.get('diameter_mm', 100.0))
     L_m      = float(seg.get('length_m', 10.0))
@@ -140,7 +116,7 @@ def calculate_segment(seg, global_flow_m3h):
     # Unit conversions
     D_m   = D_mm / 1000.0
     Q_m3s = flow_m3h / 3600.0
-    eps_mm = PIPE_ROUGHNESS_MM.get(material, PIPE_ROUGHNESS_MM['commercial_steel'])
+    eps_mm = roughness_map.get(material, roughness_map.get('commercial_steel', 0.046))
 
     # Hydraulic quantities
     A_m2  = math.pi * D_m ** 2 / 4.0    # cross-sectional area
@@ -154,7 +130,7 @@ def calculate_segment(seg, global_flow_m3h):
     hf_major  = f * (L_m / D_m) * vel_head
 
     # Minor (fitting) losses
-    K_total   = sum(FITTING_K.get(k, 0.0) for k in fittings)
+    K_total   = sum(fitting_k.get(k, 0.0) for k in fittings)
     hf_minor  = K_total * vel_head
 
     # Elevation head (positive = uphill = adds to required pump head)
@@ -205,11 +181,23 @@ def calculate_segment(seg, global_flow_m3h):
     }
 
 
+# ── Page Route ──────────────────────────────────────────────────────────────
+
 @pipe_network_bp.route('/pipe-network')
 def pipe_network():
-    """Render the interactive pipe-network visual designer page."""
-    return render_template('pipe_network.html')
+    """Render the interactive pipe-network visual designer page with DB-injected reference data."""
+    fittings = PipeFitting.query.filter_by(is_active=True).order_by(PipeFitting.sort_order).all()
+    materials = PipeMaterial.query.filter_by(is_active=True).order_by(PipeMaterial.sort_order).all()
 
+    fittings_json = json.dumps([f.to_dict() for f in fittings])
+    materials_json = json.dumps([m.to_dict() for m in materials])
+
+    return render_template('pipe_network.html',
+                           fittings_json=fittings_json,
+                           materials_json=materials_json)
+
+
+# ── Calculation Endpoint ────────────────────────────────────────────────────
 
 @pipe_network_bp.route('/api/pipe-network/calculate', methods=['POST'])
 def calculate_network():
@@ -269,8 +257,200 @@ def calculate_network():
             'pipe_count':          len(results),
         },
         'constants': {
-            'fitting_k_values': FITTING_K,
-            'fitting_labels':   FITTING_LABELS,
-            'pipe_roughness':   PIPE_ROUGHNESS_MM,
+            'fitting_k_values': get_fitting_k_map(),
+            'fitting_labels':   get_fitting_label_map(),
+            'pipe_roughness':   get_roughness_map(),
         }
     })
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CRUD API — Pipe Fittings
+# ══════════════════════════════════════════════════════════════════════════════
+
+@pipe_network_bp.route('/api/pipe-network/fittings', methods=['GET'])
+def list_fittings():
+    """List all pipe fittings (active and inactive)."""
+    fittings = PipeFitting.query.order_by(PipeFitting.sort_order).all()
+    return jsonify([f.to_dict() for f in fittings])
+
+
+@pipe_network_bp.route('/api/pipe-network/fittings', methods=['POST'])
+def create_fitting():
+    """Create a new pipe fitting."""
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'No JSON body'}), 400
+
+    key = (data.get('key') or '').strip()
+    label = (data.get('label') or '').strip()
+    k_factor = data.get('K') or data.get('k_factor')
+
+    if not key or not label or k_factor is None:
+        return jsonify({'error': 'key, label, and K (k_factor) are required'}), 400
+
+    # Sanitize key: lowercase, underscores, no spaces
+    key = re.sub(r'[^a-z0-9_]', '_', key.lower())
+
+    if PipeFitting.query.filter_by(key=key).first():
+        return jsonify({'error': f'Fitting with key "{key}" already exists'}), 409
+
+    try:
+        k_val = float(k_factor)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'K factor must be a number'}), 400
+
+    max_order = db.session.query(db.func.max(PipeFitting.sort_order)).scalar() or 0
+
+    fitting = PipeFitting(
+        key=key,
+        label=label,
+        k_factor=k_val,
+        category=(data.get('category') or 'general').strip(),
+        sort_order=max_order + 1,
+        is_active=True,
+    )
+    db.session.add(fitting)
+    db.session.commit()
+    return jsonify(fitting.to_dict()), 201
+
+
+@pipe_network_bp.route('/api/pipe-network/fittings/<int:fitting_id>', methods=['PUT'])
+def update_fitting(fitting_id):
+    """Update an existing pipe fitting."""
+    fitting = PipeFitting.query.get(fitting_id)
+    if not fitting:
+        return jsonify({'error': 'Fitting not found'}), 404
+
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'No JSON body'}), 400
+
+    if 'label' in data and data['label']:
+        fitting.label = data['label'].strip()
+    if 'K' in data or 'k_factor' in data:
+        try:
+            fitting.k_factor = float(data.get('K') or data.get('k_factor'))
+        except (ValueError, TypeError):
+            return jsonify({'error': 'K factor must be a number'}), 400
+    if 'category' in data:
+        fitting.category = (data['category'] or 'general').strip()
+    if 'sort_order' in data:
+        fitting.sort_order = int(data['sort_order'])
+    if 'is_active' in data:
+        fitting.is_active = bool(data['is_active'])
+    if 'key' in data and data['key']:
+        new_key = re.sub(r'[^a-z0-9_]', '_', data['key'].lower().strip())
+        existing = PipeFitting.query.filter(PipeFitting.key == new_key, PipeFitting.id != fitting_id).first()
+        if existing:
+            return jsonify({'error': f'Key "{new_key}" already in use'}), 409
+        fitting.key = new_key
+
+    db.session.commit()
+    return jsonify(fitting.to_dict())
+
+
+@pipe_network_bp.route('/api/pipe-network/fittings/<int:fitting_id>', methods=['DELETE'])
+def delete_fitting(fitting_id):
+    """Delete a pipe fitting (hard delete)."""
+    fitting = PipeFitting.query.get(fitting_id)
+    if not fitting:
+        return jsonify({'error': 'Fitting not found'}), 404
+
+    db.session.delete(fitting)
+    db.session.commit()
+    return jsonify({'ok': True, 'deleted': fitting_id})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CRUD API — Pipe Materials
+# ══════════════════════════════════════════════════════════════════════════════
+
+@pipe_network_bp.route('/api/pipe-network/materials', methods=['GET'])
+def list_materials():
+    """List all pipe materials (active and inactive)."""
+    materials = PipeMaterial.query.order_by(PipeMaterial.sort_order).all()
+    return jsonify([m.to_dict() for m in materials])
+
+
+@pipe_network_bp.route('/api/pipe-network/materials', methods=['POST'])
+def create_material():
+    """Create a new pipe material."""
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'No JSON body'}), 400
+
+    key = (data.get('key') or '').strip()
+    label = (data.get('label') or '').strip()
+    roughness = data.get('roughness_mm')
+
+    if not key or not label or roughness is None:
+        return jsonify({'error': 'key, label, and roughness_mm are required'}), 400
+
+    key = re.sub(r'[^a-z0-9_]', '_', key.lower())
+
+    if PipeMaterial.query.filter_by(key=key).first():
+        return jsonify({'error': f'Material with key "{key}" already exists'}), 409
+
+    try:
+        rough_val = float(roughness)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'roughness_mm must be a number'}), 400
+
+    max_order = db.session.query(db.func.max(PipeMaterial.sort_order)).scalar() or 0
+
+    material = PipeMaterial(
+        key=key,
+        label=label,
+        roughness_mm=rough_val,
+        sort_order=max_order + 1,
+        is_active=True,
+    )
+    db.session.add(material)
+    db.session.commit()
+    return jsonify(material.to_dict()), 201
+
+
+@pipe_network_bp.route('/api/pipe-network/materials/<int:material_id>', methods=['PUT'])
+def update_material(material_id):
+    """Update an existing pipe material."""
+    material = PipeMaterial.query.get(material_id)
+    if not material:
+        return jsonify({'error': 'Material not found'}), 404
+
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'No JSON body'}), 400
+
+    if 'label' in data and data['label']:
+        material.label = data['label'].strip()
+    if 'roughness_mm' in data:
+        try:
+            material.roughness_mm = float(data['roughness_mm'])
+        except (ValueError, TypeError):
+            return jsonify({'error': 'roughness_mm must be a number'}), 400
+    if 'sort_order' in data:
+        material.sort_order = int(data['sort_order'])
+    if 'is_active' in data:
+        material.is_active = bool(data['is_active'])
+    if 'key' in data and data['key']:
+        new_key = re.sub(r'[^a-z0-9_]', '_', data['key'].lower().strip())
+        existing = PipeMaterial.query.filter(PipeMaterial.key == new_key, PipeMaterial.id != material_id).first()
+        if existing:
+            return jsonify({'error': f'Key "{new_key}" already in use'}), 409
+        material.key = new_key
+
+    db.session.commit()
+    return jsonify(material.to_dict())
+
+
+@pipe_network_bp.route('/api/pipe-network/materials/<int:material_id>', methods=['DELETE'])
+def delete_material(material_id):
+    """Delete a pipe material (hard delete)."""
+    material = PipeMaterial.query.get(material_id)
+    if not material:
+        return jsonify({'error': 'Material not found'}), 404
+
+    db.session.delete(material)
+    db.session.commit()
+    return jsonify({'ok': True, 'deleted': material_id})

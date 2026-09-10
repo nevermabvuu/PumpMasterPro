@@ -11,8 +11,61 @@ Power polynomials are fitted with a non-zero shutoff anchor (≈0.35·P_BEP)
 so the displayed power curve rises continuously instead of spiking.
 """
 import json
-from models import db, Pump
+from models import db, Pump, PipeFitting, PipeMaterial
 from pump_curves import compute_power_poly
+
+
+def seed_pipe_reference_data(app):
+    """
+    Seed default pipe fittings (K-factors) and pipe materials (roughness values)
+    into the database. Idempotent — skips if rows already exist.
+
+    These values were previously hardcoded in pipe_network.js and routes/pipe_network.py.
+    Sources: Crane TP-410, Idelchik Handbook, engineering handbooks.
+    """
+    with app.app_context():
+        # ── Seed Fittings ────────────────────────────────────────────────────
+        if PipeFitting.query.count() == 0:
+            fittings = [
+                PipeFitting(key='elbow_90_standard',    label='90 Elbow (Standard)',     k_factor=0.90, category='elbow',      sort_order=1),
+                PipeFitting(key='elbow_90_long_radius', label='90 Elbow (Long Radius)',  k_factor=0.60, category='elbow',      sort_order=2),
+                PipeFitting(key='elbow_45',             label='45 Elbow',                k_factor=0.40, category='elbow',      sort_order=3),
+                PipeFitting(key='gate_valve_open',      label='Gate Valve (Open)',        k_factor=0.20, category='valve',      sort_order=4),
+                PipeFitting(key='gate_valve_half',      label='Gate Valve (50% Open)',    k_factor=5.60, category='valve',      sort_order=5),
+                PipeFitting(key='globe_valve_open',     label='Globe Valve (Open)',       k_factor=10.0, category='valve',      sort_order=6),
+                PipeFitting(key='check_valve_swing',    label='Check Valve (Swing)',      k_factor=2.50, category='valve',      sort_order=7),
+                PipeFitting(key='check_valve_ball',     label='Check Valve (Ball)',       k_factor=4.50, category='valve',      sort_order=8),
+                PipeFitting(key='ball_valve_open',      label='Ball Valve (Open)',        k_factor=0.05, category='valve',      sort_order=9),
+                PipeFitting(key='butterfly_valve_open', label='Butterfly Valve (Open)',   k_factor=0.30, category='valve',      sort_order=10),
+                PipeFitting(key='tee_run_through',      label='Tee (Run Through)',        k_factor=0.40, category='tee',        sort_order=11),
+                PipeFitting(key='tee_branch_flow',      label='Tee (Branch Flow)',        k_factor=1.80, category='tee',        sort_order=12),
+                PipeFitting(key='entry_sharp',          label='Pipe Entry (Sharp)',       k_factor=0.50, category='entry_exit', sort_order=13),
+                PipeFitting(key='entry_rounded',        label='Pipe Entry (Rounded)',     k_factor=0.20, category='entry_exit', sort_order=14),
+                PipeFitting(key='exit_abrupt',          label='Pipe Exit (Abrupt)',       k_factor=1.00, category='entry_exit', sort_order=15),
+                PipeFitting(key='reducer_gradual',      label='Reducer (Gradual)',        k_factor=0.10, category='transition', sort_order=16),
+                PipeFitting(key='reducer_sudden',       label='Reducer (Sudden)',         k_factor=0.50, category='transition', sort_order=17),
+                PipeFitting(key='expander_gradual',     label='Expander (Gradual)',       k_factor=0.30, category='transition', sort_order=18),
+            ]
+            db.session.add_all(fittings)
+            db.session.commit()
+            print(f'Seeded {len(fittings)} pipe fittings.')
+
+        # ── Seed Materials ───────────────────────────────────────────────────
+        if PipeMaterial.query.count() == 0:
+            materials = [
+                PipeMaterial(key='commercial_steel', label='Commercial Steel  (e = 0.046 mm)', roughness_mm=0.046,  sort_order=1),
+                PipeMaterial(key='galvanised_steel', label='Galvanised Steel  (e = 0.150 mm)', roughness_mm=0.150,  sort_order=2),
+                PipeMaterial(key='cast_iron',        label='Cast Iron         (e = 0.260 mm)', roughness_mm=0.260,  sort_order=3),
+                PipeMaterial(key='pvc',              label='PVC / Plastic     (e = 0.002 mm)', roughness_mm=0.0015, sort_order=4),
+                PipeMaterial(key='hdpe',             label='HDPE              (e = 0.007 mm)', roughness_mm=0.007,  sort_order=5),
+                PipeMaterial(key='stainless_steel',  label='Stainless Steel   (e = 0.015 mm)', roughness_mm=0.015,  sort_order=6),
+                PipeMaterial(key='concrete',         label='Concrete          (e = 1.000 mm)', roughness_mm=1.000,  sort_order=7),
+                PipeMaterial(key='smooth',           label='Smooth / Drawn    (e = 0.002 mm)', roughness_mm=0.0015, sort_order=8),
+            ]
+            db.session.add_all(materials)
+            db.session.commit()
+            print(f'Seeded {len(materials)} pipe materials.')
+
 
 
 def _hq(H0, Q_max):

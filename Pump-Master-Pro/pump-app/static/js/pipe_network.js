@@ -19,36 +19,19 @@
 const GRID = 50;
 const ELBOW_RADIUS = 14;
 
-const MATERIALS = [
+// MATERIALS and FITTINGS are now loaded from the database via Jinja template injection.
+// The template injects window.__PMP_MATERIALS and window.__PMP_FITTINGS as inline JSON
+// before this script runs, providing identical performance to hardcoded constants.
+const MATERIALS = window.__PMP_MATERIALS || [
+  // Fallback defaults in case DB injection fails (should not happen in normal operation)
   { key: 'commercial_steel', label: 'Commercial Steel  (e = 0.046 mm)' },
-  { key: 'galvanised_steel', label: 'Galvanised Steel  (e = 0.150 mm)' },
-  { key: 'cast_iron', label: 'Cast Iron         (e = 0.260 mm)' },
   { key: 'pvc', label: 'PVC / Plastic     (e = 0.002 mm)' },
-  { key: 'hdpe', label: 'HDPE              (e = 0.007 mm)' },
-  { key: 'stainless_steel', label: 'Stainless Steel   (e = 0.015 mm)' },
-  { key: 'concrete', label: 'Concrete          (e = 1.000 mm)' },
-  { key: 'smooth', label: 'Smooth / Drawn    (e = 0.002 mm)' },
 ];
 
-const FITTINGS = [
+const FITTINGS = window.__PMP_FITTINGS || [
+  // Fallback defaults
   { key: 'elbow_90_standard', label: '90 Elbow (Standard)', K: 0.90 },
-  { key: 'elbow_90_long_radius', label: '90 Elbow (Long Radius)', K: 0.60 },
-  { key: 'elbow_45', label: '45 Elbow', K: 0.40 },
   { key: 'gate_valve_open', label: 'Gate Valve (Open)', K: 0.20 },
-  { key: 'gate_valve_half', label: 'Gate Valve (50% Open)', K: 5.60 },
-  { key: 'globe_valve_open', label: 'Globe Valve (Open)', K: 10.0 },
-  { key: 'check_valve_swing', label: 'Check Valve (Swing)', K: 2.50 },
-  { key: 'check_valve_ball', label: 'Check Valve (Ball)', K: 4.50 },
-  { key: 'ball_valve_open', label: 'Ball Valve (Open)', K: 0.05 },
-  { key: 'butterfly_valve_open', label: 'Butterfly Valve (Open)', K: 0.30 },
-  { key: 'tee_run_through', label: 'Tee (Run Through)', K: 0.40 },
-  { key: 'tee_branch_flow', label: 'Tee (Branch Flow)', K: 1.80 },
-  { key: 'entry_sharp', label: 'Pipe Entry (Sharp)', K: 0.50 },
-  { key: 'entry_rounded', label: 'Pipe Entry (Rounded)', K: 0.20 },
-  { key: 'exit_abrupt', label: 'Pipe Exit (Abrupt)', K: 1.00 },
-  { key: 'reducer_gradual', label: 'Reducer (Gradual)', K: 0.10 },
-  { key: 'reducer_sudden', label: 'Reducer (Sudden)', K: 0.50 },
-  { key: 'expander_gradual', label: 'Expander (Gradual)', K: 0.30 },
 ];
 
 // ============================================================================

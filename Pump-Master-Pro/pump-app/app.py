@@ -10,9 +10,9 @@ import sys
 import re
 import json
 from flask import Flask, request, redirect, url_for, jsonify
-from models import db, Organisation, Supplier, ReportConfig, User, RegistrationRequest, Role
+from models import db, Organisation, Supplier, ReportConfig, User, RegistrationRequest, Role, PipeFitting, PipeMaterial
 from motor_models import Motor, seed_motors
-from seed_data import seed_pumps
+from seed_data import seed_pumps, seed_pipe_reference_data
 from routes import main_bp, pumps_bp, curves_bp, selection_bp, comparison_bp, reports_bp, organisations_bp, debug_bp, auth_bp, pipe_network_bp
 from routes.auth import get_current_user
 # Secure URL token helper — used to expose encode_pump_id() to Jinja templates.
@@ -463,6 +463,7 @@ with app.app_context():
 
     seed_pumps(app)
     seed_motors(db)
+    seed_pipe_reference_data(app)
 
 # ── Register Modular Blueprints ────────────────────────────────────────────────
 app.register_blueprint(main_bp)

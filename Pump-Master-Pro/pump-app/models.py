@@ -991,6 +991,64 @@ ACCESS_MODULE_INFO = {
 }
 
 
+class PipeFitting(db.Model):
+    """
+    Beginners Note: PipeFitting Model ('pipe_fittings' table)
+    Stores K-factor data for pipe fittings, valves, entries, exits, and transitions
+    used in minor loss calculations: hm = K × V² / (2g).
+    Previously hardcoded in pipe_network.js and routes/pipe_network.py.
+    """
+    __tablename__ = 'pipe_fittings'
+
+    id              = db.Column(db.Integer, primary_key=True)
+    key             = db.Column(db.String(60), unique=True, nullable=False)   # e.g. 'gate_valve_open'
+    label           = db.Column(db.String(120), nullable=False)               # e.g. 'Gate Valve (Open)'
+    k_factor        = db.Column(db.Float, nullable=False)                     # K value for hm = K·V²/2g
+    category        = db.Column(db.String(40), default='general')             # 'valve', 'elbow', 'entry', 'exit', etc.
+    organisation_id = db.Column(db.Integer, nullable=True)                    # NULL = global (visible to all)
+    sort_order      = db.Column(db.Integer, default=0)
+    is_active       = db.Column(db.Boolean, default=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'key': self.key,
+            'label': self.label,
+            'K': self.k_factor,
+            'category': self.category,
+            'sort_order': self.sort_order,
+            'is_active': self.is_active,
+        }
+
+
+class PipeMaterial(db.Model):
+    """
+    Beginners Note: PipeMaterial Model ('pipe_materials' table)
+    Stores absolute roughness (ε) values in mm for pipe materials used in
+    Darcy-Weisbach / Colebrook-White friction factor calculations.
+    Previously hardcoded in pipe_network.js and routes/pipe_network.py.
+    """
+    __tablename__ = 'pipe_materials'
+
+    id              = db.Column(db.Integer, primary_key=True)
+    key             = db.Column(db.String(60), unique=True, nullable=False)   # e.g. 'commercial_steel'
+    label           = db.Column(db.String(120), nullable=False)               # e.g. 'Commercial Steel (e = 0.046 mm)'
+    roughness_mm    = db.Column(db.Float, nullable=False)                     # absolute roughness ε in mm
+    organisation_id = db.Column(db.Integer, nullable=True)                    # NULL = global (visible to all)
+    sort_order      = db.Column(db.Integer, default=0)
+    is_active       = db.Column(db.Boolean, default=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'key': self.key,
+            'label': self.label,
+            'roughness_mm': self.roughness_mm,
+            'sort_order': self.sort_order,
+            'is_active': self.is_active,
+        }
+
+
 class Organisation(db.Model):
     """
     Beginners Note: Organisation Model ('organisations' table)

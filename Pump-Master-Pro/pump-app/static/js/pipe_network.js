@@ -644,7 +644,9 @@ function buildNodeSVG(node, isSel, minElev) {
   }
 
   // Connection port (only visible in connect mode)
+  // Connection port + fitting arm hints (only in connect mode)
   if (state.mode === 'connect') {
+    // 1. Port dot — appears on EVERY node as the click target
     const port = mkSVG('circle', {
       r: 7, fill: '#22c55e', stroke: '#22c55e', 'stroke-width': 2,
       opacity: 0.9,
@@ -652,8 +654,23 @@ function buildNodeSVG(node, isSel, minElev) {
     port.style.cursor = 'crosshair';
     port.addEventListener('click', e => { e.stopPropagation(); onPortClick(node.id); });
     g.appendChild(port);
-  }
 
+    // 2. Arm hints — only for fittings so users see which side the pipe attaches to
+    if (node.type === 'elbow' || node.type === 'valve') {
+      const arms = node.type === 'elbow' ? getElbowArms(node) : getValveArms(node);
+      [arms.angA, arms.angB].forEach(ang => {
+        const len = 30;
+        g.appendChild(mkSVG('line', {
+          x1: 0, y1: 0,
+          x2: Math.cos(ang) * len,
+          y2: Math.sin(ang) * len,
+          stroke: '#22c55e', 'stroke-width': 1.5,
+          'stroke-dasharray': '3 3', opacity: 0.6,
+          'pointer-events': 'none',
+        }));
+      });
+    }
+  }
   return g;
 }
 

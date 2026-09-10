@@ -119,12 +119,12 @@ function defaultNodeProps(type, count) {
   const lbl = `${type.charAt(0).toUpperCase()}${type.slice(1)} ${count + 1}`;
   switch (type) {
     case 'reservoir': return { label: lbl, elevation_m: 0 };
-    case 'pump': return { label: lbl, flow_m3h: 10, elevation_m: 0 };
     case 'tank': return { label: lbl, elevation_m: 0 };
     case 'junction': return { label: lbl, elevation_m: 0 };
     case 'discharge': return { label: lbl, elevation_m: 0 };
     case 'valve': return { label: lbl, elevation_m: 0, fitting_key: 'gate_valve_open' };
     case 'elbow': return { label: lbl, elevation_m: 0, fitting_key: 'elbow_90_standard' };
+    case 'pump': return { label: lbl, flow_m3h: 10, elevation_m: 0, pump_config: 'end_suction' };
     default: return { label: lbl };
   }
 }
@@ -140,7 +140,118 @@ function defaultPipeProps(id) {
     routing: 'auto',   // 'auto' | 'straight' | 'orthogonal'
   };
 }
+/**
+ * Return the maximum number of pipes that can connect to a node.
+ * If the node has a `pump_config` (for pumps), the suction / discharge
+ * counts override the defaults.
+ *
+ * Also returns `sideLimits` — how many pipes each arm of the fitting can take.
+ */
+function getNodePortLimits(node) {
+  switch (node.type) {
+    // ── Fittings: strictly 2 ports (one per arm) ─────────────────────
+    case 'elbow':
+      return { total: 2, perArm: { A: 1, B: 1 }, arms: ['A', 'B'] };
+    case 'valve':
+      return { total: 2, perArm: { A: 1, B: 1 }, arms: ['A', 'B'] };
 
+    // ── Pump: varies by configuration ────────────────────────────────
+    case 'pump': {
+      const cfg = node.props.pump_config || 'end_suction';
+      switch (cfg) {
+        case 'double_suction':
+          // 2 suction + 1 discharge
+          return { total: 3, sides: { suction: 2, discharge: 1 } };
+        case 'double_discharge':
+          // 1 suction + 2 discharge
+          return { total: 3, sides: { suction: 1, discharge: 2 } };
+        case 'double_both':
+          // 2 suction + 2 discharge
+          return { total: 4, sides: { suction: 2, discharge: 2 } };
+        case 'inline':
+          // Inline pump: 1 in, 1 out
+          return { total: 2, sides: { suction: 1, discharge: 1 } };
+        case 'end_suction':
+        default:
+          // Standard end-suction: 1 suction + 1 discharge
+          return { total: 2, sides: { suction: 1, discharge: 1 } };
+      }
+    }
+
+    // ── Simple terminal nodes: 1 pipe ────────────────────────────────
+    case 'discharge':
+      return { total: 1 };
+
+    // ── Manifold-style nodes: up to 6 pipes ──────────────────────────
+    case 'junction':
+      return { total: 6 };   // a tee is 3, but junctions can act as manifolds
+    case 'reservoir':
+      return { total: 4 };   // inlet + outlet + spares
+    case 'tank':
+      return { total: 4 };
+
+    default:
+      return { total: 2 };
+  }
+}
+
+/**
+ * Count how many pipes are connected to a node, optionally filtered by side.
+ * For pumps, we classify each pipe as suction/discharge based on geometry:
+ *   - if the pipe comes from the left/above of the pump, it's suction
+ *   - if from the right/below, it's discharge
+ */
+function countNodeConnections(nodeId, nodeType, sideFilter) {
+  const node = findNode(nodeId);
+  if (!node) return 0;
+
+  const pipes = state.pipes.filter(p =>
+    p.fromNodeId === nodeId || p.toNodeId === nodeId
+  );
+
+  if (!sideFilter) return pipes.length;
+
+  // Classify each pipe by direction for pumps
+  if (nodeType === 'pump') {
+    const suctionPipes = pipes.filter(p => {
+      const other = otherNode(p, node);
+      if (!other) return false;
+      const ang = Math.atan2(other.y - node.y, other.x - node.x);
+      // Suction side: left half of circle (angle between 90° and 270°)
+      return Math.abs(normalizeAngle(ang)) > Math.PI / 2;
+    }).length;
+
+    const dischargePipes = pipes.length - suctionPipes;
+
+    if (sideFilter === 'suction') return suctionPipes;
+    if (sideFilter === 'discharge') return dischargePipes;
+  }
+
+  return pipes.length;
+}
+
+/**
+ * Count how many pipes connect to a specific arm of an elbow/valve.
+ */
+function countArmConnections(nodeId, armKey) {
+  const node = findNode(nodeId);
+  if (!node) return 0;
+
+  const arms = node.type === 'elbow' ? getElbowArms(node) : getValveArms(node);
+  const armAng = armKey === 'A' ? arms.angA : arms.angB;
+  const armTip = armKey === 'A' ? arms.armA : arms.armB;
+
+  return state.pipes.filter(p => {
+    if (p.fromNodeId !== nodeId && p.toNodeId !== nodeId) return false;
+    const other = otherNode(p, node);
+    if (!other) return false;
+
+    // Check if the other node is roughly along this arm's direction
+    const toOther = Math.atan2(other.y - node.y, other.x - node.x);
+    const diff = Math.abs(normalizeAngle(toOther - armAng));
+    return diff < Math.PI / 4;   // within ±45° of the arm
+  }).length;
+}
 // ============================================================================
 // ORTHOGONAL ROUTING
 // ============================================================================
@@ -629,29 +740,33 @@ function buildNodeSVG(node, isSel, minElev) {
   // Connection port (only visible in connect mode)
   // Connection port + fitting arm hints (only in connect mode)
   if (state.mode === 'connect') {
-    // 1. Port dot — appears on EVERY node as the click target
+    const limits = getNodePortLimits(node);
+    const used = countNodeConnections(node.id, node.type);
+    const isFull = used >= limits.total;
+
+    // Port circle: green if free, red if full
     const port = mkSVG('circle', {
-      r: 7, fill: '#22c55e', stroke: '#22c55e', 'stroke-width': 2,
-      opacity: 0.9,
+      r: 7,
+      fill: isFull ? '#ef4444' : '#22c55e',
+      stroke: isFull ? '#ef4444' : '#22c55e',
+      'stroke-width': 2,
+      opacity: isFull ? 0.5 : 0.9,
     });
-    port.style.cursor = 'crosshair';
+    port.style.cursor = isFull ? 'not-allowed' : 'crosshair';
     port.addEventListener('click', e => { e.stopPropagation(); onPortClick(node.id); });
     g.appendChild(port);
 
-    // 2. Arm hints — only for fittings so users see which side the pipe attaches to
-    if (node.type === 'elbow' || node.type === 'valve') {
-      const arms = node.type === 'elbow' ? getElbowArms(node) : getValveArms(node);
-      [arms.angA, arms.angB].forEach(ang => {
-        const len = 30;
-        g.appendChild(mkSVG('line', {
-          x1: 0, y1: 0,
-          x2: Math.cos(ang) * len,
-          y2: Math.sin(ang) * len,
-          stroke: '#22c55e', 'stroke-width': 1.5,
-          'stroke-dasharray': '3 3', opacity: 0.6,
-          'pointer-events': 'none',
-        }));
+    // Small badge with port count for pumps
+    if (node.type === 'pump') {
+      const badge = mkSVG('text', {
+        x: 0, y: -14,
+        'text-anchor': 'middle',
+        'font-size': 9, fill: isFull ? '#ef4444' : '#22c55e',
+        'font-family': 'Inter, sans-serif', 'font-weight': 700,
+        'pointer-events': 'none',
       });
+      badge.textContent = `${used}/${limits.total}`;
+      g.appendChild(badge);
     }
   }
   return g;
@@ -1101,28 +1216,116 @@ function onNodeDown(e, nodeId) {
 
 function onPortClick(nodeId) {
   if (state.mode !== 'connect') return;
+
   if (!state.drawingPipe) {
-    state.drawingPipe = { fromNodeId: nodeId, mouseX: 0, mouseY: 0 };
-    toast('Click a destination node to complete the pipe.');
-  } else {
-    const fromId = state.drawingPipe.fromNodeId;
-    if (fromId === nodeId) {
-      toast('Cannot connect a node to itself.', 'warn');
+    // ── First click: check the SOURCE node has a free port ─────────
+    const srcNode = findNode(nodeId);
+    if (!srcNode) return;
+
+    const limits = getNodePortLimits(srcNode);
+    const used = countNodeConnections(nodeId, srcNode.type);
+    if (used >= limits.total) {
+      toast(`Cannot start pipe — ${srcNode.type} already has ${used}/${limits.total} connections.`, 'warn');
       return;
     }
-    const dup = state.pipes.some(
-      p => (p.fromNodeId === fromId && p.toNodeId === nodeId) ||
-        (p.fromNodeId === nodeId && p.toNodeId === fromId)
-    );
-    if (dup) {
-      toast('A pipe already connects these two nodes.', 'warn');
-      state.drawingPipe = null; updateDraftLine(); return;
-    }
-    addPipe(fromId, nodeId);
-    state.drawingPipe = null;
-    updateDraftLine();
-    setMode('select');
+
+    state.drawingPipe = { fromNodeId: nodeId, mouseX: 0, mouseY: 0 };
+    toast('Click a destination node to complete the pipe.');
+    return;
   }
+
+  // ── Second click: check BOTH ends ─────────────────────────────
+  const fromId = state.drawingPipe.fromNodeId;
+  const toId = nodeId;
+
+  if (fromId === nodeId) {
+    toast('Cannot connect a node to itself.', 'warn');
+    return;
+  }
+
+  const srcNode = findNode(fromId);
+  const dstNode = findNode(toId);
+  if (!srcNode || !dstNode) return;
+
+  // Duplicate check
+  const dup = state.pipes.some(
+    p => (p.fromNodeId === fromId && p.toNodeId === toId) ||
+      (p.fromNodeId === toId && p.toNodeId === fromId)
+  );
+  if (dup) {
+    toast('A pipe already connects these two nodes.', 'warn');
+    state.drawingPipe = null; updateDraftLine(); return;
+  }
+
+  // ── SOURCE validation ────────────────────────────────────────
+  if (!canConnect(srcNode, dstNode, fromId, toId)) {
+    state.drawingPipe = null; updateDraftLine(); return;
+  }
+  // ── DESTINATION validation ───────────────────────────────────
+  if (!canConnect(dstNode, srcNode, toId, fromId)) {
+    state.drawingPipe = null; updateDraftLine(); return;
+  }
+
+  addPipe(fromId, toId);
+  state.drawingPipe = null;
+  updateDraftLine();
+  setMode('select');
+}
+
+/**
+ * Validate that `node` can accept one more pipe coming from `otherNode`.
+ * Returns true if OK; shows a toast and returns false otherwise.
+ */
+function canConnect(node, otherNode, nodeId, otherNodeId) {
+  const limits = getNodePortLimits(node);
+
+  // 1. Total connection count
+  const totalUsed = countNodeConnections(nodeId, node.type);
+  if (totalUsed >= limits.total) {
+    toast(`Cannot connect — ${node.type} already has ${totalUsed}/${limits.total} pipes.`, 'warn');
+    return false;
+  }
+
+  // 2. Fitting arm-specific checks (elbow / valve)
+  if (node.type === 'elbow' || node.type === 'valve') {
+    // Determine which arm the new pipe will use
+    const arms = node.type === 'elbow' ? getElbowArms(node) : getValveArms(node);
+    const toOther = Math.atan2(otherNode.y - node.y, otherNode.x - node.x);
+    const diffA = Math.abs(normalizeAngle(toOther - arms.angA));
+    const diffB = Math.abs(normalizeAngle(toOther - arms.angB));
+    const chosenArm = diffA <= diffB ? 'A' : 'B';
+
+    const armUsed = countArmConnections(nodeId, chosenArm);
+    if (armUsed >= 1) {
+      toast(`Cannot connect — ${node.type} arm ${chosenArm} is already occupied.`, 'warn');
+      return false;
+    }
+  }
+
+  // 3. Pump side-specific checks
+  if (node.type === 'pump') {
+    const cfg = node.props.pump_config || 'end_suction';
+    const sideLimits = {
+      end_suction: { suction: 1, discharge: 1 },
+      double_suction: { suction: 2, discharge: 1 },
+      double_discharge: { suction: 1, discharge: 2 },
+      double_both: { suction: 2, discharge: 2 },
+      inline: { suction: 1, discharge: 1 },
+    }[cfg] || { suction: 1, discharge: 1 };
+
+    // Determine the side this new pipe would attach to
+    const toOther = Math.atan2(otherNode.y - node.y, otherNode.x - node.x);
+    const isSuction = Math.abs(normalizeAngle(toOther)) > Math.PI / 2;
+    const side = isSuction ? 'suction' : 'discharge';
+
+    const used = countNodeConnections(nodeId, 'pump', side);
+    if (used >= sideLimits[side]) {
+      toast(`Cannot connect — pump ${side} side is full (${used}/${sideLimits[side]}).`, 'warn');
+      return false;
+    }
+  }
+
+  return true;
 }
 
 // ============================================================================
@@ -1200,6 +1403,10 @@ function showNodeProps(node) {
     if (node.type === 'valve' || node.type === 'elbow') {
       setVal('np-fitting-key', node.props.fitting_key);
     }
+  }
+  if (node.type === 'pump') {
+    setVal('np-flow', node.props.flow_m3h ?? 10);
+    setVal('np-pump-config', node.props.pump_config || 'end_suction');
   }
 }
 
@@ -1281,6 +1488,14 @@ function onPumpFlowChange() {
   const node = state.selected?.kind === 'node' ? findNode(state.selected.id) : null;
   if (node && node.type === 'pump')
     node.props.flow_m3h = parseFloat(document.getElementById('np-flow').value) || 10;
+}
+
+function onPumpConfigChange() {
+  const node = state.selected?.kind === 'node' ? findNode(state.selected.id) : null;
+  if (node && node.type === 'pump') {
+    node.props.pump_config = document.getElementById('np-pump-config').value;
+    renderAll();
+  }
 }
 function onNodeFittingChange() {
   const node = state.selected?.kind === 'node' ? findNode(state.selected.id) : null;
@@ -1615,6 +1830,7 @@ function init() {
   document.getElementById('np-elev')?.addEventListener('change', onNodeElevChange);
   document.getElementById('np-flow')?.addEventListener('change', onPumpFlowChange);
   document.getElementById('np-fitting-key')?.addEventListener('change', onNodeFittingChange);
+  document.getElementById('np-pump-config')?.addEventListener('change', onPumpConfigChange);
 
   // Pipe property inputs (includes pp-routing now)
   ['pp-label', 'pp-diameter', 'pp-length', 'pp-elev-change', 'pp-material', 'pp-routing'].forEach(id =>
@@ -1672,8 +1888,9 @@ function loadDemoNetwork() {
     },
     {
       id: 'N-2', type: 'pump', x: 300, y: 350,
-      props: { label: 'Pump 1', flow_m3h: 15, elevation_m: 0 }
+      props: { label: 'Pump 1', flow_m3h: 15, elevation_m: 0, pump_config: 'end_suction' }
     },
+
     {
       id: 'N-3', type: 'junction', x: 500, y: 350,
       props: { label: 'Tee', elevation_m: 2 }

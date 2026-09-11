@@ -968,6 +968,99 @@
     justify-content: center;
     flex-shrink: 0;
   }
+  /* ── Floating Contextual Configuration Popover ── */
+  .pn-popover {
+    position: absolute;
+    z-index: 1000;
+    width: 260px;
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(12px);
+    border: 1px solid #334155;
+    border-radius: 10px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
+    font-size: 12px;
+    animation: popoverFadeIn 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: auto;
+    user-select: none;
+    transition: opacity 0.1s ease, transform 0.1s ease;
+  }
+  @keyframes popoverFadeIn {
+    from { opacity: 0; transform: scale(0.94) translateY(-4px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .pn-popover-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid #1e293b;
+    background: rgba(30, 41, 59, 0.5);
+    border-top-left-radius: 9px;
+    border-top-right-radius: 9px;
+  }
+  .pn-popover-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    color: #f8fafc;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .pn-popover-close {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    border-radius: 4px;
+  }
+  .pn-popover-close:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .pn-popover-body {
+    padding: 8px 10px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .pn-popover-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    color: #94a3b8;
+    margin-bottom: 2px;
+  }
+  .pn-popover-option:hover {
+    background: rgba(56, 189, 248, 0.14);
+    color: #38bdf8;
+  }
+  .pn-popover-option.active {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+    font-weight: 600;
+  }
+  .pn-popover-option-k {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.4);
+    color: #fbbf24;
+    font-family: monospace;
+  }
+  .pn-popover-divider {
+    height: 1px;
+    background: #1e293b;
+    margin: 8px 0;
+  }
 </style>
 <div id="tab-panel-pipenet" style="display:none;">
 
@@ -995,17 +1088,20 @@
     <button id="btn-add-tank" class="pn-btn" data-mode="add-tank" title="Place Tank">
       <i class="bi bi-cup-fill" style="color:#22c55e;"></i> Tank
     </button>
-    <button id="btn-add-junction" class="pn-btn" data-mode="add-junction" title="Place Junction / Tee">
+    <button id="btn-add-junction" class="pn-btn" data-mode="add-junction" title="Place Manifold Junction">
       <i class="bi bi-intersect" style="color:#f59e0b;"></i> Junction
     </button>
     <button id="btn-add-discharge" class="pn-btn" data-mode="add-discharge" title="Place Faucet / Discharge Tap">
       <i class="bi bi-droplet-fill" style="color:#0284c7;"></i> Faucet
     </button>
     <div class="pn-sep"></div>
-    <button id="btn-add-valve" class="pn-btn" data-mode="add-valve" title="Place Ball Valve">
+    <button id="btn-add-tee" class="pn-btn" data-mode="add-tee" title="Place 3-Way Pipe Tee Fitting">
+      <i class="bi bi-diagram-3" style="color:#f97316;"></i> Tee
+    </button>
+    <button id="btn-add-valve" class="pn-btn" data-mode="add-valve" title="Place Valve (Gate, Globe, Ball, etc.)">
       <i class="bi bi-heptagon-half" style="color:#ef4444;"></i> Valve
     </button>
-    <button id="btn-add-elbow" class="pn-btn" data-mode="add-elbow" title="Place 90° Elbow Fitting">
+    <button id="btn-add-elbow" class="pn-btn" data-mode="add-elbow" title="Place 90° / 45° Elbow Fitting">
       <i class="bi bi-arrow-return-right" style="color:#ec4899;"></i> Elbow
     </button>
 
@@ -1096,6 +1192,20 @@
         </span>
         <span style="margin-left:auto;color:#475569;">Scroll=zoom &bull; Middle-drag=pan &bull; Del=delete</span>
       </div>
+
+      <!-- Floating Contextual Configuration Popover -->
+      <div id="pn-context-popover" class="pn-popover" style="display:none;">
+        <div class="pn-popover-header">
+          <div class="pn-popover-title">
+            <span id="popover-icon"><i class="bi bi-sliders"></i></span>
+            <span id="popover-title">Configure Element</span>
+          </div>
+          <button id="popover-close" class="pn-popover-close" title="Close menu">&times;</button>
+        </div>
+        <div id="popover-body" class="pn-popover-body">
+          <!-- Populated dynamically by JS -->
+        </div>
+      </div>
     </div>
 
     <!-- Right properties panel -->
@@ -1132,8 +1242,40 @@
           <input id="np-flow" type="number" step="0.5" min="0" class="pp-input" value="10">
         </div>
         <div id="np-fitting-fields" style="display:none;">
-          <div class="pp-section-title" style="margin-top:8px;"><i class="bi bi-tools"></i> Fitting Type</div>
+          <div class="pp-section-title" style="margin-top:8px;"><i class="bi bi-tools"></i> Fitting Configuration</div>
+          <label class="pp-label">Fitting Model / Subtype</label>
           <select id="np-fitting-key" class="pp-input"></select>
+
+          <!-- Tee-only branch rotation controls -->
+          <div id="np-tee-rotation-group" style="display:none;margin-top:8px;">
+            <label class="pp-label">Tee Branch Orientation</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <select id="np-tee-rotation" class="pp-input" style="flex:1;">
+                <option value="0">0° — Branch Down</option>
+                <option value="90">90° — Branch Left</option>
+                <option value="180">180° — Branch Up</option>
+                <option value="270">270° — Branch Right</option>
+              </select>
+              <button id="btn-rotate-tee" class="pn-btn" title="Rotate Branch 90°" style="padding:5px 8px;" type="button">
+                <i class="bi bi-arrow-clockwise"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- K Factor & Custom K override -->
+          <div style="margin-top:10px;padding:8px;background:rgba(255,255,255,0.03);border:1px solid #30363d;border-radius:6px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <label class="pp-label" style="margin:0;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                <input type="checkbox" id="np-is-custom-k" style="accent-color:#f59e0b;cursor:pointer;">
+                Custom K Factor
+              </label>
+              <span id="np-k-display" style="font-size:11px;font-weight:600;color:#fbbf24;font-family:monospace;">K = 0.40</span>
+            </div>
+            <div id="np-custom-k-group" style="display:none;margin-top:6px;">
+              <input id="np-custom-k" type="number" step="0.01" min="0" class="pp-input" placeholder="Enter custom K (e.g. 1.25)">
+              <div style="font-size:10px;color:#64748b;margin-top:2px;">Overrides standard table K value</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1169,6 +1311,11 @@
           <span style="float:right;">K<sub>total</sub>=<span id="pp-ktotal">0.00</span></span>
         </div>
         <div id="pp-fittings-list" style="max-height:180px;overflow-y:auto;"></div>
+
+        <div style="margin-top:8px;padding:6px 8px;background:rgba(255,255,255,0.02);border:1px solid #21262d;border-radius:6px;">
+          <label class="pp-label" style="margin-bottom:3px;">Additional Custom K (Additive)</label>
+          <input id="pp-custom-k" type="number" step="0.01" min="0" class="pp-input" placeholder="0.00" value="0">
+        </div>
       </div>
     </div><!-- end props panel -->
   </div><!-- end canvas+props row -->

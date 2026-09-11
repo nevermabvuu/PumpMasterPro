@@ -129,8 +129,29 @@ def calculate_segment(seg, global_flow_m3h):
     # Major (pipe-wall friction) losses
     hf_major  = f * (L_m / D_m) * vel_head
 
-    # Minor (fitting) losses
-    K_total   = sum(fitting_k.get(k, 0.0) for k in fittings)
+    # Minor (fitting) losses supporting both standard lookup keys and custom K overrides
+    K_total = 0.0
+    for item in fittings:
+        if isinstance(item, dict):
+            k_val = item.get('k')
+            if k_val is not None:
+                try:
+                    K_total += float(k_val)
+                except (ValueError, TypeError):
+                    K_total += float(fitting_k.get(item.get('key'), 0.0))
+            else:
+                K_total += float(fitting_k.get(item.get('key'), 0.0))
+        elif isinstance(item, (int, float)):
+            K_total += float(item)
+        elif isinstance(item, str):
+            K_total += float(fitting_k.get(item, 0.0))
+
+    if seg.get('custom_k') is not None:
+        try:
+            K_total += float(seg.get('custom_k'))
+        except (ValueError, TypeError):
+            pass
+
     hf_minor  = K_total * vel_head
 
     # Elevation head (positive = uphill = adds to required pump head)

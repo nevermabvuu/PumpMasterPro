@@ -96,6 +96,7 @@ function getNodeRadius(node, viewMode) {
     switch (node.type) {
       case 'elbow': return 4;
       case 'valve': return 12;
+      case 'tee': return 14;
       case 'pump': return 24;
       case 'junction': return 10;
       case 'tank': return 30;
@@ -107,6 +108,7 @@ function getNodeRadius(node, viewMode) {
     switch (node.type) {
       case 'elbow': return 3;
       case 'valve': return 10;
+      case 'tee': return 12;
       case 'pump': return 34;
       case 'junction': return 9;
       case 'tank': return 28;
@@ -124,8 +126,9 @@ function defaultNodeProps(type, count) {
     case 'tank': return { label: lbl, elevation_m: 0 };
     case 'junction': return { label: lbl, elevation_m: 0 };
     case 'discharge': return { label: lbl, elevation_m: 0 };
-    case 'valve': return { label: lbl, elevation_m: 0, fitting_key: 'gate_valve_open' };
-    case 'elbow': return { label: lbl, elevation_m: 0, fitting_key: 'elbow_90_standard' };
+    case 'tee': return { label: lbl, elevation_m: 0, fitting_key: 'tee_run_through', rotation_deg: 0, custom_k: null, is_custom_k: false };
+    case 'valve': return { label: lbl, elevation_m: 0, fitting_key: 'gate_valve_open', custom_k: null, is_custom_k: false };
+    case 'elbow': return { label: lbl, elevation_m: 0, fitting_key: 'elbow_90_standard', custom_k: null, is_custom_k: false };
     case 'pump': return { label: lbl, flow_m3h: 10, elevation_m: 0, pump_config: 'end_suction' };
     default: return { label: lbl };
   }
@@ -139,6 +142,7 @@ function defaultPipeProps(id) {
     material: 'commercial_steel',
     elev_change_m: 0.0,
     fittings: [],
+    custom_k: 0.0,
     routing: 'auto',   // 'auto' | 'straight' | 'orthogonal'
   };
 }
@@ -151,11 +155,13 @@ function defaultPipeProps(id) {
  */
 function getNodePortLimits(node) {
   switch (node.type) {
-    // ── Fittings: strictly 2 ports (one per arm) ─────────────────────
+    // ── Fittings ─────────────────────────────────────────────────────
     case 'elbow':
       return { total: 2, perArm: { A: 1, B: 1 }, arms: ['A', 'B'] };
     case 'valve':
       return { total: 2, perArm: { A: 1, B: 1 }, arms: ['A', 'B'] };
+    case 'tee':
+      return { total: 3, perArm: { runA: 1, runB: 1, branch: 1 }, arms: ['runA', 'runB', 'branch'] };
 
     // ── Pump: varies by configuration ────────────────────────────────
     case 'pump': {
@@ -233,15 +239,30 @@ function countNodeConnections(nodeId, nodeType, sideFilter) {
 }
 
 /**
- * Count how many pipes connect to a specific arm of an elbow/valve.
+ * Count how many pipes connect to a specific arm of an elbow/valve/tee.
  */
 function countArmConnections(nodeId, armKey) {
   const node = findNode(nodeId);
   if (!node) return 0;
 
+  if (node.type === 'tee') {
+    const arms = getTeeArms(node);
+    let armAng = arms.angA;
+    if (armKey === 'runB') armAng = arms.angB;
+    else if (armKey === 'branch') armAng = arms.angC;
+
+    return state.pipes.filter(p => {
+      if (p.fromNodeId !== nodeId && p.toNodeId !== nodeId) return false;
+      const other = otherNode(p, node);
+      if (!other) return false;
+      const toOther = Math.atan2(other.y - node.y, other.x - node.x);
+      const diff = Math.abs(normalizeAngle(toOther - armAng));
+      return diff < Math.PI / 4;   // within ±45° of the arm
+    }).length;
+  }
+
   const arms = node.type === 'elbow' ? getElbowArms(node) : getValveArms(node);
   const armAng = armKey === 'A' ? arms.angA : arms.angB;
-  const armTip = armKey === 'A' ? arms.armA : arms.armB;
 
   return state.pipes.filter(p => {
     if (p.fromNodeId !== nodeId && p.toNodeId !== nodeId) return false;
@@ -670,19 +691,33 @@ function renderLegend() {
     `);
   }
 
-  // Tee / Junction
+  // Manifold Junction
   if (nodeCounts.junction) {
     const count = nodeCounts.junction;
     rows.push(`
       <div class="pn-legend-row">
         <div class="pn-legend-swatch">
           <svg width="16" height="14" viewBox="0 0 16 14">
-            <line x1="2" y1="3" x2="14" y2="3" stroke="#cbd5e1" stroke-width="3" />
-            <line x1="8" y1="3" x2="8" y2="13" stroke="#cbd5e1" stroke-width="3" />
-            <circle cx="8" cy="12" r="2" fill="#94a3b8" />
+            <circle cx="8" cy="7" r="5" fill="#64748b" stroke="#f59e0b" stroke-width="1.5" />
           </svg>
         </div>
-        <span>Tee / Junction${count > 1 ? ` (${count})` : ''}</span>
+        <span>Manifold Junction${count > 1 ? ` (${count})` : ''}</span>
+      </div>
+    `);
+  }
+
+  // 3-Way Pipe Tee
+  if (nodeCounts.tee) {
+    const count = nodeCounts.tee;
+    rows.push(`
+      <div class="pn-legend-row">
+        <div class="pn-legend-swatch">
+          <svg width="16" height="14" viewBox="0 0 16 14">
+            <line x1="2" y1="4" x2="14" y2="4" stroke="#f97316" stroke-width="2.5" />
+            <line x1="8" y1="4" x2="8" y2="12" stroke="#f97316" stroke-width="2.5" />
+          </svg>
+        </div>
+        <span>Pipe Tee Fitting${count > 1 ? ` (${count})` : ''}</span>
       </div>
     `);
   }
@@ -973,6 +1008,32 @@ function resolveEndpoint(node, otherNode) {
     };
   }
 
+  // ── Tee: pick the arm (runA, runB, or branch) closest to the other node ──
+  if (node.type === 'tee') {
+    const arms = getTeeArms(node);
+    const candidateArms = [
+      { pt: arms.runA, ang: arms.angA },
+      { pt: arms.runB, ang: arms.angB },
+      { pt: arms.branch, ang: arms.angC }
+    ];
+    let best = candidateArms[0];
+    let bestDist = Math.hypot(otherNode.x - best.pt.x, otherNode.y - best.pt.y);
+    for (let i = 1; i < candidateArms.length; i++) {
+      const d = Math.hypot(otherNode.x - candidateArms[i].pt.x, otherNode.y - candidateArms[i].pt.y);
+      if (d < bestDist) {
+        bestDist = d;
+        best = candidateArms[i];
+      }
+    }
+    return {
+      x: best.pt.x,
+      y: best.pt.y,
+      isTee: true,
+      isFitting: true,
+      dirAngle: best.ang,
+    };
+  }
+
   // ── Valve: pipe must travel along the valve's axis ──
   if (node.type === 'valve') {
     const arms = getValveArms(node);
@@ -1036,6 +1097,24 @@ function resolveEndpointFacing(node, tx, ty) {
     const chosenAng = useA ? arms.angA : arms.angB;
     return { x: chosenArm.x, y: chosenArm.y, dirAngle: chosenAng, isValve: true };
   }
+  if (node.type === 'tee') {
+    const arms = getTeeArms(node);
+    const candidateArms = [
+      { pt: arms.runA, ang: arms.angA },
+      { pt: arms.runB, ang: arms.angB },
+      { pt: arms.branch, ang: arms.angC }
+    ];
+    let best = candidateArms[0];
+    let bestDist = Math.hypot(tx - best.pt.x, ty - best.pt.y);
+    for (let i = 1; i < candidateArms.length; i++) {
+      const d = Math.hypot(tx - candidateArms[i].pt.x, ty - candidateArms[i].pt.y);
+      if (d < bestDist) {
+        bestDist = d;
+        best = candidateArms[i];
+      }
+    }
+    return { x: best.pt.x, y: best.pt.y, dirAngle: best.ang, isTee: true };
+  }
   // Regular node
   const r = getNodeRadius(node, state.viewMode);
   const dx = tx - node.x;
@@ -1047,6 +1126,67 @@ function resolveEndpointFacing(node, tx, ty) {
     dirAngle: null,
   };
 }
+
+function getTeeArms(node) {
+  const rotationDeg = node.props.rotation_deg || 0;
+  const rad = (rotationDeg * Math.PI) / 180;
+  const armLength = 24;
+
+  // Run A = 180° + rad (Left), Run B = 0° + rad (Right), Branch = 90° + rad (Down)
+  const angA = normalizeAngle(Math.PI + rad);
+  const angB = normalizeAngle(rad);
+  const angC = normalizeAngle(Math.PI / 2 + rad);
+
+  return {
+    angA, angB, angC,
+    runA: {
+      x: node.x + Math.cos(angA) * armLength,
+      y: node.y + Math.sin(angA) * armLength,
+    },
+    runB: {
+      x: node.x + Math.cos(angB) * armLength,
+      y: node.y + Math.sin(angB) * armLength,
+    },
+    branch: {
+      x: node.x + Math.cos(angC) * armLength,
+      y: node.y + Math.sin(angC) * armLength,
+    },
+    armLength,
+    rotationDeg,
+  };
+}
+
+/**
+ * Return current effective K-factor for any fitting node (valve, elbow, tee).
+ * Respects custom K override when node.props.is_custom_k is true.
+ */
+function getNodeKFactor(node) {
+  if (!node) return 0;
+  if (node.props.is_custom_k && node.props.custom_k !== null && node.props.custom_k !== undefined && !isNaN(Number(node.props.custom_k))) {
+    return Number(node.props.custom_k);
+  }
+  const key = node.props.fitting_key;
+  if (key) {
+    const found = FITTINGS.find(f => f.key === key);
+    if (found && typeof found.K === 'number') return found.K;
+  }
+  const defaults = {
+    'tee_run_through': 0.40,
+    'tee_branch_flow': 1.80,
+    'elbow_90_standard': 0.90,
+    'elbow_90_long_radius': 0.60,
+    'elbow_45': 0.40,
+    'gate_valve_open': 0.20,
+    'gate_valve_half': 5.60,
+    'globe_valve_open': 10.0,
+    'ball_valve_open': 0.05,
+    'butterfly_valve_open': 0.30,
+    'check_valve_swing': 2.50,
+    'check_valve_ball': 4.50,
+  };
+  return defaults[key] || 0;
+}
+
 function getValveArms(node) {
   // Valve defaults to horizontal axis (arms left & right)
   const orientation = (node.props.orientation || 0) * Math.PI / 180;
@@ -1094,6 +1234,7 @@ function buildNodeSVG(node, isSel, minElev) {
     case 'discharge': drawDischarge(g, isSel, node); break;
     case 'valve': drawValveNode(g, isSel, node); break;
     case 'elbow': drawElbowNode(g, isSel, node); break;
+    case 'tee': drawTeeNode(g, isSel, node); break;
   }
 
   // Label below node (hide for elbow waypoints)
@@ -1266,31 +1407,176 @@ function drawDischarge(g, sel) {
 }
 
 /**
- * Valve node — drawn as an inline symbol (butterfly/gate) that sits ON the pipe.
- * The visual footprint is small so it blends into the pipe run.
+ * Valve node — drawn as an inline symbol that sits ON the pipe.
+ * Renders distinct shapes according to valve type (ball, gate, globe, butterfly, check).
  */
-function drawValveNode(g, sel) {
+function drawValveNode(g, sel, node) {
+  const fKey = node?.props?.fitting_key || 'gate_valve_open';
+  const kVal = getNodeKFactor(node);
+  const isCustom = Boolean(node?.props?.is_custom_k);
   const color = sel ? '#fca5a5' : '#ef4444';
   const fill = sel ? '#7f1d1d' : '#450a0a';
 
   if (state.viewMode === 'industrial') {
-    // Valve body: two trapezoids meeting in the middle (butterfly)
-    g.appendChild(mkSVG('polygon', {
-      points: '-16,-10 0,0 -16,10 16,-10 0,0 16,10',
-      fill: '#94a3b8', stroke: sel ? '#f59e0b' : '#334155', 'stroke-width': 1.5,
-    }));
-    // Stem
-    g.appendChild(mkSVG('rect', { x: -2, y: -22, width: 4, height: 12, fill: '#cbd5e1' }));
-    // Handwheel
-    g.appendChild(mkSVG('rect', { x: -12, y: -28, width: 24, height: 5, rx: 2.5, fill: '#ef4444', stroke: '#7f1d1d' }));
+    if (fKey.startsWith('ball_valve')) {
+      // Ball valve: spherical body with quarter-turn handle
+      g.appendChild(mkSVG('circle', { r: 11, fill: '#64748b', stroke: sel ? '#f59e0b' : '#334155', 'stroke-width': 2 }));
+      g.appendChild(mkSVG('circle', { r: 5, fill: '#38bdf8', opacity: 0.85 }));
+      // Flanges
+      g.appendChild(mkSVG('rect', { x: -16, y: -7, width: 4, height: 14, rx: 1, fill: '#475569', stroke: '#1e293b' }));
+      g.appendChild(mkSVG('rect', { x: 12, y: -7, width: 4, height: 14, rx: 1, fill: '#475569', stroke: '#1e293b' }));
+      // Quarter-turn handle
+      g.appendChild(mkSVG('rect', { x: -2, y: -16, width: 4, height: 7, fill: '#cbd5e1' }));
+      g.appendChild(mkSVG('rect', { x: -2, y: -20, width: 16, height: 5, rx: 2.5, fill: '#3b82f6', stroke: '#1d4ed8' }));
+    } else if (fKey.startsWith('check_valve')) {
+      // Check valve: directional body with internal diode arrow
+      g.appendChild(mkSVG('rect', { x: -14, y: -10, width: 28, height: 20, rx: 4, fill: '#475569', stroke: sel ? '#f59e0b' : '#334155', 'stroke-width': 1.5 }));
+      g.appendChild(mkSVG('polygon', { points: '-6,-7 6,0 -6,7', fill: '#22c55e' }));
+      g.appendChild(mkSVG('line', { x1: 6, y1: -7, x2: 6, y2: 7, stroke: '#22c55e', 'stroke-width': 2 }));
+    } else if (fKey.startsWith('globe_valve')) {
+      // Globe valve: bowtie with circular globe cavity & handwheel
+      g.appendChild(mkSVG('polygon', { points: '-16,-10 0,0 -16,10 16,-10 0,0 16,10', fill: '#64748b', stroke: sel ? '#f59e0b' : '#334155', 'stroke-width': 1.5 }));
+      g.appendChild(mkSVG('circle', { r: 5, fill: '#94a3b8', stroke: '#334155', 'stroke-width': 1 }));
+      g.appendChild(mkSVG('rect', { x: -2, y: -22, width: 4, height: 12, fill: '#cbd5e1' }));
+      g.appendChild(mkSVG('circle', { cx: 0, cy: -24, r: 8, fill: 'none', stroke: '#ef4444', 'stroke-width': 2.5 }));
+    } else if (fKey.startsWith('butterfly_valve')) {
+      // Butterfly valve: slim body with circular throttle disc
+      g.appendChild(mkSVG('circle', { r: 12, fill: '#475569', stroke: sel ? '#f59e0b' : '#334155', 'stroke-width': 2 }));
+      g.appendChild(mkSVG('line', { x1: -7, y1: -7, x2: 7, y2: 7, stroke: '#f59e0b', 'stroke-width': 3, 'stroke-linecap': 'round' }));
+      g.appendChild(mkSVG('rect', { x: -2, y: -22, width: 4, height: 11, fill: '#cbd5e1' }));
+      g.appendChild(mkSVG('rect', { x: -10, y: -26, width: 20, height: 5, rx: 2.5, fill: '#f59e0b' }));
+    } else {
+      // Gate valve: standard bowtie body with vertical spindle & handwheel
+      g.appendChild(mkSVG('polygon', {
+        points: '-16,-10 0,0 -16,10 16,-10 0,0 16,10',
+        fill: '#94a3b8', stroke: sel ? '#f59e0b' : '#334155', 'stroke-width': 1.5,
+      }));
+      g.appendChild(mkSVG('rect', { x: -2, y: -22, width: 4, height: 12, fill: '#cbd5e1' }));
+      g.appendChild(mkSVG('rect', { x: -12, y: -28, width: 24, height: 5, rx: 2.5, fill: fKey.includes('half') ? '#f59e0b' : '#ef4444', stroke: '#7f1d1d' }));
+      if (fKey.includes('half')) {
+        g.appendChild(mkSVG('line', { x1: 0, y1: -4, x2: 0, y2: 4, stroke: '#f59e0b', 'stroke-width': 2.5 }));
+      }
+    }
   } else {
-    // Bowtie shape (classic valve symbol)
-    g.appendChild(mkSVG('polygon', {
-      points: '-14,-10 0,0 -14,10 14,-10 0,0 14,10',
-      fill: fill, stroke: color, 'stroke-width': 2,
-      'stroke-linejoin': 'round',
-    }));
+    // Schematic view (symbolic ANSI standard)
+    if (fKey.startsWith('ball_valve')) {
+      g.appendChild(mkSVG('polygon', { points: '-14,-9 0,0 -14,9 14,-9 0,0 14,9', fill: fill, stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+      g.appendChild(mkSVG('circle', { cx: 0, cy: 0, r: 4, fill: '#38bdf8' }));
+    } else if (fKey.startsWith('check_valve')) {
+      g.appendChild(mkSVG('polygon', { points: '-12,-8 6,0 -12,8', fill: 'none', stroke: color, 'stroke-width': 2 }));
+      g.appendChild(mkSVG('line', { x1: 6, y1: -8, x2: 6, y2: 8, stroke: color, 'stroke-width': 2 }));
+    } else if (fKey.startsWith('globe_valve')) {
+      g.appendChild(mkSVG('polygon', { points: '-14,-9 0,0 -14,9 14,-9 0,0 14,9', fill: fill, stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+      g.appendChild(mkSVG('circle', { cx: 0, cy: 0, r: 4, fill: color }));
+    } else {
+      g.appendChild(mkSVG('polygon', {
+        points: '-14,-9 0,0 -14,9 14,-9 0,0 14,9',
+        fill: fill, stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round',
+      }));
+      g.appendChild(mkSVG('line', { x1: 0, y1: 0, x2: 0, y2: -14, stroke: color, 'stroke-width': 1.5 }));
+      g.appendChild(mkSVG('line', { x1: -7, y1: -14, x2: 7, y2: -14, stroke: color, 'stroke-width': 2 }));
+    }
   }
+
+  // K-factor badge below valve
+  const badgeText = `K=${kVal.toFixed(2)}${isCustom ? '*' : ''}`;
+  const badgeY = 22;
+  const badgeW = Math.max(46, badgeText.length * 6.5 + 8);
+  const badgeBg = mkSVG('rect', {
+    x: -badgeW / 2, y: badgeY - 8, width: badgeW, height: 15, rx: 3.5,
+    fill: '#0f172a', stroke: isCustom ? '#f59e0b' : '#ef4444', 'stroke-width': 1, opacity: 0.95,
+  });
+  g.appendChild(badgeBg);
+  const badgeTxt = mkSVG('text', {
+    x: 0, y: badgeY + 3, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 700,
+    fill: isCustom ? '#fbbf24' : '#fca5a5', 'font-family': 'Inter, monospace', 'pointer-events': 'none',
+  });
+  badgeTxt.textContent = badgeText;
+  g.appendChild(badgeTxt);
+
+  // Hit area
+  g.appendChild(mkSVG('circle', { cx: 0, cy: 0, r: 24, fill: 'transparent', 'pointer-events': 'all' }));
+}
+
+/**
+ * Tee fitting node — renders a proper 3-way piping tee with run and branch arms.
+ * Renders metallic cylindrical bodies with collars and flow arrows in industrial view,
+ * and standard ANSI 3-way symbols in schematic view.
+ */
+function drawTeeNode(g, sel, node) {
+  const rot = node.props.rotation_deg || 0;
+  const isBranch = node.props.fitting_key === 'tee_branch_flow';
+  const kVal = getNodeKFactor(node);
+  const isCustom = Boolean(node.props.is_custom_k);
+
+  // Group with branch orientation rotation applied
+  const tg = mkSVG('g', { transform: `rotate(${rot})` });
+
+  if (state.viewMode === 'industrial') {
+    // Outer outline (dark contour)
+    tg.appendChild(mkSVG('path', {
+      d: 'M -22,-9 L 22,-9 L 22,9 L 9,9 L 9,22 L -9,22 L -9,9 L -22,9 Z',
+      fill: '#0f172a', stroke: sel ? '#f59e0b' : '#334155', 'stroke-width': 2,
+    }));
+    // Inner metallic tee pipe body
+    tg.appendChild(mkSVG('path', {
+      d: 'M -20,-7 L 20,-7 L 20,7 L 7,7 L 7,20 L -7,20 L -7,7 L -20,7 Z',
+      fill: '#94a3b8',
+    }));
+    // Flanged end collars at the three ports
+    tg.appendChild(mkSVG('rect', { x: -24, y: -10, width: 4, height: 20, rx: 1.5, fill: '#64748b', stroke: '#334155', 'stroke-width': 1 }));
+    tg.appendChild(mkSVG('rect', { x: 20, y: -10, width: 4, height: 20, rx: 1.5, fill: '#64748b', stroke: '#334155', 'stroke-width': 1 }));
+    tg.appendChild(mkSVG('rect', { x: -10, y: 18, width: 20, height: 4, rx: 1.5, fill: '#64748b', stroke: '#334155', 'stroke-width': 1 }));
+
+    // Shading highlight on pipe crown
+    tg.appendChild(mkSVG('line', { x1: -18, y1: -2, x2: 18, y2: -2, stroke: 'rgba(255,255,255,0.4)', 'stroke-width': 2 }));
+    tg.appendChild(mkSVG('line', { x1: 0, y1: -2, x2: 0, y2: 18, stroke: 'rgba(255,255,255,0.3)', 'stroke-width': 2 }));
+
+    // Flow indicator path (orange accent)
+    if (isBranch) {
+      // Curved 90° diversion arrow from left run into branch
+      tg.appendChild(mkSVG('path', {
+        d: 'M -14,0 Q 0,0 0,14', fill: 'none', stroke: '#f97316', 'stroke-width': 2.5, 'stroke-linecap': 'round',
+      }));
+      tg.appendChild(mkSVG('polygon', { points: '-3,11 0,16 3,11', fill: '#f97316' }));
+    } else {
+      // Straight through run arrow
+      tg.appendChild(mkSVG('line', {
+        x1: -14, y1: 0, x2: 12, y2: 0, stroke: '#38bdf8', 'stroke-width': 2.5, 'stroke-linecap': 'round',
+      }));
+      tg.appendChild(mkSVG('polygon', { points: '10,-3 15,0 10,3', fill: '#38bdf8' }));
+    }
+  } else {
+    // Schematic view (single-line blueprint)
+    const color = sel ? '#f59e0b' : '#38bdf8';
+    tg.appendChild(mkSVG('line', { x1: -20, y1: 0, x2: 20, y2: 0, stroke: color, 'stroke-width': 3, 'stroke-linecap': 'round' }));
+    tg.appendChild(mkSVG('line', { x1: 0, y1: 0, x2: 0, y2: 20, stroke: color, 'stroke-width': 3, 'stroke-linecap': 'round' }));
+    tg.appendChild(mkSVG('circle', { cx: 0, cy: 0, r: 3.5, fill: color }));
+    // Terminal ticks
+    tg.appendChild(mkSVG('line', { x1: -20, y1: -4, x2: -20, y2: 4, stroke: color, 'stroke-width': 1.5 }));
+    tg.appendChild(mkSVG('line', { x1: 20, y1: -4, x2: 20, y2: 4, stroke: color, 'stroke-width': 1.5 }));
+    tg.appendChild(mkSVG('line', { x1: -4, y1: 20, x2: 4, y2: 20, stroke: color, 'stroke-width': 1.5 }));
+  }
+  g.appendChild(tg);
+
+  // K-factor badge (always horizontal for readability)
+  const badgeText = `K=${kVal.toFixed(2)}${isCustom ? '*' : ''}`;
+  const badgeY = -22;
+  const badgeW = Math.max(48, badgeText.length * 6.5 + 10);
+  const badgeBg = mkSVG('rect', {
+    x: -badgeW / 2, y: badgeY - 8, width: badgeW, height: 16, rx: 4,
+    fill: '#0f172a', stroke: isCustom ? '#f59e0b' : '#38bdf8', 'stroke-width': 1, opacity: 0.95,
+  });
+  g.appendChild(badgeBg);
+  const badgeTxt = mkSVG('text', {
+    x: 0, y: badgeY + 3.5, 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': 700,
+    fill: isCustom ? '#fbbf24' : '#7dd3fc', 'font-family': 'Inter, monospace', 'pointer-events': 'none',
+  });
+  badgeTxt.textContent = badgeText;
+  g.appendChild(badgeTxt);
+
+  // Hit area
+  g.appendChild(mkSVG('circle', { cx: 0, cy: 0, r: 28, fill: 'transparent', 'pointer-events': 'all' }));
 }
 
 /**
@@ -1583,6 +1869,7 @@ function applyTransform() {
   const vbX = -state.pan.x / state.zoom;
   const vbY = -state.pan.y / state.zoom;
   svgEl.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
+  updateContextPopoverPosition();
 }
 
 // ============================================================================
@@ -1680,7 +1967,7 @@ function canConnect(node, otherNode, nodeId, otherNodeId) {
     return false;
   }
 
-  // 2. Fitting arm-specific checks (elbow / valve)
+  // 2. Fitting arm-specific checks (elbow / valve / tee)
   if (node.type === 'elbow' || node.type === 'valve') {
     // Determine which arm the new pipe will use
     const arms = node.type === 'elbow' ? getElbowArms(node) : getValveArms(node);
@@ -1692,6 +1979,22 @@ function canConnect(node, otherNode, nodeId, otherNodeId) {
     const armUsed = countArmConnections(nodeId, chosenArm);
     if (armUsed >= 1) {
       toast(`Cannot connect — ${node.type} arm ${chosenArm} is already occupied.`, 'warn');
+      return false;
+    }
+  } else if (node.type === 'tee') {
+    const arms = getTeeArms(node);
+    const toOther = Math.atan2(otherNode.y - node.y, otherNode.x - node.x);
+    const diffA = Math.abs(normalizeAngle(toOther - arms.angA));
+    const diffB = Math.abs(normalizeAngle(toOther - arms.angB));
+    const diffC = Math.abs(normalizeAngle(toOther - arms.angC));
+    let chosenArm = 'runA';
+    let minDiff = diffA;
+    if (diffB < minDiff) { minDiff = diffB; chosenArm = 'runB'; }
+    if (diffC < minDiff) { minDiff = diffC; chosenArm = 'branch'; }
+
+    const armUsed = countArmConnections(nodeId, chosenArm);
+    if (armUsed >= 1) {
+      toast(`Cannot connect — Tee arm ${chosenArm} is already occupied.`, 'warn');
       return false;
     }
   }
@@ -1760,6 +2063,617 @@ function deleteSelected() {
 }
 
 // ============================================================================
+// CONTEXTUAL CONFIGURATION POPOVER
+// ============================================================================
+
+function hideContextPopover() {
+  const pop = document.getElementById('pn-context-popover');
+  if (pop) {
+    pop.style.display = 'none';
+    pop.innerHTML = '';
+  }
+}
+
+function updateContextPopoverPosition() {
+  const pop = document.getElementById('pn-context-popover');
+  if (!pop || pop.style.display === 'none' || !state.selected) return;
+
+  const canvasWrap = document.getElementById('pn-canvas-wrap');
+  if (!canvasWrap) return;
+
+  let targetX = 0;
+  let targetY = 0;
+
+  if (state.selected.kind === 'node') {
+    const node = findNode(state.selected.id);
+    if (!node) { hideContextPopover(); return; }
+    targetX = (node.x * state.zoom) + state.pan.x;
+    targetY = (node.y * state.zoom) + state.pan.y;
+  } else if (state.selected.kind === 'pipe') {
+    const pipe = findPipe(state.selected.id);
+    if (!pipe) { hideContextPopover(); return; }
+    const fn = findNode(pipe.fromNodeId);
+    const tn = findNode(pipe.toNodeId);
+    if (!fn || !tn) { hideContextPopover(); return; }
+    targetX = (((fn.x + tn.x) / 2) * state.zoom) + state.pan.x;
+    targetY = (((fn.y + tn.y) / 2) * state.zoom) + state.pan.y;
+  } else {
+    hideContextPopover();
+    return;
+  }
+
+  // Positioning: place next to the element, offset by 35px
+  let left = targetX + 35;
+  let top = targetY - 40;
+
+  const popW = pop.offsetWidth || 260;
+  const popH = pop.offsetHeight || 220;
+  const maxLeft = canvasWrap.clientWidth - popW - 15;
+  const maxTop = canvasWrap.clientHeight - popH - 15;
+
+  if (left > maxLeft) {
+    left = targetX - popW - 35;
+  }
+  if (left < 15) left = 15;
+  if (top > maxTop) top = maxTop;
+  if (top < 15) top = 15;
+
+  pop.style.left = `${Math.round(left)}px`;
+  pop.style.top = `${Math.round(top)}px`;
+}
+
+function showContextPopover(kind, id) {
+  const pop = document.getElementById('pn-context-popover');
+  if (!pop) return;
+
+  pop.onclick = (e) => e.stopPropagation();
+
+  if (kind === 'node') {
+    const node = findNode(id);
+    if (!node) { hideContextPopover(); return; }
+
+    if (node.type === 'valve') {
+      renderPopoverNodeValve(node, pop);
+    } else if (node.type === 'tee') {
+      renderPopoverNodeTee(node, pop);
+    } else if (node.type === 'elbow') {
+      renderPopoverNodeElbow(node, pop);
+    } else if (node.type === 'pump') {
+      renderPopoverNodePump(node, pop);
+    } else {
+      renderPopoverNodeDefault(node, pop);
+    }
+  } else if (kind === 'pipe') {
+    const pipe = findPipe(id);
+    if (!pipe) { hideContextPopover(); return; }
+    renderPopoverPipe(pipe, pop);
+  } else {
+    hideContextPopover();
+    return;
+  }
+
+  pop.style.display = 'block';
+  requestAnimationFrame(updateContextPopoverPosition);
+}
+
+function renderPopoverNodeValve(node, pop) {
+  const currentKey = node.props.fitting_key || 'gate_valve_open';
+  const isCustom = Boolean(node.props.is_custom_k);
+  const currentK = getNodeKFactor(node);
+
+  const valveOptions = [
+    { key: 'ball_valve_open', label: 'Ball Valve (Full Bore)', K: 0.05, icon: 'bi-record-circle' },
+    { key: 'gate_valve_open', label: 'Gate Valve (Open)', K: 0.20, icon: 'bi-door-open' },
+    { key: 'butterfly_valve_open', label: 'Butterfly Valve', K: 0.30, icon: 'bi-slash-circle' },
+    { key: 'check_valve_swing', label: 'Swing Check Valve', K: 2.50, icon: 'bi-arrow-right-circle' },
+    { key: 'check_valve_ball', label: 'Ball Check Valve', K: 4.50, icon: 'bi-arrow-right-circle-fill' },
+    { key: 'gate_valve_half', label: 'Gate Valve (50% Open)', K: 5.60, icon: 'bi-door-closed' },
+    { key: 'globe_valve_open', label: 'Globe Valve (Open)', K: 10.0, icon: 'bi-disc' },
+  ];
+
+  let optionsHtml = '';
+  valveOptions.forEach(opt => {
+    const isSelected = !isCustom && currentKey === opt.key;
+    optionsHtml += `
+      <div class="pn-popover-option ${isSelected ? 'active' : ''}" data-val="${opt.key}">
+        <div style="display:flex;align-items:center;gap:7px;">
+          <i class="bi ${opt.icon}" style="color:${isSelected ? '#38bdf8' : '#94a3b8'};"></i>
+          <span>${opt.label}</span>
+        </div>
+        <span class="pn-popover-badge">K=${opt.K}</span>
+      </div>
+    `;
+  });
+
+  pop.innerHTML = `
+    <div class="pn-popover-header">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <i class="bi bi-funnel" style="color:#ef4444;"></i>
+        <span class="pn-popover-title">Valve: ${node.props.label || node.id}</span>
+      </div>
+      <button class="pn-popover-close" title="Close"><i class="bi bi-x"></i></button>
+    </div>
+    <div class="pn-popover-body">
+      <div class="pn-popover-section-label">Select Valve Type</div>
+      <div class="pn-popover-list" id="pop-valve-list">
+        ${optionsHtml}
+      </div>
+
+      <div class="pn-popover-section-label" style="margin-top:10px;">Custom K-Factor</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#cbd5e1;margin:0;">
+          <input type="checkbox" id="pop-is-custom-k" ${isCustom ? 'checked' : ''} style="accent-color:#f59e0b;cursor:pointer;">
+          <span>Custom K Value</span>
+        </label>
+        <span style="font-size:11px;font-weight:700;color:${isCustom ? '#f59e0b' : '#38bdf8'};">
+          Active K = ${currentK.toFixed(2)}
+        </span>
+      </div>
+      <div id="pop-custom-k-wrap" style="display:${isCustom ? 'flex' : 'none'};align-items:center;gap:6px;">
+        <input type="number" id="pop-custom-k" class="pn-popover-input" step="0.05" min="0" value="${node.props.custom_k ?? currentK}">
+        <span style="font-size:10px;color:#64748b;">(loss = K·V²/2g)</span>
+      </div>
+    </div>
+  `;
+
+  pop.querySelector('.pn-popover-close').onclick = hideContextPopover;
+
+  pop.querySelectorAll('#pop-valve-list .pn-popover-option').forEach(el => {
+    el.onclick = () => {
+      node.props.fitting_key = el.dataset.val;
+      node.props.is_custom_k = false;
+      renderAll();
+      showNodeProps(node);
+      showContextPopover('node', node.id);
+      saveNetworkToStorage();
+    };
+  });
+
+  const isCustomCb = pop.querySelector('#pop-is-custom-k');
+  const customKIn = pop.querySelector('#pop-custom-k');
+
+  isCustomCb.onchange = (e) => {
+    node.props.is_custom_k = e.target.checked;
+    if (node.props.is_custom_k && (node.props.custom_k === null || node.props.custom_k === undefined)) {
+      node.props.custom_k = getNodeKFactor(node);
+    }
+    renderAll();
+    showNodeProps(node);
+    showContextPopover('node', node.id);
+    saveNetworkToStorage();
+  };
+
+  if (customKIn) {
+    const onCustomK = (e) => {
+      node.props.custom_k = parseFloat(e.target.value) || 0;
+      renderAll();
+      showNodeProps(node);
+      updateKDisplay(node);
+      saveNetworkToStorage();
+    };
+    customKIn.oninput = onCustomK;
+    customKIn.onchange = onCustomK;
+  }
+}
+
+function renderPopoverNodeTee(node, pop) {
+  const currentKey = node.props.fitting_key || 'tee_run_through';
+  const isCustom = Boolean(node.props.is_custom_k);
+  const currentK = getNodeKFactor(node);
+  const rot = node.props.rotation_deg || 0;
+
+  const teeOptions = [
+    { key: 'tee_run_through', label: 'Run Through (Straight Flow)', K: 0.40, desc: 'Flow continues straight through the header' },
+    { key: 'tee_branch_flow', label: 'Branch Flow (90° Divert / Combine)', K: 1.80, desc: 'Flow turns into or out of 90° branch' },
+  ];
+
+  let optionsHtml = '';
+  teeOptions.forEach(opt => {
+    const isSelected = !isCustom && currentKey === opt.key;
+    optionsHtml += `
+      <div class="pn-popover-option ${isSelected ? 'active' : ''}" data-val="${opt.key}">
+        <div>
+          <div style="font-weight:600;">${opt.label}</div>
+          <div style="font-size:10px;color:#64748b;margin-top:2px;">${opt.desc}</div>
+        </div>
+        <span class="pn-popover-badge">K=${opt.K}</span>
+      </div>
+    `;
+  });
+
+  pop.innerHTML = `
+    <div class="pn-popover-header">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <i class="bi bi-diagram-3" style="color:#38bdf8;"></i>
+        <span class="pn-popover-title">Tee: ${node.props.label || node.id}</span>
+      </div>
+      <button class="pn-popover-close" title="Close"><i class="bi bi-x"></i></button>
+    </div>
+    <div class="pn-popover-body">
+      <div class="pn-popover-section-label">Flow Path & Hydraulic Loss</div>
+      <div class="pn-popover-list" id="pop-tee-list">
+        ${optionsHtml}
+      </div>
+
+      <div class="pn-popover-section-label" style="margin-top:10px;">Branch Orientation</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <button id="pop-btn-rotate-tee" class="pn-btn" style="flex:1;padding:5px 8px;font-size:11px;">
+          <i class="bi bi-arrow-clockwise"></i> Rotate Branch 90°
+        </button>
+        <span style="font-family:monospace;font-size:12px;color:#38bdf8;font-weight:700;padding:4px 8px;background:#0d1117;border:1px solid #30363d;border-radius:4px;">
+          ${rot}°
+        </span>
+      </div>
+
+      <div class="pn-popover-section-label" style="margin-top:10px;">Custom K-Factor</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#cbd5e1;margin:0;">
+          <input type="checkbox" id="pop-is-custom-k" ${isCustom ? 'checked' : ''} style="accent-color:#f59e0b;cursor:pointer;">
+          <span>Custom K Value</span>
+        </label>
+        <span style="font-size:11px;font-weight:700;color:${isCustom ? '#f59e0b' : '#38bdf8'};">
+          Active K = ${currentK.toFixed(2)}
+        </span>
+      </div>
+      <div id="pop-custom-k-wrap" style="display:${isCustom ? 'flex' : 'none'};align-items:center;gap:6px;">
+        <input type="number" id="pop-custom-k" class="pn-popover-input" step="0.05" min="0" value="${node.props.custom_k ?? currentK}">
+        <span style="font-size:10px;color:#64748b;">(loss = K·V²/2g)</span>
+      </div>
+    </div>
+  `;
+
+  pop.querySelector('.pn-popover-close').onclick = hideContextPopover;
+
+  pop.querySelectorAll('#pop-tee-list .pn-popover-option').forEach(el => {
+    el.onclick = () => {
+      node.props.fitting_key = el.dataset.val;
+      node.props.is_custom_k = false;
+      renderAll();
+      showNodeProps(node);
+      showContextPopover('node', node.id);
+      saveNetworkToStorage();
+    };
+  });
+
+  pop.querySelector('#pop-btn-rotate-tee').onclick = () => {
+    node.props.rotation_deg = ((node.props.rotation_deg || 0) + 90) % 360;
+    renderAll();
+    showNodeProps(node);
+    showContextPopover('node', node.id);
+    saveNetworkToStorage();
+  };
+
+  const isCustomCb = pop.querySelector('#pop-is-custom-k');
+  const customKIn = pop.querySelector('#pop-custom-k');
+
+  isCustomCb.onchange = (e) => {
+    node.props.is_custom_k = e.target.checked;
+    if (node.props.is_custom_k && (node.props.custom_k === null || node.props.custom_k === undefined)) {
+      node.props.custom_k = getNodeKFactor(node);
+    }
+    renderAll();
+    showNodeProps(node);
+    showContextPopover('node', node.id);
+    saveNetworkToStorage();
+  };
+
+  if (customKIn) {
+    const onCustomK = (e) => {
+      node.props.custom_k = parseFloat(e.target.value) || 0;
+      renderAll();
+      showNodeProps(node);
+      updateKDisplay(node);
+      saveNetworkToStorage();
+    };
+    customKIn.oninput = onCustomK;
+    customKIn.onchange = onCustomK;
+  }
+}
+
+function renderPopoverNodeElbow(node, pop) {
+  const currentKey = node.props.fitting_key || 'elbow_90_standard';
+  const isCustom = Boolean(node.props.is_custom_k);
+  const currentK = getNodeKFactor(node);
+
+  const elbowOptions = [
+    { key: 'elbow_90_standard', label: '90° Standard Elbow', K: 0.90, desc: 'Short radius standard bend' },
+    { key: 'elbow_90_long_radius', label: '90° Long Radius Elbow', K: 0.60, desc: 'Smooth radius, lower resistance' },
+    { key: 'elbow_45', label: '45° Elbow Bend', K: 0.40, desc: 'Gentle 45-degree redirection' },
+  ];
+
+  let optionsHtml = '';
+  elbowOptions.forEach(opt => {
+    const isSelected = !isCustom && currentKey === opt.key;
+    optionsHtml += `
+      <div class="pn-popover-option ${isSelected ? 'active' : ''}" data-val="${opt.key}">
+        <div>
+          <div style="font-weight:600;">${opt.label}</div>
+          <div style="font-size:10px;color:#64748b;margin-top:2px;">${opt.desc}</div>
+        </div>
+        <span class="pn-popover-badge">K=${opt.K}</span>
+      </div>
+    `;
+  });
+
+  pop.innerHTML = `
+    <div class="pn-popover-header">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <i class="bi bi-arrow-return-right" style="color:#60a5fa;"></i>
+        <span class="pn-popover-title">Elbow: ${node.props.label || node.id}</span>
+      </div>
+      <button class="pn-popover-close" title="Close"><i class="bi bi-x"></i></button>
+    </div>
+    <div class="pn-popover-body">
+      <div class="pn-popover-section-label">Elbow Bend Type</div>
+      <div class="pn-popover-list" id="pop-elbow-list">
+        ${optionsHtml}
+      </div>
+
+      <div class="pn-popover-section-label" style="margin-top:10px;">Custom K-Factor</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#cbd5e1;margin:0;">
+          <input type="checkbox" id="pop-is-custom-k" ${isCustom ? 'checked' : ''} style="accent-color:#f59e0b;cursor:pointer;">
+          <span>Custom K Value</span>
+        </label>
+        <span style="font-size:11px;font-weight:700;color:${isCustom ? '#f59e0b' : '#38bdf8'};">
+          Active K = ${currentK.toFixed(2)}
+        </span>
+      </div>
+      <div id="pop-custom-k-wrap" style="display:${isCustom ? 'flex' : 'none'};align-items:center;gap:6px;">
+        <input type="number" id="pop-custom-k" class="pn-popover-input" step="0.05" min="0" value="${node.props.custom_k ?? currentK}">
+        <span style="font-size:10px;color:#64748b;">(loss = K·V²/2g)</span>
+      </div>
+    </div>
+  `;
+
+  pop.querySelector('.pn-popover-close').onclick = hideContextPopover;
+
+  pop.querySelectorAll('#pop-elbow-list .pn-popover-option').forEach(el => {
+    el.onclick = () => {
+      node.props.fitting_key = el.dataset.val;
+      node.props.is_custom_k = false;
+      renderAll();
+      showNodeProps(node);
+      showContextPopover('node', node.id);
+      saveNetworkToStorage();
+    };
+  });
+
+  const isCustomCb = pop.querySelector('#pop-is-custom-k');
+  const customKIn = pop.querySelector('#pop-custom-k');
+
+  isCustomCb.onchange = (e) => {
+    node.props.is_custom_k = e.target.checked;
+    if (node.props.is_custom_k && (node.props.custom_k === null || node.props.custom_k === undefined)) {
+      node.props.custom_k = getNodeKFactor(node);
+    }
+    renderAll();
+    showNodeProps(node);
+    showContextPopover('node', node.id);
+    saveNetworkToStorage();
+  };
+
+  if (customKIn) {
+    const onCustomK = (e) => {
+      node.props.custom_k = parseFloat(e.target.value) || 0;
+      renderAll();
+      showNodeProps(node);
+      updateKDisplay(node);
+      saveNetworkToStorage();
+    };
+    customKIn.oninput = onCustomK;
+    customKIn.onchange = onCustomK;
+  }
+}
+
+function renderPopoverNodePump(node, pop) {
+  const currentCfg = node.props.pump_config || 'end_suction';
+  const pumpConfigs = [
+    { key: 'end_suction', label: 'End-Suction', desc: '1 suction (axial) + 1 discharge (top)' },
+    { key: 'double_suction', label: 'Double Suction', desc: '2 suction inlets + 1 discharge' },
+    { key: 'double_discharge', label: 'Double Discharge', desc: '1 suction inlet + 2 discharges' },
+    { key: 'double_both', label: '2 In / 2 Out', desc: '2 suction + 2 discharge ports' },
+    { key: 'inline', label: 'Inline Booster', desc: '1 inline in + 1 inline out' },
+  ];
+
+  let cfgHtml = '';
+  pumpConfigs.forEach(cfg => {
+    const isSelected = currentCfg === cfg.key;
+    cfgHtml += `
+      <div class="pn-popover-option ${isSelected ? 'active' : ''}" data-val="${cfg.key}">
+        <div>
+          <div style="font-weight:600;">${cfg.label}</div>
+          <div style="font-size:10px;color:#64748b;">${cfg.desc}</div>
+        </div>
+      </div>
+    `;
+  });
+
+  pop.innerHTML = `
+    <div class="pn-popover-header">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <i class="bi bi-gear-wide-connected" style="color:#a855f7;"></i>
+        <span class="pn-popover-title">Pump: ${node.props.label || node.id}</span>
+      </div>
+      <button class="pn-popover-close" title="Close"><i class="bi bi-x"></i></button>
+    </div>
+    <div class="pn-popover-body">
+      <div class="pn-popover-section-label">Pump Configuration</div>
+      <div class="pn-popover-list" id="pop-pump-cfg-list">
+        ${cfgHtml}
+      </div>
+
+      <div class="pn-popover-section-label" style="margin-top:10px;">Flow Rate (m³/h)</div>
+      <input type="number" id="pop-pump-flow" class="pn-popover-input" step="1" min="0" value="${node.props.flow_m3h ?? 10}">
+    </div>
+  `;
+
+  pop.querySelector('.pn-popover-close').onclick = hideContextPopover;
+
+  pop.querySelectorAll('#pop-pump-cfg-list .pn-popover-option').forEach(el => {
+    el.onclick = () => {
+      node.props.pump_config = el.dataset.val;
+      renderAll();
+      showNodeProps(node);
+      showContextPopover('node', node.id);
+      saveNetworkToStorage();
+    };
+  });
+
+  const flowIn = pop.querySelector('#pop-pump-flow');
+  if (flowIn) {
+    const onFlow = (e) => {
+      node.props.flow_m3h = parseFloat(e.target.value) || 10;
+      showNodeProps(node);
+      saveNetworkToStorage();
+    };
+    flowIn.oninput = onFlow;
+    flowIn.onchange = onFlow;
+  }
+}
+
+function renderPopoverNodeDefault(node, pop) {
+  pop.innerHTML = `
+    <div class="pn-popover-header">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <i class="bi bi-geo-alt" style="color:#38bdf8;"></i>
+        <span class="pn-popover-title">${node.type.toUpperCase()}: ${node.props.label || node.id}</span>
+      </div>
+      <button class="pn-popover-close" title="Close"><i class="bi bi-x"></i></button>
+    </div>
+    <div class="pn-popover-body">
+      <div class="pn-popover-section-label">Node Label</div>
+      <input type="text" id="pop-node-label" class="pn-popover-input" value="${node.props.label || ''}">
+
+      <div class="pn-popover-section-label" style="margin-top:8px;">Elevation (Z, meters)</div>
+      <input type="number" id="pop-node-elev" class="pn-popover-input" step="0.5" value="${node.props.elevation_m ?? 0}">
+    </div>
+  `;
+
+  pop.querySelector('.pn-popover-close').onclick = hideContextPopover;
+
+  const lblIn = pop.querySelector('#pop-node-label');
+  if (lblIn) {
+    lblIn.oninput = (e) => {
+      node.props.label = e.target.value;
+      renderAll();
+      showNodeProps(node);
+      saveNetworkToStorage();
+    };
+  }
+  const elevIn = pop.querySelector('#pop-node-elev');
+  if (elevIn) {
+    elevIn.oninput = (e) => {
+      node.props.elevation_m = parseFloat(e.target.value) || 0;
+      renderAll();
+      showNodeProps(node);
+      saveNetworkToStorage();
+    };
+  }
+}
+
+function renderPopoverPipe(pipe, pop) {
+  const diameters = [50, 80, 100, 150, 200, 250];
+  const curD = pipe.props.diameter_mm || 100;
+  const curMat = pipe.props.material || 'commercial_steel';
+  const curRouting = pipe.props.routing || 'auto';
+  const curCustK = pipe.props.custom_k || 0;
+
+  let diaHtml = '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
+  diameters.forEach(d => {
+    const isAct = curD === d;
+    diaHtml += `
+      <button class="pn-btn pop-dia-btn ${isAct ? 'active-tool' : ''}" data-dia="${d}" style="padding:3px 8px;font-size:11px;">
+        ${d}mm
+      </button>
+    `;
+  });
+  diaHtml += '</div>';
+
+  let matOptions = '';
+  MATERIALS.forEach(m => {
+    matOptions += `<option value="${m.key}" ${curMat === m.key ? 'selected' : ''}>${m.label}</option>`;
+  });
+
+  pop.innerHTML = `
+    <div class="pn-popover-header">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <i class="bi bi-water" style="color:#0284c7;"></i>
+        <span class="pn-popover-title">Pipe: ${pipe.props.label || pipe.id}</span>
+      </div>
+      <button class="pn-popover-close" title="Close"><i class="bi bi-x"></i></button>
+    </div>
+    <div class="pn-popover-body">
+      <div class="pn-popover-section-label">Diameter (mm)</div>
+      ${diaHtml}
+
+      <div class="pn-popover-section-label" style="margin-top:10px;">Material</div>
+      <select id="pop-pipe-material" class="pn-popover-select">
+        ${matOptions}
+      </select>
+
+      <div class="pn-popover-section-label" style="margin-top:10px;">Routing Mode</div>
+      <div style="display:flex;gap:4px;">
+        <button class="pn-btn pop-route-btn ${curRouting === 'auto' ? 'active-tool' : ''}" data-route="auto" style="flex:1;padding:4px;font-size:10px;">Auto</button>
+        <button class="pn-btn pop-route-btn ${curRouting === 'orthogonal' ? 'active-tool' : ''}" data-route="orthogonal" style="flex:1;padding:4px;font-size:10px;">Orthogonal</button>
+        <button class="pn-btn pop-route-btn ${curRouting === 'straight' ? 'active-tool' : ''}" data-route="straight" style="flex:1;padding:4px;font-size:10px;">Straight</button>
+      </div>
+
+      <div class="pn-popover-section-label" style="margin-top:10px;">Additive Custom K-Factor</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="number" id="pop-pipe-custom-k" class="pn-popover-input" step="0.05" min="0" value="${curCustK}">
+        <span style="font-size:10px;color:#64748b;">(extra minor loss)</span>
+      </div>
+    </div>
+  `;
+
+  pop.querySelector('.pn-popover-close').onclick = hideContextPopover;
+
+  pop.querySelectorAll('.pop-dia-btn').forEach(btn => {
+    btn.onclick = () => {
+      pipe.props.diameter_mm = parseInt(btn.dataset.dia, 10);
+      renderAll();
+      showPipeProps(pipe);
+      showContextPopover('pipe', pipe.id);
+      saveNetworkToStorage();
+    };
+  });
+
+  const matSel = pop.querySelector('#pop-pipe-material');
+  if (matSel) {
+    matSel.onchange = (e) => {
+      pipe.props.material = e.target.value;
+      renderAll();
+      showPipeProps(pipe);
+      saveNetworkToStorage();
+    };
+  }
+
+  pop.querySelectorAll('.pop-route-btn').forEach(btn => {
+    btn.onclick = () => {
+      pipe.props.routing = btn.dataset.route;
+      renderAll();
+      showPipeProps(pipe);
+      showContextPopover('pipe', pipe.id);
+      saveNetworkToStorage();
+    };
+  });
+
+  const pipeCustK = pop.querySelector('#pop-pipe-custom-k');
+  if (pipeCustK) {
+    const onPipeK = (e) => {
+      pipe.props.custom_k = parseFloat(e.target.value) || 0;
+      refreshKTotal(pipe.props.fittings || [], pipe.props.custom_k);
+      renderAll();
+      showPipeProps(pipe);
+      saveNetworkToStorage();
+    };
+    pipeCustK.oninput = onPipeK;
+    pipeCustK.onchange = onPipeK;
+  }
+}
+
+// ============================================================================
 // SELECTION & PROPERTIES PANEL
 // ============================================================================
 
@@ -1768,6 +2682,13 @@ function selectItem(kind, id) {
   if (kind === 'node') showNodeProps(findNode(id));
   else if (kind === 'pipe') showPipeProps(findPipe(id));
   else showPropsPanel('none');
+
+  if (kind && id) {
+    showContextPopover(kind, id);
+  } else {
+    hideContextPopover();
+  }
+
   renderAll();
 }
 
@@ -1778,6 +2699,49 @@ function showPropsPanel(which) {
   if (elNode) elNode.style.display = which === 'node' ? '' : 'none';
   if (elPipe) elPipe.style.display = which === 'pipe' ? '' : 'none';
   if (elEmpty) elEmpty.style.display = which === 'none' ? '' : 'none';
+}
+
+function populateFittingOptions(nodeType, currentKey) {
+  const nFitSel = document.getElementById('np-fitting-key');
+  if (!nFitSel) return;
+  nFitSel.innerHTML = '';
+
+  let candidates = [];
+  if (nodeType === 'tee') {
+    candidates = FITTINGS.filter(f => f.key.startsWith('tee_') || f.category === 'tee');
+    if (candidates.length === 0) {
+      candidates = [
+        { key: 'tee_run_through', label: 'Tee (Run Through)', K: 0.40 },
+        { key: 'tee_branch_flow', label: 'Tee (Branch Flow)', K: 1.80 },
+      ];
+    }
+  } else if (nodeType === 'valve') {
+    candidates = FITTINGS.filter(f => f.key.includes('valve') || f.category === 'valve');
+  } else if (nodeType === 'elbow') {
+    candidates = FITTINGS.filter(f => f.key.startsWith('elbow') || f.category === 'elbow');
+  } else {
+    candidates = FITTINGS;
+  }
+
+  candidates.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.key;
+    opt.textContent = `${f.label} (K=${f.K})`;
+    nFitSel.appendChild(opt);
+  });
+
+  if (currentKey) {
+    nFitSel.value = currentKey;
+  }
+}
+
+function updateKDisplay(node) {
+  const el = document.getElementById('np-k-display');
+  if (!el || !node) return;
+  const kVal = getNodeKFactor(node);
+  const isCustom = Boolean(node.props.is_custom_k);
+  el.textContent = `K = ${kVal.toFixed(2)}${isCustom ? ' (Custom)' : ''}`;
+  el.style.color = isCustom ? '#f59e0b' : '#38bdf8';
 }
 
 function showNodeProps(node) {
@@ -1791,19 +2755,37 @@ function showNodeProps(node) {
   const pumpDiv = document.getElementById('np-pump-fields');
   if (pumpDiv) {
     pumpDiv.style.display = node.type === 'pump' ? '' : 'none';
-    if (node.type === 'pump') setVal('np-flow', node.props.flow_m3h ?? 10);
-  }
-
-  const fittingDiv = document.getElementById('np-fitting-fields');
-  if (fittingDiv) {
-    fittingDiv.style.display = (node.type === 'valve' || node.type === 'elbow') ? '' : 'none';
-    if (node.type === 'valve' || node.type === 'elbow') {
-      setVal('np-fitting-key', node.props.fitting_key);
+    if (node.type === 'pump') {
+      setVal('np-flow', node.props.flow_m3h ?? 10);
+      setVal('np-pump-config', node.props.pump_config || 'end_suction');
     }
   }
-  if (node.type === 'pump') {
-    setVal('np-flow', node.props.flow_m3h ?? 10);
-    setVal('np-pump-config', node.props.pump_config || 'end_suction');
+
+  const isFitting = (node.type === 'valve' || node.type === 'elbow' || node.type === 'tee');
+  const fittingDiv = document.getElementById('np-fitting-fields');
+  if (fittingDiv) {
+    fittingDiv.style.display = isFitting ? '' : 'none';
+    if (isFitting) {
+      populateFittingOptions(node.type, node.props.fitting_key);
+    }
+  }
+
+  const teeRotGroup = document.getElementById('np-tee-rotation-group');
+  if (teeRotGroup) {
+    teeRotGroup.style.display = node.type === 'tee' ? '' : 'none';
+    setVal('np-tee-rotation', `${node.props.rotation_deg || 0}°`);
+  }
+
+  const customKGroup = document.getElementById('np-custom-k-group');
+  if (customKGroup) {
+    customKGroup.style.display = isFitting ? '' : 'none';
+    const isCustom = Boolean(node.props.is_custom_k);
+    const cb = document.getElementById('np-is-custom-k');
+    if (cb) cb.checked = isCustom;
+    const valGroup = document.getElementById('np-custom-k-val-group');
+    if (valGroup) valGroup.style.display = isCustom ? '' : 'none';
+    setVal('np-custom-k', node.props.custom_k ?? '');
+    updateKDisplay(node);
   }
 }
 
@@ -1819,10 +2801,11 @@ function showPipeProps(pipe) {
   setVal('pp-elev-change', pipe.props.elev_change_m);
   setVal('pp-material', pipe.props.material);
   setVal('pp-routing', pipe.props.routing || 'auto');
+  setVal('pp-custom-k', pipe.props.custom_k ?? 0);
   document.querySelectorAll('.pp-fitting-cb').forEach(cb => {
     cb.checked = (pipe.props.fittings || []).includes(cb.value);
   });
-  refreshKTotal(pipe.props.fittings || []);
+  refreshKTotal(pipe.props.fittings || [], pipe.props.custom_k || 0);
 }
 
 function setVal(id, v) {
@@ -1832,9 +2815,10 @@ function setVal(id, v) {
   else el.textContent = v;
 }
 
-function refreshKTotal(fittings) {
+function refreshKTotal(fittings, customK = 0) {
   const kMap = Object.fromEntries(FITTINGS.map(f => [f.key, f.K]));
-  const total = fittings.reduce((s, k) => s + (kMap[k] || 0), 0);
+  const fittingsK = fittings.reduce((s, k) => s + (kMap[k] || 0), 0);
+  const total = fittingsK + (parseFloat(customK) || 0);
   setVal('pp-ktotal', total.toFixed(2));
 }
 
@@ -1857,7 +2841,8 @@ function setMode(mode) {
     'add-reservoir': 'Place Reservoir — click on canvas',
     'add-pump': 'Place Pump — click on canvas',
     'add-tank': 'Place Tank — click on canvas',
-    'add-junction': 'Place Junction (Tee) — click on canvas',
+    'add-junction': 'Place Junction — click on canvas',
+    'add-tee': 'Place Pipe Tee Fitting — click on canvas',
     'add-discharge': 'Place Open Discharge — click on canvas',
     'add-valve': 'Place Valve — click on canvas',
     'add-elbow': 'Place Elbow waypoint — click on canvas',
@@ -1908,10 +2893,14 @@ function onPumpConfigChange() {
 }
 function onNodeFittingChange() {
   const node = state.selected?.kind === 'node' ? findNode(state.selected.id) : null;
-  if (node && (node.type === 'valve' || node.type === 'elbow')) {
+  if (node && (node.type === 'valve' || node.type === 'elbow' || node.type === 'tee')) {
     node.props.fitting_key = document.getElementById('np-fitting-key').value;
+    updateKDisplay(node);
     renderAll();
     saveNetworkToStorage();
+    if (state.selected?.kind === 'node' && state.selected.id === node.id) {
+      showContextPopover('node', node.id);
+    }
   }
 }
 
@@ -1928,13 +2917,18 @@ function onPipePropChange() {
   pipe.props.elev_change_m = parseFloat(document.getElementById('pp-elev-change').value) || 0;
   pipe.props.material = document.getElementById('pp-material').value;
   pipe.props.routing = document.getElementById('pp-routing').value;
+  const ppCustK = document.getElementById('pp-custom-k');
+  if (ppCustK) pipe.props.custom_k = parseFloat(ppCustK.value) || 0;
   pipe.props.fittings = [];
   document.querySelectorAll('.pp-fitting-cb:checked').forEach(cb =>
     pipe.props.fittings.push(cb.value)
   );
-  refreshKTotal(pipe.props.fittings);
+  refreshKTotal(pipe.props.fittings, pipe.props.custom_k);
   renderAll();
   saveNetworkToStorage();
+  if (state.selected?.kind === 'pipe' && state.selected.id === pipe.id) {
+    showContextPopover('pipe', pipe.id);
+  }
 }
 
 // ============================================================================
@@ -1952,7 +2946,17 @@ async function runCalculation() {
     pipes: state.pipes.map(pipe => {
       const allFittings = [...(pipe.props.fittings || [])];
       const toNode = findNode(pipe.toNodeId);
-      if (toNode && toNode.props.fitting_key) allFittings.push(toNode.props.fitting_key);
+      if (toNode && toNode.props.fitting_key) {
+        if (toNode.props.is_custom_k && toNode.props.custom_k !== null && toNode.props.custom_k !== undefined) {
+          allFittings.push({
+            key: toNode.props.fitting_key,
+            k: parseFloat(toNode.props.custom_k) || 0,
+            label: `${toNode.props.label || toNode.id} (Custom K=${toNode.props.custom_k})`
+          });
+        } else {
+          allFittings.push(toNode.props.fitting_key);
+        }
+      }
       return {
         id: pipe.id,
         label: pipe.props.label || pipe.id,
@@ -1961,6 +2965,7 @@ async function runCalculation() {
         material: pipe.props.material,
         elev_change_m: pipe.props.elev_change_m,
         fittings: allFittings,
+        custom_k: parseFloat(pipe.props.custom_k) || 0.0,
       };
     }),
   };
@@ -2244,6 +3249,7 @@ function init() {
         node.x = snap(pos.x - state.nodeDrag.offsetX);
         node.y = snap(pos.y - state.nodeDrag.offsetY);
         renderAll();
+        updateContextPopoverPosition();
       }
     }
     if (state.panDrag) {
@@ -2294,6 +3300,7 @@ function init() {
   document.getElementById('btn-add-pump')?.addEventListener('click', () => setMode('add-pump'));
   document.getElementById('btn-add-tank')?.addEventListener('click', () => setMode('add-tank'));
   document.getElementById('btn-add-junction')?.addEventListener('click', () => setMode('add-junction'));
+  document.getElementById('btn-add-tee')?.addEventListener('click', () => setMode('add-tee'));
   document.getElementById('btn-add-discharge')?.addEventListener('click', () => setMode('add-discharge'));
   document.getElementById('btn-add-valve')?.addEventListener('click', () => setMode('add-valve'));
   document.getElementById('btn-add-elbow')?.addEventListener('click', () => setMode('add-elbow'));
@@ -2366,6 +3373,74 @@ function init() {
 
   document.getElementById('np-fitting-key')?.addEventListener('change', onNodeFittingChange);
   document.getElementById('np-pump-config')?.addEventListener('change', onPumpConfigChange);
+
+  // Tee rotation button in properties panel
+  document.getElementById('btn-rotate-tee')?.addEventListener('click', () => {
+    if (state.selected?.kind === 'node') {
+      const node = findNode(state.selected.id);
+      if (node && node.type === 'tee') {
+        node.props.rotation_deg = ((node.props.rotation_deg || 0) + 90) % 360;
+        renderAll();
+        showNodeProps(node);
+        showContextPopover('node', node.id);
+        saveNetworkToStorage();
+      }
+    }
+  });
+
+  // Custom K checkbox in properties panel
+  document.getElementById('np-is-custom-k')?.addEventListener('change', e => {
+    if (state.selected?.kind === 'node') {
+      const node = findNode(state.selected.id);
+      if (node) {
+        node.props.is_custom_k = e.target.checked;
+        const valGroup = document.getElementById('np-custom-k-val-group');
+        if (valGroup) valGroup.style.display = node.props.is_custom_k ? '' : 'none';
+        if (node.props.is_custom_k && (node.props.custom_k === null || node.props.custom_k === undefined)) {
+          node.props.custom_k = getNodeKFactor(node);
+          setVal('np-custom-k', node.props.custom_k);
+        }
+        updateKDisplay(node);
+        renderAll();
+        showContextPopover('node', node.id);
+        saveNetworkToStorage();
+      }
+    }
+  });
+
+  // Custom K value input in properties panel
+  const npCustomK = document.getElementById('np-custom-k');
+  const onCustomKInput = () => {
+    if (state.selected?.kind === 'node') {
+      const node = findNode(state.selected.id);
+      if (node) {
+        node.props.custom_k = parseFloat(npCustomK.value) || 0;
+        updateKDisplay(node);
+        renderAll();
+        showContextPopover('node', node.id);
+        saveNetworkToStorage();
+      }
+    }
+  };
+  npCustomK?.addEventListener('input', onCustomKInput);
+  npCustomK?.addEventListener('change', onCustomKInput);
+
+  // Pipe additive custom K input in properties panel
+  const ppCustomK = document.getElementById('pp-custom-k');
+  const onPipeCustomK = () => {
+    if (state.selected?.kind === 'pipe') {
+      const pipe = findPipe(state.selected.id);
+      if (pipe) {
+        pipe.props.custom_k = parseFloat(ppCustomK.value) || 0;
+        refreshKTotal(pipe.props.fittings || [], pipe.props.custom_k);
+        renderAll();
+        showContextPopover('pipe', pipe.id);
+        saveNetworkToStorage();
+      }
+    }
+  };
+  ppCustomK?.addEventListener('input', onPipeCustomK);
+  ppCustomK?.addEventListener('change', onPipeCustomK);
 
   // Pipe property inputs (includes pp-routing now)
   ['pp-label', 'pp-diameter', 'pp-length', 'pp-elev-change', 'pp-material', 'pp-routing'].forEach(id => {

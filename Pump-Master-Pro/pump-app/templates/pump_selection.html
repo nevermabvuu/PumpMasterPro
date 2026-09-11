@@ -1077,51 +1077,10 @@
       <!-- Legend Overlay Matching Reference Diagram -->
       <div id="pn-legend-overlay">
         <div class="pn-legend-title">
-          <span>Water System</span>
-          <span style="cursor:pointer;font-size:12px;opacity:0.6;" onclick="document.getElementById('pn-legend-overlay').style.display='none'">&times;</span>
+          <span>System Legend</span>
+          <span style="cursor:pointer;font-size:12px;opacity:0.6;" onclick="toggleLegend(false)">&times;</span>
         </div>
-        <div class="pn-legend-row">
-          <div class="pn-legend-swatch"><div style="width:18px;height:4px;background:#0284c7;border-radius:1px;"></div></div>
-          <span>1" Main Pipe</span>
-        </div>
-        <div class="pn-legend-row">
-          <div class="pn-legend-swatch"><div style="width:18px;height:3px;background:#0284c7;border-radius:1px;"></div></div>
-          <span>3/4" Distribution Pipe</span>
-        </div>
-        <div class="pn-legend-row">
-          <div class="pn-legend-swatch"><div style="width:18px;height:2px;background:#0284c7;border-radius:1px;"></div></div>
-          <span>1/2" Branch Pipe</span>
-        </div>
-        <div class="pn-legend-row">
-          <div class="pn-legend-swatch">
-            <svg width="16" height="14" viewBox="0 0 16 14"><path d="M 2,12 L 2,4 A 4,4 0 0,1 6,0 L 14,0" fill="none" stroke="#cbd5e1" stroke-width="3"/><circle cx="2" cy="12" r="2.5" fill="#94a3b8"/><circle cx="14" cy="0" r="2.5" fill="#94a3b8"/></svg>
-          </div>
-          <span>Elbow Fitting</span>
-        </div>
-        <div class="pn-legend-row">
-          <div class="pn-legend-swatch">
-            <svg width="16" height="14" viewBox="0 0 16 14"><line x1="1" y1="3" x2="15" y2="3" stroke="#cbd5e1" stroke-width="3"/><line x1="8" y1="3" x2="8" y2="13" stroke="#cbd5e1" stroke-width="3"/><circle cx="8" cy="12" r="2" fill="#94a3b8"/></svg>
-          </div>
-          <span>Tee Fitting</span>
-        </div>
-        <div class="pn-legend-row">
-          <div class="pn-legend-swatch">
-            <svg width="16" height="14" viewBox="0 0 16 14"><rect x="1" y="4" width="14" height="6" rx="1.5" fill="#1e293b"/><line x1="4" y1="2" x2="14" y2="0" stroke="#0284c7" stroke-width="2.5"/></svg>
-          </div>
-          <span>Ball Valve</span>
-        </div>
-        <div class="pn-legend-row">
-          <div class="pn-legend-swatch">
-            <svg width="16" height="14" viewBox="0 0 16 14"><path d="M 2,5 L 10,5 L 10,10 L 8,10" fill="none" stroke="#94a3b8" stroke-width="2"/><line x1="6" y1="2" x2="14" y2="2" stroke="#ef4444" stroke-width="2"/><circle cx="9" cy="12" r="1.5" fill="#0284c7"/></svg>
-          </div>
-          <span>Faucet (Tap)</span>
-        </div>
-        <div class="pn-legend-row">
-          <div class="pn-legend-swatch">
-            <svg width="16" height="14" viewBox="0 0 16 14"><rect x="3" y="3" width="10" height="9" rx="2" fill="#ecdcc2" stroke="#b45309" stroke-width="1"/><ellipse cx="8" cy="3" rx="3.5" ry="1.5" fill="#92400e"/></svg>
-          </div>
-          <span>Water Tank</span>
-        </div>
+        <div id="pn-legend-items"></div>
       </div>
 
       <!-- Status bar -->

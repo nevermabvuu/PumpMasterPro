@@ -49,7 +49,7 @@ const state = {
   zoom: 1.0,
   panDrag: null,
   nodeDrag: null,
-  viewMode: 'schematic',
+  viewMode: 'industrial', // 'industrial' (Visual thick 3D pipes) | 'schematic' (Thin 2D single-line)
 };
 
 let svgEl, nodesGroup, pipesGroup, draftPipeLine;
@@ -374,12 +374,238 @@ function loadNetworkFromStorage() {
 }
 
 // ============================================================================
-// RENDERING
+// VIEW MODE & RENDERING
 // ============================================================================
+
+/**
+ * Switch view mode between 'industrial' (Visual realistic 3D thick pipes)
+ * and 'schematic' (Thin 2D single-line CAD blueprint diagram).
+ * 
+ * Behavior:
+ *  - Updates state.viewMode.
+ *  - Toggles active-tool styling on #btn-view-industrial and #btn-view-schematic buttons.
+ *  - Persists user selection in localStorage ('pmp_pipe_view_mode') to survive page reloads.
+ *  - Re-renders all pipes, nodes, and legend with the new view styling.
+ * 
+ * @param {'schematic'|'industrial'} mode
+ */
+function setViewMode(mode) {
+  state.viewMode = mode;
+  const btnSchematic = document.getElementById('btn-view-schematic');
+  const btnIndustrial = document.getElementById('btn-view-industrial');
+  if (btnSchematic && btnIndustrial) {
+    if (mode === 'industrial') {
+      btnIndustrial.classList.add('active-tool');
+      btnSchematic.classList.remove('active-tool');
+    } else {
+      btnSchematic.classList.add('active-tool');
+      btnIndustrial.classList.remove('active-tool');
+    }
+  }
+  localStorage.setItem('pmp_pipe_view_mode', mode);
+  renderAll();
+}
+
+/**
+ * Dynamically renders the Legend Overlay based strictly on elements present in the active network.
+ * 
+ * Behavior:
+ *  - Scans state.pipes for distinct pipe diameters present on canvas.
+ *  - Scans state.nodes for active node types (pumps, tanks, reservoirs, junctions, valves, elbows, faucets).
+ *  - Scans state.pipes for inline fittings (check valves, strainers, etc.).
+ *  - If the canvas is empty, displays a clean "No elements on canvas" placeholder.
+ *  - Excludes all element types that are not currently part of the network diagram.
+ */
+function renderLegend() {
+  const itemsContainer = document.getElementById('pn-legend-items');
+  if (!itemsContainer) return;
+
+  const rows = [];
+
+  // 1. Group pipes by diameter
+  const diameterCounts = {};
+  state.pipes.forEach(p => {
+    const d = p.props.diameter_mm || 100;
+    diameterCounts[d] = (diameterCounts[d] || 0) + 1;
+  });
+
+  const sortedDiameters = Object.keys(diameterCounts).map(Number).sort((a, b) => b - a);
+  sortedDiameters.forEach(d => {
+    const count = diameterCounts[d];
+    let label = `${d}mm Pipe`;
+    if (d >= 150) label = `${d}mm Main Pipe`;
+    else if (d >= 80) label = `${d}mm Distribution Pipe`;
+    else label = `${d}mm Branch Pipe`;
+
+    const thickness = Math.max(2, Math.min(6, Math.round(d / 30)));
+    rows.push(`
+      <div class="pn-legend-row">
+        <div class="pn-legend-swatch">
+          <div style="width:18px;height:${thickness}px;background:#0284c7;border-radius:1px;"></div>
+        </div>
+        <span>${label}${count > 1 ? ` (${count})` : ''}</span>
+      </div>
+    `);
+  });
+
+  // 2. Count nodes by type
+  const nodeCounts = {};
+  state.nodes.forEach(n => {
+    nodeCounts[n.type] = (nodeCounts[n.type] || 0) + 1;
+  });
+
+  // Reservoir / Sump
+  if (nodeCounts.reservoir) {
+    const count = nodeCounts.reservoir;
+    rows.push(`
+      <div class="pn-legend-row">
+        <div class="pn-legend-swatch">
+          <svg width="16" height="14" viewBox="0 0 16 14">
+            <rect x="2" y="3" width="12" height="8" rx="1.5" fill="#0369a1" stroke="#38bdf8" stroke-width="1" />
+            <line x1="4" y1="6" x2="12" y2="6" stroke="#bae6fd" stroke-width="1" />
+          </svg>
+        </div>
+        <span>Reservoir / Sump${count > 1 ? ` (${count})` : ''}</span>
+      </div>
+    `);
+  }
+
+  // Pump
+  if (nodeCounts.pump) {
+    const count = nodeCounts.pump;
+    rows.push(`
+      <div class="pn-legend-row">
+        <div class="pn-legend-swatch">
+          <svg width="16" height="14" viewBox="0 0 16 14">
+            <circle cx="8" cy="7" r="5" fill="#0284c7" stroke="#38bdf8" stroke-width="1.5" />
+            <polygon points="6,7 10,4.5 10,9.5" fill="#ffffff" />
+          </svg>
+        </div>
+        <span>Pump${count > 1 ? ` (${count})` : ''}</span>
+      </div>
+    `);
+  }
+
+  // Water Tank
+  if (nodeCounts.tank) {
+    const count = nodeCounts.tank;
+    rows.push(`
+      <div class="pn-legend-row">
+        <div class="pn-legend-swatch">
+          <svg width="16" height="14" viewBox="0 0 16 14">
+            <rect x="3" y="2" width="10" height="10" rx="2" fill="#1e293b" stroke="#f59e0b" stroke-width="1.2" />
+            <ellipse cx="8" cy="2" rx="3.5" ry="1.5" fill="#f59e0b" />
+          </svg>
+        </div>
+        <span>Water Tank${count > 1 ? ` (${count})` : ''}</span>
+      </div>
+    `);
+  }
+
+  // Tee / Junction
+  if (nodeCounts.junction) {
+    const count = nodeCounts.junction;
+    rows.push(`
+      <div class="pn-legend-row">
+        <div class="pn-legend-swatch">
+          <svg width="16" height="14" viewBox="0 0 16 14">
+            <line x1="2" y1="3" x2="14" y2="3" stroke="#cbd5e1" stroke-width="3" />
+            <line x1="8" y1="3" x2="8" y2="13" stroke="#cbd5e1" stroke-width="3" />
+            <circle cx="8" cy="12" r="2" fill="#94a3b8" />
+          </svg>
+        </div>
+        <span>Tee / Junction${count > 1 ? ` (${count})` : ''}</span>
+      </div>
+    `);
+  }
+
+  // Valve nodes
+  if (nodeCounts.valve) {
+    const count = nodeCounts.valve;
+    rows.push(`
+      <div class="pn-legend-row">
+        <div class="pn-legend-swatch">
+          <svg width="16" height="14" viewBox="0 0 16 14">
+            <polygon points="2,3 8,7 2,11" fill="#ef4444" />
+            <polygon points="14,3 8,7 14,11" fill="#ef4444" />
+            <line x1="8" y1="2" x2="8" y2="7" stroke="#ef4444" stroke-width="1.5" />
+          </svg>
+        </div>
+        <span>Ball / Gate Valve${count > 1 ? ` (${count})` : ''}</span>
+      </div>
+    `);
+  }
+
+  // Elbow nodes
+  if (nodeCounts.elbow) {
+    const count = nodeCounts.elbow;
+    rows.push(`
+      <div class="pn-legend-row">
+        <div class="pn-legend-swatch">
+          <svg width="16" height="14" viewBox="0 0 16 14">
+            <path d="M 2,12 L 2,4 A 4,4 0 0,1 6,0 L 14,0" fill="none" stroke="#3b82f6" stroke-width="2.5" />
+            <circle cx="2" cy="12" r="2" fill="#94a3b8" />
+            <circle cx="14" cy="0" r="2" fill="#94a3b8" />
+          </svg>
+        </div>
+        <span>Elbow Fitting${count > 1 ? ` (${count})` : ''}</span>
+      </div>
+    `);
+  }
+
+  // Discharge / Faucet
+  if (nodeCounts.discharge) {
+    const count = nodeCounts.discharge;
+    rows.push(`
+      <div class="pn-legend-row">
+        <div class="pn-legend-swatch">
+          <svg width="16" height="14" viewBox="0 0 16 14">
+            <path d="M 2,5 L 10,5 L 10,10 L 8,10" fill="none" stroke="#94a3b8" stroke-width="2" />
+            <line x1="6" y1="2" x2="14" y2="2" stroke="#ef4444" stroke-width="2" />
+            <circle cx="9" cy="12" r="1.5" fill="#0284c7" />
+          </svg>
+        </div>
+        <span>Faucet / Tap${count > 1 ? ` (${count})` : ''}</span>
+      </div>
+    `);
+  }
+
+  // 3. Inline pipe fittings attached to pipes
+  const pipeFittingCounts = {};
+  state.pipes.forEach(p => {
+    (p.props.fittings || []).forEach(fKey => {
+      pipeFittingCounts[fKey] = (pipeFittingCounts[fKey] || 0) + 1;
+    });
+  });
+
+  Object.entries(pipeFittingCounts).forEach(([fKey, count]) => {
+    const fitObj = FITTINGS.find(f => f.key === fKey);
+    const label = fitObj ? fitObj.label : fKey;
+    rows.push(`
+      <div class="pn-legend-row">
+        <div class="pn-legend-swatch">
+          <svg width="16" height="14" viewBox="0 0 16 14">
+            <circle cx="8" cy="7" r="4.5" fill="#334155" stroke="#a78bfa" stroke-width="1.5" />
+            <circle cx="8" cy="7" r="1.5" fill="#a78bfa" />
+          </svg>
+        </div>
+        <span>${label}${count > 1 ? ` (${count})` : ''}</span>
+      </div>
+    `);
+  });
+
+  // Render or show placeholder
+  if (rows.length === 0) {
+    itemsContainer.innerHTML = `<div style="color:#64748b;font-size:11px;font-style:italic;padding:4px 0;">No elements on canvas</div>`;
+  } else {
+    itemsContainer.innerHTML = rows.join('');
+  }
+}
 
 function renderAll() {
   renderPipes();
   renderNodes();
+  renderLegend();
   updateDraftLine();
   saveNetworkToStorage();
 }
@@ -1673,6 +1899,78 @@ function toast(msg, type = 'info') {
 }
 
 // ============================================================================
+// THEME & LEGEND CONTROLS
+// ============================================================================
+
+/**
+ * Toggle between Dark theme (default CAD dark blueprint) and Light CAD theme on the canvas wrap.
+ * 
+ * Behavior:
+ *  - Adds/removes the 'pn-light-theme' CSS class on #pn-canvas-wrap.
+ *  - Updates the Theme button icon (Sun vs. Moon) and active highlight state.
+ *  - Saves the user's preference to localStorage ('pmp_pipe_canvas_theme') to persist across page reloads.
+ * 
+ * @param {'light'|'dark'} [forceTheme] - Optional explicit theme mode to apply.
+ */
+function toggleTheme(forceTheme) {
+  const canvasWrap = document.getElementById('pn-canvas-wrap');
+  const themeBtn = document.getElementById('btn-theme-toggle');
+  if (!canvasWrap || !themeBtn) return;
+
+  const isCurrentLight = canvasWrap.classList.contains('pn-light-theme');
+  const shouldBeLight = forceTheme !== undefined ? forceTheme === 'light' : !isCurrentLight;
+
+  if (shouldBeLight) {
+    canvasWrap.classList.add('pn-light-theme');
+    themeBtn.classList.add('active-tool');
+    themeBtn.innerHTML = '<i class="bi bi-moon"></i> Theme';
+    themeBtn.setAttribute('title', 'Switch to Dark CAD Theme');
+    localStorage.setItem('pmp_pipe_canvas_theme', 'light');
+  } else {
+    canvasWrap.classList.remove('pn-light-theme');
+    themeBtn.classList.remove('active-tool');
+    themeBtn.innerHTML = '<i class="bi bi-sun"></i> Theme';
+    themeBtn.setAttribute('title', 'Switch to Light CAD Theme');
+    localStorage.setItem('pmp_pipe_canvas_theme', 'dark');
+  }
+}
+
+/**
+ * Toggle the visibility of the canvas Legend Overlay (showing pipes, fittings, valves).
+ * 
+ * Behavior:
+ *  - Shows or hides the #pn-legend-overlay DOM element.
+ *  - Updates the active-tool visual state of the #btn-toggle-legend toolbar button.
+ *  - Saves the user's preference to localStorage ('pmp_pipe_legend_visible') to persist across page reloads.
+ * 
+ * @param {boolean} [forceVisible] - Optional explicit boolean to show (true) or hide (false) the legend.
+ */
+function toggleLegend(forceVisible) {
+  const legendEl = document.getElementById('pn-legend-overlay');
+  const legendBtn = document.getElementById('btn-toggle-legend');
+  if (!legendEl || !legendBtn) return;
+
+  const isVisible = legendEl.style.display !== 'none';
+  const shouldShow = forceVisible !== undefined ? forceVisible : !isVisible;
+
+  if (shouldShow) {
+    legendEl.style.display = 'block';
+    legendBtn.classList.add('active-tool');
+    localStorage.setItem('pmp_pipe_legend_visible', 'true');
+  } else {
+    legendEl.style.display = 'none';
+    legendBtn.classList.remove('active-tool');
+    localStorage.setItem('pmp_pipe_legend_visible', 'false');
+  }
+}
+
+// Expose on window object so HTML inline event handlers (e.g. close buttons) can invoke them
+window.toggleTheme = toggleTheme;
+window.toggleLegend = toggleLegend;
+window.setViewMode = setViewMode;
+window.renderLegend = renderLegend;
+
+// ============================================================================
 // INIT
 // ============================================================================
 
@@ -1792,19 +2090,30 @@ function init() {
   document.getElementById('btn-clear')?.addEventListener('click', clearCanvas);
   document.getElementById('btn-export')?.addEventListener('click', exportNetwork);
 
-  // View toggle
-  document.getElementById('btn-view-schematic')?.addEventListener('click', () => {
-    state.viewMode = 'schematic';
-    document.getElementById('btn-view-schematic').classList.add('active-tool');
-    document.getElementById('btn-view-industrial').classList.remove('active-tool');
-    renderAll();
-  });
-  document.getElementById('btn-view-industrial')?.addEventListener('click', () => {
-    state.viewMode = 'industrial';
-    document.getElementById('btn-view-industrial').classList.add('active-tool');
-    document.getElementById('btn-view-schematic').classList.remove('active-tool');
-    renderAll();
-  });
+  // View mode toggle (Industrial/Visual vs. Schematic)
+  document.getElementById('btn-view-schematic')?.addEventListener('click', () => setViewMode('schematic'));
+  document.getElementById('btn-view-industrial')?.addEventListener('click', () => setViewMode('industrial'));
+
+  // Restore saved view mode preference (defaults to 'industrial' / Visual mode)
+  const savedViewMode = localStorage.getItem('pmp_pipe_view_mode') || 'industrial';
+  setViewMode(savedViewMode);
+
+  // Canvas Theme toggle (Dark CAD blueprint vs. Light CAD mode)
+  document.getElementById('btn-theme-toggle')?.addEventListener('click', () => toggleTheme());
+
+  // Legend Overlay toggle (Show / Hide schematic installation symbols)
+  document.getElementById('btn-toggle-legend')?.addEventListener('click', () => toggleLegend());
+
+  // Restore saved Theme & Legend preferences from localStorage
+  const savedTheme = localStorage.getItem('pmp_pipe_canvas_theme');
+  if (savedTheme === 'light') {
+    toggleTheme('light');
+  }
+
+  const savedLegend = localStorage.getItem('pmp_pipe_legend_visible');
+  if (savedLegend === 'false') {
+    toggleLegend(false);
+  }
 
   const importInput = document.getElementById('import-file-input');
   document.getElementById('btn-import')?.addEventListener('click', () => importInput?.click());

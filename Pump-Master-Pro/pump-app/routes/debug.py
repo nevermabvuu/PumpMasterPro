@@ -201,6 +201,7 @@ def seed_sample_session():
     p_id = first_pump.id if first_pump else 1
     r_id = first_report.id if first_report else 1
 
+    existing_pipe_net = session.get('active_selection', {}).get('pipe_network')
     session['active_selection'] = {
         'pump_id': p_id,
         'report_id': r_id,
@@ -218,6 +219,8 @@ def seed_sample_session():
         'show_duty': '1',
         'hidden_curves': ''
     }
+    if existing_pipe_net:
+        session['active_selection']['pipe_network'] = existing_pipe_net
     session['selection_form_data'] = {
         'q_duty': 40.0,
         'h_duty': 28.0,

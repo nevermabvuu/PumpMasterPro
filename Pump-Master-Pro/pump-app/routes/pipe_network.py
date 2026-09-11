@@ -29,7 +29,7 @@ Friction Loss Models Used
 import json
 import math
 import re
-from flask import Blueprint, render_template, request, jsonify, g
+from flask import Blueprint, render_template, request, jsonify, g, session
 from models import db, PipeFitting, PipeMaterial
 
 # -- Blueprint registration --------------------------------------------------
@@ -185,16 +185,98 @@ def calculate_segment(seg, global_flow_m3h):
 
 @pipe_network_bp.route('/pipe-network')
 def pipe_network():
-    """Render the interactive pipe-network visual designer page with DB-injected reference data."""
+    """Render the interactive pipe-network visual designer page with DB-injected reference data and active session state."""
     fittings = PipeFitting.query.filter_by(is_active=True).order_by(PipeFitting.sort_order).all()
     materials = PipeMaterial.query.filter_by(is_active=True).order_by(PipeMaterial.sort_order).all()
 
     fittings_json = json.dumps([f.to_dict() for f in fittings])
     materials_json = json.dumps([m.to_dict() for m in materials])
 
+    active_sel = session.get('active_selection') or {}
+    pipe_net_data = active_sel.get('pipe_network')
+    pipe_network_json = json.dumps(pipe_net_data) if pipe_net_data else 'null'
+    active_selection_json = json.dumps(active_sel)
+
     return render_template('pipe_network.html',
                            fittings_json=fittings_json,
-                           materials_json=materials_json)
+                           materials_json=materials_json,
+                           pipe_network_json=pipe_network_json,
+                           active_selection_json=active_selection_json,
+                           active_selection=active_sel)
+
+
+@pipe_network_bp.route('/api/pipe-network/save', methods=['POST'])
+def save_pipe_network_session():
+    """
+    Save the current pipe network designer graph, pump settings,
+    and calculation results to session['active_selection'].
+    """
+    data = request.get_json(silent=True)
+    if not data and request.data:
+        try:
+            data = json.loads(request.data.decode('utf-8'))
+        except Exception:
+            data = {}
+    data = data or {}
+
+    active_sel = session.get('active_selection') or {}
+    active_sel['pipe_network'] = data
+
+    # Sync pump and duty parameters into active_selection
+    nodes = data.get('nodes', [])
+    pump_nodes = [n for n in nodes if n.get('type') == 'pump']
+    global_flow = data.get('globalFlow')
+
+    if pump_nodes:
+        first_pump = pump_nodes[0]
+        pump_props = first_pump.get('props', {})
+        flow = pump_props.get('flow_m3h') or global_flow
+        if flow:
+            try:
+                active_sel['q_duty'] = float(flow)
+                active_sel['disp_q_duty'] = float(flow)
+            except (ValueError, TypeError):
+                pass
+        if pump_props.get('pump_config'):
+            active_sel['pump_config'] = pump_props.get('pump_config')
+        if pump_props.get('label'):
+            active_sel['pump_label'] = pump_props.get('label')
+    elif global_flow:
+        try:
+            active_sel['q_duty'] = float(global_flow)
+            active_sel['disp_q_duty'] = float(global_flow)
+        except (ValueError, TypeError):
+            pass
+
+    calc = data.get('lastCalculation')
+    if calc and isinstance(calc, dict):
+        summary = calc.get('summary', {})
+        total_head = summary.get('total_system_head_m')
+        if total_head is not None:
+            try:
+                active_sel['h_duty'] = round(float(total_head), 3)
+                active_sel['disp_h_duty'] = round(float(total_head), 3)
+            except (ValueError, TypeError):
+                pass
+
+    session['active_selection'] = active_sel
+    session.modified = True
+    return jsonify({
+        'status': 'ok',
+        'message': 'Pipe network saved to session active_selection',
+        'active_selection': active_sel
+    })
+
+
+@pipe_network_bp.route('/api/pipe-network/session', methods=['GET'])
+def get_pipe_network_session():
+    """Return the saved pipe network from session['active_selection']."""
+    active_sel = session.get('active_selection') or {}
+    return jsonify({
+        'status': 'ok',
+        'pipe_network': active_sel.get('pipe_network'),
+        'active_selection': active_sel
+    })
 
 
 # ── Calculation Endpoint ────────────────────────────────────────────────────
@@ -246,16 +328,38 @@ def calculate_network():
 
     total_head = total_major + total_minor + total_elev
 
+    calc_summary = {
+        'total_hf_major_m':    round(total_major, 3),
+        'total_hf_minor_m':    round(total_minor, 3),
+        'total_elevation_m':   round(total_elev,  3),
+        'total_system_head_m': round(total_head,  3),
+        'pipe_count':          len(results),
+    }
+
+    # Auto-sync calculation results and duty point to session['active_selection']
+    try:
+        active_sel = session.get('active_selection') or {}
+        pn = active_sel.get('pipe_network') or {}
+        pn['lastCalculation'] = {
+            'results': results,
+            'errors': errors,
+            'summary': calc_summary,
+        }
+        pn['globalFlow'] = global_flow
+        active_sel['pipe_network'] = pn
+        active_sel['q_duty'] = global_flow
+        active_sel['disp_q_duty'] = global_flow
+        active_sel['h_duty'] = round(total_head, 3)
+        active_sel['disp_h_duty'] = round(total_head, 3)
+        session['active_selection'] = active_sel
+        session.modified = True
+    except Exception:
+        pass
+
     return jsonify({
         'results': results,
         'errors':  errors,
-        'summary': {
-            'total_hf_major_m':    round(total_major, 3),
-            'total_hf_minor_m':    round(total_minor, 3),
-            'total_elevation_m':   round(total_elev,  3),
-            'total_system_head_m': round(total_head,  3),
-            'pipe_count':          len(results),
-        },
+        'summary': calc_summary,
         'constants': {
             'fitting_k_values': get_fitting_k_map(),
             'fitting_labels':   get_fitting_label_map(),

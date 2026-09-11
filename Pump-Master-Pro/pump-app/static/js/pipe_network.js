@@ -50,6 +50,8 @@ const state = {
   panDrag: null,
   nodeDrag: null,
   viewMode: 'industrial', // 'industrial' (Visual thick 3D pipes) | 'schematic' (Thin 2D single-line)
+  lastCalculation: null,
+  pendingSelect: null,
 };
 
 let svgEl, nodesGroup, pipesGroup, draftPipeLine;
@@ -348,29 +350,195 @@ function orthogonalMidpoint(x1, y1, x2, y2) {
 // LOCAL STORAGE
 // ============================================================================
 
-function saveNetworkToStorage() {
-  const data = { nodes: state.nodes, pipes: state.pipes, nextId: state.nextId };
-  try { localStorage.setItem('pmpro_pipe_network', JSON.stringify(data)); } catch (e) { }
+function updateSaveIndicator(status = 'saved') {
+  const el = document.getElementById('pn-save-indicator');
+  if (!el) return;
+  if (status === 'saved') {
+    el.innerHTML = '<i class="bi bi-check2-circle" style="color:#22c55e;"></i> <span style="color:#22c55e;">Auto-saved</span>';
+  } else if (status === 'saving') {
+    el.innerHTML = '<i class="bi bi-arrow-repeat" style="color:#38bdf8;"></i> <span style="color:#38bdf8;">Saving...</span>';
+  } else if (status === 'error') {
+    el.innerHTML = '<i class="bi bi-exclamation-circle" style="color:#f87171;"></i> <span style="color:#f87171;">Save error</span>';
+  }
+}
+
+let _saveServerTimeout = null;
+function saveNetworkToServer(data, immediate = false) {
+  if (_saveServerTimeout) {
+    clearTimeout(_saveServerTimeout);
+    _saveServerTimeout = null;
+  }
+  const doSave = async () => {
+    try {
+      const res = await fetch('/api/pipe-network/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) {
+        const respData = await res.json();
+        if (respData.active_selection) {
+          window.__PMP_ACTIVE_SELECTION = respData.active_selection;
+          window.__PMP_SESSION_PIPE_NETWORK = respData.active_selection.pipe_network;
+        }
+        updateSaveIndicator('saved');
+      }
+    } catch (err) {
+      console.warn('Could not sync pipe network to session:', err);
+    }
+  };
+
+  if (immediate) {
+    return doSave();
+  } else {
+    _saveServerTimeout = setTimeout(doSave, 300);
+  }
+}
+
+function getNetworkPayload(extra = {}) {
+  const flowEl = document.getElementById('pn-global-flow');
+  const globalFlow = flowEl ? (parseFloat(flowEl.value) || 15) : 15;
+
+  return {
+    version: 2,
+    nodes: state.nodes,
+    pipes: state.pipes,
+    nextId: state.nextId,
+    globalFlow: globalFlow,
+    lastCalculation: state.lastCalculation || null,
+    pan: state.pan,
+    zoom: state.zoom,
+    selected: state.selected ? { kind: state.selected.kind, id: state.selected.id } : null,
+    savedAt: new Date().toISOString(),
+    ...extra
+  };
+}
+
+function saveNetworkToStorage(extra = {}) {
+  const data = getNetworkPayload(extra);
+
+  try {
+    localStorage.setItem('pmpro_pipe_network', JSON.stringify(data));
+    updateSaveIndicator('saved');
+  } catch (e) {
+    console.error('Failed to save pipe network to localStorage:', e);
+    updateSaveIndicator('error');
+  }
+
+  // Also auto-sync to server session['active_selection']
+  saveNetworkToServer(data, false);
+}
+
+async function saveNetwork() {
+  updateSaveIndicator('saving');
+  const data = getNetworkPayload();
+  try {
+    localStorage.setItem('pmpro_pipe_network', JSON.stringify(data));
+  } catch (e) { }
+
+  try {
+    const res = await fetch('/api/pipe-network/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (res.ok) {
+      const respData = await res.json();
+      if (respData.active_selection) {
+        window.__PMP_ACTIVE_SELECTION = respData.active_selection;
+        window.__PMP_SESSION_PIPE_NETWORK = respData.active_selection.pipe_network;
+      }
+      updateSaveIndicator('saved');
+      toast('Saved to session active_selection!', 'success');
+      return;
+    }
+  } catch (e) {
+    console.warn('Server session save failed:', e);
+  }
+  toast('Network saved locally', 'info');
 }
 
 function loadNetworkFromStorage() {
-  const saved = localStorage.getItem('pmpro_pipe_network');
-  if (saved) {
-    try {
-      const d = JSON.parse(saved);
-      if (d.nodes && d.pipes) {
-        state.nodes = d.nodes;
-        state.pipes = d.pipes;
-        // Migrate pipes created before routing was introduced
-        state.pipes.forEach(p => {
-          if (p.props && !p.props.routing) p.props.routing = 'auto';
-        });
-        state.nextId = d.nextId || Math.max(0, ...[...d.nodes, ...d.pipes].map(x => parseInt(x.id.split('-')[1]) || 0)) + 1;
-        return true;
-      }
-    } catch (e) { console.error('Failed to load pipe network:', e); }
+  let d = null;
+
+  // 1. First priority: Server session active_selection
+  if (window.__PMP_SESSION_PIPE_NETWORK && typeof window.__PMP_SESSION_PIPE_NETWORK === 'object') {
+    if (Array.isArray(window.__PMP_SESSION_PIPE_NETWORK.nodes) && (window.__PMP_SESSION_PIPE_NETWORK.nodes.length > 0 || window.__PMP_SESSION_PIPE_NETWORK.explicitClear)) {
+      d = window.__PMP_SESSION_PIPE_NETWORK;
+    }
   }
-  return false;
+
+  // 2. Second priority: LocalStorage
+  if (!d) {
+    const saved = localStorage.getItem('pmpro_pipe_network');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed.nodes) && (parsed.nodes.length > 0 || parsed.explicitClear)) {
+          d = parsed;
+        }
+      } catch (e) {
+        console.error('Failed to load pipe network from localStorage:', e);
+      }
+    }
+  }
+
+  // 3. Fallback check for session with empty network
+  if (!d && window.__PMP_SESSION_PIPE_NETWORK && Array.isArray(window.__PMP_SESSION_PIPE_NETWORK.nodes)) {
+    d = window.__PMP_SESSION_PIPE_NETWORK;
+  }
+
+  if (!d || !Array.isArray(d.nodes) || !Array.isArray(d.pipes)) {
+    return false;
+  }
+
+  // If both nodes and pipes are empty and it was NOT explicitly cleared, return false to load demo
+  if (d.nodes.length === 0 && d.pipes.length === 0 && !d.explicitClear) {
+    return false;
+  }
+
+  state.nodes = d.nodes;
+  state.pipes = d.pipes;
+
+  // Migrate pipes created before routing was introduced
+  state.pipes.forEach(p => {
+    if (p.props && !p.props.routing) p.props.routing = 'auto';
+  });
+
+  const maxIdFromElements = Math.max(
+    0,
+    ...[...d.nodes, ...d.pipes].map(x => {
+      const parts = (x.id || '').split('-');
+      return parseInt(parts[1], 10) || 0;
+    })
+  );
+  state.nextId = (typeof d.nextId === 'number' && !isNaN(d.nextId))
+    ? Math.max(d.nextId, maxIdFromElements + 1)
+    : maxIdFromElements + 1;
+
+  if (d.globalFlow) {
+    const flowInput = document.getElementById('pn-global-flow');
+    if (flowInput) flowInput.value = d.globalFlow;
+  }
+
+  if (d.pan && typeof d.pan.x === 'number' && typeof d.pan.y === 'number') {
+    state.pan = { x: d.pan.x, y: d.pan.y };
+  }
+  if (d.zoom && typeof d.zoom === 'number' && !isNaN(d.zoom)) {
+    state.zoom = Math.min(3, Math.max(0.2, d.zoom));
+  }
+
+  if (d.lastCalculation && d.lastCalculation.summary && d.lastCalculation.results) {
+    state.lastCalculation = d.lastCalculation;
+    displayResults(d.lastCalculation);
+  }
+
+  if (d.selected && d.selected.kind && d.selected.id) {
+    state.pendingSelect = d.selected;
+  }
+
+  updateSaveIndicator('saved');
+  return true;
 }
 
 // ============================================================================
@@ -1565,6 +1733,7 @@ function addNode(type, x, y) {
   state.nodes.push(node);
   renderAll();
   selectItem('node', id);
+  saveNetworkToStorage();
 }
 
 function addPipe(fromNodeId, toNodeId) {
@@ -1573,6 +1742,7 @@ function addPipe(fromNodeId, toNodeId) {
   state.pipes.push(pipe);
   renderAll();
   selectItem('pipe', id);
+  saveNetworkToStorage();
 }
 
 function deleteSelected() {
@@ -1586,6 +1756,7 @@ function deleteSelected() {
   }
   selectItem(null);
   renderAll();
+  saveNetworkToStorage();
 }
 
 // ============================================================================
@@ -1704,30 +1875,48 @@ function setMode(mode) {
 
 function onNodeLabelChange() {
   const node = state.selected?.kind === 'node' ? findNode(state.selected.id) : null;
-  if (node) { node.props.label = document.getElementById('np-label').value; renderAll(); }
+  if (node) {
+    node.props.label = document.getElementById('np-label').value;
+    renderAll();
+    saveNetworkToStorage();
+  }
 }
 function onNodeElevChange() {
   const node = state.selected?.kind === 'node' ? findNode(state.selected.id) : null;
-  if (node) node.props.elevation_m = parseFloat(document.getElementById('np-elev').value) || 0;
+  if (node) {
+    node.props.elevation_m = parseFloat(document.getElementById('np-elev').value) || 0;
+    saveNetworkToStorage();
+    renderLegend();
+  }
 }
 function onPumpFlowChange() {
   const node = state.selected?.kind === 'node' ? findNode(state.selected.id) : null;
-  if (node && node.type === 'pump')
+  if (node && node.type === 'pump') {
     node.props.flow_m3h = parseFloat(document.getElementById('np-flow').value) || 10;
+    saveNetworkToStorage();
+  }
 }
 
 function onPumpConfigChange() {
   const node = state.selected?.kind === 'node' ? findNode(state.selected.id) : null;
   if (node && node.type === 'pump') {
-    node.props.pump_config = document.getElementById('np-pump-config').value;
+    const el = document.getElementById('np-pump-config');
+    if (el) node.props.pump_config = el.value;
     renderAll();
+    saveNetworkToStorage();
   }
 }
 function onNodeFittingChange() {
   const node = state.selected?.kind === 'node' ? findNode(state.selected.id) : null;
   if (node && (node.type === 'valve' || node.type === 'elbow')) {
     node.props.fitting_key = document.getElementById('np-fitting-key').value;
+    renderAll();
+    saveNetworkToStorage();
   }
+}
+
+function onGlobalFlowChange() {
+  saveNetworkToStorage();
 }
 
 function onPipePropChange() {
@@ -1745,6 +1934,7 @@ function onPipePropChange() {
   );
   refreshKTotal(pipe.props.fittings);
   renderAll();
+  saveNetworkToStorage();
 }
 
 // ============================================================================
@@ -1789,6 +1979,8 @@ async function runCalculation() {
     });
     if (!resp.ok) { const e = await resp.json(); toast(`Error: ${e.error}`, 'error'); return; }
     const data = await resp.json();
+    state.lastCalculation = data;
+    saveNetworkToStorage();
     displayResults(data);
     document.getElementById('pn-results-section')?.scrollIntoView({ behavior: 'smooth' });
     toast('Calculation complete!', 'success');
@@ -1874,11 +2066,23 @@ function importNetwork(file) {
 function clearCanvas() {
   if (!state.nodes.length && !state.pipes.length) return;
   if (!confirm('Clear the entire network? This cannot be undone.')) return;
-  state.nodes = []; state.pipes = [];
+  state.nodes = [];
+  state.pipes = [];
+  state.lastCalculation = null;
   const sec = document.getElementById('pn-results-section');
   if (sec) sec.style.display = 'none';
-  selectItem(null); renderAll();
+  selectItem(null);
+  renderAll();
+  saveNetworkToStorage({ explicitClear: true });
   toast('Canvas cleared.', 'info');
+}
+
+function resetToDemo() {
+  if (state.nodes.length || state.pipes.length) {
+    if (!confirm('Replace current network with the demo layout?')) return;
+  }
+  loadDemoNetwork();
+  toast('Demo network loaded.', 'info');
 }
 
 // ============================================================================
@@ -2049,7 +2253,13 @@ function init() {
     }
   });
 
-  svgEl.addEventListener('mouseup', () => { state.nodeDrag = null; state.panDrag = null; });
+  svgEl.addEventListener('mouseup', () => {
+    if (state.nodeDrag || state.panDrag) {
+      saveNetworkToStorage();
+    }
+    state.nodeDrag = null;
+    state.panDrag = null;
+  });
 
   svgEl.addEventListener('mousedown', e => {
     if (e.button === 1) {
@@ -2065,6 +2275,7 @@ function init() {
     e.preventDefault();
     state.zoom = Math.min(3, Math.max(0.2, state.zoom * (e.deltaY < 0 ? 1.1 : 0.9)));
     applyTransform();
+    saveNetworkToStorage();
   }, { passive: false });
 
   // Keyboard
@@ -2087,6 +2298,8 @@ function init() {
   document.getElementById('btn-add-valve')?.addEventListener('click', () => setMode('add-valve'));
   document.getElementById('btn-add-elbow')?.addEventListener('click', () => setMode('add-elbow'));
   document.getElementById('btn-delete')?.addEventListener('click', deleteSelected);
+  document.getElementById('btn-save')?.addEventListener('click', saveNetwork);
+  document.getElementById('btn-load-demo')?.addEventListener('click', resetToDemo);
   document.getElementById('btn-clear')?.addEventListener('click', clearCanvas);
   document.getElementById('btn-export')?.addEventListener('click', exportNetwork);
 
@@ -2123,28 +2336,43 @@ function init() {
   });
 
   document.getElementById('btn-zoom-in')?.addEventListener('click', () => {
-    state.zoom = Math.min(3, state.zoom * 1.2); applyTransform();
+    state.zoom = Math.min(3, state.zoom * 1.2); applyTransform(); saveNetworkToStorage();
   });
   document.getElementById('btn-zoom-out')?.addEventListener('click', () => {
-    state.zoom = Math.max(0.2, state.zoom / 1.2); applyTransform();
+    state.zoom = Math.max(0.2, state.zoom / 1.2); applyTransform(); saveNetworkToStorage();
   });
   document.getElementById('btn-zoom-reset')?.addEventListener('click', () => {
-    state.zoom = 1; state.pan = { x: 0, y: 0 }; applyTransform();
+    state.zoom = 1; state.pan = { x: 0, y: 0 }; applyTransform(); saveNetworkToStorage();
   });
 
   document.getElementById('pn-calc-btn')?.addEventListener('click', runCalculation);
 
-  // Property inputs
-  document.getElementById('np-label')?.addEventListener('input', onNodeLabelChange);
-  document.getElementById('np-elev')?.addEventListener('change', onNodeElevChange);
-  document.getElementById('np-flow')?.addEventListener('change', onPumpFlowChange);
+  // Global flow rate
+  document.getElementById('pn-global-flow')?.addEventListener('input', onGlobalFlowChange);
+  document.getElementById('pn-global-flow')?.addEventListener('change', onGlobalFlowChange);
+
+  // Property inputs (handle both input and change events for real-time saving)
+  const npLabel = document.getElementById('np-label');
+  npLabel?.addEventListener('input', onNodeLabelChange);
+  npLabel?.addEventListener('change', onNodeLabelChange);
+
+  const npElev = document.getElementById('np-elev');
+  npElev?.addEventListener('input', onNodeElevChange);
+  npElev?.addEventListener('change', onNodeElevChange);
+
+  const npFlow = document.getElementById('np-flow');
+  npFlow?.addEventListener('input', onPumpFlowChange);
+  npFlow?.addEventListener('change', onPumpFlowChange);
+
   document.getElementById('np-fitting-key')?.addEventListener('change', onNodeFittingChange);
   document.getElementById('np-pump-config')?.addEventListener('change', onPumpConfigChange);
 
   // Pipe property inputs (includes pp-routing now)
-  ['pp-label', 'pp-diameter', 'pp-length', 'pp-elev-change', 'pp-material', 'pp-routing'].forEach(id =>
-    document.getElementById(id)?.addEventListener('change', onPipePropChange)
-  );
+  ['pp-label', 'pp-diameter', 'pp-length', 'pp-elev-change', 'pp-material', 'pp-routing'].forEach(id => {
+    const el = document.getElementById(id);
+    el?.addEventListener('input', onPipePropChange);
+    el?.addEventListener('change', onPipePropChange);
+  });
   document.getElementById('pp-fittings-list')?.addEventListener('change', onPipePropChange);
 
   // Populate materials
@@ -2175,19 +2403,39 @@ function init() {
     }
   });
 
+  // Ensure state is flushed to storage on tab unload or visibility hidden
+  window.addEventListener('beforeunload', () => {
+    const payload = getNetworkPayload();
+    try {
+      localStorage.setItem('pmpro_pipe_network', JSON.stringify(payload));
+      if (navigator.sendBeacon) {
+        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+        navigator.sendBeacon('/api/pipe-network/save', blob);
+      }
+    } catch (e) { }
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      saveNetworkToStorage();
+    }
+  });
+
   // Initial state
   setMode('select');
   showPropsPanel('none');
-  applyTransform();
 
   if (!loadNetworkFromStorage()) {
     loadDemoNetwork();
   } else {
     renderAll();
+    if (state.pendingSelect) {
+      selectItem(state.pendingSelect.kind, state.pendingSelect.id);
+      delete state.pendingSelect;
+    }
   }
+  applyTransform();
 }
 
-/** Demo: reservoir -> pump -> junction -> tank, matching the reference layout */
 /** Demo: reservoir -> pump -> junction -> tank, matching the reference layout */
 function loadDemoNetwork() {
   state.nodes = [
@@ -2239,7 +2487,15 @@ function loadDemoNetwork() {
     },
   ];
   state.nextId = 10;
+  state.lastCalculation = null;
+  state.pan = { x: 0, y: 0 };
+  state.zoom = 1.0;
+  const flowEl = document.getElementById('pn-global-flow');
+  if (flowEl) flowEl.value = 15;
+  const sec = document.getElementById('pn-results-section');
+  if (sec) sec.style.display = 'none';
   renderAll();
+  applyTransform();
 }
 
 document.addEventListener('DOMContentLoaded', init);

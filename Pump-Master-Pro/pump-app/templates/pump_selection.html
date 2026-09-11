@@ -1039,6 +1039,8 @@
 
     <div class="pn-sep"></div>
 
+    <button id="btn-save" class="pn-btn pn-btn-success" title="Save current network (auto-saves on change)"><i class="bi bi-floppy"></i> Save</button>
+    <button id="btn-load-demo" class="pn-btn" title="Load sample demo network"><i class="bi bi-arrow-counterclockwise"></i> Demo</button>
     <button id="btn-export" class="pn-btn" title="Export JSON"><i class="bi bi-download"></i> Export</button>
     <button id="btn-import" class="pn-btn" title="Import JSON"><i class="bi bi-upload"></i> Import</button>
     <input id="import-file-input" type="file" accept=".json" style="display:none;">
@@ -1089,6 +1091,9 @@
            display:flex;align-items:center;gap:10px;border-top:1px solid #30363d;pointer-events:none;">
         <i class="bi bi-info-circle" style="color:#58a6ff;"></i>
         <span id="pn-status">Select / Move nodes</span>
+        <span id="pn-save-indicator" style="margin-left:14px;display:inline-flex;align-items:center;gap:4px;font-size:11px;">
+          <i class="bi bi-check2-circle" style="color:#22c55e;"></i> <span style="color:#22c55e;">Auto-saved</span>
+        </span>
         <span style="margin-left:auto;color:#475569;">Scroll=zoom &bull; Middle-drag=pan &bull; Del=delete</span>
       </div>
     </div>
@@ -1295,5 +1300,8 @@
 </script>
 
 <!-- Load the pipe network JS after the DOM elements above are in place -->
+<script>
+  window.__PMP_SESSION_PIPE_NETWORK = {{ pipe_network_json | safe }};
+</script>
 <script src="{{ url_for('static', filename='js/pipe_network.js') }}?v=2"></script>
 {% endblock %}

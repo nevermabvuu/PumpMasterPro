@@ -19,6 +19,7 @@ _app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if _app_dir not in sys.path:
     sys.path.insert(0, _app_dir)
 
+import json
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, flash, abort
 from models import Pump
 from utils import (
@@ -294,6 +295,10 @@ def pump_selection():
     )
     motor_filter_options = get_motor_filter_options()
 
+    active_sel = session.get('active_selection') or {}
+    pipe_net_data = active_sel.get('pipe_network')
+    pipe_network_json = json.dumps(pipe_net_data) if pipe_net_data else 'null'
+
     # ── Render template with results and filter options ─────────────────────
     return render_template('pump_selection.html',
                            results=results,
@@ -312,6 +317,7 @@ def pump_selection():
                            unit_rho=unit_rho,
                            unit_d50=unit_d50,
                            unit_pow=unit_pow,
+                           pipe_network_json=pipe_network_json,
                            sort_by=form_data.get('sort_by', 'rating'))
 
 
@@ -385,6 +391,7 @@ def pump_selection_details(pump_id):
     # ── Store Selection State into Server-Side Session ──
     # Beginners Note: Save full engineering parameters, active duty point, unit settings,
     # and default report ID into session['active_selection'].
+    existing_pipe_net = session.get('active_selection', {}).get('pipe_network')
     session['active_selection'] = {
         'pump_id': pump.id,
         'report_id': default_report_id,
@@ -414,6 +421,8 @@ def pump_selection_details(pump_id):
         'show_duty': '1',
         'hidden_curves': ''
     }
+    if existing_pipe_net:
+        session['active_selection']['pipe_network'] = existing_pipe_net
     
     units_tables = {
         'flow':    UNITS_FLOW,

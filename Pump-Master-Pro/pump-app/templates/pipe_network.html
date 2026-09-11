@@ -431,6 +431,12 @@
     <div class="pn-sep"></div>
 
     <!-- File operations -->
+    <button id="btn-save" class="pn-btn pn-btn-success" title="Save current network (auto-saves on change)">
+      <i class="bi bi-floppy"></i> Save
+    </button>
+    <button id="btn-load-demo" class="pn-btn" title="Load sample demo network">
+      <i class="bi bi-arrow-counterclockwise"></i> Demo
+    </button>
     <button id="btn-export" class="pn-btn" title="Export network as JSON">
       <i class="bi bi-download"></i> Export
     </button>
@@ -493,6 +499,9 @@
       <div id="pn-statusbar">
         <i class="bi bi-info-circle" style="color:#58a6ff;pointer-events:none;"></i>
         <span id="pn-status">Select / Move nodes</span>
+        <span id="pn-save-indicator" style="margin-left:14px;display:inline-flex;align-items:center;gap:4px;font-size:11px;">
+          <i class="bi bi-check2-circle" style="color:#22c55e;"></i> <span style="color:#22c55e;">Auto-saved</span>
+        </span>
         <span style="margin-left:auto;color:#475569;pointer-events:none;">
           Scroll to zoom &bull; Middle-drag to pan &bull; Delete key to remove
         </span>
@@ -864,6 +873,8 @@
 <script>
   window.__PMP_FITTINGS = {{ fittings_json | safe }};
   window.__PMP_MATERIALS = {{ materials_json | safe }};
+  window.__PMP_SESSION_PIPE_NETWORK = {{ pipe_network_json | safe }};
+  window.__PMP_ACTIVE_SELECTION = {{ active_selection_json | safe }};
 </script>
 <script src="{{ url_for('static', filename='js/pipe_network.js') }}"></script>
 <script>

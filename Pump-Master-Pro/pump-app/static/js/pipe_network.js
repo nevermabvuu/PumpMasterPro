@@ -34,6 +34,232 @@ const FITTINGS = window.__PMP_FITTINGS || [
   { key: 'gate_valve_open', label: 'Gate Valve (Open)', K: 0.20 },
 ];
 
+function generateStandardPipesCatalog() {
+  const pipes = [];
+  let id = 1;
+
+  // 1. ASME B36.10M Carbon Steel
+  const cs = [
+    [15, '1/2"', 21.3, [['Sch 40 (STD)', 2.77, 197], ['Sch 80 (XS)', 3.73, 265]]],
+    [20, '3/4"', 26.7, [['Sch 40 (STD)', 2.87, 161], ['Sch 80 (XS)', 3.91, 220]]],
+    [25, '1"', 33.4, [['Sch 40 (STD)', 3.38, 152], ['Sch 80 (XS)', 4.55, 205]]],
+    [32, '1-1/4"', 42.2, [['Sch 40 (STD)', 3.56, 127], ['Sch 80 (XS)', 4.85, 172]]],
+    [40, '1-1/2"', 48.3, [['Sch 40 (STD)', 3.68, 114], ['Sch 80 (XS)', 5.08, 158]]],
+    [50, '2"', 60.3, [['Sch 10', 2.77, 69], ['Sch 40 (STD)', 3.91, 97], ['Sch 80 (XS)', 5.54, 138], ['Sch 160', 8.74, 217]]],
+    [65, '2-1/2"', 73.0, [['Sch 40 (STD)', 5.16, 106], ['Sch 80 (XS)', 7.01, 144]]],
+    [80, '3"', 88.9, [['Sch 10', 3.05, 51], ['Sch 40 (STD)', 5.49, 93], ['Sch 80 (XS)', 7.62, 129], ['Sch 160', 11.13, 188]]],
+    [100, '4"', 114.3, [['Sch 10', 3.05, 40], ['Sch 40 (STD)', 6.02, 79], ['Sch 80 (XS)', 8.56, 112], ['Sch 120', 11.13, 146], ['Sch 160', 13.49, 177]]],
+    [125, '5"', 141.3, [['Sch 40 (STD)', 6.55, 70], ['Sch 80 (XS)', 9.53, 101]]],
+    [150, '6"', 168.3, [['Sch 10', 3.40, 30], ['Sch 40 (STD)', 7.11, 63], ['Sch 80 (XS)', 10.97, 98], ['Sch 160', 18.26, 163]]],
+    [200, '8"', 219.1, [['Sch 10', 3.76, 26], ['Sch 20', 6.35, 44], ['Sch 40 (STD)', 8.18, 56], ['Sch 80 (XS)', 12.70, 87], ['Sch 120', 18.26, 125], ['Sch 160', 23.01, 158]]],
+    [250, '10"', 273.0, [['Sch 20', 6.35, 35], ['Sch 40 (STD)', 9.27, 51], ['Sch 80 (XS)', 15.09, 83], ['Sch 120', 21.44, 118], ['Sch 160', 28.58, 157]]],
+    [300, '12"', 323.8, [['Sch 20', 6.35, 29], ['Sch 40 (STD)', 10.31, 48], ['Sch 80 (XS)', 17.48, 81]]],
+    [350, '14"', 355.6, [['Sch 30', 9.53, 40], ['Sch 40 (STD)', 11.13, 47], ['Sch 80 (XS)', 19.05, 80]]],
+    [400, '16"', 406.4, [['Sch 30', 9.53, 35], ['Sch 40 (STD)', 12.70, 47], ['Sch 80 (XS)', 21.44, 79]]],
+    [450, '18"', 457.0, [['Sch 40 (STD)', 14.27, 47], ['Sch 80 (XS)', 23.83, 78]]],
+    [500, '20"', 508.0, [['Sch 40 (STD)', 15.09, 45], ['Sch 80 (XS)', 26.19, 77]]],
+    [600, '24"', 610.0, [['Sch 40 (STD)', 17.48, 43], ['Sch 80 (XS)', 30.96, 76]]]
+  ];
+  cs.forEach(([nb, inch, od, list]) => {
+    list.forEach(([sch, wall, p]) => {
+      pipes.push({
+        id: id++, standard: 'ASME B36.10M', material: 'Carbon Steel', material_key: 'commercial_steel',
+        schedule_sdr: sch, nb_mm: nb, nb_inch: inch, od_mm: od, wall_thickness_mm: wall,
+        id_mm: +(od - 2 * wall).toFixed(2), sdr: +(od / wall).toFixed(1),
+        pressure_rating: `PN ${p} bar (${Math.round(p * 14.5038)} psi)`, is_active: true
+      });
+    });
+  });
+
+  // 2. ASME B36.19M Stainless Steel
+  const ss = [
+    [15, '1/2"', 21.3, [['Sch 10S', 2.11, 148], ['Sch 40S', 2.77, 197], ['Sch 80S', 3.73, 265]]],
+    [20, '3/4"', 26.7, [['Sch 10S', 2.11, 118], ['Sch 40S', 2.87, 161], ['Sch 80S', 3.91, 220]]],
+    [25, '1"', 33.4, [['Sch 10S', 2.77, 124], ['Sch 40S', 3.38, 152], ['Sch 80S', 4.55, 205]]],
+    [32, '1-1/4"', 42.2, [['Sch 10S', 2.77, 98], ['Sch 40S', 3.56, 127], ['Sch 80S', 4.85, 172]]],
+    [40, '1-1/2"', 48.3, [['Sch 10S', 2.77, 86], ['Sch 40S', 3.68, 114], ['Sch 80S', 5.08, 158]]],
+    [50, '2"', 60.3, [['Sch 10S', 2.77, 69], ['Sch 40S', 3.91, 97], ['Sch 80S', 5.54, 138]]],
+    [65, '2-1/2"', 73.0, [['Sch 10S', 3.05, 63], ['Sch 40S', 5.16, 106], ['Sch 80S', 7.01, 144]]],
+    [80, '3"', 88.9, [['Sch 10S', 3.05, 51], ['Sch 40S', 5.49, 93], ['Sch 80S', 7.62, 129]]],
+    [100, '4"', 114.3, [['Sch 10S', 3.05, 40], ['Sch 40S', 6.02, 79], ['Sch 80S', 8.56, 112]]],
+    [150, '6"', 168.3, [['Sch 10S', 3.40, 30], ['Sch 40S', 7.11, 63], ['Sch 80S', 10.97, 98]]],
+    [200, '8"', 219.1, [['Sch 10S', 3.76, 26], ['Sch 40S', 8.18, 56], ['Sch 80S', 12.70, 87]]],
+    [250, '10"', 273.0, [['Sch 10S', 4.19, 23], ['Sch 40S', 9.27, 51], ['Sch 80S', 12.70, 70]]],
+    [300, '12"', 323.8, [['Sch 10S', 4.57, 21], ['Sch 40S', 9.53, 44], ['Sch 80S', 12.70, 59]]]
+  ];
+  ss.forEach(([nb, inch, od, list]) => {
+    list.forEach(([sch, wall, p]) => {
+      pipes.push({
+        id: id++, standard: 'ASME B36.19M', material: 'Stainless Steel', material_key: 'stainless_steel',
+        schedule_sdr: sch, nb_mm: nb, nb_inch: inch, od_mm: od, wall_thickness_mm: wall,
+        id_mm: +(od - 2 * wall).toFixed(2), sdr: +(od / wall).toFixed(1),
+        pressure_rating: `PN ${p} bar (${Math.round(p * 14.5038)} psi)`, is_active: true
+      });
+    });
+  });
+
+  // 3. ISO 4427 / SANS 4427 HDPE PE100
+  const hdpe_sdrs = [
+    ['SDR 7.4', 7.4, 'PN 25 (25 bar / 363 psi)'],
+    ['SDR 9', 9.0, 'PN 20 (20 bar / 290 psi)'],
+    ['SDR 11', 11.0, 'PN 16 (16 bar / 232 psi)'],
+    ['SDR 13.6', 13.6, 'PN 12.5 (12.5 bar / 181 psi)'],
+    ['SDR 17', 17.0, 'PN 10 (10 bar / 145 psi)'],
+    ['SDR 21', 21.0, 'PN 8 (8 bar / 116 psi)'],
+    ['SDR 26', 26.0, 'PN 6 (6 bar / 87 psi)'],
+  ];
+  const hdpe_ods = [
+    [25, 20], [32, 25], [40, 32], [50, 40], [63, 50], [75, 65], [90, 80],
+    [110, 100], [125, 100], [140, 125], [160, 150], [180, 150], [200, 200],
+    [225, 200], [250, 250], [280, 250], [315, 300], [355, 350], [400, 400],
+    [450, 450], [500, 500], [560, 500], [630, 600]
+  ];
+  hdpe_sdrs.forEach(([sch, sdr, rating]) => {
+    hdpe_ods.forEach(([od, nb]) => {
+      let wall = +(od / sdr).toFixed(2);
+      if (wall < 2.0) wall = 2.0;
+      const idVal = +(od - 2 * wall).toFixed(2);
+      if (idVal > 0) {
+        pipes.push({
+          id: id++, standard: 'ISO 4427 / SANS 4427', material: 'HDPE (PE100)', material_key: 'plastic_pe',
+          schedule_sdr: sch, nb_mm: nb, nb_inch: `${nb}mm`, od_mm: od, wall_thickness_mm: wall,
+          id_mm: idVal, sdr: sdr, pressure_rating: rating, is_active: true
+        });
+      }
+    });
+  });
+
+  // 4. DIN 8062 / ISO 1452 uPVC Metric
+  const pvc_classes = [
+    ['Class 6 / SDR 41', 41.0, 'PN 6 (6 bar / 87 psi)'],
+    ['Class 9 / SDR 26', 26.0, 'PN 9 (9 bar / 130 psi)'],
+    ['Class 12 / SDR 21', 21.0, 'PN 12 (12 bar / 174 psi)'],
+    ['Class 16 / SDR 13.5', 13.5, 'PN 16 (16 bar / 232 psi)'],
+    ['Class 20 / SDR 11', 11.0, 'PN 20 (20 bar / 290 psi)'],
+  ];
+  const pvc_ods = [
+    [32, 25], [40, 32], [50, 40], [63, 50], [75, 65], [90, 80],
+    [110, 100], [125, 100], [140, 125], [160, 150], [200, 200],
+    [250, 250], [315, 300], [400, 400], [500, 500]
+  ];
+  pvc_classes.forEach(([sch, sdr, rating]) => {
+    pvc_ods.forEach(([od, nb]) => {
+      let wall = +(od / sdr).toFixed(2);
+      if (wall < 1.5) wall = 1.5;
+      const idVal = +(od - 2 * wall).toFixed(2);
+      if (idVal > 0) {
+        pipes.push({
+          id: id++, standard: 'DIN 8062 / ISO 1452', material: 'uPVC', material_key: 'pvc',
+          schedule_sdr: sch, nb_mm: nb, nb_inch: `${nb}mm`, od_mm: od, wall_thickness_mm: wall,
+          id_mm: idVal, sdr: sdr, pressure_rating: rating, is_active: true
+        });
+      }
+    });
+  });
+
+  // 5. ASTM D1785 PVC IPS
+  const pvc_ips = [
+    [15, '1/2"', 21.3, [['Sch 40', 2.77, 'PN 41 (600 psi)'], ['Sch 80', 3.73, 'PN 59 (850 psi)']]],
+    [20, '3/4"', 26.7, [['Sch 40', 2.87, 'PN 33 (480 psi)'], ['Sch 80', 3.91, 'PN 48 (690 psi)']]],
+    [25, '1"', 33.4, [['Sch 40', 3.38, 'PN 31 (450 psi)'], ['Sch 80', 4.55, 'PN 43 (630 psi)']]],
+    [32, '1-1/4"', 42.2, [['Sch 40', 3.56, 'PN 25 (370 psi)'], ['Sch 80', 4.85, 'PN 36 (520 psi)']]],
+    [40, '1-1/2"', 48.3, [['Sch 40', 3.68, 'PN 23 (330 psi)'], ['Sch 80', 5.08, 'PN 32 (470 psi)']]],
+    [50, '2"', 60.3, [['Sch 40', 3.91, 'PN 19 (280 psi)'], ['Sch 80', 5.54, 'PN 28 (400 psi)']]],
+    [65, '2-1/2"', 73.0, [['Sch 40', 5.16, 'PN 21 (300 psi)'], ['Sch 80', 7.01, 'PN 29 (420 psi)']]],
+    [80, '3"', 88.9, [['Sch 40', 5.49, 'PN 18 (260 psi)'], ['Sch 80', 7.62, 'PN 26 (370 psi)']]],
+    [100, '4"', 114.3, [['Sch 40', 6.02, 'PN 15 (220 psi)'], ['Sch 80', 8.56, 'PN 22 (320 psi)']]],
+    [150, '6"', 168.3, [['Sch 40', 7.11, 'PN 12 (180 psi)'], ['Sch 80', 10.97, 'PN 19 (280 psi)']]],
+    [200, '8"', 219.1, [['Sch 40', 8.18, 'PN 11 (160 psi)'], ['Sch 80', 12.70, 'PN 17 (250 psi)']]],
+    [250, '10"', 273.0, [['Sch 40', 9.27, 'PN 10 (140 psi)'], ['Sch 80', 15.09, 'PN 16 (230 psi)']]],
+    [300, '12"', 323.8, [['Sch 40', 10.31, 'PN 9 (130 psi)'], ['Sch 80', 17.48, 'PN 16 (230 psi)']]]
+  ];
+  pvc_ips.forEach(([nb, inch, od, list]) => {
+    list.forEach(([sch, wall, rating]) => {
+      pipes.push({
+        id: id++, standard: 'ASTM D1785 (PVC)', material: 'uPVC', material_key: 'pvc',
+        schedule_sdr: sch, nb_mm: nb, nb_inch: inch, od_mm: od, wall_thickness_mm: wall,
+        id_mm: +(od - 2 * wall).toFixed(2), sdr: +(od / wall).toFixed(1),
+        pressure_rating: rating, is_active: true
+      });
+    });
+  });
+
+  // 6. EN 545 / ISO 2531 Ductile Iron
+  const di = [
+    [80, '3"', 98.0, [['Class C40', 4.4, 'PN 40 (40 bar)'], ['Class K9', 6.0, 'PN 50 (50 bar)']]],
+    [100, '4"', 118.0, [['Class C40', 4.4, 'PN 40 (40 bar)'], ['Class K9', 6.0, 'PN 50 (50 bar)']]],
+    [150, '6"', 170.0, [['Class C40', 4.5, 'PN 40 (40 bar)'], ['Class K9', 6.0, 'PN 45 (45 bar)']]],
+    [200, '8"', 222.0, [['Class C40', 4.7, 'PN 40 (40 bar)'], ['Class K9', 6.3, 'PN 40 (40 bar)']]],
+    [250, '10"', 274.0, [['Class C40', 5.5, 'PN 40 (40 bar)'], ['Class K9', 6.8, 'PN 35 (35 bar)']]],
+    [300, '12"', 326.0, [['Class C40', 6.2, 'PN 40 (40 bar)'], ['Class K9', 7.2, 'PN 32 (32 bar)']]],
+    [350, '14"', 378.0, [['Class C30', 6.3, 'PN 30 (30 bar)'], ['Class K9', 7.7, 'PN 30 (30 bar)']]],
+    [400, '16"', 429.0, [['Class C30', 6.5, 'PN 30 (30 bar)'], ['Class K9', 8.1, 'PN 30 (30 bar)']]],
+    [500, '20"', 532.0, [['Class C30', 7.5, 'PN 30 (30 bar)'], ['Class K9', 9.0, 'PN 28 (28 bar)']]],
+    [600, '24"', 635.0, [['Class C25', 7.9, 'PN 25 (25 bar)'], ['Class K9', 9.9, 'PN 25 (25 bar)']]]
+  ];
+  di.forEach(([nb, inch, od, list]) => {
+    list.forEach(([sch, wall, rating]) => {
+      pipes.push({
+        id: id++, standard: 'EN 545 / ISO 2531', material: 'Ductile Iron', material_key: 'ductile_iron',
+        schedule_sdr: sch, nb_mm: nb, nb_inch: inch, od_mm: od, wall_thickness_mm: wall,
+        id_mm: +(od - 2 * wall).toFixed(2), sdr: +(od / wall).toFixed(1),
+        pressure_rating: rating, is_active: true
+      });
+    });
+  });
+
+  // 7. SANS 62 / BS 1387 Galvanised Steel
+  const galv = [
+    [15, '1/2"', 21.3, [['Medium (Class B)', 2.65, 'PN 25 (25 bar)'], ['Heavy (Class C)', 3.25, 'PN 32 (32 bar)']]],
+    [20, '3/4"', 26.9, [['Medium (Class B)', 2.65, 'PN 25 (25 bar)'], ['Heavy (Class C)', 3.25, 'PN 32 (32 bar)']]],
+    [25, '1"', 33.7, [['Medium (Class B)', 3.25, 'PN 25 (25 bar)'], ['Heavy (Class C)', 4.05, 'PN 32 (32 bar)']]],
+    [32, '1-1/4"', 42.4, [['Medium (Class B)', 3.25, 'PN 25 (25 bar)'], ['Heavy (Class C)', 4.05, 'PN 32 (32 bar)']]],
+    [40, '1-1/2"', 48.3, [['Medium (Class B)', 3.25, 'PN 25 (25 bar)'], ['Heavy (Class C)', 4.05, 'PN 32 (32 bar)']]],
+    [50, '2"', 60.3, [['Medium (Class B)', 3.65, 'PN 25 (25 bar)'], ['Heavy (Class C)', 4.50, 'PN 32 (32 bar)']]],
+    [65, '2-1/2"', 76.1, [['Medium (Class B)', 3.65, 'PN 25 (25 bar)'], ['Heavy (Class C)', 4.50, 'PN 32 (32 bar)']]],
+    [80, '3"', 88.9, [['Medium (Class B)', 4.05, 'PN 25 (25 bar)'], ['Heavy (Class C)', 4.85, 'PN 32 (32 bar)']]],
+    [100, '4"', 114.3, [['Medium (Class B)', 4.50, 'PN 25 (25 bar)'], ['Heavy (Class C)', 5.40, 'PN 32 (32 bar)']]],
+    [150, '6"', 165.1, [['Medium (Class B)', 4.85, 'PN 25 (25 bar)'], ['Heavy (Class C)', 5.40, 'PN 32 (32 bar)']]]
+  ];
+  galv.forEach(([nb, inch, od, list]) => {
+    list.forEach(([sch, wall, rating]) => {
+      pipes.push({
+        id: id++, standard: 'SANS 62 / BS 1387', material: 'Galvanised Steel', material_key: 'galvanized_iron',
+        schedule_sdr: sch, nb_mm: nb, nb_inch: inch, od_mm: od, wall_thickness_mm: wall,
+        id_mm: +(od - 2 * wall).toFixed(2), sdr: +(od / wall).toFixed(1),
+        pressure_rating: rating, is_active: true
+      });
+    });
+  });
+
+  return pipes;
+}
+
+const EMBEDDED_STANDARD_PIPES = generateStandardPipesCatalog();
+let STANDARD_PIPES = (Array.isArray(window.__PMP_STANDARD_PIPES) && window.__PMP_STANDARD_PIPES.length > 0)
+  ? window.__PMP_STANDARD_PIPES
+  : EMBEDDED_STANDARD_PIPES;
+
+// Also fetch from API in background to sync any dynamic database additions
+fetch('/api/pipe-network/standard-pipes')
+  .then(r => {
+    if (!r.ok) return null;
+    return r.json();
+  })
+  .then(d => {
+    if (d && d.pipes && d.pipes.length > 0) {
+      STANDARD_PIPES = d.pipes;
+      if (state.selected && state.selected.kind === 'pipe') {
+        const pipe = findPipe(state.selected.id);
+        if (pipe) {
+          populateStandardPipeFilters(pipe);
+          updatePipeDetailsCard(pipe.props);
+        }
+      }
+    }
+  })
+  .catch(() => {});
+
 // ============================================================================
 // STATE
 // ============================================================================
@@ -135,11 +361,27 @@ function defaultNodeProps(type, count) {
 }
 
 function defaultPipeProps(id) {
+  let defStd = null;
+  if (Array.isArray(STANDARD_PIPES) && STANDARD_PIPES.length > 0) {
+    defStd = STANDARD_PIPES.find(p => p.standard.includes('B36.10M') && p.nb_mm === 100 && p.schedule_sdr.includes('40'))
+      || STANDARD_PIPES.find(p => p.nb_mm === 100)
+      || STANDARD_PIPES[0];
+  }
   return {
     label: id,
-    diameter_mm: 100,
+    dimension_mode: 'standard', // 'standard' | 'custom'
+    standard_pipe_id: defStd ? defStd.id : null,
+    standard: defStd ? defStd.standard : 'ASME B36.10M',
+    schedule_sdr: defStd ? defStd.schedule_sdr : 'Sch 40 (STD)',
+    nb_mm: defStd ? defStd.nb_mm : 100,
+    nb_inch: defStd ? defStd.nb_inch : '4"',
+    od_mm: defStd ? defStd.od_mm : 114.3,
+    wall_thickness_mm: defStd ? defStd.wall_thickness_mm : 6.02,
+    id_mm: defStd ? defStd.id_mm : 102.26,
+    pressure_rating: defStd ? defStd.pressure_rating : 'PN 79 bar (1145 psi)',
+    diameter_mm: defStd ? defStd.id_mm : 100,
     length_m: 10.0,
-    material: 'commercial_steel',
+    material: defStd ? defStd.material_key : 'commercial_steel',
     elev_change_m: 0.0,
     fittings: [],
     custom_k: 0.0,
@@ -2210,8 +2452,8 @@ function renderPopoverNodeValve(node, pop) {
         </span>
       </div>
       <div id="pop-custom-k-wrap" style="display:${isCustom ? 'flex' : 'none'};align-items:center;gap:6px;">
-        <input type="number" id="pop-custom-k" class="pn-popover-input" step="0.05" min="0" value="${node.props.custom_k ?? currentK}">
-        <span style="font-size:10px;color:#64748b;">(loss = K·V²/2g)</span>
+        <input type="number" id="pop-custom-k" class="pn-popover-input" step="0.05" min="0" value="${node.props.custom_k ?? currentK}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:6px 9px;font-size:12px;width:100px;">
+        <span style="font-size:10px;color:#94a3b8;">(loss = K·V²/2g)</span>
       </div>
     </div>
   `;
@@ -2316,8 +2558,8 @@ function renderPopoverNodeTee(node, pop) {
         </span>
       </div>
       <div id="pop-custom-k-wrap" style="display:${isCustom ? 'flex' : 'none'};align-items:center;gap:6px;">
-        <input type="number" id="pop-custom-k" class="pn-popover-input" step="0.05" min="0" value="${node.props.custom_k ?? currentK}">
-        <span style="font-size:10px;color:#64748b;">(loss = K·V²/2g)</span>
+        <input type="number" id="pop-custom-k" class="pn-popover-input" step="0.05" min="0" value="${node.props.custom_k ?? currentK}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:6px 9px;font-size:12px;width:100px;">
+        <span style="font-size:10px;color:#94a3b8;">(loss = K·V²/2g)</span>
       </div>
     </div>
   `;
@@ -2420,8 +2662,8 @@ function renderPopoverNodeElbow(node, pop) {
         </span>
       </div>
       <div id="pop-custom-k-wrap" style="display:${isCustom ? 'flex' : 'none'};align-items:center;gap:6px;">
-        <input type="number" id="pop-custom-k" class="pn-popover-input" step="0.05" min="0" value="${node.props.custom_k ?? currentK}">
-        <span style="font-size:10px;color:#64748b;">(loss = K·V²/2g)</span>
+        <input type="number" id="pop-custom-k" class="pn-popover-input" step="0.05" min="0" value="${node.props.custom_k ?? currentK}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:6px 9px;font-size:12px;width:100px;">
+        <span style="font-size:10px;color:#94a3b8;">(loss = K·V²/2g)</span>
       </div>
     </div>
   `;
@@ -2504,7 +2746,7 @@ function renderPopoverNodePump(node, pop) {
       </div>
 
       <div class="pn-popover-section-label" style="margin-top:10px;">Flow Rate (m³/h)</div>
-      <input type="number" id="pop-pump-flow" class="pn-popover-input" step="1" min="0" value="${node.props.flow_m3h ?? 10}">
+      <input type="number" id="pop-pump-flow" class="pn-popover-input" step="1" min="0" value="${node.props.flow_m3h ?? 10}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:6px 9px;font-size:12px;">
     </div>
   `;
 
@@ -2543,10 +2785,10 @@ function renderPopoverNodeDefault(node, pop) {
     </div>
     <div class="pn-popover-body">
       <div class="pn-popover-section-label">Node Label</div>
-      <input type="text" id="pop-node-label" class="pn-popover-input" value="${node.props.label || ''}">
+      <input type="text" id="pop-node-label" class="pn-popover-input" value="${node.props.label || ''}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:6px 9px;font-size:12px;">
 
       <div class="pn-popover-section-label" style="margin-top:8px;">Elevation (Z, meters)</div>
-      <input type="number" id="pop-node-elev" class="pn-popover-input" step="0.5" value="${node.props.elevation_m ?? 0}">
+      <input type="number" id="pop-node-elev" class="pn-popover-input" step="0.5" value="${node.props.elevation_m ?? 0}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:6px 9px;font-size:12px;">
     </div>
   `;
 
@@ -2573,26 +2815,58 @@ function renderPopoverNodeDefault(node, pop) {
 }
 
 function renderPopoverPipe(pipe, pop) {
-  const diameters = [50, 80, 100, 150, 200, 250];
-  const curD = pipe.props.diameter_mm || 100;
-  const curMat = pipe.props.material || 'commercial_steel';
+  if (!Array.isArray(STANDARD_PIPES) || STANDARD_PIPES.length === 0) {
+    STANDARD_PIPES = EMBEDDED_STANDARD_PIPES;
+  }
+
   const curRouting = pipe.props.routing || 'auto';
   const curCustK = pipe.props.custom_k || 0;
+  const curD = pipe.props.id_mm || pipe.props.diameter_mm || 100;
+  const curStd = pipe.props.standard || 'ASME B36.10M';
+  const curSch = pipe.props.schedule_sdr || 'Sch 40 (STD)';
 
-  let diaHtml = '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
-  diameters.forEach(d => {
-    const isAct = curD === d;
-    diaHtml += `
-      <button class="pn-btn pop-dia-btn ${isAct ? 'active-tool' : ''}" data-dia="${d}" style="padding:3px 8px;font-size:11px;">
-        ${d}mm
-      </button>
-    `;
-  });
-  diaHtml += '</div>';
+  // Build spec summary card
+  const specCardHtml = `
+    <div style="background:#090d16;border:1px solid #334155;border-radius:6px;padding:8px 9px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:11px;font-weight:700;color:#38bdf8;display:flex;align-items:center;gap:4px;">
+          <i class="bi bi-shield-check"></i> ${pipe.props.standard || curStd}
+        </span>
+        <span style="font-size:9.5px;font-family:monospace;color:#38bdf8;background:rgba(56,189,248,0.15);padding:1px 6px;border-radius:4px;border:1px solid rgba(56,189,248,0.3);font-weight:600;">
+          ${pipe.props.pressure_rating || 'PN --'}
+        </span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;">
+        <div style="background:#0f172a;padding:4px 6px;border-radius:4px;border:1px solid #1e293b;">
+          <span style="color:#94a3b8;font-size:9.5px;display:block;">Inner Dia (ID):</span>
+          <strong style="color:#34d399;font-size:12px;">${(pipe.props.id_mm || pipe.props.diameter_mm || 100).toFixed(1)} mm</strong>
+        </div>
+        <div style="background:#0f172a;padding:4px 6px;border-radius:4px;border:1px solid #1e293b;">
+          <span style="color:#94a3b8;font-size:9.5px;display:block;">Outer Dia (OD):</span>
+          <strong style="color:#f8fafc;font-size:12px;">${pipe.props.od_mm ? pipe.props.od_mm.toFixed(1) + ' mm' : '--'}</strong>
+        </div>
+        <div style="background:#0f172a;padding:4px 6px;border-radius:4px;border:1px solid #1e293b;">
+          <span style="color:#94a3b8;font-size:9.5px;display:block;">Nominal Bore:</span>
+          <strong style="color:#cbd5e1;font-size:11px;">${pipe.props.nb_mm ? 'DN ' + pipe.props.nb_mm + (pipe.props.nb_inch ? ' (' + pipe.props.nb_inch + ')' : '') : '--'}</strong>
+        </div>
+        <div style="background:#0f172a;padding:4px 6px;border-radius:4px;border:1px solid #1e293b;">
+          <span style="color:#94a3b8;font-size:9.5px;display:block;">Schedule / SDR:</span>
+          <strong style="color:#cbd5e1;font-size:11px;">${pipe.props.schedule_sdr || curSch}</strong>
+        </div>
+      </div>
+    </div>
+  `;
 
-  let matOptions = '';
-  MATERIALS.forEach(m => {
-    matOptions += `<option value="${m.key}" ${curMat === m.key ? 'selected' : ''}>${m.label}</option>`;
+  // Candidate pipes in current standard
+  let sizeOptions = '';
+  const currentStdPipes = Array.isArray(STANDARD_PIPES) ? STANDARD_PIPES.filter(p => p.standard === curStd && p.schedule_sdr === curSch) : [];
+  const candidatePipes = currentStdPipes.length > 0 ? currentStdPipes : (Array.isArray(STANDARD_PIPES) ? STANDARD_PIPES.filter(p => p.standard === curStd) : []);
+  const listToUse = candidatePipes.length > 0 ? candidatePipes : (Array.isArray(STANDARD_PIPES) ? STANDARD_PIPES.slice(0, 30) : []);
+
+  listToUse.forEach(p => {
+    const isAct = p.id === pipe.props.standard_pipe_id || Math.abs(p.id_mm - curD) < 1.0;
+    const label = formatStandardPipeLabel(p, false);
+    sizeOptions += `<option value="${p.id}" ${isAct ? 'selected' : ''}>${label}</option>`;
   });
 
   pop.innerHTML = `
@@ -2604,48 +2878,57 @@ function renderPopoverPipe(pipe, pop) {
       <button class="pn-popover-close" title="Close"><i class="bi bi-x"></i></button>
     </div>
     <div class="pn-popover-body">
-      <div class="pn-popover-section-label">Diameter (mm)</div>
-      ${diaHtml}
+      <div class="pn-popover-section-label">Pipe Specifications</div>
+      ${specCardHtml}
 
-      <div class="pn-popover-section-label" style="margin-top:10px;">Material</div>
-      <select id="pop-pipe-material" class="pn-popover-select">
-        ${matOptions}
+      <div class="pn-popover-section-label">Standard Pipe Size</div>
+      <select id="pop-pipe-size-select" class="pn-popover-select" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:6px 8px;font-size:11.5px;margin-bottom:8px;">
+        ${sizeOptions || '<option value="">No pipes available</option>'}
       </select>
 
-      <div class="pn-popover-section-label" style="margin-top:10px;">Routing Mode</div>
-      <div style="display:flex;gap:4px;">
+      <div class="pn-popover-section-label" style="margin-top:6px;">Routing Mode</div>
+      <div style="display:flex;gap:4px;margin-bottom:8px;">
         <button class="pn-btn pop-route-btn ${curRouting === 'auto' ? 'active-tool' : ''}" data-route="auto" style="flex:1;padding:4px;font-size:10px;">Auto</button>
         <button class="pn-btn pop-route-btn ${curRouting === 'orthogonal' ? 'active-tool' : ''}" data-route="orthogonal" style="flex:1;padding:4px;font-size:10px;">Orthogonal</button>
         <button class="pn-btn pop-route-btn ${curRouting === 'straight' ? 'active-tool' : ''}" data-route="straight" style="flex:1;padding:4px;font-size:10px;">Straight</button>
       </div>
 
-      <div class="pn-popover-section-label" style="margin-top:10px;">Additive Custom K-Factor</div>
+      <div class="pn-popover-section-label">Additive Minor Loss (Custom K)</div>
       <div style="display:flex;align-items:center;gap:6px;">
-        <input type="number" id="pop-pipe-custom-k" class="pn-popover-input" step="0.05" min="0" value="${curCustK}">
-        <span style="font-size:10px;color:#64748b;">(extra minor loss)</span>
+        <input type="number" id="pop-pipe-custom-k" class="pn-popover-input" step="0.05" min="0" value="${curCustK}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:5px 8px;font-size:11px;width:90px;">
+        <span style="font-size:10px;color:#94a3b8;">(extra minor loss)</span>
       </div>
     </div>
   `;
 
   pop.querySelector('.pn-popover-close').onclick = hideContextPopover;
 
-  pop.querySelectorAll('.pop-dia-btn').forEach(btn => {
-    btn.onclick = () => {
-      pipe.props.diameter_mm = parseInt(btn.dataset.dia, 10);
-      renderAll();
-      showPipeProps(pipe);
-      showContextPopover('pipe', pipe.id);
-      saveNetworkToStorage();
-    };
-  });
+  const sizeSel = pop.querySelector('#pop-pipe-size-select');
+  if (sizeSel) {
+    sizeSel.onchange = (e) => {
+      const stdId = parseInt(e.target.value, 10);
+      const stdPipe = Array.isArray(STANDARD_PIPES) ? STANDARD_PIPES.find(p => p.id === stdId) : null;
+      if (stdPipe) {
+        pipe.props.dimension_mode = 'standard';
+        pipe.props.standard_pipe_id = stdPipe.id;
+        pipe.props.standard = stdPipe.standard;
+        pipe.props.schedule_sdr = stdPipe.schedule_sdr;
+        pipe.props.nb_mm = stdPipe.nb_mm;
+        pipe.props.nb_inch = stdPipe.nb_inch;
+        pipe.props.od_mm = stdPipe.od_mm;
+        pipe.props.wall_thickness_mm = stdPipe.wall_thickness_mm;
+        pipe.props.id_mm = stdPipe.id_mm;
+        pipe.props.sdr = stdPipe.sdr;
+        pipe.props.pressure_rating = stdPipe.pressure_rating;
+        pipe.props.material_key = stdPipe.material_key;
+        pipe.props.material = stdPipe.material_key;
+        pipe.props.diameter_mm = stdPipe.id_mm;
 
-  const matSel = pop.querySelector('#pop-pipe-material');
-  if (matSel) {
-    matSel.onchange = (e) => {
-      pipe.props.material = e.target.value;
-      renderAll();
-      showPipeProps(pipe);
-      saveNetworkToStorage();
+        renderAll();
+        showPipeProps(pipe);
+        showContextPopover('pipe', pipe.id);
+        saveNetworkToStorage();
+      }
     };
   }
 
@@ -2789,6 +3072,479 @@ function showNodeProps(node) {
   }
 }
 
+// ============================================================================
+// STANDARD PIPE SPECIFICATION & FILTERING HELPERS
+// ============================================================================
+
+function setPipeDimensionMode(mode, save = true) {
+  const stdBtn = document.getElementById('pp-mode-std');
+  const custBtn = document.getElementById('pp-mode-custom');
+  const stdGrp = document.getElementById('pp-std-dim-group');
+  const custGrp = document.getElementById('pp-custom-dim-group');
+
+  if (mode === 'standard') {
+    stdBtn?.classList.add('active-tool');
+    custBtn?.classList.remove('active-tool');
+    if (stdGrp) stdGrp.style.display = '';
+    if (custGrp) custGrp.style.display = 'none';
+  } else {
+    custBtn?.classList.add('active-tool');
+    stdBtn?.classList.remove('active-tool');
+    if (stdGrp) stdGrp.style.display = 'none';
+    if (custGrp) custGrp.style.display = '';
+  }
+
+  if (state.selected?.kind === 'pipe') {
+    const pipe = findPipe(state.selected.id);
+    if (pipe) {
+      pipe.props.dimension_mode = mode;
+      if (mode === 'standard') {
+        const sel = document.getElementById('pp-standard-pipe-select');
+        if (sel && sel.value) {
+          onStandardPipeSelectChange();
+        }
+      } else {
+        const diaInput = document.getElementById('pp-diameter');
+        if (diaInput) {
+          diaInput.value = pipe.props.diameter_mm || 100;
+        }
+        pipe.props.id_mm = pipe.props.diameter_mm || 100;
+        updatePipeDetailsCard(pipe.props);
+      }
+      if (save) {
+        renderAll();
+        saveNetworkToStorage();
+      }
+    }
+  }
+}
+
+function getAvailableStandards() {
+  if (!Array.isArray(STANDARD_PIPES)) return [];
+  const set = new Set();
+  STANDARD_PIPES.forEach(p => { if (p.standard) set.add(p.standard); });
+  return Array.from(set);
+}
+
+function getAvailableMaterialsForStandard(std) {
+  if (!Array.isArray(STANDARD_PIPES)) return [];
+  const set = new Set();
+  STANDARD_PIPES.forEach(p => {
+    if (!std || std === 'all' || p.standard === std) {
+      if (p.material) set.add(p.material);
+    }
+  });
+  return Array.from(set);
+}
+
+function getAvailableSchedulesForFilters(std, mat) {
+  if (!Array.isArray(STANDARD_PIPES)) return [];
+  const set = new Set();
+  STANDARD_PIPES.forEach(p => {
+    const stdMatch = !std || std === 'all' || p.standard === std;
+    const matMatch = !mat || mat === 'all' || p.material === mat;
+    if (stdMatch && matMatch && p.schedule_sdr) {
+      set.add(p.schedule_sdr);
+    }
+  });
+  return Array.from(set);
+}
+
+function getFilteredStandardPipes(std, mat, sch) {
+  if (!Array.isArray(STANDARD_PIPES)) return [];
+  return STANDARD_PIPES.filter(p => {
+    if (std && std !== 'all' && p.standard !== std) return false;
+    if (mat && mat !== 'all' && p.material !== mat) return false;
+    if (sch && sch !== 'all' && p.schedule_sdr !== sch) return false;
+    return true;
+  }).sort((a, b) => (a.nb_mm || a.od_mm || 0) - (b.nb_mm || b.od_mm || 0));
+}
+
+function formatStandardPipeLabel(p, includeStandard = false) {
+  let sizeLabel = '';
+  // ISO 4427 HDPE and DIN 8062 Metric uPVC are commercially specified by Outside Diameter (OD)
+  const isMetricOD = p.standard && (p.standard.includes('4427') || p.standard.includes('8062'));
+
+  if (isMetricOD) {
+    const nbPart = p.nb_mm ? ` (DN ${p.nb_mm})` : '';
+    sizeLabel = `OD ${p.od_mm}mm${nbPart}`;
+  } else if (p.nb_inch && !p.nb_inch.includes('mm') && !p.standard.includes('EN 545')) {
+    // Imperial nominal bore pipes (ASME B36.10M, B36.19M, ASTM D1785 PVC IPS, SANS 62 Galv):
+    sizeLabel = `${p.nb_inch} (DN ${p.nb_mm})`;
+  } else {
+    // European metric nominal bore pipes (EN 545 Ductile Iron):
+    sizeLabel = `DN ${p.nb_mm}`;
+  }
+
+  const schStr = p.schedule_sdr ? ` • ${p.schedule_sdr}` : '';
+  const stdPrefix = includeStandard ? `[${p.material || p.standard}] ` : '';
+  return `${stdPrefix}${sizeLabel}${schStr} — OD ${p.od_mm}mm | ID ${p.id_mm}mm`;
+}
+
+function populateStandardPipeFilters(pipe) {
+  const stdSel = document.getElementById('pp-filter-standard');
+  const matSel = document.getElementById('pp-filter-material');
+  const schSel = document.getElementById('pp-filter-schedule');
+  const pipeSel = document.getElementById('pp-standard-pipe-select');
+
+  if (!stdSel || !pipeSel) return;
+
+  // Guarantee catalog is present
+  if (!Array.isArray(STANDARD_PIPES) || STANDARD_PIPES.length === 0) {
+    STANDARD_PIPES = EMBEDDED_STANDARD_PIPES;
+  }
+
+  // Determine current active standard pipe or auto-detect from pipe properties
+  let activePipe = null;
+  if (pipe?.props?.standard_pipe_id) {
+    activePipe = STANDARD_PIPES.find(p => p.id === pipe.props.standard_pipe_id);
+  }
+  if (!activePipe && pipe?.props?.standard) {
+    activePipe = STANDARD_PIPES.find(p =>
+      p.standard === pipe.props.standard &&
+      (!pipe.props.schedule_sdr || p.schedule_sdr === pipe.props.schedule_sdr) &&
+      (!pipe.props.nb_mm || p.nb_mm === pipe.props.nb_mm)
+    );
+  }
+  if (!activePipe) {
+    // If not yet standard pipe, pick closest match for standard diameter and material
+    const targetD = pipe?.props?.id_mm || pipe?.props?.diameter_mm || 100;
+    const targetMat = pipe?.props?.material || 'commercial_steel';
+    const matPool = STANDARD_PIPES.filter(p => p.material_key === targetMat);
+    const pool = matPool.length > 0 ? matPool : STANDARD_PIPES;
+    activePipe = pool.reduce((closest, p) => {
+      if (!closest) return p;
+      return Math.abs(p.id_mm - targetD) < Math.abs(closest.id_mm - targetD) ? p : closest;
+    }, null) || STANDARD_PIPES[0];
+  }
+
+  if (activePipe && pipe) {
+    pipe.props.dimension_mode = pipe.props.dimension_mode || 'standard';
+    pipe.props.standard_pipe_id = activePipe.id;
+    pipe.props.standard = activePipe.standard;
+    pipe.props.schedule_sdr = activePipe.schedule_sdr;
+    pipe.props.nb_mm = activePipe.nb_mm;
+    pipe.props.nb_inch = activePipe.nb_inch;
+    pipe.props.od_mm = activePipe.od_mm;
+    pipe.props.wall_thickness_mm = activePipe.wall_thickness_mm;
+    pipe.props.id_mm = activePipe.id_mm;
+    pipe.props.sdr = activePipe.sdr;
+    pipe.props.pressure_rating = activePipe.pressure_rating;
+    pipe.props.material_key = activePipe.material_key;
+    pipe.props.material = activePipe.material_key;
+    pipe.props.diameter_mm = activePipe.id_mm;
+  }
+
+  const standards = getAvailableStandards();
+  const currentStd = activePipe?.standard || standards[0] || 'all';
+
+  // 1. Standards dropdown
+  stdSel.innerHTML = '<option value="all">All Standards</option>';
+  standards.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = s;
+    stdSel.appendChild(opt);
+  });
+  stdSel.value = standards.includes(currentStd) ? currentStd : 'all';
+
+  // 2. Materials dropdown
+  const materials = getAvailableMaterialsForStandard(stdSel.value);
+  const currentMat = activePipe?.material || 'all';
+  matSel.innerHTML = '<option value="all">All Materials</option>';
+  materials.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = m;
+    matSel.appendChild(opt);
+  });
+  matSel.value = materials.includes(currentMat) ? currentMat : 'all';
+
+  // 3. Schedules dropdown
+  const schedules = getAvailableSchedulesForFilters(stdSel.value, matSel.value);
+  const currentSch = activePipe?.schedule_sdr || 'all';
+  schSel.innerHTML = '<option value="all">All Schedules / SDRs</option>';
+  schedules.forEach(sc => {
+    const opt = document.createElement('option');
+    opt.value = sc;
+    opt.textContent = sc;
+    schSel.appendChild(opt);
+  });
+  schSel.value = schedules.includes(currentSch) ? currentSch : 'all';
+
+  // 4. Pipe sizes dropdown
+  updatePipeSizeSelect(pipe);
+}
+
+function updatePipeSizeSelect(pipe) {
+  const stdSel = document.getElementById('pp-filter-standard');
+  const matSel = document.getElementById('pp-filter-material');
+  const schSel = document.getElementById('pp-filter-schedule');
+  const pipeSel = document.getElementById('pp-standard-pipe-select');
+  const countEl = document.getElementById('pp-filter-match-count');
+
+  if (!pipeSel) return;
+
+  const std = stdSel ? stdSel.value : 'all';
+  const mat = matSel ? matSel.value : 'all';
+  const sch = schSel ? schSel.value : 'all';
+
+  let matches = getFilteredStandardPipes(std, mat, sch);
+
+  // Fallback gracefully if combination has no pipes
+  if (matches.length === 0 && sch !== 'all') {
+    if (schSel) schSel.value = 'all';
+    matches = getFilteredStandardPipes(std, mat, 'all');
+  }
+  if (matches.length === 0 && mat !== 'all') {
+    if (matSel) matSel.value = 'all';
+    matches = getFilteredStandardPipes(std, 'all', 'all');
+  }
+  if (matches.length === 0 && std !== 'all') {
+    if (stdSel) stdSel.value = 'all';
+    matches = getFilteredStandardPipes('all', 'all', 'all');
+  }
+
+  if (countEl) countEl.textContent = `${matches.length} sizes`;
+
+  pipeSel.innerHTML = '';
+  if (matches.length === 0) {
+    pipeSel.innerHTML = '<option value="">No pipes match filters</option>';
+    return;
+  }
+
+  let matchedOption = null;
+  const targetId = pipe?.props?.standard_pipe_id;
+  const targetD = pipe?.props?.id_mm || pipe?.props?.diameter_mm;
+  const targetNB = pipe?.props?.nb_mm;
+
+  // When viewing all standards or all materials, group by Standard & Material
+  if (std === 'all' || mat === 'all') {
+    const groups = {};
+    matches.forEach(p => {
+      const gKey = `${p.standard} — ${p.material || 'Standard'}`;
+      if (!groups[gKey]) groups[gKey] = [];
+      groups[gKey].push(p);
+    });
+
+    Object.entries(groups).forEach(([groupName, groupPipes]) => {
+      const optGroup = document.createElement('optgroup');
+      optGroup.label = groupName;
+      groupPipes.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = formatStandardPipeLabel(p, false);
+
+        if (targetId && p.id === targetId) {
+          opt.selected = true;
+          matchedOption = opt;
+        } else if (!matchedOption && targetNB && p.nb_mm === targetNB) {
+          opt.selected = true;
+          matchedOption = opt;
+        } else if (!matchedOption && targetD && Math.abs(p.id_mm - targetD) < 5.0) {
+          opt.selected = true;
+          matchedOption = opt;
+        }
+        optGroup.appendChild(opt);
+      });
+      pipeSel.appendChild(optGroup);
+    });
+  } else {
+    matches.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = formatStandardPipeLabel(p, false);
+
+      if (targetId && p.id === targetId) {
+        opt.selected = true;
+        matchedOption = opt;
+      } else if (!matchedOption && targetNB && p.nb_mm === targetNB) {
+        opt.selected = true;
+        matchedOption = opt;
+      } else if (!matchedOption && targetD && Math.abs(p.id_mm - targetD) < 5.0) {
+        opt.selected = true;
+        matchedOption = opt;
+      }
+      pipeSel.appendChild(opt);
+    });
+  }
+
+  if (!matchedOption && pipeSel.options.length > 0) {
+    pipeSel.selectedIndex = 0;
+  }
+
+  // Ensure pipe and details card are synced with the currently selected standard pipe
+  if (pipeSel.value) {
+    const stdId = parseInt(pipeSel.value, 10);
+    const chosen = Array.isArray(STANDARD_PIPES) ? STANDARD_PIPES.find(p => p.id === stdId) : null;
+    if (chosen && pipe) {
+      pipe.props.dimension_mode = 'standard';
+      pipe.props.standard_pipe_id = chosen.id;
+      pipe.props.standard = chosen.standard;
+      pipe.props.schedule_sdr = chosen.schedule_sdr;
+      pipe.props.nb_mm = chosen.nb_mm;
+      pipe.props.nb_inch = chosen.nb_inch;
+      pipe.props.od_mm = chosen.od_mm;
+      pipe.props.wall_thickness_mm = chosen.wall_thickness_mm;
+      pipe.props.id_mm = chosen.id_mm;
+      pipe.props.sdr = chosen.sdr;
+      pipe.props.pressure_rating = chosen.pressure_rating;
+      pipe.props.material_key = chosen.material_key;
+      pipe.props.material = chosen.material_key;
+      pipe.props.diameter_mm = chosen.id_mm;
+    }
+  }
+
+  updatePipeDetailsCard(pipe?.props);
+}
+
+function onStandardPipeFilterChange(changedField) {
+  const stdSel = document.getElementById('pp-filter-standard');
+  const matSel = document.getElementById('pp-filter-material');
+  const schSel = document.getElementById('pp-filter-schedule');
+  const pipe = state.selected?.kind === 'pipe' ? findPipe(state.selected.id) : null;
+
+  if (changedField === 'standard') {
+    const materials = getAvailableMaterialsForStandard(stdSel.value);
+    matSel.innerHTML = '<option value="all">All Materials</option>';
+    materials.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m; opt.textContent = m;
+      matSel.appendChild(opt);
+    });
+    if (materials.length === 1) {
+      matSel.value = materials[0];
+    } else {
+      matSel.value = 'all';
+    }
+
+    const schedules = getAvailableSchedulesForFilters(stdSel.value, matSel.value);
+    schSel.innerHTML = '<option value="all">All Schedules / SDRs</option>';
+    schedules.forEach(sc => {
+      const opt = document.createElement('option');
+      opt.value = sc; opt.textContent = sc;
+      schSel.appendChild(opt);
+    });
+    schSel.value = 'all';
+  } else if (changedField === 'material') {
+    const schedules = getAvailableSchedulesForFilters(stdSel.value, matSel.value);
+    schSel.innerHTML = '<option value="all">All Schedules / SDRs</option>';
+    schedules.forEach(sc => {
+      const opt = document.createElement('option');
+      opt.value = sc; opt.textContent = sc;
+      schSel.appendChild(opt);
+    });
+    schSel.value = 'all';
+  }
+
+  updatePipeSizeSelect(pipe);
+  onStandardPipeSelectChange();
+}
+
+function onStandardPipeSelectChange() {
+  const pipeSel = document.getElementById('pp-standard-pipe-select');
+  if (!pipeSel || !pipeSel.value) return;
+
+  const stdId = parseInt(pipeSel.value, 10);
+  const stdPipe = Array.isArray(STANDARD_PIPES) ? STANDARD_PIPES.find(p => p.id === stdId) : null;
+  if (!stdPipe) return;
+
+  const pipe = state.selected?.kind === 'pipe' ? findPipe(state.selected.id) : null;
+  if (!pipe) return;
+
+  pipe.props.dimension_mode = 'standard';
+  pipe.props.standard_pipe_id = stdPipe.id;
+  pipe.props.standard = stdPipe.standard;
+  pipe.props.schedule_sdr = stdPipe.schedule_sdr;
+  pipe.props.nb_mm = stdPipe.nb_mm;
+  pipe.props.nb_inch = stdPipe.nb_inch;
+  pipe.props.od_mm = stdPipe.od_mm;
+  pipe.props.wall_thickness_mm = stdPipe.wall_thickness_mm;
+  pipe.props.id_mm = stdPipe.id_mm;
+  pipe.props.sdr = stdPipe.sdr;
+  pipe.props.pressure_rating = stdPipe.pressure_rating;
+  pipe.props.material_key = stdPipe.material_key;
+  pipe.props.material = stdPipe.material_key;
+  // Hydraulic Darcy friction requires internal diameter:
+  pipe.props.diameter_mm = stdPipe.id_mm;
+
+  // Sync custom controls to match
+  const diaInput = document.getElementById('pp-diameter');
+  if (diaInput) diaInput.value = stdPipe.id_mm;
+  const matInput = document.getElementById('pp-material');
+  if (matInput) matInput.value = stdPipe.material_key;
+
+  updatePipeDetailsCard(pipe.props);
+  renderAll();
+  saveNetworkToStorage();
+
+  // If popover is currently open, re-render it
+  const pop = document.getElementById('pn-context-popover');
+  if (pop && pop.style.display !== 'none' && state.selected?.kind === 'pipe') {
+    renderPopoverPipe(pipe, pop);
+  }
+}
+
+function updatePipeDetailsCard(props) {
+  if (!props) return;
+  const titleEl = document.getElementById('pspec-title');
+  const ratingEl = document.getElementById('pspec-rating');
+  const idEl = document.getElementById('pspec-id');
+  const odEl = document.getElementById('pspec-od');
+  const nbEl = document.getElementById('pspec-nb');
+  const wallEl = document.getElementById('pspec-wall');
+  const schEl = document.getElementById('pspec-sch');
+  const roughEl = document.getElementById('pspec-rough');
+
+  if (titleEl) {
+    if (props.standard) {
+      titleEl.textContent = `${props.standard} (${props.schedule_sdr || ''})`;
+    } else {
+      titleEl.textContent = 'Custom Pipe Dimensions';
+    }
+  }
+
+  if (ratingEl) {
+    ratingEl.textContent = props.pressure_rating || 'PN --';
+  }
+
+  if (idEl) {
+    const val = props.id_mm || props.diameter_mm;
+    idEl.textContent = val ? `${val.toFixed(2)} mm` : '--';
+  }
+
+  if (odEl) {
+    odEl.textContent = props.od_mm ? `${props.od_mm.toFixed(2)} mm` : (props.diameter_mm ? `${(props.diameter_mm * 1.1).toFixed(1)} mm (approx)` : '--');
+  }
+
+  if (nbEl) {
+    if (props.nb_mm) {
+      nbEl.textContent = `DN ${props.nb_mm}${props.nb_inch ? ' (' + props.nb_inch + ')' : ''}`;
+    } else if (props.diameter_mm) {
+      nbEl.textContent = `~DN ${Math.round(props.diameter_mm)}`;
+    } else {
+      nbEl.textContent = '--';
+    }
+  }
+
+  if (wallEl) {
+    wallEl.textContent = props.wall_thickness_mm ? `${props.wall_thickness_mm.toFixed(2)} mm` : '--';
+  }
+
+  if (schEl) {
+    schEl.textContent = props.schedule_sdr || (props.sdr ? `SDR ${props.sdr}` : 'Standard / Custom');
+  }
+
+  if (roughEl) {
+    const matObj = MATERIALS.find(m => m.key === props.material);
+    if (matObj) {
+      roughEl.textContent = matObj.label;
+    } else {
+      roughEl.textContent = props.material || '--';
+    }
+  }
+}
+
 function showPipeProps(pipe) {
   if (!pipe) return;
   showPropsPanel('pipe');
@@ -2806,6 +3562,12 @@ function showPipeProps(pipe) {
     cb.checked = (pipe.props.fittings || []).includes(cb.value);
   });
   refreshKTotal(pipe.props.fittings || [], pipe.props.custom_k || 0);
+
+  // Set dimension mode and populate standard pipe dropdowns and details card
+  const dimMode = pipe.props.dimension_mode || 'standard';
+  setPipeDimensionMode(dimMode, false);
+  populateStandardPipeFilters(pipe);
+  updatePipeDetailsCard(pipe.props);
 }
 
 function setVal(id, v) {
@@ -2912,10 +3674,14 @@ function onPipePropChange() {
   const pipe = state.selected?.kind === 'pipe' ? findPipe(state.selected.id) : null;
   if (!pipe) return;
   pipe.props.label = document.getElementById('pp-label').value;
-  pipe.props.diameter_mm = parseFloat(document.getElementById('pp-diameter').value) || 100;
+  if (pipe.props.dimension_mode === 'custom') {
+    pipe.props.diameter_mm = parseFloat(document.getElementById('pp-diameter').value) || 100;
+    pipe.props.id_mm = pipe.props.diameter_mm;
+    pipe.props.material = document.getElementById('pp-material').value;
+    pipe.props.material_key = pipe.props.material;
+  }
   pipe.props.length_m = parseFloat(document.getElementById('pp-length').value) || 10;
   pipe.props.elev_change_m = parseFloat(document.getElementById('pp-elev-change').value) || 0;
-  pipe.props.material = document.getElementById('pp-material').value;
   pipe.props.routing = document.getElementById('pp-routing').value;
   const ppCustK = document.getElementById('pp-custom-k');
   if (ppCustK) pipe.props.custom_k = parseFloat(ppCustK.value) || 0;
@@ -2924,6 +3690,7 @@ function onPipePropChange() {
     pipe.props.fittings.push(cb.value)
   );
   refreshKTotal(pipe.props.fittings, pipe.props.custom_k);
+  updatePipeDetailsCard(pipe.props);
   renderAll();
   saveNetworkToStorage();
   if (state.selected?.kind === 'pipe' && state.selected.id === pipe.id) {
@@ -2966,6 +3733,12 @@ async function runCalculation() {
         elev_change_m: pipe.props.elev_change_m,
         fittings: allFittings,
         custom_k: parseFloat(pipe.props.custom_k) || 0.0,
+        standard: pipe.props.standard,
+        schedule_sdr: pipe.props.schedule_sdr,
+        nb_mm: pipe.props.nb_mm,
+        od_mm: pipe.props.od_mm,
+        id_mm: pipe.props.id_mm,
+        pressure_rating: pipe.props.pressure_rating,
       };
     }),
   };
@@ -3018,8 +3791,14 @@ function displayResults(data) {
     tbody.innerHTML += `
       <tr style="border-bottom:1px solid #21262d" onmouseover="this.style.background='#1c2330'" onmouseout="this.style.background=''">
         <td style="padding:6px 10px;font-family:monospace;color:#58a6ff">${r.id}</td>
-        <td style="padding:6px 10px;color:#e6edf3">${r.label}</td>
-        <td style="padding:6px 10px;text-align:right">${r.diameter_mm}</td>
+        <td style="padding:6px 10px;color:#e6edf3">
+          ${r.label}
+          ${r.schedule_sdr ? `<div style="font-size:10px;color:#94a3b8;">${r.standard || ''} ${r.schedule_sdr}</div>` : ''}
+        </td>
+        <td style="padding:6px 10px;text-align:right">
+          ${r.diameter_mm}
+          ${r.od_mm ? `<div style="font-size:10px;color:#64748b;">OD ${r.od_mm}</div>` : ''}
+        </td>
         <td style="padding:6px 10px;text-align:right">${r.length_m}</td>
         <td style="padding:6px 10px;text-align:right">${r.velocity_ms}
           <span style="font-size:10px;color:${vc}"> ${r.velocity_status}</span></td>
@@ -3450,6 +4229,14 @@ function init() {
   });
   document.getElementById('pp-fittings-list')?.addEventListener('change', onPipePropChange);
 
+  // Standard pipe filter listeners
+  document.getElementById('pp-filter-standard')?.addEventListener('change', () => onStandardPipeFilterChange('standard'));
+  document.getElementById('pp-filter-material')?.addEventListener('change', () => onStandardPipeFilterChange('material'));
+  document.getElementById('pp-filter-schedule')?.addEventListener('change', () => onStandardPipeFilterChange('schedule'));
+  document.getElementById('pp-standard-pipe-select')?.addEventListener('change', onStandardPipeSelectChange);
+  document.getElementById('pp-mode-std')?.addEventListener('click', () => setPipeDimensionMode('standard'));
+  document.getElementById('pp-mode-custom')?.addEventListener('click', () => setPipeDimensionMode('custom'));
+
   // Populate materials
   const matSel = document.getElementById('pp-material');
   if (matSel) {
@@ -3536,8 +4323,20 @@ function loadDemoNetwork() {
     {
       id: 'P-1', fromNodeId: 'N-1', toNodeId: 'N-2',
       props: {
-        label: 'Suction', diameter_mm: 150, length_m: 4,
-        material: 'commercial_steel', elev_change_m: 0,
+        label: 'Suction',
+        dimension_mode: 'standard',
+        standard: 'ASME B36.10M',
+        schedule_sdr: 'Sch 40 (STD)',
+        nb_mm: 150,
+        nb_inch: '6"',
+        od_mm: 168.3,
+        wall_thickness_mm: 7.11,
+        id_mm: 154.08,
+        pressure_rating: 'PN 50 bar (725 psi)',
+        diameter_mm: 154.08,
+        length_m: 4,
+        material: 'commercial_steel',
+        elev_change_m: 0,
         fittings: ['entry_sharp', 'gate_valve_open'],
         routing: 'straight'
       }
@@ -3545,8 +4344,20 @@ function loadDemoNetwork() {
     {
       id: 'P-2', fromNodeId: 'N-2', toNodeId: 'N-3',
       props: {
-        label: 'Discharge', diameter_mm: 100, length_m: 18,
-        material: 'commercial_steel', elev_change_m: 2,
+        label: 'Discharge',
+        dimension_mode: 'standard',
+        standard: 'ASME B36.10M',
+        schedule_sdr: 'Sch 40 (STD)',
+        nb_mm: 100,
+        nb_inch: '4"',
+        od_mm: 114.3,
+        wall_thickness_mm: 6.02,
+        id_mm: 102.26,
+        pressure_rating: 'PN 79 bar (1145 psi)',
+        diameter_mm: 102.26,
+        length_m: 18,
+        material: 'commercial_steel',
+        elev_change_m: 2,
         fittings: ['check_valve_swing', 'elbow_90_standard'],
         routing: 'straight'
       }
@@ -3554,8 +4365,20 @@ function loadDemoNetwork() {
     {
       id: 'P-3', fromNodeId: 'N-3', toNodeId: 'N-4',
       props: {
-        label: 'Riser', diameter_mm: 80, length_m: 14,
-        material: 'commercial_steel', elev_change_m: 10,
+        label: 'Riser',
+        dimension_mode: 'standard',
+        standard: 'ASME B36.10M',
+        schedule_sdr: 'Sch 40 (STD)',
+        nb_mm: 80,
+        nb_inch: '3"',
+        od_mm: 88.9,
+        wall_thickness_mm: 5.49,
+        id_mm: 77.92,
+        pressure_rating: 'PN 93 bar (1350 psi)',
+        diameter_mm: 77.92,
+        length_m: 14,
+        material: 'commercial_steel',
+        elev_change_m: 10,
         fittings: ['elbow_90_standard', 'exit_abrupt'],
         routing: 'straight'
       }

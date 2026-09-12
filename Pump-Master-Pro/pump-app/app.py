@@ -47,6 +47,17 @@ def inject_token_helpers():
     """
     return {"encode_pump_id": encode_pump_id}
 
+@app.context_processor
+def inject_standard_pipes_context():
+    """Inject standard_pipes_json into all template contexts automatically."""
+    from models import StandardPipe
+    import json
+    try:
+        pipes = StandardPipe.query.filter_by(is_active=True).order_by(StandardPipe.sort_order).all()
+        return {'standard_pipes_json': json.dumps([p.to_dict() for p in pipes])}
+    except Exception:
+        return {'standard_pipes_json': '[]'}
+
 # ── Database Creation & Auto-Migration ─────────────────────────────────────────
 with app.app_context():
     try:
@@ -491,10 +502,10 @@ def enforce_login_gatekeeper():
     if request.endpoint == 'static' or request.path.startswith('/static') or request.path == '/favicon.ico':
         return None
 
-    # 2. Allow public authentication endpoints
-    public_endpoints = {'auth.login', 'auth.register', 'auth.logout', 'favicon'}
+    # 2. Allow public authentication endpoints & public catalog APIs
+    public_endpoints = {'auth.login', 'auth.register', 'auth.logout', 'favicon', 'pipe_network.get_standard_pipes'}
     public_paths = {'/login', '/register', '/request-access', '/logout', '/favicon.ico'}
-    if request.endpoint in public_endpoints or request.path in public_paths:
+    if request.endpoint in public_endpoints or request.path in public_paths or request.path.startswith('/api/pipe-network/standard-pipes'):
         return None
 
     # 3. Check if user is authenticated

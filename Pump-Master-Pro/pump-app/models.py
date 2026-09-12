@@ -1049,6 +1049,51 @@ class PipeMaterial(db.Model):
         }
 
 
+class StandardPipe(db.Model):
+    """
+    StandardPipe Model ('standard_pipes' table)
+    Catalog of standard commercial piping specifications (ASME, ISO, DIN, ASTM, EN, SANS).
+    Provides nominal bore, outside diameter, wall thickness, inside diameter,
+    schedule/SDR, pressure rating, and associated material roughness.
+    """
+    __tablename__ = 'standard_pipes'
+
+    id                = db.Column(db.Integer, primary_key=True)
+    standard          = db.Column(db.String(80), nullable=False)   # e.g. 'ASME B36.10M', 'ISO 4427 (HDPE)', 'DIN 8062 (uPVC)', 'ASTM D1785 (PVC)'
+    material          = db.Column(db.String(80), nullable=False)   # e.g. 'Carbon Steel', 'HDPE (PE100)', 'uPVC', 'Stainless Steel'
+    material_key      = db.Column(db.String(60), nullable=False)   # maps to PipeMaterial key: 'commercial_steel', 'hdpe', 'pvc', etc.
+    schedule_sdr      = db.Column(db.String(60), nullable=False)   # e.g. 'Sch 40 (STD)', 'SDR 11', 'Class C40'
+    nb_mm             = db.Column(db.Float, nullable=False)        # Nominal Bore (DN) mm e.g. 100
+    nb_inch           = db.Column(db.String(20), nullable=True)    # e.g. '4"'
+    od_mm             = db.Column(db.Float, nullable=False)        # Outer Diameter mm e.g. 114.3
+    wall_thickness_mm = db.Column(db.Float, nullable=False)        # Wall thickness t mm e.g. 6.02
+    id_mm             = db.Column(db.Float, nullable=False)        # Inner Diameter mm = OD - 2*t e.g. 102.26 (actual hydraulic diameter)
+    sdr               = db.Column(db.Float, nullable=True)         # e.g. 11.0 or None
+    pressure_rating   = db.Column(db.String(80), nullable=False)   # e.g. 'PN 16 (16 bar / 232 psi)'
+    notes             = db.Column(db.String(200), nullable=True)
+    sort_order        = db.Column(db.Integer, default=0)
+    is_active         = db.Column(db.Boolean, default=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'standard': self.standard,
+            'material': self.material,
+            'material_key': self.material_key,
+            'schedule_sdr': self.schedule_sdr,
+            'nb_mm': self.nb_mm,
+            'nb_inch': self.nb_inch or f"{int(self.nb_mm)}mm",
+            'od_mm': round(self.od_mm, 2),
+            'wall_thickness_mm': round(self.wall_thickness_mm, 2),
+            'id_mm': round(self.id_mm, 2),
+            'sdr': round(self.sdr, 1) if self.sdr is not None else None,
+            'pressure_rating': self.pressure_rating,
+            'notes': self.notes or '',
+            'sort_order': self.sort_order,
+            'is_active': self.is_active,
+        }
+
+
 class Organisation(db.Model):
     """
     Beginners Note: Organisation Model ('organisations' table)

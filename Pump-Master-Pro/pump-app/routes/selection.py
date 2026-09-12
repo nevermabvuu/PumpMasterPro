@@ -21,7 +21,7 @@ if _app_dir not in sys.path:
 
 import json
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, flash, abort
-from models import Pump
+from models import Pump, StandardPipe
 from utils import (
     _get_float, get_visible_pumps_query, get_current_organisation,
     UNITS_FLOW, UNITS_HEAD, UNITS_POWER, UNITS_DENSITY, UNITS_SIZE, convert_unit
@@ -299,6 +299,9 @@ def pump_selection():
     pipe_net_data = active_sel.get('pipe_network')
     pipe_network_json = json.dumps(pipe_net_data) if pipe_net_data else 'null'
 
+    standard_pipes = StandardPipe.query.filter_by(is_active=True).order_by(StandardPipe.sort_order).all()
+    standard_pipes_json = json.dumps([p.to_dict() for p in standard_pipes])
+
     # ── Render template with results and filter options ─────────────────────
     return render_template('pump_selection.html',
                            results=results,
@@ -318,6 +321,7 @@ def pump_selection():
                            unit_d50=unit_d50,
                            unit_pow=unit_pow,
                            pipe_network_json=pipe_network_json,
+                           standard_pipes_json=standard_pipes_json,
                            sort_by=form_data.get('sort_by', 'rating'))
 
 

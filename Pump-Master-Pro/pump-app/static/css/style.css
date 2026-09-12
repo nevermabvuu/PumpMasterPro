@@ -319,6 +319,174 @@ select.form-select.form-control-dark option {
   color: #88bbff;
   border-radius: 6px;
 }
+.sort-btn.sort-active {
+    background: rgba(88, 166, 255, 0.15);
+    color: #58a6ff;
+    border-color: rgba(88, 166, 255, 0.4);
+}
+
+/* ── Contextual Popover & Properties Panel Form Controls ─────────── */
+.pn-popover {
+  position: absolute;
+  z-index: 1000;
+  width: 290px;
+  background: rgba(15, 23, 42, 0.98) !important;
+  backdrop-filter: blur(16px);
+  border: 1px solid #334155;
+  border-radius: 10px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  font-size: 12px;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.pn-popover input[type="text"],
+.pn-popover input[type="number"],
+.pn-popover-input {
+  width: 100%;
+  background: #090d16 !important;
+  border: 1px solid #334155 !important;
+  border-radius: 6px;
+  color: #ffffff !important;
+  padding: 6px 9px;
+  font-size: 12px;
+  font-weight: 500;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.pn-popover input[type="text"]:focus,
+.pn-popover input[type="number"]:focus,
+.pn-popover-input:focus {
+  outline: none;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25) !important;
+  background: #0f172a !important;
+  color: #ffffff !important;
+}
+
+.pn-popover-input::placeholder,
+.pn-popover input::placeholder {
+  color: #64748b !important;
+}
+
+.pn-popover-select,
+.pn-popover select {
+  width: 100%;
+  background: #090d16 !important;
+  border: 1px solid #334155 !important;
+  border-radius: 6px;
+  color: #ffffff !important;
+  padding: 6px 9px;
+  font-size: 12px;
+  font-weight: 500;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pn-popover-select:focus,
+.pn-popover select:focus {
+  outline: none;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25) !important;
+  background: #0f172a !important;
+}
+
+.pn-popover-select option,
+.pn-popover select option {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+.pn-popover-section-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  font-weight: 600;
+  margin-bottom: 5px;
+  margin-top: 8px;
+}
+
+.pp-input {
+  width: 100%;
+  background: #090d16 !important;
+  border: 1px solid #30363d !important;
+  border-radius: 6px;
+  color: #ffffff !important;
+  padding: 6px 9px;
+  font-size: 12px;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+}
+
+.pp-input:focus {
+  outline: none;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+}
+
+.pp-input option {
+  background: #0f172a !important;
+  color: #ffffff !important;
+}
+
+/* ── Pipe Specification Details Card ─────────────────────────── */
+.pipe-spec-card {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.7));
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 10px;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.pipe-spec-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pipe-spec-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 10px;
+}
+
+.pipe-spec-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.pipe-spec-item-label {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin-bottom: 1px;
+}
+
+.pipe-spec-item-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f8fafc;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.pipe-spec-id-badge {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399 !important;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
 
 /* ── Empty state ─────────────────────────────────────────────────── */
 .empty-state {

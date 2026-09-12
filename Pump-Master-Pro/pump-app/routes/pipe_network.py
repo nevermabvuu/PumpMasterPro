@@ -30,7 +30,7 @@ import json
 import math
 import re
 from flask import Blueprint, render_template, request, jsonify, g, session
-from models import db, PipeFitting, PipeMaterial
+from models import db, PipeFitting, PipeMaterial, StandardPipe
 
 # -- Blueprint registration --------------------------------------------------
 pipe_network_bp = Blueprint('pipe_network', __name__)
@@ -199,6 +199,12 @@ def calculate_segment(seg, global_flow_m3h):
         'h_total_m':       round(h_total, 4),
         'fittings':        fittings,
         'K_total':         round(K_total, 3),
+        'standard':        seg.get('standard'),
+        'schedule_sdr':    seg.get('schedule_sdr'),
+        'nb_mm':           seg.get('nb_mm'),
+        'od_mm':           seg.get('od_mm'),
+        'id_mm':           seg.get('id_mm', round(D_mm, 1)),
+        'pressure_rating': seg.get('pressure_rating'),
     }
 
 
@@ -209,9 +215,11 @@ def pipe_network():
     """Render the interactive pipe-network visual designer page with DB-injected reference data and active session state."""
     fittings = PipeFitting.query.filter_by(is_active=True).order_by(PipeFitting.sort_order).all()
     materials = PipeMaterial.query.filter_by(is_active=True).order_by(PipeMaterial.sort_order).all()
+    standard_pipes = StandardPipe.query.filter_by(is_active=True).order_by(StandardPipe.sort_order).all()
 
     fittings_json = json.dumps([f.to_dict() for f in fittings])
     materials_json = json.dumps([m.to_dict() for m in materials])
+    standard_pipes_json = json.dumps([p.to_dict() for p in standard_pipes])
 
     active_sel = session.get('active_selection') or {}
     pipe_net_data = active_sel.get('pipe_network')
@@ -221,9 +229,37 @@ def pipe_network():
     return render_template('pipe_network.html',
                            fittings_json=fittings_json,
                            materials_json=materials_json,
+                           standard_pipes_json=standard_pipes_json,
                            pipe_network_json=pipe_network_json,
                            active_selection_json=active_selection_json,
                            active_selection=active_sel)
+
+
+@pipe_network_bp.route('/api/pipe-network/standard-pipes', methods=['GET'])
+def get_standard_pipes():
+    """Return standard pipes catalog with optional filtering by standard, material, schedule_sdr, nb_mm."""
+    q = StandardPipe.query.filter_by(is_active=True)
+    std = request.args.get('standard')
+    if std and std != 'all':
+        q = q.filter(StandardPipe.standard == std)
+    mat = request.args.get('material')
+    if mat and mat != 'all':
+        q = q.filter(StandardPipe.material == mat)
+    sch = request.args.get('schedule_sdr')
+    if sch and sch != 'all':
+        q = q.filter(StandardPipe.schedule_sdr == sch)
+    nb = request.args.get('nb_mm')
+    if nb and nb != 'all':
+        try:
+            q = q.filter(StandardPipe.nb_mm == float(nb))
+        except (ValueError, TypeError):
+            pass
+    pipes = q.order_by(StandardPipe.sort_order).all()
+    return jsonify({
+        'status': 'ok',
+        'pipes': [p.to_dict() for p in pipes],
+        'total': len(pipes)
+    })
 
 
 @pipe_network_bp.route('/api/pipe-network/save', methods=['POST'])

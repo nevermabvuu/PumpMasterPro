@@ -673,14 +673,27 @@
       <i class="bi bi-database-gear" style="color:#a78bfa;"></i> Manage Data
     </button>
 
-    <!-- Friction Method selection -->
-    <label style="font-size:11px;color:#8b949e;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;">
-      Method:
-      <select id="pn-friction-method" class="pp-input" style="width:132px;display:inline-block;margin:0 4px;padding:4px 6px;height:28px;">
-        <option value="darcy_weisbach">Darcy-Weisbach</option>
-        <option value="hazen_williams">Hazen-Williams</option>
+    <!-- Network Analysis / Solver Method selection -->
+    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.03);padding:2px 8px;border-radius:6px;border:1px solid #30363d;">
+      <i class="bi bi-cpu" style="color:#a78bfa;font-size:12px;"></i>
+      <label for="pn-solver-method" style="font-size:11px;color:#94a3b8;font-weight:600;margin:0;">Network Solver:</label>
+      <select id="pn-solver-method" class="pp-input" style="width:190px;margin:0;padding:3px 6px;height:28px;font-size:11px;background:#0d1117;color:#f8fafc;border:1px solid #a78bfa;border-radius:4px;cursor:pointer;" title="Choose network analysis method / solver algorithm">
+        <option value="ggm">Global Gradient Method (GGM)</option>
+        <option value="newton_raphson">Newton-Raphson (NR)</option>
+        <option value="hardy_cross">Hardy Cross Method</option>
+        <option value="linear_theory">Linear Theory Method</option>
       </select>
-    </label>
+    </div>
+
+    <!-- Pipe Friction Method selection -->
+    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.03);padding:2px 8px;border-radius:6px;border:1px solid #30363d;">
+      <i class="bi bi-droplet-half" style="color:#38bdf8;font-size:12px;"></i>
+      <label for="pn-friction-method" style="font-size:11px;color:#94a3b8;font-weight:600;margin:0;">Friction:</label>
+      <select id="pn-friction-method" class="pp-input" style="width:160px;margin:0;padding:3px 6px;height:28px;font-size:11px;background:#0d1117;color:#f8fafc;border:1px solid #38bdf8;border-radius:4px;cursor:pointer;" title="Choose pipe friction formulation">
+        <option value="darcy_weisbach">Darcy-Weisbach (Moody)</option>
+        <option value="hazen_williams">Hazen-Williams (C-Factor)</option>
+      </select>
+    </div>
 
     <!-- Global flow rate for calculation -->
     <label style="font-size:11px;color:#8b949e;white-space:nowrap;">
@@ -1016,6 +1029,12 @@
 
   <!-- Summary stat cards -->
   <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+    <div class="res-card" style="border-color:rgba(168,85,247,0.35);background:rgba(168,85,247,0.04);">
+      <div class="res-card-value" style="color:#c084fc;font-size:17px;">
+        <span id="res-solver-status">Converged</span>
+      </div>
+      <div class="res-card-label" style="color:#c084fc;font-weight:700;">Solver: <span id="res-solver-name">GGM</span></div>
+    </div>
     <div class="res-card" style="border-color:rgba(248,113,113,0.3);">
       <div class="res-card-value" style="color:#f87171;">
         <span id="res-major">—</span> m
@@ -1048,8 +1067,16 @@
     </div>
   </div>
 
+  <!-- Section: Pipe Hydraulic & Resistance Results -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <h3 style="font-size:0.88rem;font-weight:700;color:#cbd5e1;margin:0;display:flex;align-items:center;gap:6px;">
+      <i class="bi bi-water" style="color:#38bdf8;"></i> Pipe Segments &amp; Friction Losses
+    </h3>
+    <span style="font-size:11px;color:#64748b;">Losses calculated across continuous pipe runs</span>
+  </div>
+
   <!-- Per-segment table -->
-  <div style="overflow-x:auto;border:1px solid #30363d;border-radius:8px;">
+  <div style="overflow-x:auto;border:1px solid #30363d;border-radius:8px;margin-bottom:16px;">
     <table id="pn-results-table">
       <thead>
         <tr style="background:#161b22;">
@@ -1059,7 +1086,7 @@
           <th>L (m)</th>
           <th>Velocity (m/s)</th>
           <th>Regime / Re</th>
-          <th>f</th>
+          <th id="th-friction-factor">f</th>
           <th>K<sub>total</sub></th>
           <th>hf Major (m)</th>
           <th>hf Minor (m)</th>
@@ -1073,8 +1100,35 @@
     </table>
   </div>
 
+  <!-- Section: Node Hydraulic Grade Line (HGL) & Pressures -->
+  <div style="margin-top:16px;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <h3 style="font-size:0.88rem;font-weight:700;color:#cbd5e1;margin:0;display:flex;align-items:center;gap:6px;">
+        <i class="bi bi-geo-alt-fill" style="color:#c084fc;"></i> Node Hydraulic Grade Line (HGL) &amp; Pressures
+      </h3>
+      <span style="font-size:11px;color:#64748b;">Nodal energy elevation and gauge pressures</span>
+    </div>
+    <div style="overflow-x:auto;border:1px solid #30363d;border-radius:8px;">
+      <table id="pn-node-results-table" style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#161b22;">
+            <th style="padding:6px 10px;text-align:left;">Node ID</th>
+            <th style="padding:6px 10px;text-align:left;">Label</th>
+            <th style="padding:6px 10px;text-align:left;">Type</th>
+            <th style="padding:6px 10px;text-align:right;">Elevation Z (m)</th>
+            <th style="padding:6px 10px;text-align:right;">Total Head HGL (m)</th>
+            <th style="padding:6px 10px;text-align:right;">Pressure Head P/γ (m)</th>
+            <th style="padding:6px 10px;text-align:right;">Pressure (kPa)</th>
+            <th style="padding:6px 10px;text-align:right;">Demand (m³/h)</th>
+          </tr>
+        </thead>
+        <tbody id="res-node-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- Formula reference -->
-  <div
+  <div id="pn-formula-reference"
     style="margin-top:12px;padding:10px 14px;background:#161b22;border:1px solid #21262d;border-radius:8px;font-size:11px;color:#64748b;line-height:1.9;">
     <strong style="color:#8b949e;">Calculation methods:</strong>
     Major losses: <code style="color:#58a6ff;">hf = f (L/D) V&sup2;/2g</code> &mdash;

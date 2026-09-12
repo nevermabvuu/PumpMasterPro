@@ -10,7 +10,8 @@ Verifies all 4 structural rules:
 import math
 from services.hydraulic_engine import (
     Fitting, Node, PipeEdge, NetworkGraph,
-    calculate_consolidated_pipe, solve_hardy_cross, LoopDefinition
+    calculate_consolidated_pipe, solve_hardy_cross, LoopDefinition,
+    solve_network, NetworkSolverResult, NodeHydraulicResult
 )
 
 def test_minor_loss_accumulation():
@@ -203,9 +204,38 @@ def test_hardy_cross_loop_solver():
     print("Test 4 PASSED!\n")
 
 
+def test_unified_network_solvers():
+    print("--- Test 5: Unified Network Solvers (GGM, Newton-Raphson, Hardy Cross, Linear Theory) ---")
+    graph = NetworkGraph()
+    graph.add_node(Node(id="N-1", label="Sump", node_type="reservoir", elevation_m=0.0, head_m=0.0))
+    graph.add_node(Node(id="N-2", label="Pump 1", node_type="pump", elevation_m=0.5))
+    graph.add_node(Node(id="N-3", label="Gate Valve", node_type="valve", elevation_m=2.0, k_factor=0.2))
+    graph.add_node(Node(id="N-4", label="Discharge", node_type="discharge", elevation_m=10.0, head_m=10.0))
+
+    p1 = PipeEdge(id="P-1", from_node="N-1", to_node="N-2", length_m=4.0, diameter_mm=128.19, material="commercial_steel")
+    p2 = PipeEdge(id="P-2", from_node="N-2", to_node="N-3", length_m=12.0, diameter_mm=102.26, material="commercial_steel")
+    p3 = PipeEdge(id="P-3", from_node="N-3", to_node="N-4", length_m=20.0, diameter_mm=102.26, material="commercial_steel")
+
+    for p in [p1, p2, p3]:
+        graph.add_pipe(p)
+
+    solvers = ['ggm', 'newton_raphson', 'hardy_cross', 'linear_theory']
+    for sm in solvers:
+        res = solve_network(graph, solver_method=sm, friction_method='darcy_weisbach', global_flow_m3h=20.0)
+        print(f"  [{sm.upper()}] {res.solver_name}: converged={res.converged} in {res.iterations} iters, TDH={res.summary['total_system_head_m']}m")
+        assert res.converged, f"{sm} must converge!"
+        assert len(res.node_results) == 4, "Must have results for all 4 nodes"
+        assert len(res.pipe_results) == 3, "Must have results for all 3 pipes"
+        assert abs(res.summary['total_system_head_m'] - 10.162) < 0.05, f"Expected TDH ~10.16m, got {res.summary['total_system_head_m']}"
+
+    print("Test 5 PASSED!\n")
+
+
 if __name__ == "__main__":
     test_minor_loss_accumulation()
     test_pseudo_node_collapsing()
     test_genuine_splits_preserved()
     test_hardy_cross_loop_solver()
+    test_unified_network_solvers()
     print("ALL TESTS PASSED SUCCESSFULLY!")
+

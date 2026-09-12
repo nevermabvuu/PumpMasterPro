@@ -33,7 +33,8 @@ from flask import Blueprint, render_template, request, jsonify, g, session
 from models import db, PipeFitting, PipeMaterial, StandardPipe
 from services.hydraulic_engine import (
     Fitting, Node, PipeEdge, NetworkGraph,
-    calculate_consolidated_pipe, DEFAULT_HAZEN_WILLIAMS_C
+    calculate_consolidated_pipe, DEFAULT_HAZEN_WILLIAMS_C,
+    solve_network, NetworkSolverResult, NodeHydraulicResult
 )
 
 # -- Blueprint registration --------------------------------------------------
@@ -326,6 +327,10 @@ def calculate_network():
     if friction_method not in ('darcy_weisbach', 'hazen_williams'):
         friction_method = 'darcy_weisbach'
 
+    solver_method = (data.get('solver_method') or data.get('network_solver') or 'ggm').lower().strip()
+    if solver_method not in ('ggm', 'newton_raphson', 'hardy_cross', 'linear_theory'):
+        solver_method = 'ggm'
+
     raw_pipes = data['pipes']
     raw_nodes = data.get('nodes')
 
@@ -350,6 +355,11 @@ def calculate_network():
     #    - Boundary conditions (Reservoirs, Tanks, Fixed head, External demands)
     #    - Active pump stations
     # =========================================================================
+    results = []
+    node_results = []
+    errors = []
+    consolidated_nodes = []
+
     if raw_nodes and isinstance(raw_nodes, list) and len(raw_nodes) > 0:
         graph = NetworkGraph()
         fitting_k = get_fitting_k_map()
@@ -374,48 +384,80 @@ def calculate_network():
 
         # Consolidate collinear edges across degree-2 pseudo-nodes
         consolidated = graph.consolidate()
-        pipe_list_to_calc = [p.to_dict() for p in consolidated.pipes.values()]
         consolidated_nodes = [n.to_dict() for n in consolidated.nodes.values()]
+
+        # =====================================================================
+        # STEP 2: NETWORK ANALYSIS SOLVER EXECUTION
+        # (Global Gradient Method, Newton-Raphson, Hardy Cross, Linear Theory)
+        # =====================================================================
+        try:
+            solver_res = solve_network(
+                graph=consolidated,
+                solver_method=solver_method,
+                friction_method=friction_method,
+                global_flow_m3h=global_flow
+            )
+            results = [p.to_dict() for p in solver_res.pipe_results]
+            node_results = [n.to_dict() for n in solver_res.node_results]
+            calc_summary = solver_res.summary
+            total_head = calc_summary['total_system_head_m']
+        except Exception as exc:
+            errors.append({'id': 'solver', 'error': str(exc)})
+            # Fallback to single segment calculation
+            pipe_list_to_calc = [p.to_dict() for p in consolidated.pipes.values()]
+            total_major, total_minor, total_elev, total_R = 0.0, 0.0, 0.0, 0.0
+            for seg in pipe_list_to_calc:
+                try:
+                    res = calculate_segment(seg, global_flow, friction_method=friction_method)
+                    results.append(res)
+                    total_major += res['hf_major_m']
+                    total_minor += res['hf_minor_m']
+                    total_elev  += res['hf_elevation_m']
+                    total_R     += res.get('resistance_R', 0.0)
+                except Exception as e:
+                    errors.append({'id': seg.get('id', '?'), 'error': str(e)})
+            total_head = total_major + total_minor + total_elev
+            calc_summary = {
+                'total_hf_major_m': round(total_major, 3),
+                'total_hf_minor_m': round(total_minor, 3),
+                'total_elevation_m': round(total_elev, 3),
+                'total_system_head_m': round(total_head, 3),
+                'total_system_R': round(total_R, 3),
+                'pipe_count': len(results),
+                'friction_method': friction_method,
+                'solver_method': solver_method,
+                'solver_name': solver_method.upper(),
+                'converged': True,
+                'iterations': 1,
+            }
     else:
         # Fallback for flat pipe list (legacy mode)
         pipe_list_to_calc = raw_pipes
-        consolidated_nodes = []
-
-    # =========================================================================
-    # STEP 2: HYDRAULIC CALCULATION PIPELINE
-    # =========================================================================
-    # Calculates major friction loss, minor fitting loss, elevation head change,
-    # and consolidated equivalent system resistance R (hf = R * Q^n) for each edge.
-    # =========================================================================
-    results     = []
-    errors      = []
-    total_major = 0.0
-    total_minor = 0.0
-    total_elev  = 0.0
-    total_R     = 0.0
-
-    for seg in pipe_list_to_calc:
-        try:
-            result = calculate_segment(seg, global_flow, friction_method=friction_method)
-            results.append(result)
-            total_major += result['hf_major_m']
-            total_minor += result['hf_minor_m']
-            total_elev  += result['hf_elevation_m']
-            total_R     += result.get('resistance_R', 0.0)
-        except (ValueError, ZeroDivisionError, KeyError) as exc:
-            errors.append({'id': seg.get('id', '?'), 'error': str(exc)})
-
-    total_head = total_major + total_minor + total_elev
-
-    calc_summary = {
-        'total_hf_major_m':    round(total_major, 3),
-        'total_hf_minor_m':    round(total_minor, 3),
-        'total_elevation_m':   round(total_elev,  3),
-        'total_system_head_m': round(total_head,  3),
-        'total_system_R':      round(total_R,     3),
-        'pipe_count':          len(results),
-        'friction_method':     friction_method,
-    }
+        total_major, total_minor, total_elev, total_R = 0.0, 0.0, 0.0, 0.0
+        for seg in pipe_list_to_calc:
+            try:
+                res = calculate_segment(seg, global_flow, friction_method=friction_method)
+                results.append(res)
+                total_major += res['hf_major_m']
+                total_minor += res['hf_minor_m']
+                total_elev  += res['hf_elevation_m']
+                total_R     += res.get('resistance_R', 0.0)
+            except (ValueError, ZeroDivisionError, KeyError) as exc:
+                errors.append({'id': seg.get('id', '?'), 'error': str(exc)})
+        total_head = total_major + total_minor + total_elev
+        calc_summary = {
+            'total_hf_major_m': round(total_major, 3),
+            'total_hf_minor_m': round(total_minor, 3),
+            'total_elevation_m': round(total_elev, 3),
+            'total_system_head_m': round(total_head, 3),
+            'total_system_R': round(total_R, 3),
+            'pipe_count': len(results),
+            'friction_method': friction_method,
+            'solver_method': solver_method,
+            'solver_name': solver_method.upper(),
+            'converged': True,
+            'iterations': 1,
+        }
 
     # Auto-sync calculation results and duty point to session['active_selection']
     try:
@@ -423,11 +465,13 @@ def calculate_network():
         pn = active_sel.get('pipe_network') or {}
         pn['lastCalculation'] = {
             'results': results,
+            'node_results': node_results,
             'errors': errors,
             'summary': calc_summary,
         }
         pn['globalFlow'] = global_flow
         pn['friction_method'] = friction_method
+        pn['solver_method'] = solver_method
         active_sel['pipe_network'] = pn
         active_sel['q_duty'] = global_flow
         active_sel['disp_q_duty'] = global_flow
@@ -440,6 +484,7 @@ def calculate_network():
 
     return jsonify({
         'results': results,
+        'node_results': node_results,
         'errors':  errors,
         'summary': calc_summary,
         'consolidated_nodes': consolidated_nodes,

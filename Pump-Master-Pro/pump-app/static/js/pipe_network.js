@@ -660,14 +660,20 @@ function saveNetworkToServer(data, immediate = false) {
 
 function getNetworkPayload(extra = {}) {
   const flowEl = document.getElementById('pn-global-flow');
-  const globalFlow = flowEl ? (parseFloat(flowEl.value) || 15) : 15;
+  const globalFlow = flowEl ? (parseFloat(flowEl.value) || 20) : 20;
+  const solverEl = document.getElementById('pn-solver-method');
+  const solverMethod = solverEl ? (solverEl.value || 'ggm') : 'ggm';
+  const methodEl = document.getElementById('pn-friction-method');
+  const frictionMethod = methodEl ? (methodEl.value || 'darcy_weisbach') : 'darcy_weisbach';
 
   return {
-    version: 2,
+    version: 3,
     nodes: state.nodes,
     pipes: state.pipes,
     nextId: state.nextId,
     globalFlow: globalFlow,
+    solverMethod: solverMethod,
+    frictionMethod: frictionMethod,
     lastCalculation: state.lastCalculation || null,
     pan: state.pan,
     zoom: state.zoom,
@@ -755,13 +761,29 @@ function loadNetworkFromStorage() {
     return false;
   }
 
-  // If both nodes and pipes are empty and it was NOT explicitly cleared, return false to load demo
-  if (d.nodes.length === 0 && d.pipes.length === 0 && !d.explicitClear) {
+  // If stored network is older demo layout with Tee junction, return false to load new simple demo
+  const isOldDemo = d.nodes && d.nodes.some(n => n.type === 'junction' && n.props?.label === 'Tee')
+    && d.nodes.some(n => n.type === 'tank' && n.props?.label === 'Overhead Tank');
+  if (isOldDemo || (d.nodes.length === 0 && d.pipes.length === 0 && !d.explicitClear)) {
     return false;
   }
 
   state.nodes = d.nodes;
   state.pipes = d.pipes;
+
+  // Restore network solver algorithm
+  const savedSolver = d.solverMethod || localStorage.getItem('pmpro_solver_method');
+  if (savedSolver) {
+    const solverEl = document.getElementById('pn-solver-method');
+    if (solverEl) solverEl.value = savedSolver;
+  }
+
+  // Restore calculation / friction method
+  const savedMethod = d.frictionMethod || localStorage.getItem('pmpro_calc_method');
+  if (savedMethod) {
+    const methodEl = document.getElementById('pn-friction-method');
+    if (methodEl) methodEl.value = savedMethod;
+  }
 
   // Migrate pipes created before routing was introduced
   state.pipes.forEach(p => {
@@ -4116,10 +4138,12 @@ async function runCalculation() {
     toast('Add at least one pipe segment before calculating.', 'warn'); return;
   }
   const globalFlow = parseFloat(document.getElementById('pn-global-flow').value) || 10;
+  const solverMethod = document.getElementById('pn-solver-method')?.value || 'ggm';
   const frictionMethod = document.getElementById('pn-friction-method')?.value || 'darcy_weisbach';
 
   const payload = {
     flow_m3h: globalFlow,
+    solver_method: solverMethod,
     friction_method: frictionMethod,
     nodes: state.nodes.map(node => ({
       id: node.id,
@@ -4209,42 +4233,130 @@ function displayResults(data) {
   setVal('res-r-sys', s.total_system_R !== undefined ? s.total_system_R.toFixed(2) : '—');
   setVal('res-method-label', s.friction_method === 'hazen_williams' ? 'Hazen-Williams' : 'Darcy-Weisbach');
 
+  // Populate solver summary card
+  const solverStatusEl = document.getElementById('res-solver-status');
+  if (solverStatusEl) {
+    const iterCount = s.iterations || 1;
+    const iterText = ` (${iterCount} iter${iterCount > 1 ? 's' : ''})`;
+    solverStatusEl.textContent = s.converged ? `Converged${iterText}` : `Iterating${iterText}`;
+    solverStatusEl.style.color = s.converged ? '#22c55e' : '#f59e0b';
+  }
+  const solverNameEl = document.getElementById('res-solver-name');
+  if (solverNameEl) {
+    const solverShortNames = {
+      'ggm': 'GGM (EPANET)',
+      'newton_raphson': 'Newton-Raphson',
+      'hardy_cross': 'Hardy Cross',
+      'linear_theory': 'Linear Theory'
+    };
+    solverNameEl.textContent = s.solver_name || solverShortNames[s.solver_method] || (s.solver_method ? s.solver_method.toUpperCase() : 'GGM');
+  }
+
+  const thFric = document.getElementById('th-friction-factor');
+  if (thFric) {
+    thFric.textContent = s.friction_method === 'hazen_williams' ? 'HW C / f' : 'Friction f';
+  }
+
+  const formulaRef = document.getElementById('pn-formula-reference');
+  if (formulaRef) {
+    const solverDescriptions = {
+      'ggm': 'Global Gradient Method (Todini &amp; Pilati EPANET Standard &mdash; simultaneous node heads &amp; pipe flows)',
+      'newton_raphson': 'Newton-Raphson Method (Node Head Formulation &mdash; quadratic Jacobian convergence)',
+      'hardy_cross': 'Hardy Cross Method (Fundamental Loop Balancing &mdash; successive loop corrections &Delta;Q)',
+      'linear_theory': 'Linear Theory Method (Isaacs &amp; Mills &mdash; linearized pipe resistance matrix &amp; under-relaxation)'
+    };
+    const activeSolverDesc = solverDescriptions[s.solver_method] || (s.solver_name || 'Global Gradient Method (GGM)');
+    const frictionDesc = s.friction_method === 'hazen_williams'
+      ? `Major friction: <code style="color:#38bdf8;">hf = 10.67 &times; L &times; C<sup>-1.852</sup> &times; D<sup>-4.87</sup> &times; Q<sup>1.852</sup></code> (Hazen-Williams, n=1.852)`
+      : `Major friction: <code style="color:#58a6ff;">hf = f &times; (L/D) &times; V&sup2;/2g</code> (Colebrook-White / Swamee-Jain, n=2.000)`;
+
+    formulaRef.innerHTML = `
+      <div style="margin-bottom:4px;"><strong style="color:#c084fc;">Network Solver:</strong> <span style="color:#f8fafc;">${activeSolverDesc}</span></div>
+      <div><strong style="color:#8b949e;">Friction Formulation:</strong> ${frictionDesc} &mdash;
+      Minor losses: <code style="color:#58a6ff;">hm = K &times; V&sup2;/2g</code> (Crane TP-410) &mdash;
+      Fluid: <code style="color:#58a6ff;">Water @ 20&deg;C</code></div>
+    `;
+  }
+
   const tbody = document.getElementById('res-table-body');
-  if (!tbody) return;
-  tbody.innerHTML = '';
-  data.results.forEach(r => {
-    const rc = r.regime === 'Laminar' ? '#22c55e' : r.regime === 'Transitional' ? '#f59e0b' : '#60a5fa';
-    const vc = r.velocity_status === 'OK' ? '#22c55e' : r.velocity_status === 'Too slow' ? '#94a3b8' : '#f87171';
-    tbody.innerHTML += `
-      <tr style="border-bottom:1px solid #21262d" onmouseover="this.style.background='#1c2330'" onmouseout="this.style.background=''">
-        <td style="padding:6px 10px;font-family:monospace;color:#58a6ff">${r.id}</td>
-        <td style="padding:6px 10px;color:#e6edf3">
-          ${r.label}
-          ${r.schedule_sdr ? `<div style="font-size:10px;color:#94a3b8;">${r.standard || ''} ${r.schedule_sdr}</div>` : ''}
-        </td>
-        <td style="padding:6px 10px;text-align:right">
-          ${r.diameter_mm}
-          ${r.od_mm ? `<div style="font-size:10px;color:#64748b;">OD ${r.od_mm}</div>` : ''}
-        </td>
-        <td style="padding:6px 10px;text-align:right">${r.length_m}</td>
-        <td style="padding:6px 10px;text-align:right">${r.velocity_ms}
-          <span style="font-size:10px;color:${vc}"> ${r.velocity_status}</span></td>
-        <td style="padding:6px 10px;text-align:center">
-          <span style="color:${rc};font-size:11px">${r.regime}</span><br>
-          <span style="color:#64748b;font-size:10px">Re ${r.reynolds.toLocaleString()}</span></td>
-        <td style="padding:6px 10px;text-align:right">${r.friction_factor}</td>
-        <td style="padding:6px 10px;text-align:right;color:#e2e8f0;font-weight:600">${r.K_total !== undefined ? r.K_total.toFixed(2) : '—'}</td>
-        <td style="padding:6px 10px;text-align:right;color:#f87171">${r.hf_major_m}</td>
-        <td style="padding:6px 10px;text-align:right;color:#fb923c">${r.hf_minor_m}</td>
-        <td style="padding:6px 10px;text-align:right;color:#a78bfa">${r.hf_elevation_m}</td>
-        <td style="padding:6px 10px;text-align:right;font-weight:700;color:#fbbf24">${r.h_total_m}</td>
-        <td style="padding:6px 10px;text-align:right;font-family:monospace;color:#38bdf8">${r.resistance_R !== undefined ? r.resistance_R.toFixed(1) : '—'}</td>
-        <td style="padding:6px 10px;text-align:right;font-family:monospace;color:#94a3b8">${r.flow_exponent_n !== undefined ? r.flow_exponent_n.toFixed(3) : (s.friction_method === 'hazen_williams' ? '1.852' : '2.000')}</td>
-      </tr>`;
-  });
-  (data.errors || []).forEach(err => {
-    tbody.innerHTML += `<tr><td colspan="14" style="padding:6px 10px;color:#f85149">Error in ${err.id}: ${err.error}</td></tr>`;
-  });
+  if (tbody) {
+    tbody.innerHTML = '';
+    data.results.forEach(r => {
+      const rc = r.regime === 'Laminar' ? '#22c55e' : r.regime === 'Transitional' ? '#f59e0b' : '#60a5fa';
+      const vc = r.velocity_status === 'OK' ? '#22c55e' : r.velocity_status === 'Too slow' ? '#94a3b8' : '#f87171';
+      const fricCell = s.friction_method === 'hazen_williams'
+        ? `<span style="color:#38bdf8;font-weight:600;">C=${r.hazen_williams_c || 120}</span><br><span style="font-size:9.5px;color:#64748b;">(f=${r.friction_factor})</span>`
+        : `<span style="font-family:monospace;">${r.friction_factor}</span>`;
+
+      tbody.innerHTML += `
+        <tr style="border-bottom:1px solid #21262d" onmouseover="this.style.background='#1c2330'" onmouseout="this.style.background=''">
+          <td style="padding:6px 10px;font-family:monospace;color:#58a6ff">${r.id}</td>
+          <td style="padding:6px 10px;color:#e6edf3">
+            ${r.label}
+            ${r.schedule_sdr ? `<div style="font-size:10px;color:#94a3b8;">${r.standard || ''} ${r.schedule_sdr}</div>` : ''}
+          </td>
+          <td style="padding:6px 10px;text-align:right">
+            ${r.diameter_mm}
+            ${r.od_mm ? `<div style="font-size:10px;color:#64748b;">OD ${r.od_mm}</div>` : ''}
+          </td>
+          <td style="padding:6px 10px;text-align:right">${r.length_m}</td>
+          <td style="padding:6px 10px;text-align:right">${r.velocity_ms}
+            <span style="font-size:10px;color:${vc}"> ${r.velocity_status}</span></td>
+          <td style="padding:6px 10px;text-align:center">
+            <span style="color:${rc};font-size:11px">${r.regime}</span><br>
+            <span style="color:#64748b;font-size:10px">Re ${r.reynolds.toLocaleString()}</span></td>
+          <td style="padding:6px 10px;text-align:right">${fricCell}</td>
+          <td style="padding:6px 10px;text-align:right;color:#e2e8f0;font-weight:600">${r.K_total !== undefined ? r.K_total.toFixed(2) : '—'}</td>
+          <td style="padding:6px 10px;text-align:right;color:#f87171">${r.hf_major_m}</td>
+          <td style="padding:6px 10px;text-align:right;color:#fb923c">${r.hf_minor_m}</td>
+          <td style="padding:6px 10px;text-align:right;color:#a78bfa">${r.hf_elevation_m}</td>
+          <td style="padding:6px 10px;text-align:right;font-weight:700;color:#fbbf24">${r.h_total_m}</td>
+          <td style="padding:6px 10px;text-align:right;font-family:monospace;color:#38bdf8">${r.resistance_R !== undefined ? r.resistance_R.toFixed(1) : '—'}</td>
+          <td style="padding:6px 10px;text-align:right;font-family:monospace;color:#94a3b8">${r.flow_exponent_n !== undefined ? r.flow_exponent_n.toFixed(3) : (s.friction_method === 'hazen_williams' ? '1.852' : '2.000')}</td>
+        </tr>`;
+    });
+    (data.errors || []).forEach(err => {
+      tbody.innerHTML += `<tr><td colspan="14" style="padding:6px 10px;color:#f85149">Error in ${err.id}: ${err.error}</td></tr>`;
+    });
+  }
+
+  // Populate Node Hydraulic Grade Line (HGL) & Pressures table
+  const nodeTbody = document.getElementById('res-node-table-body');
+  if (nodeTbody && Array.isArray(data.node_results)) {
+    nodeTbody.innerHTML = '';
+    const nodeTableHasDemand = (document.getElementById('pn-node-results-table')?.querySelectorAll('th').length || 0) >= 8;
+    data.node_results.forEach(n => {
+      const typeBadgeColors = {
+        'reservoir': 'background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.4)',
+        'pump': 'background:rgba(168,85,247,0.15);color:#c084fc;border:1px solid rgba(168,85,247,0.4)',
+        'tank': 'background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.4)',
+        'junction': 'background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.4)',
+        'discharge': 'background:rgba(2,132,199,0.15);color:#38bdf8;border:1px solid rgba(2,132,199,0.4)',
+        'tee': 'background:rgba(249,115,22,0.15);color:#fb923c;border:1px solid rgba(249,115,22,0.4)',
+        'valve': 'background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.4)',
+        'elbow': 'background:rgba(236,72,153,0.15);color:#f472b6;border:1px solid rgba(236,72,153,0.4)'
+      };
+      const badgeStyle = typeBadgeColors[n.node_type] || 'background:rgba(148,163,184,0.15);color:#cbd5e1;border:1px solid rgba(148,163,184,0.4)';
+      const pVal = n.pressure_kpa !== undefined ? n.pressure_kpa : 0;
+      const pColor = pVal >= 0 ? '#4ade80' : '#f87171';
+
+      nodeTbody.innerHTML += `
+        <tr style="border-bottom:1px solid #21262d" onmouseover="this.style.background='#1c2330'" onmouseout="this.style.background=''">
+          <td style="padding:6px 10px;font-family:monospace;color:#c084fc;font-weight:600;">${n.node_id}</td>
+          <td style="padding:6px 10px;color:#e6edf3;">${n.label || n.node_id}</td>
+          <td style="padding:6px 10px;">
+            <span style="font-size:10px;padding:2px 6px;border-radius:4px;text-transform:capitalize;${badgeStyle}">
+              ${n.node_type}
+            </span>
+          </td>
+          <td style="padding:6px 10px;text-align:right;font-family:monospace;color:#a78bfa;">${n.elevation_m !== undefined ? n.elevation_m.toFixed(2) : '0.00'}</td>
+          <td style="padding:6px 10px;text-align:right;font-family:monospace;font-weight:700;color:#fbbf24;">${n.head_m !== undefined ? n.head_m.toFixed(2) : '—'}</td>
+          <td style="padding:6px 10px;text-align:right;font-family:monospace;color:${pColor};">${n.pressure_head_m !== undefined ? n.pressure_head_m.toFixed(2) : '—'}</td>
+          <td style="padding:6px 10px;text-align:right;font-family:monospace;font-weight:600;color:${pColor};">${n.pressure_kpa !== undefined ? n.pressure_kpa.toFixed(1) : '—'}</td>
+          ${nodeTableHasDemand ? `<td style="padding:6px 10px;text-align:right;font-family:monospace;color:#94a3b8;">${(n.demand_m3h || 0).toFixed(1)}</td>` : ''}
+        </tr>`;
+    });
+  }
 }
 
 // ============================================================================
@@ -4563,6 +4675,36 @@ function init() {
 
   document.getElementById('pn-calc-btn')?.addEventListener('click', runCalculation);
 
+  // Network Analysis / Solver Method selection
+  const solverSelect = document.getElementById('pn-solver-method');
+  solverSelect?.addEventListener('change', () => {
+    const selectedSolver = solverSelect.value;
+    localStorage.setItem('pmpro_solver_method', selectedSolver);
+    saveNetworkToStorage();
+    if (state.lastCalculation && document.getElementById('pn-results-section')?.style.display !== 'none') {
+      runCalculation();
+    }
+    const solverNames = {
+      'ggm': 'Global Gradient Method (GGM)',
+      'newton_raphson': 'Newton-Raphson (NR)',
+      'hardy_cross': 'Hardy Cross Method',
+      'linear_theory': 'Linear Theory Method'
+    };
+    toast(`Network solver: ${solverNames[selectedSolver] || selectedSolver}`, 'info');
+  });
+
+  // Calculation / Friction Method selection
+  const methodSelect = document.getElementById('pn-friction-method');
+  methodSelect?.addEventListener('change', () => {
+    const selectedMethod = methodSelect.value;
+    localStorage.setItem('pmpro_calc_method', selectedMethod);
+    saveNetworkToStorage();
+    if (state.lastCalculation && document.getElementById('pn-results-section')?.style.display !== 'none') {
+      runCalculation();
+    }
+    toast(`Friction formulation: ${selectedMethod === 'hazen_williams' ? 'Hazen-Williams (C-Factor)' : 'Darcy-Weisbach (Moody)'}`, 'info');
+  });
+
   // Global flow rate
   document.getElementById('pn-global-flow')?.addEventListener('input', onGlobalFlowChange);
   document.getElementById('pn-global-flow')?.addEventListener('change', onGlobalFlowChange);
@@ -4728,53 +4870,67 @@ function init() {
   applyTransform();
 }
 
-/** Demo: reservoir -> pump -> junction -> tank, matching the reference layout */
+/**
+ * Demo Network:
+ * Simple pumping circuit consisting of:
+ * - Sump (Reservoir)
+ * - Suction Pipe
+ * - Pump (Centrifugal)
+ * - Continuous Discharge Pipe with an Inline Gate Valve
+ * - Discharge Point (Free outlet)
+ * 
+ * Both segments of the discharge pipe share the same pipe identity ('Discharge Pipe')
+ * and identical hydraulic parameters, visually and structurally proving the continuous
+ * pipe architecture with fittings as attributes.
+ */
 function loadDemoNetwork() {
   state.nodes = [
     {
-      id: 'N-1', type: 'reservoir', x: 100, y: 350,
+      id: 'N-1', type: 'reservoir', x: 120, y: 320,
       props: { label: 'Sump', elevation_m: 0 }
     },
     {
-      id: 'N-2', type: 'pump', x: 300, y: 350,
-      props: { label: 'Pump 1', flow_m3h: 15, elevation_m: 0, pump_config: 'end_suction' }
-    },
-
-    {
-      id: 'N-3', type: 'junction', x: 500, y: 350,
-      props: { label: 'Tee', elevation_m: 2 }
+      id: 'N-2', type: 'pump', x: 340, y: 320,
+      props: { label: 'Pump 1', flow_m3h: 20, elevation_m: 0, pump_config: 'end_suction' }
     },
     {
-      id: 'N-4', type: 'tank', x: 700, y: 150,
-      props: { label: 'Overhead Tank', elevation_m: 12 }
+      id: 'N-3', type: 'valve', x: 540, y: 320,
+      props: { label: 'Gate Valve', elevation_m: 2, fitting_key: 'gate_valve_open' }
+    },
+    {
+      id: 'N-4', type: 'discharge', x: 760, y: 320,
+      props: { label: 'Discharge', elevation_m: 10 }
     },
   ];
+
   state.pipes = [
     {
       id: 'P-1', fromNodeId: 'N-1', toNodeId: 'N-2',
+      pipeRunId: 'Suction Pipe',
       props: {
-        label: 'Suction',
+        label: 'Suction Pipe',
         dimension_mode: 'standard',
         standard: 'ASME B36.10M',
         schedule_sdr: 'Sch 40 (STD)',
-        nb_mm: 150,
-        nb_inch: '6"',
-        od_mm: 168.3,
-        wall_thickness_mm: 7.11,
-        id_mm: 154.08,
-        pressure_rating: 'PN 50 bar (725 psi)',
-        diameter_mm: 154.08,
+        nb_mm: 125,
+        nb_inch: '5"',
+        od_mm: 141.3,
+        wall_thickness_mm: 6.55,
+        id_mm: 128.2,
+        pressure_rating: 'PN 63 bar (915 psi)',
+        diameter_mm: 128.2,
         length_m: 4,
         material: 'commercial_steel',
         elev_change_m: 0,
-        fittings: ['entry_sharp', 'gate_valve_open'],
+        fittings: ['entry_bellmouth'],
         routing: 'straight'
       }
     },
     {
       id: 'P-2', fromNodeId: 'N-2', toNodeId: 'N-3',
+      pipeRunId: 'Discharge Pipe',
       props: {
-        label: 'Discharge',
+        label: 'Discharge Pipe',
         dimension_mode: 'standard',
         standard: 'ASME B36.10M',
         schedule_sdr: 'Sch 40 (STD)',
@@ -4785,31 +4941,32 @@ function loadDemoNetwork() {
         id_mm: 102.26,
         pressure_rating: 'PN 79 bar (1145 psi)',
         diameter_mm: 102.26,
-        length_m: 18,
+        length_m: 12,
         material: 'commercial_steel',
         elev_change_m: 2,
-        fittings: ['check_valve_swing', 'elbow_90_standard'],
+        fittings: ['check_valve_swing'],
         routing: 'straight'
       }
     },
     {
       id: 'P-3', fromNodeId: 'N-3', toNodeId: 'N-4',
+      pipeRunId: 'Discharge Pipe',
       props: {
-        label: 'Riser',
+        label: 'Discharge Pipe',
         dimension_mode: 'standard',
         standard: 'ASME B36.10M',
         schedule_sdr: 'Sch 40 (STD)',
-        nb_mm: 80,
-        nb_inch: '3"',
-        od_mm: 88.9,
-        wall_thickness_mm: 5.49,
-        id_mm: 77.92,
-        pressure_rating: 'PN 93 bar (1350 psi)',
-        diameter_mm: 77.92,
-        length_m: 14,
+        nb_mm: 100,
+        nb_inch: '4"',
+        od_mm: 114.3,
+        wall_thickness_mm: 6.02,
+        id_mm: 102.26,
+        pressure_rating: 'PN 79 bar (1145 psi)',
+        diameter_mm: 102.26,
+        length_m: 20,
         material: 'commercial_steel',
-        elev_change_m: 10,
-        fittings: ['elbow_90_standard', 'exit_abrupt'],
+        elev_change_m: 8,
+        fittings: ['exit_abrupt'],
         routing: 'straight'
       }
     },
@@ -4819,11 +4976,13 @@ function loadDemoNetwork() {
   state.pan = { x: 0, y: 0 };
   state.zoom = 1.0;
   const flowEl = document.getElementById('pn-global-flow');
-  if (flowEl) flowEl.value = 15;
+  if (flowEl) flowEl.value = 20;
   const sec = document.getElementById('pn-results-section');
   if (sec) sec.style.display = 'none';
+  reconcilePipeRuns();
   renderAll();
   applyTransform();
+  saveNetworkToStorage();
 }
 
 document.addEventListener('DOMContentLoaded', init);

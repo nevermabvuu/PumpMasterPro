@@ -53,4 +53,19 @@ pipe_res_hw = data_hw["results"][0]
 assert abs(pipe_res_hw["length_m"] - 100.0) < 1e-4, f"Expected length 100m, got {pipe_res_hw['length_m']}"
 assert pipe_res_hw["flow_exponent_n"] == 1.852, "Expected n=1.852 for Hazen-Williams"
 
-print("\nAPI CALCULATION TESTS PASSED COMPLETELY!")
+# Test all 4 Network Analysis Solvers
+print("\n=== Testing All 4 Network Analysis Solvers via API ===")
+solvers = ['ggm', 'newton_raphson', 'hardy_cross', 'linear_theory']
+for sm in solvers:
+    p = dict(payload_dw)
+    p["solver_method"] = sm
+    resp = client.post("/api/pipe-network/calculate", json=p)
+    assert resp.status_code == 200, f"Error for solver {sm}: {resp.data}"
+    d = resp.get_json()
+    assert d["summary"]["solver_method"] == sm
+    assert d["summary"]["converged"] is True
+    assert "node_results" in d and len(d["node_results"]) > 0
+    print(f"  Solver {sm.upper()}: {d['summary']['solver_name']} -> converged in {d['summary']['iterations']} iters, TDH={d['summary']['total_system_head_m']}m, {len(d['node_results'])} nodes")
+
+print("\nAPI CALCULATION TESTS PASSED COMPLETELY FOR ALL SOLVERS!")
+

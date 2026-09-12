@@ -973,9 +973,15 @@
             <input id="pp-length" type="number" min="0.1" step="0.5" class="pp-input" value="10">
           </div>
           <div class="pp-field">
-            <label class="pp-label">Elevation Change (m)</label>
+            <label class="pp-label" title="Elevation difference between destination and source nodes (Delta Z = Z_to - Z_from)">Elevation &Delta;Z (m)</label>
             <input id="pp-elev-change" type="number" step="0.5" class="pp-input" value="0">
           </div>
+        </div>
+        <!-- Elevation integrity indicator connecting endpoints -->
+        <div id="pp-elev-integrity-badge" style="font-size:10.5px;color:#94a3b8;margin-top:-6px;margin-bottom:8px;padding:4px 8px;background:rgba(255,255,255,0.02);border:1px solid #21262d;border-radius:6px;display:flex;align-items:center;justify-content:space-between;">
+          <span>Inlet: <strong id="pp-elev-from-val" style="color:#a78bfa;">0.0 m</strong></span>
+          <i class="bi bi-arrow-right" style="color:#475569;font-size:10px;"></i>
+          <span>Outlet: <strong id="pp-elev-to-val" style="color:#a78bfa;">0.0 m</strong></span>
         </div>
 
         <label class="pp-label">Routing</label>

@@ -16,7 +16,8 @@
 // CONSTANTS
 // ============================================================================
 
-const GRID = 50;
+// Grid resolution: 10px allows smooth, precision alignment without jarring jumps
+const GRID = 10;
 const ELBOW_RADIUS = 14;
 
 // MATERIALS and FITTINGS are now loaded from the database via Jinja template injection.
@@ -281,6 +282,7 @@ const state = {
 };
 
 let svgEl, nodesGroup, pipesGroup, draftPipeLine;
+let guideLineX, guideLineY; // Dynamic magnetic alignment guidelines (horizontal & vertical)
 
 // ============================================================================
 // UTILITIES
@@ -290,6 +292,175 @@ function newId(prefix) { return `${prefix}-${state.nextId++}`; }
 function snap(v) { return Math.round(v / GRID) * GRID; }
 function findNode(id) { return state.nodes.find(n => n.id === id); }
 function findPipe(id) { return state.pipes.find(p => p.id === id); }
+
+/**
+ * Smart magnetic axis snapping for smooth node movement.
+ * Automatically checks if the dragged node is within 14px of the horizontal (Y)
+ * or vertical (X) axis of ANY other node on the canvas.
+ * When detected, it magnetically locks to that exact coordinate and displays
+ * a dashed alignment guideline, making horizontal/vertical alignments effortless.
+ */
+function getSmartSnappedPosition(draggedNodeId, rawX, rawY) {
+  const SNAP_THRESHOLD = 14; // pixels tolerance for magnetic axis lock
+  let finalX = Math.round(rawX / GRID) * GRID;
+  let finalY = Math.round(rawY / GRID) * GRID;
+  let alignedY = null;
+  let alignedX = null;
+
+  for (const other of state.nodes) {
+    if (other.id === draggedNodeId) continue;
+    // Magnetic horizontal axis lock (matching other node's Y coordinate)
+    if (Math.abs(rawY - other.y) <= SNAP_THRESHOLD) {
+      finalY = other.y;
+      alignedY = other.y;
+    }
+    // Magnetic vertical axis lock (matching other node's X coordinate)
+    if (Math.abs(rawX - other.x) <= SNAP_THRESHOLD) {
+      finalX = other.x;
+      alignedX = other.x;
+    }
+  }
+
+  // Update visual guideline indicators
+  if (guideLineY) {
+    if (alignedY !== null) {
+      guideLineY.setAttribute('x1', -5000);
+      guideLineY.setAttribute('y1', alignedY);
+      guideLineY.setAttribute('x2', 5000);
+      guideLineY.setAttribute('y2', alignedY);
+      guideLineY.style.display = '';
+    } else {
+      guideLineY.style.display = 'none';
+    }
+  }
+
+  if (guideLineX) {
+    if (alignedX !== null) {
+      guideLineX.setAttribute('x1', alignedX);
+      guideLineX.setAttribute('y1', -5000);
+      guideLineX.setAttribute('x2', alignedX);
+      guideLineX.setAttribute('y2', 5000);
+      guideLineX.style.display = '';
+    } else {
+      guideLineX.style.display = 'none';
+    }
+  }
+
+  return { x: finalX, y: finalY };
+}
+
+function hideAlignmentGuides() {
+  if (guideLineX) guideLineX.style.display = 'none';
+  if (guideLineY) guideLineY.style.display = 'none';
+}
+
+/**
+ * Synchronizes physical elevation integrity across the entire network.
+ * 
+ * Physical Law Enforced:
+ *   ΔZ_pipe = Z_to - Z_from
+ * 
+ * Bidirectional Integrity Rules:
+ * 1. Node elevation modified (sourceKind === 'node'):
+ *    - Updates node.props.elevation_m.
+ *    - Recalculates ΔZ on all incoming pipes (Z_node - Z_from) and outgoing pipes (Z_to - Z_node).
+ * 2. Pipe elevation change modified (sourceKind === 'pipe'):
+ *    - Updates pipe.props.elev_change_m = ΔZ.
+ *    - Updates destination node's elevation: Z_to = Z_from + ΔZ.
+ *    - Automatically updates ΔZ on any other pipes incident on that destination node.
+ * 
+ * This ensures that if Sump is at 0m and Suction line has an elevation change of 10m,
+ * the Pump's elevation automatically becomes 10m, preserving complete physical consistency.
+ */
+function syncElevationIntegrity(sourceKind, sourceId, newValue) {
+  const numVal = parseFloat(newValue) || 0;
+
+  if (sourceKind === 'node') {
+    const node = findNode(sourceId);
+    if (!node) return;
+    node.props.elevation_m = parseFloat(numVal.toFixed(3));
+
+    // Maintain ΔZ = Z_to - Z_from across all connected pipes
+    state.pipes.forEach(p => {
+      if (p.fromNodeId === node.id || p.toNodeId === node.id) {
+        const fn = findNode(p.fromNodeId);
+        const tn = findNode(p.toNodeId);
+        if (fn && tn) {
+          p.props.elev_change_m = parseFloat(((tn.props.elevation_m || 0) - (fn.props.elevation_m || 0)).toFixed(3));
+        }
+      }
+    });
+  } else if (sourceKind === 'pipe') {
+    const pipe = findPipe(sourceId);
+    if (!pipe) return;
+    pipe.props.elev_change_m = parseFloat(numVal.toFixed(3));
+
+    const fn = findNode(pipe.fromNodeId);
+    const tn = findNode(pipe.toNodeId);
+    if (fn && tn) {
+      // Destination node elevation = Source node elevation + ΔZ
+      const fromElev = fn.props.elevation_m || 0;
+      const newToElev = parseFloat((fromElev + pipe.props.elev_change_m).toFixed(3));
+      tn.props.elevation_m = newToElev;
+
+      // Propagate elevation update to all other pipes connected to the modified destination node
+      state.pipes.forEach(otherPipe => {
+        if (otherPipe.id !== pipe.id && (otherPipe.fromNodeId === tn.id || otherPipe.toNodeId === tn.id)) {
+          const ofn = findNode(otherPipe.fromNodeId);
+          const otn = findNode(otherPipe.toNodeId);
+          if (ofn && otn) {
+            otherPipe.props.elev_change_m = parseFloat(((otn.props.elevation_m || 0) - (ofn.props.elevation_m || 0)).toFixed(3));
+          }
+        }
+      });
+    }
+  }
+
+  // Refresh open inspector UI inputs if visible
+  if (state.selected?.kind === 'node') {
+    const selNode = findNode(state.selected.id);
+    if (selNode) {
+      setVal('np-elev', selNode.props.elevation_m ?? 0);
+      const popElev = document.getElementById('pop-node-elev');
+      if (popElev && popElev !== document.activeElement) popElev.value = selNode.props.elevation_m ?? 0;
+    }
+  } else if (state.selected?.kind === 'pipe') {
+    const selPipe = findPipe(state.selected.id);
+    if (selPipe) {
+      const ppElev = document.getElementById('pp-elev-change');
+      if (ppElev && ppElev !== document.activeElement) ppElev.value = selPipe.props.elev_change_m ?? 0;
+      updatePipeElevationLabels(selPipe);
+    }
+  }
+
+  renderLegend();
+  saveNetworkToStorage();
+
+  // If calculation results are visible, recalculate to reflect updated elevation head
+  if (state.lastCalculation && document.getElementById('pn-results-section')?.style.display !== 'none') {
+    runCalculation();
+  }
+}
+
+function updatePipeElevationLabels(pipe) {
+  if (!pipe) return;
+  const fn = findNode(pipe.fromNodeId);
+  const tn = findNode(pipe.toNodeId);
+  const fromEl = document.getElementById('pp-elev-from-val');
+  const toEl = document.getElementById('pp-elev-to-val');
+  if (fromEl) fromEl.textContent = fn ? `${(fn.props.elevation_m || 0).toFixed(1)} m` : '--';
+  if (toEl) toEl.textContent = tn ? `${(tn.props.elevation_m || 0).toFixed(1)} m` : '--';
+}
+
+function reconcileAllPipesElevation() {
+  state.pipes.forEach(p => {
+    const fn = findNode(p.fromNodeId);
+    const tn = findNode(p.toNodeId);
+    if (fn && tn) {
+      p.props.elev_change_m = parseFloat(((tn.props.elevation_m || 0) - (fn.props.elevation_m || 0)).toFixed(3));
+    }
+  });
+}
 
 function toSVG(e) {
   const r = svgEl.getBoundingClientRect();
@@ -770,6 +941,9 @@ function loadNetworkFromStorage() {
 
   state.nodes = d.nodes;
   state.pipes = d.pipes;
+
+  // Reconcile pipe elevation changes with node elevations (Delta Z = Z_to - Z_from)
+  reconcileAllPipesElevation();
 
   // Restore network solver algorithm
   const savedSolver = d.solverMethod || localStorage.getItem('pmpro_solver_method');
@@ -3119,12 +3293,24 @@ function renderPopoverNodePump(node, pop) {
         ${cfgHtml}
       </div>
 
+      <div class="pn-popover-section-label" style="margin-top:10px;">Elevation (Z, meters)</div>
+      <input type="number" id="pop-node-elev" class="pn-popover-input" step="0.5" value="${node.props.elevation_m ?? 0}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:6px 9px;font-size:12px;">
+
       <div class="pn-popover-section-label" style="margin-top:10px;">Flow Rate (m³/h)</div>
       <input type="number" id="pop-pump-flow" class="pn-popover-input" step="1" min="0" value="${node.props.flow_m3h ?? 10}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:6px 9px;font-size:12px;">
     </div>
   `;
 
   pop.querySelector('.pn-popover-close').onclick = hideContextPopover;
+
+  const pElevIn = pop.querySelector('#pop-node-elev');
+  if (pElevIn) {
+    pElevIn.oninput = (e) => {
+      syncElevationIntegrity('node', node.id, e.target.value);
+      renderAll();
+      showNodeProps(node);
+    };
+  }
 
   pop.querySelectorAll('#pop-pump-cfg-list .pn-popover-option').forEach(el => {
     el.onclick = () => {
@@ -3180,10 +3366,9 @@ function renderPopoverNodeDefault(node, pop) {
   const elevIn = pop.querySelector('#pop-node-elev');
   if (elevIn) {
     elevIn.oninput = (e) => {
-      node.props.elevation_m = parseFloat(e.target.value) || 0;
+      syncElevationIntegrity('node', node.id, e.target.value);
       renderAll();
       showNodeProps(node);
-      saveNetworkToStorage();
     };
   }
 }
@@ -3288,6 +3473,12 @@ function renderPopoverPipe(pipe, pop) {
         <button class="pn-btn pop-route-btn ${curRouting === 'straight' ? 'active-tool' : ''}" data-route="straight" style="flex:1;padding:4px;font-size:10px;">Straight</button>
       </div>
 
+      <div class="pn-popover-section-label">Elevation Change &Delta;Z (m)</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+        <input type="number" id="pop-pipe-elev" class="pn-popover-input" step="0.5" value="${pipe.props.elev_change_m ?? 0}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:5px 8px;font-size:11px;width:90px;">
+        <span style="font-size:9.5px;color:#94a3b8;">Inlet &rarr; Outlet</span>
+      </div>
+
       <div class="pn-popover-section-label">Additive Minor Loss (Custom K)</div>
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
         <input type="number" id="pop-pipe-custom-k" class="pn-popover-input" step="0.05" min="0" value="${curCustK}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:5px 8px;font-size:11px;width:90px;">
@@ -3358,6 +3549,15 @@ function renderPopoverPipe(pipe, pop) {
       saveNetworkToStorage();
     };
   });
+
+  const pipeElevIn = pop.querySelector('#pop-pipe-elev');
+  if (pipeElevIn) {
+    pipeElevIn.oninput = (e) => {
+      syncElevationIntegrity('pipe', pipe.id, e.target.value);
+      renderAll();
+      showPipeProps(pipe);
+    };
+  }
 
   const pipeCustK = pop.querySelector('#pop-pipe-custom-k');
   if (pipeCustK) {
@@ -3959,6 +4159,7 @@ function showPipeProps(pipe) {
   setVal('pp-diameter', pipe.props.diameter_mm);
   setVal('pp-length', pipe.props.length_m);
   setVal('pp-elev-change', pipe.props.elev_change_m);
+  updatePipeElevationLabels(pipe);
   setVal('pp-material', pipe.props.material);
   setVal('pp-routing', pipe.props.routing || 'auto');
   setVal('pp-custom-k', pipe.props.custom_k ?? 0);
@@ -4042,9 +4243,8 @@ function onNodeLabelChange() {
 function onNodeElevChange() {
   const node = state.selected?.kind === 'node' ? findNode(state.selected.id) : null;
   if (node) {
-    node.props.elevation_m = parseFloat(document.getElementById('np-elev').value) || 0;
-    saveNetworkToStorage();
-    renderLegend();
+    const val = document.getElementById('np-elev').value;
+    syncElevationIntegrity('node', node.id, val);
   }
 }
 function onPumpFlowChange() {
@@ -4107,7 +4307,8 @@ function onPipePropChange() {
     pipe.props.material_key = pipe.props.material;
   }
   pipe.props.length_m = parseFloat(document.getElementById('pp-length').value) || 10;
-  pipe.props.elev_change_m = parseFloat(document.getElementById('pp-elev-change').value) || 0;
+  const newElevVal = document.getElementById('pp-elev-change').value;
+  syncElevationIntegrity('pipe', pipe.id, newElevVal);
   pipe.props.routing = document.getElementById('pp-routing').value;
   const ppCustK = document.getElementById('pp-custom-k');
   if (ppCustK) pipe.props.custom_k = parseFloat(ppCustK.value) || 0;
@@ -4382,6 +4583,8 @@ function importNetwork(file) {
       state.pipes = d.pipes;
       state.nextId = Math.max(0, ...[...d.nodes, ...d.pipes].map(x =>
         parseInt(x.id.split('-')[1]) || 0)) + 1;
+      reconcilePipeRuns();
+      reconcileAllPipesElevation();
       selectItem(null); renderAll();
       toast('Network loaded!', 'success');
     } catch (err) { toast(`Import failed: ${err.message}`, 'error'); }
@@ -4522,6 +4725,21 @@ function init() {
   draftPipeLine.style.pointerEvents = 'none';
   svgEl.appendChild(draftPipeLine);
 
+  // Dynamic magnetic alignment guidelines (dashed cyan guides)
+  guideLineX = mkSVG('line', {
+    stroke: '#38bdf8', 'stroke-width': 1.2, 'stroke-dasharray': '5 4', opacity: 0.85
+  });
+  guideLineX.style.display = 'none';
+  guideLineX.style.pointerEvents = 'none';
+  svgEl.appendChild(guideLineX);
+
+  guideLineY = mkSVG('line', {
+    stroke: '#38bdf8', 'stroke-width': 1.2, 'stroke-dasharray': '5 4', opacity: 0.85
+  });
+  guideLineY.style.display = 'none';
+  guideLineY.style.pointerEvents = 'none';
+  svgEl.appendChild(guideLineY);
+
   // Gradients (kept for compatibility with industrial view)
   const defs = mkSVG('defs', {});
   defs.innerHTML = `
@@ -4559,16 +4777,33 @@ function init() {
   svgEl.addEventListener('mousemove', e => {
     if (state.drawingPipe) {
       const pos = toSVG(e);
-      state.drawingPipe.mouseX = pos.x;
-      state.drawingPipe.mouseY = pos.y;
+      const srcNode = findNode(state.drawingPipe.fromNodeId);
+      let mx = pos.x;
+      let my = pos.y;
+
+      // Smart horizontal & vertical snap to source node while drawing pipe
+      if (srcNode) {
+        if (Math.abs(my - srcNode.y) <= 14) {
+          my = srcNode.y;
+        }
+        if (Math.abs(mx - srcNode.x) <= 14) {
+          mx = srcNode.x;
+        }
+      }
+
+      state.drawingPipe.mouseX = mx;
+      state.drawingPipe.mouseY = my;
       updateDraftLine();
     }
     if (state.nodeDrag) {
       const pos = toSVG(e);
       const node = findNode(state.nodeDrag.nodeId);
       if (node) {
-        node.x = snap(pos.x - state.nodeDrag.offsetX);
-        node.y = snap(pos.y - state.nodeDrag.offsetY);
+        const rawX = pos.x - state.nodeDrag.offsetX;
+        const rawY = pos.y - state.nodeDrag.offsetY;
+        const snapped = getSmartSnappedPosition(node.id, rawX, rawY);
+        node.x = snapped.x;
+        node.y = snapped.y;
         renderAll();
         updateContextPopoverPosition();
       }
@@ -4581,6 +4816,7 @@ function init() {
   });
 
   svgEl.addEventListener('mouseup', () => {
+    hideAlignmentGuides();
     if (state.nodeDrag || state.panDrag) {
       saveNetworkToStorage();
     }
@@ -4980,6 +5216,7 @@ function loadDemoNetwork() {
   const sec = document.getElementById('pn-results-section');
   if (sec) sec.style.display = 'none';
   reconcilePipeRuns();
+  reconcileAllPipesElevation();
   renderAll();
   applyTransform();
   saveNetworkToStorage();

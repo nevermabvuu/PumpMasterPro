@@ -1333,8 +1333,8 @@ def solve_network(
     total_R = 0.0
 
     for pid, pipe in graph.pipes.items():
-        # Ensure pipe elevation change matches node elevations if connected
-        if pipe.from_node in graph.nodes and pipe.to_node in graph.nodes and pipe.elev_change_m == 0.0:
+        # Ensure pipe elevation change strictly matches incident node elevations (Delta Z = Z_to - Z_from)
+        if pipe.from_node in graph.nodes and pipe.to_node in graph.nodes:
             pipe.elev_change_m = graph.nodes[pipe.to_node].elevation_m - graph.nodes[pipe.from_node].elevation_m
 
         q_m3s = flows_m3s.get(pid, q_global_m3s)

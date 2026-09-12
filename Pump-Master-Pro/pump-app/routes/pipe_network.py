@@ -380,6 +380,11 @@ def calculate_network():
             for f in p_obj.fittings:
                 if f.k_factor == 0.0 and f.type in fitting_k:
                     f.k_factor = float(fitting_k[f.type])
+
+            # Enforce physical elevation integrity: Delta Z = Z_to - Z_from
+            if p_obj.from_node in graph.nodes and p_obj.to_node in graph.nodes:
+                p_obj.elev_change_m = round(graph.nodes[p_obj.to_node].elevation_m - graph.nodes[p_obj.from_node].elevation_m, 3)
+
             graph.add_pipe(p_obj)
 
         # Consolidate collinear edges across degree-2 pseudo-nodes

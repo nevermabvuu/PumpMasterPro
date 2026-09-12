@@ -907,6 +907,7 @@
      TAB 2: Pipe Network System Designer
      Embedded inline — same JS as /pipe-network but scoped to this page.
      Network state is saved to localStorage on every change and restored
+     ══════════════════════════════════════════════════════════════════════════ -->
 <style>
   #pn-canvas-wrap.pn-light-theme {
     background: #f8fafc !important;
@@ -1661,19 +1662,20 @@
    * sessionStorage so it survives page reloads within the same session.
    */
   function switchSelectionTab(tab) {
-    // Show/hide panels
-    document.getElementById('tab-panel-selection').style.display = tab === 'selection' ? '' : 'none';
-    document.getElementById('tab-panel-pipenet').style.display   = tab === 'pipenet'   ? '' : 'none';
+    const selPanel = document.getElementById('tab-panel-selection');
+    const pnPanel  = document.getElementById('tab-panel-pipenet');
+    if (selPanel) selPanel.style.display = tab === 'selection' ? '' : 'none';
+    if (pnPanel)  pnPanel.style.display  = tab === 'pipenet'   ? '' : 'none';
 
     // Update tab button styles
     const sel = document.getElementById('tab-btn-selection');
     const pn  = document.getElementById('tab-btn-pipenet');
     if (tab === 'selection') {
-      sel.style.borderBottom = '2px solid #58a6ff'; sel.style.color = '#58a6ff';
-      pn.style.borderBottom  = '2px solid transparent'; pn.style.color  = '#8b949e';
+      if (sel) { sel.style.borderBottom = '2px solid #58a6ff'; sel.style.color = '#58a6ff'; }
+      if (pn)  { pn.style.borderBottom  = '2px solid transparent'; pn.style.color  = '#8b949e'; }
     } else {
-      pn.style.borderBottom  = '2px solid #22c55e'; pn.style.color  = '#22c55e';
-      sel.style.borderBottom = '2px solid transparent'; sel.style.color = '#8b949e';
+      if (pn)  { pn.style.borderBottom  = '2px solid #22c55e'; pn.style.color  = '#22c55e'; }
+      if (sel) { sel.style.borderBottom = '2px solid transparent'; sel.style.color = '#8b949e'; }
       // Trigger SVG resize when tab becomes visible
       if (typeof applyTransform === 'function') applyTransform();
     }

@@ -31,6 +31,10 @@ import math
 import re
 from flask import Blueprint, render_template, request, jsonify, g, session
 from models import db, PipeFitting, PipeMaterial, StandardPipe
+from services.hydraulic_engine import (
+    Fitting, Node, PipeEdge, NetworkGraph,
+    calculate_consolidated_pipe, DEFAULT_HAZEN_WILLIAMS_C
+)
 
 # -- Blueprint registration --------------------------------------------------
 pipe_network_bp = Blueprint('pipe_network', __name__)
@@ -93,119 +97,71 @@ def friction_factor(Re, epsilon_mm, diameter_m):
     return f_turb
 
 
-def calculate_segment(seg, global_flow_m3h):
+def calculate_segment(seg, global_flow_m3h, friction_method='darcy_weisbach'):
     """
-    Calculate all hydraulic quantities for one pipe segment.
-
-    Required keys in seg dict:
-        id, diameter_mm, length_m, material, elev_change_m, fittings
-    Optional:
-        flow_m3h  (overrides global_flow_m3h for this segment)
+    Calculate all hydraulic quantities for one pipe segment using the consolidated
+    hydraulic engine pipeline. Accumulates child fittings without splitting the pipe.
     """
     fitting_k = get_fitting_k_map()
     roughness_map = get_roughness_map()
 
     seg_id   = seg.get('id', 'pipe')
-    D_mm     = float(seg.get('diameter_mm', 100.0))
+    D_mm     = float(seg.get('diameter_mm') or seg.get('id_mm') or 100.0)
     L_m      = float(seg.get('length_m', 10.0))
     material = seg.get('material', 'commercial_steel')
-    flow_m3h = float(seg.get('flow_m3h', global_flow_m3h))
+    flow_raw = seg.get('flow_m3h')
+    flow_m3h = float(flow_raw) if flow_raw is not None else float(global_flow_m3h)
     dz_m     = float(seg.get('elev_change_m', 0.0))
-    fittings = seg.get('fittings', [])
+    raw_fittings = seg.get('fittings', [])
 
-    # Unit conversions
-    D_m   = D_mm / 1000.0
-    Q_m3s = flow_m3h / 3600.0
     eps_mm = roughness_map.get(material, roughness_map.get('commercial_steel', 0.046))
 
-    # Hydraulic quantities
-    A_m2  = math.pi * D_m ** 2 / 4.0    # cross-sectional area
-    V_ms  = Q_m3s / A_m2                  # mean velocity
-    Re    = V_ms * D_m / KINEMATIC_VISCOSITY  # Reynolds number
-    f     = friction_factor(Re, eps_mm, D_m)  # Darcy friction factor
-
-    vel_head  = V_ms ** 2 / (2.0 * GRAVITY)  # velocity head V^2/2g
-
-    # Major (pipe-wall friction) losses
-    hf_major  = f * (L_m / D_m) * vel_head
-
-    # Minor (fitting) losses supporting both standard lookup keys and custom K overrides
-    K_total = 0.0
-    for item in fittings:
+    # Parse fittings into Fitting objects with resolved K values
+    parsed_fittings = []
+    for item in raw_fittings:
         if isinstance(item, dict):
-            k_val = item.get('k')
-            if k_val is not None:
-                try:
-                    K_total += float(k_val)
-                except (ValueError, TypeError):
-                    K_total += float(fitting_k.get(item.get('key'), 0.0))
-            else:
-                K_total += float(fitting_k.get(item.get('key'), 0.0))
+            k_val = item.get('k') or item.get('k_factor')
+            key = item.get('key') or item.get('type')
+            if k_val is None:
+                k_val = fitting_k.get(key, 0.0)
+            parsed_fittings.append(Fitting(
+                id=str(item.get('id') or key or 'fit'),
+                type=str(key or 'fitting'),
+                label=str(item.get('label') or (key or 'Fitting').replace('_', ' ').title()),
+                k_factor=float(k_val or 0.0),
+                count=int(item.get('count') or 1),
+                custom_k=float(item['custom_k']) if item.get('custom_k') is not None else None,
+            ))
         elif isinstance(item, (int, float)):
-            K_total += float(item)
+            parsed_fittings.append(Fitting(type='custom', label=f'Custom K={item}', k_factor=float(item)))
         elif isinstance(item, str):
-            K_total += float(fitting_k.get(item, 0.0))
+            k_val = fitting_k.get(item, 0.0)
+            parsed_fittings.append(Fitting(type=item, label=item.replace('_', ' ').title(), k_factor=float(k_val)))
 
-    if seg.get('custom_k') is not None:
-        try:
-            K_total += float(seg.get('custom_k'))
-        except (ValueError, TypeError):
-            pass
+    pipe_edge = PipeEdge(
+        id=seg_id,
+        from_node=str(seg.get('from_node') or seg.get('fromNodeId') or ''),
+        to_node=str(seg.get('to_node') or seg.get('toNodeId') or ''),
+        length_m=L_m,
+        diameter_mm=D_mm,
+        material=material,
+        roughness_mm=float(seg.get('roughness_mm') or eps_mm),
+        hazen_williams_c=float(seg['hazen_williams_c']) if seg.get('hazen_williams_c') else None,
+        fittings=parsed_fittings,
+        custom_k=float(seg.get('custom_k') or 0.0),
+        elev_change_m=dz_m,
+        label=str(seg.get('label') or seg_id),
+        standard=seg.get('standard'),
+        schedule_sdr=seg.get('schedule_sdr'),
+        nb_mm=seg.get('nb_mm'),
+        od_mm=seg.get('od_mm'),
+        id_mm=seg.get('id_mm', round(D_mm, 1)),
+        pressure_rating=seg.get('pressure_rating'),
+        flow_m3h=flow_m3h,
+    )
 
-    hf_minor  = K_total * vel_head
-
-    # Elevation head (positive = uphill = adds to required pump head)
-    hf_elev   = dz_m
-
-    # Totals
-    hf_friction = hf_major + hf_minor
-    h_total     = hf_friction + hf_elev
-
-    # Flow regime label
-    if Re < 2300:
-        regime = 'Laminar'
-    elif Re < 4000:
-        regime = 'Transitional'
-    else:
-        regime = 'Turbulent'
-
-    # Velocity advisory (recommended range for water: 0.5 - 3.0 m/s)
-    if V_ms < 0.3:
-        vel_status = 'Too slow'
-    elif V_ms > 4.0:
-        vel_status = 'Too fast'
-    elif V_ms > 3.0:
-        vel_status = 'High - consider larger pipe'
-    else:
-        vel_status = 'OK'
-
-    return {
-        'id':              seg_id,
-        'label':           seg.get('label', seg_id),
-        'diameter_mm':     round(D_mm, 1),
-        'length_m':        round(L_m, 2),
-        'material':        material,
-        'flow_m3h':        round(flow_m3h, 3),
-        'velocity_ms':     round(V_ms, 3),
-        'reynolds':        int(Re),
-        'regime':          regime,
-        'velocity_status': vel_status,
-        'friction_factor': round(f, 6),
-        'velocity_head_m': round(vel_head, 5),
-        'hf_major_m':      round(hf_major, 4),
-        'hf_minor_m':      round(hf_minor, 4),
-        'hf_friction_m':   round(hf_friction, 4),
-        'hf_elevation_m':  round(hf_elev, 4),
-        'h_total_m':       round(h_total, 4),
-        'fittings':        fittings,
-        'K_total':         round(K_total, 3),
-        'standard':        seg.get('standard'),
-        'schedule_sdr':    seg.get('schedule_sdr'),
-        'nb_mm':           seg.get('nb_mm'),
-        'od_mm':           seg.get('od_mm'),
-        'id_mm':           seg.get('id_mm', round(D_mm, 1)),
-        'pressure_rating': seg.get('pressure_rating'),
-    }
+    res = calculate_consolidated_pipe(pipe_edge, flow_m3h=flow_m3h, friction_method=friction_method)
+    return res.to_dict()
 
 
 # ── Page Route ──────────────────────────────────────────────────────────────
@@ -341,19 +297,23 @@ def get_pipe_network_session():
 @pipe_network_bp.route('/api/pipe-network/calculate', methods=['POST'])
 def calculate_network():
     """
-    Calculate friction losses for every pipe segment in the submitted network.
+    Calculate consolidated friction losses and hydraulic resistance for every
+    pipe segment in the submitted network.
+    Automatically collapses degree-2 pseudo-nodes if full network graph is submitted.
 
     Request JSON:
     {
         "flow_m3h": 10.0,
+        "friction_method": "darcy_weisbach" | "hazen_williams",
+        "nodes": [ { node dicts } ],   // optional for graph consolidation
         "pipes": [ { pipe segment dicts } ]
     }
 
     Response JSON:
     {
-        "results": [ { per-segment results } ],
+        "results": [ { per-segment results including R and n } ],
         "errors":  [ { per-segment errors } ],
-        "summary": { totals },
+        "summary": { totals, R_system, friction_method },
         "constants": { reference tables }
     }
     """
@@ -362,24 +322,86 @@ def calculate_network():
         return jsonify({'error': 'Missing required field: pipes'}), 400
 
     global_flow = float(data.get('flow_m3h', 10.0))
-    pipe_list   = data['pipes']
+    friction_method = (data.get('friction_method') or 'darcy_weisbach').lower().strip()
+    if friction_method not in ('darcy_weisbach', 'hazen_williams'):
+        friction_method = 'darcy_weisbach'
 
-    if not isinstance(pipe_list, list) or len(pipe_list) == 0:
+    raw_pipes = data['pipes']
+    raw_nodes = data.get('nodes')
+
+    if not isinstance(raw_pipes, list) or len(raw_pipes) == 0:
         return jsonify({'error': 'pipes must be a non-empty list'}), 400
 
+    # =========================================================================
+    # STEP 1: GRAPH TOPOLOGY INGESTION & CONSOLIDATION
+    # =========================================================================
+    # If both nodes and pipes are sent from the canvas, run structural graph
+    # consolidation to eliminate degree-2 pseudo-nodes (e.g. inline valves, elbows,
+    # or inline tees).
+    #
+    # Structural Consolidation Rules:
+    # 1. FITTINGS AS ATTRIBUTES: Inline fittings do not split a continuous pipe run.
+    #    Their loss coefficients (K-factor) and equivalent lengths are accumulated
+    #    directly into the parent continuous pipe segment.
+    # 2. GENUINE SPLIT PRESERVATION: True nodes are strictly preserved for:
+    #    - Physical branches (degree >= 3 junctions / manifolds)
+    #    - Pipe diameter transitions (D1 != D2, e.g. reducers / expanders)
+    #    - Material or roughness transitions (e.g. Steel -> PVC)
+    #    - Boundary conditions (Reservoirs, Tanks, Fixed head, External demands)
+    #    - Active pump stations
+    # =========================================================================
+    if raw_nodes and isinstance(raw_nodes, list) and len(raw_nodes) > 0:
+        graph = NetworkGraph()
+        fitting_k = get_fitting_k_map()
+        roughness_map = get_roughness_map()
+
+        # Ingest nodes into graph representation
+        for nd in raw_nodes:
+            node_obj = Node.from_dict(nd)
+            if node_obj.k_factor == 0.0 and node_obj.fitting_key and node_obj.fitting_key in fitting_k:
+                node_obj.k_factor = float(fitting_k[node_obj.fitting_key])
+            graph.add_node(node_obj)
+
+        # Ingest pipe edges and resolve material roughness and fitting loss coefficients
+        for pd in raw_pipes:
+            p_obj = PipeEdge.from_dict(pd)
+            if not p_obj.roughness_mm or p_obj.roughness_mm <= 0:
+                p_obj.roughness_mm = roughness_map.get(p_obj.material, 0.046)
+            for f in p_obj.fittings:
+                if f.k_factor == 0.0 and f.type in fitting_k:
+                    f.k_factor = float(fitting_k[f.type])
+            graph.add_pipe(p_obj)
+
+        # Consolidate collinear edges across degree-2 pseudo-nodes
+        consolidated = graph.consolidate()
+        pipe_list_to_calc = [p.to_dict() for p in consolidated.pipes.values()]
+        consolidated_nodes = [n.to_dict() for n in consolidated.nodes.values()]
+    else:
+        # Fallback for flat pipe list (legacy mode)
+        pipe_list_to_calc = raw_pipes
+        consolidated_nodes = []
+
+    # =========================================================================
+    # STEP 2: HYDRAULIC CALCULATION PIPELINE
+    # =========================================================================
+    # Calculates major friction loss, minor fitting loss, elevation head change,
+    # and consolidated equivalent system resistance R (hf = R * Q^n) for each edge.
+    # =========================================================================
     results     = []
     errors      = []
     total_major = 0.0
     total_minor = 0.0
     total_elev  = 0.0
+    total_R     = 0.0
 
-    for seg in pipe_list:
+    for seg in pipe_list_to_calc:
         try:
-            result = calculate_segment(seg, global_flow)
+            result = calculate_segment(seg, global_flow, friction_method=friction_method)
             results.append(result)
             total_major += result['hf_major_m']
             total_minor += result['hf_minor_m']
             total_elev  += result['hf_elevation_m']
+            total_R     += result.get('resistance_R', 0.0)
         except (ValueError, ZeroDivisionError, KeyError) as exc:
             errors.append({'id': seg.get('id', '?'), 'error': str(exc)})
 
@@ -390,7 +412,9 @@ def calculate_network():
         'total_hf_minor_m':    round(total_minor, 3),
         'total_elevation_m':   round(total_elev,  3),
         'total_system_head_m': round(total_head,  3),
+        'total_system_R':      round(total_R,     3),
         'pipe_count':          len(results),
+        'friction_method':     friction_method,
     }
 
     # Auto-sync calculation results and duty point to session['active_selection']
@@ -403,6 +427,7 @@ def calculate_network():
             'summary': calc_summary,
         }
         pn['globalFlow'] = global_flow
+        pn['friction_method'] = friction_method
         active_sel['pipe_network'] = pn
         active_sel['q_duty'] = global_flow
         active_sel['disp_q_duty'] = global_flow
@@ -417,10 +442,12 @@ def calculate_network():
         'results': results,
         'errors':  errors,
         'summary': calc_summary,
+        'consolidated_nodes': consolidated_nodes,
         'constants': {
             'fitting_k_values': get_fitting_k_map(),
             'fitting_labels':   get_fitting_label_map(),
             'pipe_roughness':   get_roughness_map(),
+            'hazen_williams_c': DEFAULT_HAZEN_WILLIAMS_C,
         }
     })
 

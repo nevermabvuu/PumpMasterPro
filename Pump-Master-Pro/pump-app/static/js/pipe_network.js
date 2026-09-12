@@ -800,6 +800,9 @@ function loadNetworkFromStorage() {
     state.pendingSelect = d.selected;
   }
 
+  // Reconcile continuous pipe runs across inline fitting nodes upon loading
+  reconcilePipeRuns();
+
   updateSaveIndicator('saved');
   return true;
 }
@@ -1070,11 +1073,24 @@ function renderPipes() {
     const fn = findNode(pipe.fromNodeId);
     const tn = findNode(pipe.toNodeId);
     if (!fn || !tn) return;
+    const isFittingTool = state.mode && state.mode.startsWith('add-') && ['valve', 'elbow', 'tee'].includes(state.mode.replace('add-', ''));
     const isSel = state.selected?.kind === 'pipe' && state.selected.id === pipe.id;
 
     const g = mkSVG('g', {});
-    g.style.cursor = 'pointer';
-    g.addEventListener('click', e => { e.stopPropagation(); selectItem('pipe', pipe.id); });
+    g.style.cursor = isFittingTool ? 'crosshair' : 'pointer';
+    g.addEventListener('click', e => {
+      e.stopPropagation();
+      // If user has a fitting placement tool active, clicking on the pipe inserts the fitting into the pipe!
+      if (state.mode && state.mode.startsWith('add-')) {
+        const type = state.mode.replace('add-', '');
+        if (['valve', 'elbow', 'tee'].includes(type)) {
+          const pos = toSVG(e);
+          insertFittingOnPipe(pipe, type, pos);
+          return;
+        }
+      }
+      selectItem('pipe', pipe.id);
+    });
 
     // Resolve endpoints (with direction constraints from fittings)
     const fromPt = resolveEndpoint(fn, tn);
@@ -1119,20 +1135,24 @@ function renderPipes() {
       }));
     }
 
-    // Label
-    const lbl = mkSVG('text', {
-      x: mid.x, y: mid.y - (state.viewMode === 'industrial' ? 22 : 10),
-      'font-size': 10, fill: '#8b949e',
-      'font-family': 'Inter, sans-serif',
-      'text-anchor': 'middle', 'pointer-events': 'none',
-    });
-    lbl.textContent = `${pipe.props.label || pipe.id}  D${pipe.props.diameter_mm}mm`;
-    g.appendChild(lbl);
+    // Label: Displays the continuous Pipe ID/label (e.g. P-15) and diameter.
+    // Suppress text on very short connector segments (<42px) to keep canvas clean between close fittings.
+    const segDistance = Math.hypot(toPt.x - fromPt.x, toPt.y - fromPt.y);
+    if (segDistance >= 42) {
+      const lbl = mkSVG('text', {
+        x: mid.x, y: mid.y - (state.viewMode === 'industrial' ? 22 : 10),
+        'font-size': 10, fill: '#8b949e',
+        'font-family': 'Inter, sans-serif',
+        'text-anchor': 'middle', 'pointer-events': 'none',
+      });
+      lbl.textContent = `${pipe.props.label || pipe.id}  D${pipe.props.diameter_mm}mm`;
+      g.appendChild(lbl);
+    }
 
-    // Hit target
+    // Hit target (expanded width makes clicking on pipes to insert fittings or select easy)
     g.appendChild(mkSVG('path', {
       d: pathD, fill: 'none', stroke: 'transparent',
-      'stroke-width': state.viewMode === 'industrial' ? 40 : 16,
+      'stroke-width': state.viewMode === 'industrial' ? 44 : 22,
     }));
 
     pipesGroup.appendChild(g);
@@ -2123,6 +2143,17 @@ function onCanvasClick(e) {
   if (state.mode.startsWith('add-')) {
     const type = state.mode.replace('add-', '');
     const pos = toSVG(e);
+
+    // If placing an inline fitting (valve, elbow, tee) and clicked near an existing pipe,
+    // insert it directly into the middle of that pipe!
+    if (['valve', 'elbow', 'tee'].includes(type)) {
+      const targetPipe = findPipeNearPoint(pos.x, pos.y, 25);
+      if (targetPipe) {
+        insertFittingOnPipe(targetPipe, type, pos);
+        return;
+      }
+    }
+
     addNode(type, snap(pos.x), snap(pos.y));
     setMode('select');
   }
@@ -2268,6 +2299,264 @@ function canConnect(node, otherNode, nodeId, otherNodeId) {
 }
 
 // ============================================================================
+// CONTINUOUS PIPE RUNS & INLINE FITTING ARCHITECTURE
+// ============================================================================
+
+/**
+ * Check if two pipe segments share identical hydraulic characteristics.
+ * If both segments share the same diameter, material, and schedule/SDR,
+ * they belong to the SAME continuous pipe run and do not warrant a split.
+ * If either diameter or material differs, this is a genuine physical split!
+ */
+function pipesMatchCharacteristics(p1, p2) {
+  if (!p1 || !p2 || !p1.props || !p2.props) return false;
+  const d1 = parseFloat(p1.props.id_mm || p1.props.diameter_mm || 0);
+  const d2 = parseFloat(p2.props.id_mm || p2.props.diameter_mm || 0);
+  if (Math.abs(d1 - d2) > 0.1) return false;
+
+  const m1 = p1.props.material || p1.props.material_key || '';
+  const m2 = p2.props.material || p2.props.material_key || '';
+  if (m1 && m2 && m1 !== m2) return false;
+
+  return true;
+}
+
+/**
+ * ============================================================================
+ * CONTINUOUS PIPE RUN RECONCILIATION ENGINE
+ * ============================================================================
+ * 
+ * Reconciles continuous pipe runs across inline degree-2 fitting nodes:
+ * 
+ * 1. FITTINGS AS ATTRIBUTES (UNIFIED PIPE RUN):
+ *    When an inline fitting node (valve, elbow, inline tee) connects two pipe
+ *    segments with MATCHING diameter and material, both segments belong to the
+ *    SAME continuous pipe run and share the same Pipe ID / label (e.g. 'P-1').
+ *    Neither segment gets an unwanted extra ID.
+ * 
+ * 2. AUTOMATIC SPLITTING ON CHARACTERISTIC TRANSITION:
+ *    If the user modifies any segment characteristic (such as diameter or
+ *    material) on one side of an inline fitting, that transition is a genuine
+ *    physical split (e.g. pipe reducer/expander or material joint).
+ *    The engine automatically assigns a new distinct Pipe ID (e.g. 'P-2') to
+ *    the differing segment.
+ * 
+ * 3. STABILITY & CLICK IMMUNITY:
+ *    Clicking, selecting, or inspecting another pipe will NEVER reset or corrupt
+ *    segment characteristics or overwrite split IDs back to the same name.
+ * 
+ * 4. AUTOMATIC RE-MERGING:
+ *    If the user changes differing segment characteristics back so that they
+ *    match again, the system automatically re-unifies both segments under
+ *    the primary continuous pipe ID (unless the user explicitly split them).
+ * 
+ * 5. MANUAL SPLIT RESPECT:
+ *    If a user explicitly clicks "Split Segment" or assigns a custom label,
+ *    `pipe.props.manual_split` is marked true, preventing automatic re-merging.
+ */
+function reconcilePipeRuns() {
+  if (!state.pipes || state.pipes.length === 0) return false;
+
+  let anyModified = false;
+  let pass = 0;
+  let passModified = true;
+
+  // Multi-pass propagation loop: ensures ID changes propagate across multi-segment continuous runs
+  while (passModified && pass < 10) {
+    passModified = false;
+    pass++;
+
+    state.nodes.forEach(node => {
+      // Only examine inline fitting nodes (valves, elbows, inline tees)
+      if (!['valve', 'elbow', 'tee'].includes(node.type)) return;
+
+      // An inline fitting connects exactly 2 pipe segments (degree == 2)
+      const incident = state.pipes.filter(p => p.fromNodeId === node.id || p.toNodeId === node.id);
+      if (incident.length !== 2) return;
+
+      // Determine upstream (pIn) and downstream (pOut) relative to node orientation
+      let pIn, pOut;
+      const inPipes = state.pipes.filter(p => p.toNodeId === node.id);
+      const outPipes = state.pipes.filter(p => p.fromNodeId === node.id);
+
+      if (inPipes.length === 1 && outPipes.length === 1) {
+        // Standard directional flow: pipeA -> node -> pipeB
+        pIn = inPipes[0];
+        pOut = outPipes[0];
+      } else {
+        // Tolerates arbitrary user drawing order (both drawn into or away from fitting)
+        pIn = incident[0];
+        pOut = incident[1];
+      }
+
+      // Check if hydraulic characteristics (internal diameter, material) match
+      const match = pipesMatchCharacteristics(pIn, pOut);
+
+      if (match) {
+        // Characteristics match:
+        // Respect manual user splits (if user explicitly split or renamed the segment)
+        if (pOut.props.manual_split || pIn.props.manual_split) {
+          // Keep distinct pipe IDs as requested by user
+          return;
+        }
+
+        // Both belong to the same continuous pipe run: unify under upstream label
+        const unifiedLabel = pIn.props.label || pIn.pipeRunId || pIn.id;
+        if (pOut.props.label !== unifiedLabel) {
+          pOut.props.label = unifiedLabel;
+          pOut.pipeRunId = unifiedLabel;
+          passModified = true;
+          anyModified = true;
+        }
+      } else {
+        // Characteristics differ: genuine physical split warranted!
+        // If both segments currently still have the same label, split downstream to a new distinct ID
+        if (pOut.props.label === pIn.props.label) {
+          const newName = newId('P');
+          pOut.props.label = newName;
+          pOut.pipeRunId = newName;
+          delete pOut.props.manual_split;
+          passModified = true;
+          anyModified = true;
+          toast(`Pipe automatically split at ${node.props.label || node.id} due to diameter/material transition (${pIn.props.label} -> ${newName}).`, 'info');
+        }
+      }
+    });
+  }
+
+  return anyModified;
+}
+
+/**
+ * Calculate squared Euclidean distance from point (px, py) to line segment (x1, y1) -> (x2, y2).
+ */
+function distToSegmentSquared(px, py, x1, y1, x2, y2) {
+  const l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+  if (l2 === 0) return (px - x1) * (px - x1) + (py - y1) * (py - y1);
+  let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+  t = Math.max(0, Math.min(1, t));
+  const projX = x1 + t * (x2 - x1);
+  const projY = y1 + t * (y2 - y1);
+  return (px - projX) * (px - projX) + (py - projY) * (py - projY);
+}
+
+/**
+ * Find any pipe that passes close to the given canvas coordinate (x, y).
+ */
+function findPipeNearPoint(x, y, maxDist = 25) {
+  const maxD2 = maxDist * maxDist;
+  let bestPipe = null;
+  let bestDist2 = Infinity;
+
+  state.pipes.forEach(pipe => {
+    const fn = findNode(pipe.fromNodeId);
+    const tn = findNode(pipe.toNodeId);
+    if (!fn || !tn) return;
+
+    const routing = pipe.props.routing || 'auto';
+    if (routing === 'orthogonal') {
+      const midX = (fn.x + tn.x) / 2;
+      const d1 = distToSegmentSquared(x, y, fn.x, fn.y, midX, fn.y);
+      const d2 = distToSegmentSquared(x, y, midX, fn.y, midX, tn.y);
+      const d3 = distToSegmentSquared(x, y, midX, tn.y, tn.x, tn.y);
+      const minD = Math.min(d1, d2, d3);
+      if (minD < maxD2 && minD < bestDist2) {
+        bestDist2 = minD;
+        bestPipe = pipe;
+      }
+    } else {
+      const d = distToSegmentSquared(x, y, fn.x, fn.y, tn.x, tn.y);
+      if (d < maxD2 && d < bestDist2) {
+        bestDist2 = d;
+        bestPipe = pipe;
+      }
+    }
+  });
+
+  return bestPipe;
+}
+
+/**
+ * Insert an inline fitting (valve, elbow, tee) directly in the middle of an existing pipe.
+ *
+ * Slices the pipe into two collinear segments of the SAME continuous pipe run:
+ * - Upstream segment (fromNode -> new fitting node)
+ * - Downstream segment (new fitting node -> toNode)
+ * Both segments share the exact same pipe label, diameter, material, and standard pipe specs!
+ */
+function insertFittingOnPipe(pipe, type, clickPos) {
+  const fn = findNode(pipe.fromNodeId);
+  const tn = findNode(pipe.toNodeId);
+  if (!fn || !tn) return;
+
+  // 1. Calculate projected insertion point on the pipe line
+  const dx = tn.x - fn.x;
+  const dy = tn.y - fn.y;
+  const lenSq = dx * dx + dy * dy;
+  let t = lenSq > 0 ? ((clickPos.x - fn.x) * dx + (clickPos.y - fn.y) * dy) / lenSq : 0.5;
+  // Constrain t between 0.15 and 0.85 so fitting doesn't collide with endpoint halos
+  t = Math.max(0.15, Math.min(0.85, t));
+
+  const insertX = snap(fn.x + t * dx);
+  const insertY = snap(fn.y + t * dy);
+
+  // 2. Create the fitting node at the projected coordinate
+  const nodeId = newId('N');
+  const count = state.nodes.filter(n => n.type === type).length;
+  const nodeProps = defaultNodeProps(type, count);
+
+  // Interpolate elevation smoothly between fn and tn
+  const elevA = fn.props.elevation_m || 0;
+  const elevB = tn.props.elevation_m || 0;
+  nodeProps.elevation_m = +(elevA + t * (elevB - elevA)).toFixed(1);
+
+  const newNode = { id: nodeId, type, x: insertX, y: insertY, props: nodeProps };
+  state.nodes.push(newNode);
+
+  // 3. Splice the pipe into two connected segments of the SAME continuous pipe run
+  const originalToNodeId = pipe.toNodeId;
+  const totalLength = pipe.props.length_m || 10;
+  const len1 = Math.max(1, +(totalLength * t).toFixed(1));
+  const len2 = Math.max(1, +(totalLength - len1).toFixed(1));
+
+  // The base unified pipe run identity (e.g. 'P-15')
+  const basePipeLabel = pipe.props.label || pipe.id;
+  const basePipeRunId = pipe.pipeRunId || basePipeLabel;
+
+  // Upstream segment: fn -> newNode
+  pipe.toNodeId = nodeId;
+  pipe.pipeRunId = basePipeRunId;
+  pipe.props.label = basePipeLabel;
+  pipe.props.length_m = len1;
+
+  // Downstream segment: newNode -> originalToNodeId (inherits identical properties and pipe identity!)
+  const newPipeId = newId('P');
+  const downstreamPipe = {
+    id: newPipeId,
+    pipeRunId: basePipeRunId,
+    fromNodeId: nodeId,
+    toNodeId: originalToNodeId,
+    props: {
+      ...JSON.parse(JSON.stringify(pipe.props)),
+      label: basePipeLabel,   // SHARES THE SAME PIPE ID/LABEL!
+      length_m: len2,
+      fittings: [],
+    }
+  };
+  state.pipes.push(downstreamPipe);
+
+  // 4. Reconcile pipe runs to ensure seamless continuous labeling
+  reconcilePipeRuns();
+
+  // 5. Select the newly inserted fitting node and render
+  setMode('select');
+  selectItem('node', nodeId);
+  renderAll();
+  saveNetworkToStorage();
+  toast(`Inserted ${type.toUpperCase()} in the middle of Pipe ${basePipeLabel}.`, 'success');
+}
+
+// ============================================================================
 // CRUD
 // ============================================================================
 
@@ -2282,9 +2571,51 @@ function addNode(type, x, y) {
 }
 
 function addPipe(fromNodeId, toNodeId) {
+  const srcNode = findNode(fromNodeId);
+  const dstNode = findNode(toNodeId);
+
+  // Check if either end is an inline fitting that already belongs to an existing pipe run
+  let inheritedProps = null;
+  let inheritedLabel = null;
+  let inheritedRunId = null;
+
+  // Continuing from an inline fitting node (e.g. Valve 1) that already has an incoming pipe
+  if (srcNode && ['valve', 'elbow', 'tee'].includes(srcNode.type)) {
+    const incomingPipe = state.pipes.find(p => p.toNodeId === fromNodeId);
+    if (incomingPipe) {
+      inheritedProps = JSON.parse(JSON.stringify(incomingPipe.props));
+      inheritedLabel = incomingPipe.props.label || incomingPipe.id;
+      inheritedRunId = incomingPipe.pipeRunId || inheritedLabel;
+    }
+  }
+
+  // Connecting into an inline fitting node that already has an outgoing pipe
+  if (!inheritedProps && dstNode && ['valve', 'elbow', 'tee'].includes(dstNode.type)) {
+    const outgoingPipe = state.pipes.find(p => p.fromNodeId === toNodeId);
+    if (outgoingPipe) {
+      inheritedProps = JSON.parse(JSON.stringify(outgoingPipe.props));
+      inheritedLabel = outgoingPipe.props.label || outgoingPipe.id;
+      inheritedRunId = outgoingPipe.pipeRunId || inheritedLabel;
+    }
+  }
+
   const id = newId('P');
-  const pipe = { id, fromNodeId, toNodeId, props: defaultPipeProps(id) };
+  const props = inheritedProps ? {
+    ...inheritedProps,
+    label: inheritedLabel, // Retain the same pipe run identity!
+    fittings: [],
+  } : defaultPipeProps(id);
+
+  const pipe = {
+    id,
+    pipeRunId: inheritedRunId || props.label || id,
+    fromNodeId,
+    toNodeId,
+    props,
+  };
   state.pipes.push(pipe);
+
+  reconcilePipeRuns();
   renderAll();
   selectItem('pipe', id);
   saveNetworkToStorage();
@@ -2294,12 +2625,33 @@ function deleteSelected() {
   if (!state.selected) return;
   if (state.selected.kind === 'node') {
     const nid = state.selected.id;
+    const node = findNode(nid);
+    // If deleting an inline fitting between two pipes, heal the continuous pipe!
+    if (node && ['valve', 'elbow', 'tee'].includes(node.type)) {
+      const inPipes = state.pipes.filter(p => p.toNodeId === nid);
+      const outPipes = state.pipes.filter(p => p.fromNodeId === nid);
+      if (inPipes.length === 1 && outPipes.length === 1) {
+        const pIn = inPipes[0];
+        const pOut = outPipes[0];
+        pIn.toNodeId = pOut.toNodeId;
+        pIn.props.length_m = +(pIn.props.length_m + pOut.props.length_m).toFixed(1);
+        state.pipes = state.pipes.filter(p => p.id !== pOut.id);
+        state.nodes = state.nodes.filter(n => n.id !== nid);
+        selectItem(null);
+        reconcilePipeRuns();
+        renderAll();
+        saveNetworkToStorage();
+        toast(`Removed ${node.props.label || node.id} and joined continuous pipe.`, 'info');
+        return;
+      }
+    }
     state.nodes = state.nodes.filter(n => n.id !== nid);
     state.pipes = state.pipes.filter(p => p.fromNodeId !== nid && p.toNodeId !== nid);
   } else {
     state.pipes = state.pipes.filter(p => p.id !== state.selected.id);
   }
   selectItem(null);
+  reconcilePipeRuns();
   renderAll();
   saveNetworkToStorage();
 }
@@ -2869,6 +3221,25 @@ function renderPopoverPipe(pipe, pop) {
     sizeOptions += `<option value="${p.id}" ${isAct ? 'selected' : ''}>${label}</option>`;
   });
 
+  // Detect inline fittings along this continuous pipe run
+  const activeLabel = pipe.props.label || pipe.id;
+  const inlineFittingsOnRun = [];
+  state.nodes.forEach(n => {
+    if (!['valve', 'elbow', 'tee'].includes(n.type)) return;
+    const connectedPipes = state.pipes.filter(p => p.fromNodeId === n.id || p.toNodeId === n.id);
+    if (connectedPipes.some(p => (p.props.label || p.id) === activeLabel)) {
+      const k = getNodeKFactor(n);
+      inlineFittingsOnRun.push({ id: n.id, label: n.props.label || n.id, type: n.type, k: k });
+    }
+  });
+
+  const fittingsInfoHtml = inlineFittingsOnRun.length > 0 ? `
+    <div class="pn-popover-section-label" style="margin-top:6px;">Inline Fittings on Pipe (${inlineFittingsOnRun.length})</div>
+    <div style="background:#090d16;border:1px solid #1e293b;border-radius:5px;padding:5px 8px;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px;">
+      ${inlineFittingsOnRun.map(f => `<span style="background:#0f172a;border:1px solid #334155;border-radius:4px;padding:2px 6px;font-size:10px;color:#38bdf8;"><i class="bi bi-diagram-2"></i> ${f.label} (K=${f.k.toFixed(2)})</span>`).join('')}
+    </div>
+  ` : '';
+
   pop.innerHTML = `
     <div class="pn-popover-header">
       <div style="display:flex;align-items:center;gap:6px;">
@@ -2886,6 +3257,8 @@ function renderPopoverPipe(pipe, pop) {
         ${sizeOptions || '<option value="">No pipes available</option>'}
       </select>
 
+      ${fittingsInfoHtml}
+
       <div class="pn-popover-section-label" style="margin-top:6px;">Routing Mode</div>
       <div style="display:flex;gap:4px;margin-bottom:8px;">
         <button class="pn-btn pop-route-btn ${curRouting === 'auto' ? 'active-tool' : ''}" data-route="auto" style="flex:1;padding:4px;font-size:10px;">Auto</button>
@@ -2894,14 +3267,33 @@ function renderPopoverPipe(pipe, pop) {
       </div>
 
       <div class="pn-popover-section-label">Additive Minor Loss (Custom K)</div>
-      <div style="display:flex;align-items:center;gap:6px;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
         <input type="number" id="pop-pipe-custom-k" class="pn-popover-input" step="0.05" min="0" value="${curCustK}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:5px 8px;font-size:11px;width:90px;">
         <span style="font-size:10px;color:#94a3b8;">(extra minor loss)</span>
       </div>
+
+      <button id="pop-split-pipe-btn" class="pn-btn" style="width:100%;font-size:10px;padding:4px 8px;background:#0f172a;border:1px solid #334155;color:#94a3b8;border-radius:4px;" title="Assign a distinct pipe ID to this segment">
+        <i class="bi bi-scissors"></i> Split Segment (Assign New Pipe ID)
+      </button>
     </div>
   `;
 
   pop.querySelector('.pn-popover-close').onclick = hideContextPopover;
+
+  const splitBtn = pop.querySelector('#pop-split-pipe-btn');
+  if (splitBtn) {
+    splitBtn.onclick = () => {
+      const newPipeName = newId('P');
+      pipe.props.label = newPipeName;
+      pipe.pipeRunId = newPipeName;
+      pipe.props.manual_split = true; // Mark as explicit user manual split
+      renderAll();
+      showPipeProps(pipe);
+      showContextPopover('pipe', pipe.id);
+      saveNetworkToStorage();
+      toast(`Segment split into distinct pipe: ${newPipeName}`, 'info');
+    };
+  }
 
   const sizeSel = pop.querySelector('#pop-pipe-size-select');
   if (sizeSel) {
@@ -2923,6 +3315,9 @@ function renderPopoverPipe(pipe, pop) {
         pipe.props.material_key = stdPipe.material_key;
         pipe.props.material = stdPipe.material_key;
         pipe.props.diameter_mm = stdPipe.id_mm;
+
+        // Automatically split into separate pipe ID if this change differs from adjacent segment!
+        reconcilePipeRuns();
 
         renderAll();
         showPipeProps(pipe);
@@ -3076,6 +3471,14 @@ function showNodeProps(node) {
 // STANDARD PIPE SPECIFICATION & FILTERING HELPERS
 // ============================================================================
 
+/**
+ * Toggle between 'standard' (catalog-based) and 'custom' (manual diameter/roughness) dimension modes.
+ * 
+ * IMPORTANT: When called during pipe inspection/selection from showPipeProps(), `save` is false.
+ * In display mode (save === false), this function ONLY toggles the active button classes and
+ * container visibility. It NEVER mutates pipe properties or triggers cascading change handlers,
+ * preventing accidental overwrites when clicking different pipes.
+ */
 function setPipeDimensionMode(mode, save = true) {
   const stdBtn = document.getElementById('pp-mode-std');
   const custBtn = document.getElementById('pp-mode-custom');
@@ -3094,15 +3497,13 @@ function setPipeDimensionMode(mode, save = true) {
     if (custGrp) custGrp.style.display = '';
   }
 
-  if (state.selected?.kind === 'pipe') {
+  // Only mutate pipe models if explicitly triggered by the user (save === true)
+  if (save && state.selected?.kind === 'pipe') {
     const pipe = findPipe(state.selected.id);
     if (pipe) {
       pipe.props.dimension_mode = mode;
       if (mode === 'standard') {
-        const sel = document.getElementById('pp-standard-pipe-select');
-        if (sel && sel.value) {
-          onStandardPipeSelectChange();
-        }
+        populateStandardPipeFilters(pipe);
       } else {
         const diaInput = document.getElementById('pp-diameter');
         if (diaInput) {
@@ -3111,10 +3512,8 @@ function setPipeDimensionMode(mode, save = true) {
         pipe.props.id_mm = pipe.props.diameter_mm || 100;
         updatePipeDetailsCard(pipe.props);
       }
-      if (save) {
-        renderAll();
-        saveNetworkToStorage();
-      }
+      renderAll();
+      saveNetworkToStorage();
     }
   }
 }
@@ -3218,8 +3617,8 @@ function populateStandardPipeFilters(pipe) {
     }, null) || STANDARD_PIPES[0];
   }
 
-  if (activePipe && pipe) {
-    pipe.props.dimension_mode = pipe.props.dimension_mode || 'standard';
+  // Only sync standard pipe specs onto pipe model if pipe is in 'standard' mode
+  if (activePipe && pipe && pipe.props.dimension_mode === 'standard') {
     pipe.props.standard_pipe_id = activePipe.id;
     pipe.props.standard = activePipe.standard;
     pipe.props.schedule_sdr = activePipe.schedule_sdr;
@@ -3373,28 +3772,9 @@ function updatePipeSizeSelect(pipe) {
     pipeSel.selectedIndex = 0;
   }
 
-  // Ensure pipe and details card are synced with the currently selected standard pipe
-  if (pipeSel.value) {
-    const stdId = parseInt(pipeSel.value, 10);
-    const chosen = Array.isArray(STANDARD_PIPES) ? STANDARD_PIPES.find(p => p.id === stdId) : null;
-    if (chosen && pipe) {
-      pipe.props.dimension_mode = 'standard';
-      pipe.props.standard_pipe_id = chosen.id;
-      pipe.props.standard = chosen.standard;
-      pipe.props.schedule_sdr = chosen.schedule_sdr;
-      pipe.props.nb_mm = chosen.nb_mm;
-      pipe.props.nb_inch = chosen.nb_inch;
-      pipe.props.od_mm = chosen.od_mm;
-      pipe.props.wall_thickness_mm = chosen.wall_thickness_mm;
-      pipe.props.id_mm = chosen.id_mm;
-      pipe.props.sdr = chosen.sdr;
-      pipe.props.pressure_rating = chosen.pressure_rating;
-      pipe.props.material_key = chosen.material_key;
-      pipe.props.material = chosen.material_key;
-      pipe.props.diameter_mm = chosen.id_mm;
-    }
-  }
-
+  // Note: updatePipeSizeSelect only configures the DOM options to display the current pipe.
+  // It NEVER mutates the pipe model or overwrites properties, ensuring that simply clicking
+  // or inspecting another pipe on canvas never modifies its diameter or triggers reconciliation.
   updatePipeDetailsCard(pipe?.props);
 }
 
@@ -3475,6 +3855,8 @@ function onStandardPipeSelectChange() {
   if (matInput) matInput.value = stdPipe.material_key;
 
   updatePipeDetailsCard(pipe.props);
+  // Automatically split or merge continuous pipe run based on standard pipe size selection
+  reconcilePipeRuns();
   renderAll();
   saveNetworkToStorage();
 
@@ -3579,9 +3961,16 @@ function setVal(id, v) {
 
 function refreshKTotal(fittings, customK = 0) {
   const kMap = Object.fromEntries(FITTINGS.map(f => [f.key, f.K]));
-  const fittingsK = fittings.reduce((s, k) => s + (kMap[k] || 0), 0);
+  const fittingsK = (fittings || []).reduce((s, item) => {
+    if (typeof item === 'object' && item !== null) {
+      const k = item.k !== undefined ? parseFloat(item.k) : (kMap[item.key || item.type] || 0);
+      return s + (k * (item.count || 1));
+    }
+    return s + (kMap[item] || 0);
+  }, 0);
   const total = fittingsK + (parseFloat(customK) || 0);
   setVal('pp-ktotal', total.toFixed(2));
+  return total;
 }
 
 // ============================================================================
@@ -3670,10 +4059,25 @@ function onGlobalFlowChange() {
   saveNetworkToStorage();
 }
 
+/**
+ * Handles changes made in the Pipe Segment Properties panel (Sidebar).
+ * Automatically triggers graph reconciliation:
+ * - If diameter or material is changed, reconcilePipeRuns() detects the physical
+ *   mismatch and splits the adjacent segment into a new distinct pipe ID.
+ * - If characteristics are changed back to match, the segments re-unify under
+ *   one continuous pipe run.
+ */
 function onPipePropChange() {
   const pipe = state.selected?.kind === 'pipe' ? findPipe(state.selected.id) : null;
   if (!pipe) return;
-  pipe.props.label = document.getElementById('pp-label').value;
+
+  const newLabel = (document.getElementById('pp-label').value || '').trim();
+  if (newLabel && newLabel !== pipe.props.label) {
+    pipe.props.label = newLabel;
+    pipe.pipeRunId = newLabel;
+    pipe.props.manual_split = true; // Explicit manual label set by user
+  }
+
   if (pipe.props.dimension_mode === 'custom') {
     pipe.props.diameter_mm = parseFloat(document.getElementById('pp-diameter').value) || 100;
     pipe.props.id_mm = pipe.props.diameter_mm;
@@ -3691,6 +4095,11 @@ function onPipePropChange() {
   );
   refreshKTotal(pipe.props.fittings, pipe.props.custom_k);
   updatePipeDetailsCard(pipe.props);
+
+  // Automatically split into separate pipe IDs if characteristics differ across an inline fitting,
+  // or re-merge if properties now match!
+  reconcilePipeRuns();
+
   renderAll();
   saveNetworkToStorage();
   if (state.selected?.kind === 'pipe' && state.selected.id === pipe.id) {
@@ -3707,25 +4116,41 @@ async function runCalculation() {
     toast('Add at least one pipe segment before calculating.', 'warn'); return;
   }
   const globalFlow = parseFloat(document.getElementById('pn-global-flow').value) || 10;
+  const frictionMethod = document.getElementById('pn-friction-method')?.value || 'darcy_weisbach';
 
   const payload = {
     flow_m3h: globalFlow,
+    friction_method: frictionMethod,
+    nodes: state.nodes.map(node => ({
+      id: node.id,
+      type: node.type,
+      props: node.props || {},
+      x: node.x,
+      y: node.y,
+    })),
     pipes: state.pipes.map(pipe => {
       const allFittings = [...(pipe.props.fittings || [])];
       const toNode = findNode(pipe.toNodeId);
       if (toNode && toNode.props.fitting_key) {
         if (toNode.props.is_custom_k && toNode.props.custom_k !== null && toNode.props.custom_k !== undefined) {
           allFittings.push({
+            id: `fit_${toNode.id}`,
             key: toNode.props.fitting_key,
             k: parseFloat(toNode.props.custom_k) || 0,
             label: `${toNode.props.label || toNode.id} (Custom K=${toNode.props.custom_k})`
           });
         } else {
-          allFittings.push(toNode.props.fitting_key);
+          allFittings.push({
+            id: `fit_${toNode.id}`,
+            key: toNode.props.fitting_key,
+            label: toNode.props.label || toNode.id,
+          });
         }
       }
       return {
         id: pipe.id,
+        from_node: pipe.fromNodeId,
+        to_node: pipe.toNodeId,
         label: pipe.props.label || pipe.id,
         diameter_mm: pipe.props.diameter_mm,
         length_m: pipe.props.length_m,
@@ -3781,6 +4206,8 @@ function displayResults(data) {
   setVal('res-elev', s.total_elevation_m.toFixed(3));
   setVal('res-total', s.total_system_head_m.toFixed(3));
   setVal('res-count', s.pipe_count);
+  setVal('res-r-sys', s.total_system_R !== undefined ? s.total_system_R.toFixed(2) : '—');
+  setVal('res-method-label', s.friction_method === 'hazen_williams' ? 'Hazen-Williams' : 'Darcy-Weisbach');
 
   const tbody = document.getElementById('res-table-body');
   if (!tbody) return;
@@ -3806,14 +4233,17 @@ function displayResults(data) {
           <span style="color:${rc};font-size:11px">${r.regime}</span><br>
           <span style="color:#64748b;font-size:10px">Re ${r.reynolds.toLocaleString()}</span></td>
         <td style="padding:6px 10px;text-align:right">${r.friction_factor}</td>
+        <td style="padding:6px 10px;text-align:right;color:#e2e8f0;font-weight:600">${r.K_total !== undefined ? r.K_total.toFixed(2) : '—'}</td>
         <td style="padding:6px 10px;text-align:right;color:#f87171">${r.hf_major_m}</td>
         <td style="padding:6px 10px;text-align:right;color:#fb923c">${r.hf_minor_m}</td>
         <td style="padding:6px 10px;text-align:right;color:#a78bfa">${r.hf_elevation_m}</td>
         <td style="padding:6px 10px;text-align:right;font-weight:700;color:#fbbf24">${r.h_total_m}</td>
+        <td style="padding:6px 10px;text-align:right;font-family:monospace;color:#38bdf8">${r.resistance_R !== undefined ? r.resistance_R.toFixed(1) : '—'}</td>
+        <td style="padding:6px 10px;text-align:right;font-family:monospace;color:#94a3b8">${r.flow_exponent_n !== undefined ? r.flow_exponent_n.toFixed(3) : (s.friction_method === 'hazen_williams' ? '1.852' : '2.000')}</td>
       </tr>`;
   });
   (data.errors || []).forEach(err => {
-    tbody.innerHTML += `<tr><td colspan="11" style="padding:6px 10px;color:#f85149">Error in ${err.id}: ${err.error}</td></tr>`;
+    tbody.innerHTML += `<tr><td colspan="14" style="padding:6px 10px;color:#f85149">Error in ${err.id}: ${err.error}</td></tr>`;
   });
 }
 

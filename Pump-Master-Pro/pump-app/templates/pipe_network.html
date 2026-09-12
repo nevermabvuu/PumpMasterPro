@@ -673,6 +673,15 @@
       <i class="bi bi-database-gear" style="color:#a78bfa;"></i> Manage Data
     </button>
 
+    <!-- Friction Method selection -->
+    <label style="font-size:11px;color:#8b949e;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;">
+      Method:
+      <select id="pn-friction-method" class="pp-input" style="width:132px;display:inline-block;margin:0 4px;padding:4px 6px;height:28px;">
+        <option value="darcy_weisbach">Darcy-Weisbach</option>
+        <option value="hazen_williams">Hazen-Williams</option>
+      </select>
+    </label>
+
     <!-- Global flow rate for calculation -->
     <label style="font-size:11px;color:#8b949e;white-space:nowrap;">
       Flow rate
@@ -1011,7 +1020,7 @@
       <div class="res-card-value" style="color:#f87171;">
         <span id="res-major">—</span> m
       </div>
-      <div class="res-card-label">Major Friction Head (Darcy-Weisbach)</div>
+      <div class="res-card-label">Major Friction Head (<span id="res-method-label">Darcy-Weisbach</span>)</div>
     </div>
     <div class="res-card" style="border-color:rgba(251,146,60,0.3);">
       <div class="res-card-value" style="color:#fb923c;">
@@ -1031,6 +1040,12 @@
       </div>
       <div class="res-card-label" style="color:#d97706;font-weight:700;">Total System Head Required</div>
     </div>
+    <div class="res-card" style="border-color:rgba(56,189,248,0.35);background:rgba(56,189,248,0.04);">
+      <div class="res-card-value" style="color:#38bdf8;font-size:18px;">
+        <span id="res-r-sys">—</span>
+      </div>
+      <div class="res-card-label" style="color:#38bdf8;font-weight:700;">Consolidated R<sub>sys</sub></div>
+    </div>
   </div>
 
   <!-- Per-segment table -->
@@ -1045,10 +1060,13 @@
           <th>Velocity (m/s)</th>
           <th>Regime / Re</th>
           <th>f</th>
+          <th>K<sub>total</sub></th>
           <th>hf Major (m)</th>
           <th>hf Minor (m)</th>
           <th>Elev (m)</th>
           <th>h Total (m)</th>
+          <th>Res. R</th>
+          <th>Exp. n</th>
         </tr>
       </thead>
       <tbody id="res-table-body"></tbody>

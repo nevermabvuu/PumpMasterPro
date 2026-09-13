@@ -196,6 +196,13 @@
             </select>
           </div>
 
+          <!-- Operating Temperature -->
+          <div>
+            <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Operating Temperature (°C)</label>
+            <input type="number" name="temperature_c" id="input_temperature_c" class="form-control form-control-dark w-full text-xs font-mono"
+                   value="{{ form_data.get('temperature_c', 20) }}" step="0.5" placeholder="20.0">
+          </div>
+
           <!-- Water params -->
           <div id="waterParams">
             <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Liquid Density ρ</label>
@@ -215,7 +222,7 @@
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Density (kg/m³)</label>
-                <input type="number" name="rho" class="form-control form-control-dark w-full text-xs"
+                <input type="number" name="rho" id="input_rho_viscous" class="form-control form-control-dark w-full text-xs"
                        value="{{ form_data.rho or 900 }}" step="any">
               </div>
               <div>
@@ -223,6 +230,28 @@
                 <input type="number" name="viscosity_cSt" class="form-control form-control-dark w-full text-xs"
                        value="{{ form_data.viscosity_cSt or 50 }}" step="any" min="0.01">
               </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Fluid pH (0 - 14)</label>
+                <input type="number" name="fluid_ph" id="input_fluid_ph" class="form-control form-control-dark w-full text-xs font-mono"
+                       value="{{ form_data.get('fluid_ph', 7.0) }}" step="0.1" min="0" max="14" placeholder="7.0">
+              </div>
+              <div>
+                <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Concentration</label>
+                <input type="text" name="fluid_concentration" id="input_fluid_concentration" class="form-control form-control-dark w-full text-xs"
+                       value="{{ form_data.get('fluid_concentration', '') }}" placeholder="e.g. 25 wt% / 100%">
+              </div>
+            </div>
+            <div class="pt-1 flex items-center gap-4 text-xs">
+              <label class="flex items-center gap-1.5 text-[#cbd5e1] cursor-pointer">
+                <input type="checkbox" name="is_hazardous" value="1" class="accent-[#ef4444] rounded cursor-pointer" {{ 'checked' if form_data.get('is_hazardous') == '1' else '' }}>
+                <span class="flex items-center gap-1 text-[#f87171]"><i class="bi bi-exclamation-triangle-fill text-[11px]"></i> Hazardous Fluid</span>
+              </label>
+              <label class="flex items-center gap-1.5 text-[#cbd5e1] cursor-pointer">
+                <input type="checkbox" name="is_flammable" value="1" class="accent-[#f59e0b] rounded cursor-pointer" {{ 'checked' if form_data.get('is_flammable') == '1' else '' }}>
+                <span class="flex items-center gap-1 text-[#fbbf24]"><i class="bi bi-fire text-[11px]"></i> Flammable Fluid</span>
+              </label>
             </div>
             <div class="text-[11px] text-[#58a6ff] bg-[#58a6ff]/10 p-2 rounded border border-[#58a6ff]/20">
               HI correction factors (CH, CQ, CE) applied automatically.
@@ -289,6 +318,15 @@
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- Calculated SG summary indicator -->
+          <div class="flex items-center justify-between p-2 rounded-lg bg-[#0d1117] border border-[#30363d] text-xs">
+            <span class="text-[#8b949e] flex items-center gap-1.5">
+              <i class="bi bi-water text-[#38bdf8]"></i>
+              <span>Specific Gravity (SG):</span>
+            </span>
+            <span id="ps_calculated_sg_badge" class="font-mono font-bold text-[#38bdf8] text-xs px-2 py-0.5 rounded bg-[#38bdf8]/10 border border-[#38bdf8]/30">1.000</span>
           </div>
         </div>
         </fieldset>
@@ -905,18 +943,82 @@
 
 <!-- ══════════════════════════════════════════════════════════════════════════
      TAB 2: Pipe Network System Designer
-     Embedded inline — same JS as /pipe-network but scoped to this page.
-     Network state is saved to localStorage on every change and restored
+     Embedded inline — fully equipped with LHS toolbox, advanced analysis,
+     slurry/mechanics modals, and reference data management.
      ══════════════════════════════════════════════════════════════════════════ -->
 <style>
+  /* ── Layout: full-height three-panel design (toolbar | canvas | props) ── */
+  #pn-outer {
+    display: flex;
+    flex-direction: column;
+    height: 680px;
+    gap: 0;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  /* Top toolbar strip */
+  #pn-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+  }
+
+  /* Main row: canvas + right panel side by side */
+  #pn-main-row {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* SVG canvas area */
+  #pn-canvas-wrap {
+    flex: 1;
+    position: relative;
+    background: #0d1117;
+    overflow: hidden;
+  }
+
+  #pn-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    user-select: none;
+  }
+
+  /* Grid background pattern for the canvas */
+  #pn-canvas-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(48, 54, 61, 0.5) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(48, 54, 61, 0.5) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+  }
+
   #pn-canvas-wrap.pn-light-theme {
     background: #f8fafc !important;
   }
-  #pn-canvas-wrap.pn-light-theme > div:first-child {
+
+  #pn-canvas-wrap.pn-light-theme::before {
     background-image:
-      linear-gradient(rgba(203,213,225,0.65) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(203,213,225,0.65) 1px, transparent 1px) !important;
+      linear-gradient(rgba(203, 213, 225, 0.65) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(203, 213, 225, 0.65) 1px, transparent 1px) !important;
   }
+
+  /* Legend Overlay matching typical installation diagram */
   #pn-legend-overlay {
     position: absolute;
     bottom: 28px;
@@ -928,18 +1030,20 @@
     font-size: 11px;
     color: #cbd5e1;
     z-index: 5;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(6px);
     transition: opacity 0.2s ease;
     user-select: none;
     min-width: 170px;
   }
+
   #pn-canvas-wrap.pn-light-theme #pn-legend-overlay {
     background: rgba(255, 255, 255, 0.95);
     border: 1px solid #cbd5e1;
     color: #1e293b;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   }
+
   .pn-legend-title {
     font-weight: 700;
     font-size: 10px;
@@ -951,9 +1055,11 @@
     align-items: center;
     justify-content: space-between;
   }
+
   #pn-canvas-wrap.pn-light-theme .pn-legend-title {
     color: #0284c7;
   }
+
   .pn-legend-row {
     display: flex;
     align-items: center;
@@ -961,6 +1067,7 @@
     margin-bottom: 4px;
     font-size: 11px;
   }
+
   .pn-legend-swatch {
     width: 20px;
     height: 14px;
@@ -969,6 +1076,374 @@
     justify-content: center;
     flex-shrink: 0;
   }
+
+  /* Right properties panel */
+  #pn-props-panel {
+    width: 280px;
+    min-width: 240px;
+    max-width: 320px;
+    background: #161b22;
+    border-left: 1px solid #30363d;
+    overflow-y: auto;
+    flex-shrink: 0;
+    padding: 14px;
+    font-size: 13px;
+  }
+
+  /* Left sidebar: Component Toolbox in single vertical column */
+  #pn-left-sidebar {
+    width: 220px;
+    min-width: 180px;
+    max-width: 260px;
+    background: #161b22;
+    border-right: 1px solid #30363d;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    font-size: 12px;
+    z-index: 5;
+    transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+
+  #pn-left-sidebar.collapsed {
+    width: 44px !important;
+    min-width: 44px !important;
+    overflow: hidden !important;
+  }
+
+  #pn-left-sidebar.collapsed .pn-sidebar-tools {
+    padding: 6px 4px;
+    gap: 4px;
+  }
+
+  #pn-left-sidebar.collapsed .pn-sidebar-tool-btn {
+    padding: 6px 0;
+    justify-content: center;
+    border-radius: 4px;
+  }
+
+  #pn-left-sidebar.collapsed .pn-sidebar-tool-btn .tool-label,
+  #pn-left-sidebar.collapsed .pn-sidebar-tool-btn .tool-shortcut,
+  #pn-left-sidebar.collapsed .pn-sidebar-tools-header,
+  #pn-left-sidebar.collapsed .pn-sidebar-header span {
+    display: none !important;
+  }
+
+  #pn-left-sidebar.collapsed .pn-sidebar-header {
+    padding: 8px 4px !important;
+    justify-content: center !important;
+    border-bottom: none !important;
+  }
+
+  .pn-sidebar-header {
+    padding: 10px 12px;
+    background: #0d1117;
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .pn-sidebar-tools-header {
+    padding: 8px 12px 4px 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8b949e;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #0d1117;
+  }
+
+  .pn-sidebar-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px 14px 10px;
+    background: #0d1117;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .pn-sidebar-tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #cbd5e1;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+    user-select: none;
+    width: 100%;
+  }
+
+  .pn-sidebar-tool-btn:hover {
+    background: #21262d;
+    border-color: #58a6ff;
+    color: #f0f6fc;
+  }
+
+  .pn-sidebar-tool-btn.active-tool {
+    background: rgba(56, 189, 248, 0.15) !important;
+    border-color: #38bdf8 !important;
+    color: #38bdf8 !important;
+    font-weight: 600;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.25);
+  }
+
+  .pn-sidebar-tool-btn.btn-danger-tool:hover {
+    background: rgba(248, 81, 73, 0.15);
+    border-color: #f85149;
+    color: #f85149;
+  }
+
+  .pn-sidebar-tool-btn .tool-icon {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    flex-shrink: 0;
+  }
+
+  .pn-sidebar-tool-btn .tool-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pn-sidebar-tool-btn .tool-shortcut {
+    font-size: 9px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #8b949e;
+    font-family: monospace;
+  }
+
+  /* Toolbar buttons */
+  .pn-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    background: #21262d;
+    color: #c9d1d9;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .pn-btn:hover {
+    background: #2d333b;
+    color: #e6edf3;
+    border-color: #444c56;
+  }
+
+  .pn-btn.active-tool {
+    background: rgba(88, 166, 255, 0.15);
+    border-color: #58a6ff;
+    color: #58a6ff;
+  }
+
+  .pn-btn-danger {
+    border-color: rgba(248, 81, 73, 0.4);
+    color: #f85149;
+  }
+
+  .pn-btn-danger:hover {
+    background: rgba(248, 81, 73, 0.1);
+  }
+
+  .pn-btn-success {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: #22c55e;
+    color: #22c55e;
+  }
+
+  .pn-btn-success:hover {
+    background: rgba(34, 197, 94, 0.25);
+  }
+
+  /* Toolbar separators */
+  .pn-sep {
+    width: 1px;
+    height: 24px;
+    background: #30363d;
+    margin: 0 4px;
+    flex-shrink: 0;
+  }
+
+  /* Properties panel form labels */
+  .pp-label {
+    display: block;
+    font-size: 11px;
+    color: #8b949e;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .pp-input {
+    width: 100%;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e6edf3;
+    padding: 5px 8px;
+    font-size: 12px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+  }
+
+  .pp-input:focus {
+    outline: none;
+    border-color: #58a6ff;
+    box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.12);
+  }
+
+  .pp-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .pp-row .pp-field {
+    flex: 1;
+  }
+
+  /* Section headings inside the props panel */
+  .pp-section-title {
+    font-size: 10px;
+    font-weight: 600;
+    color: #58a6ff;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #21262d;
+    margin-top: 4px;
+  }
+
+  /* Info chips in props panel */
+  .pp-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: monospace;
+    font-size: 11px;
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    padding: 2px 7px;
+    color: #58a6ff;
+  }
+
+  /* Results section below canvas */
+  #pn-results-section {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .res-card {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 10px 14px;
+    text-align: center;
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .res-card-value {
+    font-size: 20px;
+    font-weight: 700;
+    font-family: monospace;
+    color: #e6edf3;
+  }
+
+  .res-card-label {
+    font-size: 10px;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 2px;
+  }
+
+  #pn-results-table,
+  #pn-node-results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  #pn-results-table th,
+  #pn-node-results-table th {
+    padding: 6px 10px;
+    text-align: right;
+    color: #8b949e;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    border-bottom: 1px solid #30363d;
+  }
+
+  #pn-results-table th:first-child,
+  #pn-results-table th:nth-child(2),
+  #pn-node-results-table th:first-child,
+  #pn-node-results-table th:nth-child(2),
+  #pn-node-results-table th:nth-child(3) {
+    text-align: left;
+  }
+
+  #pn-results-table td,
+  #pn-node-results-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #21262d;
+    text-align: right;
+    font-family: monospace;
+  }
+
+  #pn-results-table td:first-child,
+  #pn-results-table td:nth-child(2),
+  #pn-node-results-table td:first-child,
+  #pn-node-results-table td:nth-child(2),
+  #pn-node-results-table td:nth-child(3) {
+    text-align: left;
+  }
+
+  /* Status bar at bottom of canvas */
+  #pn-statusbar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 4px 12px;
+    background: rgba(22, 27, 34, 0.85);
+    font-size: 11px;
+    color: #8b949e;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    backdrop-filter: blur(4px);
+    border-top: 1px solid #30363d;
+    pointer-events: none;
+  }
+
   /* ── Floating Contextual Configuration Popover ── */
   .pn-popover {
     position: absolute;
@@ -1134,34 +1609,8 @@
     font-weight: 600;
     border: 1px solid rgba(56, 189, 248, 0.2);
   }
-  .pp-label {
-    display: block;
-    font-size: 11px;
-    color: #8b949e;
-    margin-bottom: 3px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-  .pp-input {
-    width: 100%;
-    background: #090d16 !important;
-    border: 1px solid #30363d !important;
-    border-radius: 6px;
-    color: #ffffff !important;
-    padding: 6px 9px;
-    font-size: 12px;
-    margin-bottom: 10px;
-    box-sizing: border-box;
-  }
-  .pp-input:focus {
-    outline: none;
-    border-color: #38bdf8 !important;
-    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
-  }
-  .pp-input option {
-    background: #0f172a !important;
-    color: #ffffff !important;
-  }
+
+  /* ── Pipe Specification Details Card ─────────────────────────── */
   .pipe-spec-card {
     background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.7));
     border: 1px solid rgba(56, 189, 248, 0.25);
@@ -1210,516 +1659,704 @@
     font-weight: 700;
   }
 </style>
+
 <div id="tab-panel-pipenet" style="display:none;">
 
-  <!-- Toolbar -->
-  <div id="pn-toolbar" style="display:flex;align-items:center;gap:6px;padding:8px 0;flex-wrap:wrap;">
+  <div id="pn-outer">
 
-    <!-- Mode buttons -->
-    <button id="btn-select" class="pn-btn active-tool" data-mode="select" title="Select / Move (S)">
-      <i class="bi bi-cursor"></i> Select
-    </button>
-    <button id="btn-connect" class="pn-btn" data-mode="connect" title="Draw Pipe (C)">
-      <i class="bi bi-arrow-right-short" style="font-size:16px;"></i> Pipe
-    </button>
+    <!-- TOP TOOLBAR -->
+    <div id="pn-toolbar">
+      <span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-right:-2px;">View:</span>
+      <button id="btn-view-schematic" type="button" class="pn-btn" title="Schematic View">
+        <i class="bi bi-bezier2"></i> Schematic
+      </button>
+      <button id="btn-view-industrial" type="button" class="pn-btn active-tool" title="Industrial Installation View">
+        <i class="bi bi-water" style="color:#38bdf8;"></i> Visual
+      </button>
+      <button id="btn-theme-toggle" type="button" class="pn-btn" title="Toggle Canvas Theme (Light CAD / Dark)">
+        <i class="bi bi-sun"></i> Theme
+      </button>
+      <button id="btn-toggle-legend" type="button" class="pn-btn active-tool" title="Show / Hide Legend">
+        <i class="bi bi-card-list"></i> Legend
+      </button>
 
-    <div class="pn-sep"></div>
+      <div class="pn-sep"></div>
 
-    <!-- Add nodes -->
-    <span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;">Add:</span>
-    <button id="btn-add-reservoir" class="pn-btn" data-mode="add-reservoir" title="Place Reservoir / Sump">
-      <i class="bi bi-water" style="color:#3b82f6;"></i> Reservoir
-    </button>
-    <button id="btn-add-pump" class="pn-btn" data-mode="add-pump" title="Place Pump">
-      <i class="bi bi-gear-fill" style="color:#a855f7;"></i> Pump
-    </button>
-    <button id="btn-add-tank" class="pn-btn" data-mode="add-tank" title="Place Tank">
-      <i class="bi bi-cup-fill" style="color:#22c55e;"></i> Tank
-    </button>
-    <button id="btn-add-junction" class="pn-btn" data-mode="add-junction" title="Place Manifold Junction">
-      <i class="bi bi-intersect" style="color:#f59e0b;"></i> Junction
-    </button>
-    <button id="btn-add-discharge" class="pn-btn" data-mode="add-discharge" title="Place Faucet / Discharge Tap">
-      <i class="bi bi-droplet-fill" style="color:#0284c7;"></i> Faucet
-    </button>
-    <div class="pn-sep"></div>
-    <button id="btn-add-tee" class="pn-btn" data-mode="add-tee" title="Place 3-Way Pipe Tee Fitting">
-      <i class="bi bi-diagram-3" style="color:#f97316;"></i> Tee
-    </button>
-    <button id="btn-add-valve" class="pn-btn" data-mode="add-valve" title="Place Valve (Gate, Globe, Ball, etc.)">
-      <i class="bi bi-heptagon-half" style="color:#ef4444;"></i> Valve
-    </button>
-    <button id="btn-add-elbow" class="pn-btn" data-mode="add-elbow" title="Place 90° / 45° Elbow Fitting">
-      <i class="bi bi-arrow-return-right" style="color:#ec4899;"></i> Elbow
-    </button>
+      <!-- Zoom controls -->
+      <button id="btn-zoom-out" type="button" class="pn-btn" title="Zoom out">
+        <i class="bi bi-zoom-out"></i>
+      </button>
+      <button id="btn-zoom-reset" type="button" class="pn-btn" title="Reset zoom and pan">
+        <i class="bi bi-fullscreen-exit"></i>
+      </button>
+      <button id="btn-zoom-in" type="button" class="pn-btn" title="Zoom in">
+        <i class="bi bi-zoom-in"></i>
+      </button>
 
-    <div class="pn-sep"></div>
+      <div class="pn-sep"></div>
 
-    <button id="btn-delete" class="pn-btn pn-btn-danger" title="Delete selected (Del)">
-      <i class="bi bi-trash3"></i>
-    </button>
+      <!-- File operations -->
+      <button id="btn-save" type="button" class="pn-btn pn-btn-success" title="Save current network (auto-saves on change)">
+        <i class="bi bi-floppy"></i> Save
+      </button>
+      <button id="btn-load-demo" type="button" class="pn-btn" title="Load sample demo network">
+        <i class="bi bi-arrow-counterclockwise"></i> Demo
+      </button>
+      <button id="btn-export" type="button" class="pn-btn" title="Export network as JSON">
+        <i class="bi bi-download"></i> Export
+      </button>
+      <button id="btn-import" type="button" class="pn-btn" title="Import a saved JSON network">
+        <i class="bi bi-upload"></i> Import
+      </button>
+      <input id="import-file-input" type="file" accept=".json" style="display:none;">
+      <button id="btn-clear" type="button" class="pn-btn pn-btn-danger" title="Clear all nodes and pipes">
+        <i class="bi bi-x-circle"></i> Clear
+      </button>
 
-    <div class="pn-sep"></div>
-    
-    <span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-right:-2px;">View:</span>
-    <button id="btn-view-schematic" class="pn-btn" title="Schematic View">
-      <i class="bi bi-bezier2"></i> Schematic
-    </button>
-    <button id="btn-view-industrial" class="pn-btn active-tool" title="Industrial Installation View">
-      <i class="bi bi-water" style="color:#38bdf8;"></i> Visual
-    </button>
-    <button id="btn-theme-toggle" class="pn-btn" title="Toggle Canvas Theme (Light CAD / Dark)">
-      <i class="bi bi-sun"></i> Theme
-    </button>
-    <button id="btn-toggle-legend" class="pn-btn active-tool" title="Show / Hide Legend">
-      <i class="bi bi-card-list"></i> Legend
-    </button>
+      <div class="pn-sep"></div>
 
-    <div class="pn-sep"></div>
+      <!-- Manage Reference Data -->
+      <button id="btn-manage-data" type="button" class="pn-btn" title="Manage Fittings & Materials" onclick="toggleManageModal()">
+        <i class="bi bi-database-gear" style="color:#a78bfa;"></i> Manage Data
+      </button>
 
-    <button id="btn-zoom-out"   class="pn-btn" title="Zoom out"><i class="bi bi-zoom-out"></i></button>
-    <button id="btn-zoom-reset" class="pn-btn" title="Reset zoom"><i class="bi bi-fullscreen-exit"></i></button>
-    <button id="btn-zoom-in"    class="pn-btn" title="Zoom in"><i class="bi bi-zoom-in"></i></button>
+      <!-- Network Analysis / Solver Method selection -->
+      <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.03);padding:2px 8px;border-radius:6px;border:1px solid #30363d;">
+        <i class="bi bi-cpu" style="color:#a78bfa;font-size:12px;"></i>
+        <label for="pn-solver-method" style="font-size:11px;color:#94a3b8;font-weight:600;margin:0;">Solver:</label>
+        <select id="pn-solver-method" class="pp-input" style="width:180px;margin:0;padding:3px 6px;height:28px;font-size:11px;background:#0d1117;color:#f8fafc;border:1px solid #a78bfa;border-radius:4px;cursor:pointer;" title="Choose network analysis method / solver algorithm">
+          <option value="ggm">Global Gradient Method (GGM)</option>
+          <option value="newton_raphson">Newton-Raphson (NR)</option>
+          <option value="hardy_cross">Hardy Cross Method</option>
+          <option value="linear_theory">Linear Theory Method</option>
+        </select>
+      </div>
 
-    <div class="pn-sep"></div>
+      <!-- Pipe Friction Method selection -->
+      <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.03);padding:2px 8px;border-radius:6px;border:1px solid #30363d;">
+        <i class="bi bi-droplet-half" style="color:#38bdf8;font-size:12px;"></i>
+        <label for="pn-friction-method" style="font-size:11px;color:#94a3b8;font-weight:600;margin:0;">Friction:</label>
+        <select id="pn-friction-method" class="pp-input" style="width:150px;margin:0;padding:3px 6px;height:28px;font-size:11px;background:#0d1117;color:#f8fafc;border:1px solid #38bdf8;border-radius:4px;cursor:pointer;" title="Choose pipe friction formulation">
+          <option value="darcy_weisbach">Darcy-Weisbach (Moody)</option>
+          <option value="hazen_williams">Hazen-Williams (C-Factor)</option>
+        </select>
+      </div>
 
-    <button id="btn-save" class="pn-btn pn-btn-success" title="Save current network (auto-saves on change)"><i class="bi bi-floppy"></i> Save</button>
-    <button id="btn-load-demo" class="pn-btn" title="Load sample demo network"><i class="bi bi-arrow-counterclockwise"></i> Demo</button>
-    <button id="btn-export" class="pn-btn" title="Export JSON"><i class="bi bi-download"></i> Export</button>
-    <button id="btn-import" class="pn-btn" title="Import JSON"><i class="bi bi-upload"></i> Import</button>
-    <input id="import-file-input" type="file" accept=".json" style="display:none;">
-    <button id="btn-clear" class="pn-btn pn-btn-danger" title="Clear canvas"><i class="bi bi-x-circle"></i> Clear</button>
-
-    <div class="pn-sep"></div>
-
-    <!-- Network Analysis / Solver Method selection -->
-    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.03);padding:2px 8px;border-radius:6px;border:1px solid #30363d;">
-      <i class="bi bi-cpu" style="color:#a78bfa;font-size:12px;"></i>
-      <label for="pn-solver-method" style="font-size:11px;color:#94a3b8;font-weight:600;margin:0;">Solver:</label>
-      <select id="pn-solver-method" class="pp-input" style="width:180px;margin:0;padding:3px 6px;height:28px;font-size:11px;background:#0d1117;color:#f8fafc;border:1px solid #a78bfa;border-radius:4px;cursor:pointer;" title="Choose network analysis method / solver algorithm">
-        <option value="ggm">Global Gradient Method (GGM)</option>
-        <option value="newton_raphson">Newton-Raphson (NR)</option>
-        <option value="hardy_cross">Hardy Cross Method</option>
-        <option value="linear_theory">Linear Theory Method</option>
-      </select>
-    </div>
-
-    <!-- Pipe Friction Method selection -->
-    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.03);padding:2px 8px;border-radius:6px;border:1px solid #30363d;">
-      <i class="bi bi-droplet-half" style="color:#38bdf8;font-size:12px;"></i>
-      <label for="pn-friction-method" style="font-size:11px;color:#94a3b8;font-weight:600;margin:0;">Friction:</label>
-      <select id="pn-friction-method" class="pp-input" style="width:150px;margin:0;padding:3px 6px;height:28px;font-size:11px;background:#0d1117;color:#f8fafc;border:1px solid #38bdf8;border-radius:4px;cursor:pointer;" title="Choose pipe friction formulation">
-        <option value="darcy_weisbach">Darcy-Weisbach (Moody)</option>
-        <option value="hazen_williams">Hazen-Williams (C-Factor)</option>
-      </select>
-    </div>
-
-    <!-- Global flow rate -->
-    <label style="font-size:11px;color:#8b949e;white-space:nowrap;">
-      Flow
-      <input id="pn-global-flow" type="number" min="0.1" step="0.5" value="20"
-             class="pp-input" style="width:65px;display:inline-block;margin:0 4px;">
-      m&#179;/h
-    </label>
-
-    <!-- Environmental & Fluid Properties: Altitude/Pressure, Temperature, SG -->
-    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.03);padding:2px 10px;border-radius:6px;border:1px solid #30363d;" title="Site atmospheric conditions and fluid properties affecting viscosity, vapor pressure, and NPSHa">
-      <i class="bi bi-clouds" style="color:#a78bfa;font-size:12px;" title="Site altitude and barometric atmospheric pressure"></i>
-      <label style="font-size:11px;color:#94a3b8;font-weight:600;margin:0;white-space:nowrap;" title="Site Altitude above sea level (m)">
-        Alt
-        <input id="pn-altitude" type="number" step="50" min="-500" max="6000" value="0" class="pp-input"
-               style="width:55px;display:inline-block;margin:0 2px;padding:2px 4px;height:24px;font-size:11px;" title="Site altitude in meters above sea level">
-        m
-      </label>
-      <span style="color:#484f58;font-size:10px;">/</span>
-      <label style="font-size:11px;color:#94a3b8;margin:0;white-space:nowrap;" title="Barometric atmospheric pressure (auto-synced with altitude via International Barometric Formula)">
-        <input id="pn-barometric" type="number" step="0.1" min="40" max="115" value="101.3" class="pp-input"
-               style="width:55px;display:inline-block;margin:0 2px;padding:2px 4px;height:24px;font-size:11px;" title="Barometric atmospheric pressure in kPa">
-        kPa
+      <!-- Global flow rate -->
+      <label style="font-size:11px;color:#8b949e;white-space:nowrap;">
+        Flow rate
+        <input id="pn-global-flow" type="number" min="0.1" step="0.5" value="15" class="pp-input"
+          style="width:65px;display:inline-block;margin:0 4px 0 4px;">
+        m³/h
       </label>
 
-      <span style="color:#484f58;font-size:10px;">|</span>
-      <i class="bi bi-thermometer-half" style="color:#f87171;font-size:12px;" title="Liquid operating temperature (°C) — determines liquid vapor pressure and kinematic viscosity"></i>
-      <label style="font-size:11px;color:#94a3b8;margin:0;white-space:nowrap;" title="Liquid operating temperature (°C)">
-        Temp
-        <input id="pn-temperature" type="number" step="1" min="0" max="100" value="20" class="pp-input"
-               style="width:45px;display:inline-block;margin:0 2px;padding:2px 4px;height:24px;font-size:11px;" title="Liquid operating temperature in °C">
-        °C
-      </label>
+      <!-- Environmental & Fluid Properties: Altitude/Pressure, Temperature, Pv, SG -->
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.03);padding:2px 10px;border-radius:6px;border:1px solid #30363d;" title="Site atmospheric conditions and fluid properties affecting viscosity, vapor pressure, and NPSHa">
+        <i class="bi bi-clouds" style="color:#a78bfa;font-size:12px;" title="Site altitude and barometric atmospheric pressure"></i>
+        <label style="font-size:11px;color:#94a3b8;font-weight:600;margin:0;white-space:nowrap;" title="Site Altitude above sea level (m)">
+          Alt
+          <input id="pn-altitude" type="number" step="50" min="-500" max="6000" value="0" class="pp-input"
+                 style="width:55px;display:inline-block;margin:0 2px;padding:2px 4px;height:24px;font-size:11px;" title="Site altitude in meters above sea level">
+          m
+        </label>
+        <span style="color:#484f58;font-size:10px;">/</span>
+        <label style="font-size:11px;color:#94a3b8;margin:0;white-space:nowrap;" title="Barometric atmospheric pressure (auto-synced with altitude via International Barometric Formula)">
+          <input id="pn-barometric" type="number" step="0.1" min="40" max="115" value="101.3" class="pp-input"
+                 style="width:55px;display:inline-block;margin:0 2px;padding:2px 4px;height:24px;font-size:11px;" title="Barometric atmospheric pressure in kPa">
+          kPa
+        </label>
 
-      <span style="color:#484f58;font-size:10px;">|</span>
-      <i class="bi bi-water" style="color:#38bdf8;font-size:12px;" title="Fluid Specific Gravity (SG) relative to water (1.0)"></i>
-      <label style="font-size:11px;color:#94a3b8;margin:0;white-space:nowrap;" title="Fluid Specific Gravity (SG)">
-        SG
-        <input id="pn-sg" type="number" step="0.01" min="0.5" max="3.0" value="1.00" class="pp-input"
-               style="width:50px;display:inline-block;margin:0 2px;padding:2px 4px;height:24px;font-size:11px;" title="Specific Gravity (SG)">
-      </label>
-    </div>
+        <span style="color:#484f58;font-size:10px;">|</span>
+        <i class="bi bi-thermometer-half" style="color:#f87171;font-size:12px;" title="Liquid operating temperature (°C)"></i>
+        <label style="font-size:11px;color:#94a3b8;margin:0;white-space:nowrap;" title="Liquid operating temperature (°C)">
+          Temp
+          <input id="pn-temperature" type="number" step="1" min="0" max="100" value="20" class="pp-input"
+                 style="width:45px;display:inline-block;margin:0 2px;padding:2px 4px;height:24px;font-size:11px;" title="Liquid operating temperature in °C">
+          °C
+        </label>
 
-    <!-- Calculate -->
-    <button id="pn-calc-btn" class="pn-btn pn-btn-success" style="margin-left:auto;">
-      <i class="bi bi-calculator"></i> Calculate Losses
-    </button>
-  </div>
+        <span style="color:#484f58;font-size:10px;">/</span>
+        <label style="font-size:11px;color:#94a3b8;margin:0;white-space:nowrap;" title="Liquid saturation vapor pressure Pv in kPa">
+          Pv
+          <input id="pn-vapor-pressure" type="number" step="0.05" min="0.01" max="150" value="2.34" class="pp-input"
+                 style="width:52px;display:inline-block;margin:0 2px;padding:2px 4px;height:24px;font-size:11px;" title="Liquid saturation vapor pressure Pv in kPa">
+          kPa
+        </label>
 
-  <!-- Canvas + Properties side by side -->
-  <div style="display:flex;height:560px;border:1px solid #30363d;border-radius:8px;overflow:hidden;">
+        <span style="color:#484f58;font-size:10px;">|</span>
+        <i class="bi bi-water" style="color:#38bdf8;font-size:12px;" title="Fluid Specific Gravity (SG) relative to water (1.0)"></i>
+        <label style="font-size:11px;color:#94a3b8;margin:0;white-space:nowrap;" title="Fluid Specific Gravity (SG)">
+          SG
+          <input id="pn-sg" type="number" step="0.01" min="0.5" max="3.0" value="1.00" class="pp-input"
+                 style="width:50px;display:inline-block;margin:0 2px;padding:2px 4px;height:24px;font-size:11px;" title="Specific Gravity (SG)">
+        </label>
+      </div>
 
-    <!-- SVG canvas -->
-    <div id="pn-canvas-wrap" style="flex:1;position:relative;background:#0d1117;overflow:hidden;">
-      <!-- Grid pattern background -->
-      <div style="position:absolute;inset:0;pointer-events:none;
-                  background-image:linear-gradient(rgba(48,54,61,0.5) 1px,transparent 1px),linear-gradient(90deg,rgba(48,54,61,0.5) 1px,transparent 1px);
-                  background-size:50px 50px;"></div>
-      <svg id="pn-svg" style="width:100%;height:100%;display:block;user-select:none;">
-        <g id="pn-pipes"></g>
-        <g id="pn-nodes"></g>
-      </svg>
+      <!-- Slurry & Advanced Pipeline Analysis Tool -->
+      <button id="btn-toggle-slurry" type="button" class="pn-btn" title="Slurry Transport & Advanced Pipe Analytics (Settling velocity, Durand critical deposition, Joukowsky surge, Barlow hoop stress)">
+        <i class="bi bi-layers-fill" style="color:#f59e0b;"></i> Slurry / Advanced
+      </button>
 
-      <!-- Legend Overlay Matching Reference Diagram -->
-      <div id="pn-legend-overlay">
-        <div class="pn-legend-title">
-          <span>System Legend</span>
-          <span style="cursor:pointer;font-size:12px;opacity:0.6;" onclick="toggleLegend(false)">&times;</span>
+      <!-- Calculate button -->
+      <button id="pn-calc-btn" type="button" class="pn-btn pn-btn-success" style="margin-left:auto;">
+        <i class="bi bi-calculator"></i> Calculate Losses
+      </button>
+
+    </div><!-- end toolbar -->
+
+    <!-- MAIN ROW: LHS Sidebar + SVG Canvas + Properties Panel -->
+    <div id="pn-main-row">
+
+      <!-- LHS SIDEBAR: Add Network Members Tool Palette -->
+      <div id="pn-left-sidebar">
+        <!-- Sidebar Header with collapse button -->
+        <div class="pn-sidebar-header">
+          <span style="font-weight:700;color:#f0f6fc;display:flex;align-items:center;gap:6px;">
+            <i class="bi bi-tools" style="color:#58a6ff;"></i>
+            Add Members
+          </span>
+          <button id="btn-toggle-left-sidebar" type="button" class="pn-btn" style="padding:2px 6px;font-size:11px;" title="Collapse / Expand Left Sidebar">
+            <i class="bi bi-chevron-bar-left"></i>
+          </button>
         </div>
-        <div id="pn-legend-items"></div>
-      </div>
 
-      <!-- Status bar -->
-      <div id="pn-statusbar" style="position:absolute;bottom:0;left:0;right:0;padding:4px 12px;
-           background:rgba(22,27,34,0.85);font-size:11px;color:#8b949e;
-           display:flex;align-items:center;gap:10px;border-top:1px solid #30363d;pointer-events:none;">
-        <i class="bi bi-info-circle" style="color:#58a6ff;"></i>
-        <span id="pn-status">Select / Move nodes</span>
-        <span id="pn-save-indicator" style="margin-left:14px;display:inline-flex;align-items:center;gap:4px;font-size:11px;">
-          <i class="bi bi-check2-circle" style="color:#22c55e;"></i> <span style="color:#22c55e;">Auto-saved</span>
-        </span>
-        <span style="margin-left:auto;color:#475569;">Scroll=zoom &bull; Middle-drag=pan &bull; Del=delete</span>
-      </div>
+        <!-- Member Creation Tools (Single vertical column) -->
+        <div class="pn-sidebar-tools-header">
+          <span>Component Toolbox</span>
+          <span style="font-size:10px;color:#64748b;">Click or key</span>
+        </div>
+        <div class="pn-sidebar-tools">
+          <!-- Select / Move -->
+          <button id="btn-select" type="button" class="pn-sidebar-tool-btn active-tool" data-mode="select" title="Select / Move elements (S)">
+            <span class="tool-icon"><i class="bi bi-cursor-fill" style="color:#58a6ff;"></i></span>
+            <span class="tool-label">Select / Move</span>
+            <span class="tool-shortcut">S</span>
+          </button>
 
-      <!-- Floating Contextual Configuration Popover -->
-      <div id="pn-context-popover" class="pn-popover" style="display:none;">
-        <div class="pn-popover-header">
-          <div class="pn-popover-title">
-            <span id="popover-icon"><i class="bi bi-sliders"></i></span>
-            <span id="popover-title">Configure Element</span>
+          <!-- Draw Pipe -->
+          <button id="btn-connect" type="button" class="pn-sidebar-tool-btn" data-mode="connect" title="Draw Pipe (C)">
+            <span class="tool-icon"><i class="bi bi-arrow-right-short" style="color:#38bdf8;font-size:18px;"></i></span>
+            <span class="tool-label">Draw Pipe</span>
+            <span class="tool-shortcut">C</span>
+          </button>
+
+          <!-- Reservoir / Sump -->
+          <button id="btn-add-reservoir" type="button" class="pn-sidebar-tool-btn" data-mode="add-reservoir" title="Place Sump / Reservoir">
+            <span class="tool-icon"><i class="bi bi-water" style="color:#3b82f6;"></i></span>
+            <span class="tool-label">Reservoir / Sump</span>
+          </button>
+
+          <!-- Pump Station -->
+          <button id="btn-add-pump" type="button" class="pn-sidebar-tool-btn" data-mode="add-pump" title="Place Centrifugal Pump Station">
+            <span class="tool-icon"><i class="bi bi-gear-fill" style="color:#a855f7;"></i></span>
+            <span class="tool-label">Pump Station</span>
+          </button>
+
+          <!-- Storage Tank -->
+          <button id="btn-add-tank" type="button" class="pn-sidebar-tool-btn" data-mode="add-tank" title="Place Storage Tank">
+            <span class="tool-icon"><i class="bi bi-cup-fill" style="color:#22c55e;"></i></span>
+            <span class="tool-label">Storage Tank</span>
+          </button>
+
+          <!-- Junction -->
+          <button id="btn-add-junction" type="button" class="pn-sidebar-tool-btn" data-mode="add-junction" title="Place Pipe Junction / Node">
+            <span class="tool-icon"><i class="bi bi-intersect" style="color:#f59e0b;"></i></span>
+            <span class="tool-label">Junction</span>
+          </button>
+
+          <!-- Tee Fitting -->
+          <button id="btn-add-tee" type="button" class="pn-sidebar-tool-btn" data-mode="add-tee" title="Place 3-Way Pipe Tee Fitting">
+            <span class="tool-icon"><i class="bi bi-diagram-3" style="color:#f97316;"></i></span>
+            <span class="tool-label">Tee (3-Way)</span>
+          </button>
+
+          <!-- Valve -->
+          <button id="btn-add-valve" type="button" class="pn-sidebar-tool-btn" data-mode="add-valve" title="Place Valve (Gate, Globe, Check, Ball)">
+            <span class="tool-icon"><i class="bi bi-heptagon-half" style="color:#ef4444;"></i></span>
+            <span class="tool-label">Inline Valve</span>
+          </button>
+
+          <!-- Elbow -->
+          <button id="btn-add-elbow" type="button" class="pn-sidebar-tool-btn" data-mode="add-elbow" title="Place 90° / 45° Elbow Waypoint">
+            <span class="tool-icon"><i class="bi bi-arrow-return-right" style="color:#ec4899;"></i></span>
+            <span class="tool-label">Elbow Bend</span>
+          </button>
+
+          <!-- Discharge -->
+          <button id="btn-add-discharge" type="button" class="pn-sidebar-tool-btn" data-mode="add-discharge" title="Place Open Discharge Point">
+            <span class="tool-icon"><i class="bi bi-droplet-fill" style="color:#0284c7;"></i></span>
+            <span class="tool-label">Discharge Outlet</span>
+          </button>
+
+          <!-- Delete -->
+          <button id="btn-delete" type="button" class="pn-sidebar-tool-btn btn-danger-tool" title="Delete Selected Element (Del / Backspace)">
+            <span class="tool-icon"><i class="bi bi-trash3" style="color:#f85149;"></i></span>
+            <span class="tool-label" style="color:#f85149;">Delete Selected</span>
+            <span class="tool-shortcut">Del</span>
+          </button>
+        </div>
+      </div><!-- end left sidebar -->
+
+      <!-- SVG Canvas -->
+      <div id="pn-canvas-wrap">
+        <svg id="pn-svg" xmlns="http://www.w3.org/2000/svg">
+          <g id="pn-pipes"></g>
+          <g id="pn-nodes"></g>
+        </svg>
+
+        <!-- Legend Overlay -->
+        <div id="pn-legend-overlay">
+          <div class="pn-legend-title">
+            <span>System Legend</span>
+            <span style="cursor:pointer;font-size:12px;opacity:0.6;" onclick="toggleLegend(false)">&times;</span>
           </div>
-          <button id="popover-close" class="pn-popover-close" title="Close menu">&times;</button>
+          <div id="pn-legend-items"></div>
         </div>
-        <div id="popover-body" class="pn-popover-body">
-          <!-- Populated dynamically by JS -->
-        </div>
-      </div>
-    </div>
 
-    <!-- Right properties panel -->
-    <div id="pn-props-panel" style="width:270px;min-width:230px;background:#161b22;
-         border-left:1px solid #30363d;overflow-y:auto;padding:14px;font-size:13px;">
-
-      <!-- Empty state -->
-      <div id="pn-props-empty">
-        <div style="text-align:center;padding:30px 8px;color:#475569;">
-          <i class="bi bi-cursor-fill" style="font-size:2rem;color:#21262d;display:block;margin-bottom:10px;"></i>
-          <div style="font-size:12px;color:#475569;line-height:1.7;">
-            Click a <strong style="color:#8b949e;">node</strong> or <strong style="color:#8b949e;">pipe</strong> to edit.<br>
-            <span style="font-size:10px;color:#334155;">
-              S = select &bull; C = draw pipe &bull; Del = delete
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Node properties -->
-      <div id="pn-props-node" style="display:none;">
-        <div class="pp-section-title"><i class="bi bi-circle-fill" style="font-size:8px;"></i> Node Properties</div>
-        <div style="display:flex;gap:6px;margin-bottom:10px;">
-          <span class="pp-chip" id="np-id">N-?</span>
-          <span class="pp-chip" id="np-type" style="color:#a855f7;border-color:#a855f7;">?</span>
-        </div>
-        <label class="pp-label">Label</label>
-        <input id="np-label" type="text" class="pp-input" placeholder="Node label">
-        <label class="pp-label">Elevation (m)</label>
-        <input id="np-elev" type="number" step="0.1" class="pp-input" placeholder="0">
-        <div id="np-pump-fields" style="display:none;">
-          <div class="pp-section-title" style="margin-top:8px;"><i class="bi bi-gear-fill"></i> Pump Data</div>
-          <label class="pp-label">Design Flow Rate (m&#179;/h)</label>
-          <input id="np-flow" type="number" step="0.5" min="0" class="pp-input" value="10">
-        </div>
-        <div id="np-fitting-fields" style="display:none;">
-          <div class="pp-section-title" style="margin-top:8px;"><i class="bi bi-tools"></i> Fitting Configuration</div>
-          <label class="pp-label">Fitting Model / Subtype</label>
-          <select id="np-fitting-key" class="pp-input"></select>
-
-          <!-- Tee-only branch rotation controls -->
-          <div id="np-tee-rotation-group" style="display:none;margin-top:8px;">
-            <label class="pp-label">Tee Branch Orientation</label>
-            <div style="display:flex;gap:6px;align-items:center;">
-              <select id="np-tee-rotation" class="pp-input" style="flex:1;">
-                <option value="0">0° — Branch Down</option>
-                <option value="90">90° — Branch Left</option>
-                <option value="180">180° — Branch Up</option>
-                <option value="270">270° — Branch Right</option>
-              </select>
-              <button id="btn-rotate-tee" class="pn-btn" title="Rotate Branch 90°" style="padding:5px 8px;" type="button">
-                <i class="bi bi-arrow-clockwise"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- K Factor & Custom K override -->
-          <div style="margin-top:10px;padding:8px;background:rgba(255,255,255,0.03);border:1px solid #30363d;border-radius:6px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-              <label class="pp-label" style="margin:0;cursor:pointer;display:flex;align-items:center;gap:4px;">
-                <input type="checkbox" id="np-is-custom-k" style="accent-color:#f59e0b;cursor:pointer;">
-                Custom K Factor
-              </label>
-              <span id="np-k-display" style="font-size:11px;font-weight:600;color:#fbbf24;font-family:monospace;">K = 0.40</span>
-            </div>
-            <div id="np-custom-k-group" style="display:none;margin-top:6px;">
-              <input id="np-custom-k" type="number" step="0.01" min="0" class="pp-input" placeholder="Enter custom K (e.g. 1.25)">
-              <div style="font-size:10px;color:#64748b;margin-top:2px;">Overrides standard table K value</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Pipe properties -->
-      <div id="pn-props-pipe" style="display:none;">
-        <div class="pp-section-title"><i class="bi bi-dash-lg" style="font-size:8px;"></i> Pipe Segment</div>
-        <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
-          <span class="pp-chip" id="pp-id">P-?</span>
-          <span style="font-size:11px;color:#64748b;">
-            <span id="pp-from" style="color:#3b82f6;font-family:monospace;">?</span>
-            <i class="bi bi-arrow-right" style="font-size:9px;margin:0 2px;"></i>
-            <span id="pp-to" style="color:#3b82f6;font-family:monospace;">?</span>
+        <!-- Status bar overlaid at bottom of canvas -->
+        <div id="pn-statusbar">
+          <i class="bi bi-info-circle" style="color:#58a6ff;pointer-events:none;"></i>
+          <span id="pn-status">Select / Move nodes</span>
+          <span id="pn-save-indicator" style="margin-left:14px;display:inline-flex;align-items:center;gap:4px;font-size:11px;">
+            <i class="bi bi-check2-circle" style="color:#22c55e;"></i> <span style="color:#22c55e;">Auto-saved</span>
+          </span>
+          <span style="margin-left:auto;color:#475569;pointer-events:none;">
+            Scroll to zoom &bull; Middle-drag to pan &bull; Delete key to remove
           </span>
         </div>
-        <label class="pp-label">Label</label>
-        <input id="pp-label" type="text" class="pp-input">
-        <!-- Dimension Mode Switcher -->
-        <div style="display:flex;gap:4px;margin-bottom:10px;background:#0d1117;padding:3px;border-radius:6px;border:1px solid #30363d;">
-          <button type="button" id="pp-mode-std" class="pn-btn active-tool" style="flex:1;justify-content:center;font-size:11px;padding:5px;" onclick="setPipeDimensionMode('standard')">
-            <i class="bi bi-collection"></i> Standard Pipe
-          </button>
-          <button type="button" id="pp-mode-custom" class="pn-btn" style="flex:1;justify-content:center;font-size:11px;padding:5px;" onclick="setPipeDimensionMode('custom')">
-            <i class="bi bi-pencil-square"></i> Custom
-          </button>
-        </div>
 
-        <!-- ── Standard Pipe Selector & Cascading Filters ── -->
-        <div id="pp-std-dim-group">
-          <div style="background:rgba(255,255,255,0.02);border:1px solid #30363d;border-radius:6px;padding:8px 9px;margin-bottom:10px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-              <span class="pp-label" style="margin:0;color:#38bdf8;font-weight:700;"><i class="bi bi-funnel"></i> Standard Pipe Filter</span>
-              <span id="pp-filter-match-count" style="font-size:10px;color:#94a3b8;font-family:monospace;">-- matches</span>
+        <!-- Floating Contextual Configuration Popover -->
+        <div id="pn-context-popover" class="pn-popover" style="display:none;">
+          <div class="pn-popover-header">
+            <div class="pn-popover-title">
+              <span id="popover-icon"><i class="bi bi-sliders"></i></span>
+              <span id="popover-title">Configure Element</span>
             </div>
-
-            <!-- 1. Standard Filter -->
-            <label class="pp-label">Standard</label>
-            <select id="pp-filter-standard" class="pp-input" style="margin-bottom:6px;">
-              <option value="all">All Standards</option>
-            </select>
-
-            <!-- 2. Material Filter -->
-            <label class="pp-label">Material</label>
-            <select id="pp-filter-material" class="pp-input" style="margin-bottom:6px;">
-              <option value="all">All Materials</option>
-            </select>
-
-            <!-- 3. SDR / Schedule Filter -->
-            <label class="pp-label">SDR / Schedule</label>
-            <select id="pp-filter-schedule" class="pp-input" style="margin-bottom:6px;">
-              <option value="all">All Schedules / SDRs</option>
-            </select>
-
-            <!-- 4. Pipe Size (NB / DN) -->
-            <label class="pp-label" style="color:#f8fafc;font-weight:700;">Select Pipe Size (NB / OD)</label>
-            <select id="pp-standard-pipe-select" class="pp-input" style="border-color:#38bdf8;margin-bottom:0;">
-              <!-- Populated dynamically -->
-            </select>
+            <button id="popover-close" type="button" class="pn-popover-close" title="Close menu">&times;</button>
           </div>
+          <div id="popover-body" class="pn-popover-body">
+            <!-- Populated dynamically by JS -->
+          </div>
+        </div>
+      </div><!-- end canvas wrap -->
 
-          <!-- ── Pipe Specification Details Card ── -->
-          <div id="pp-pipe-details-card" class="pipe-spec-card">
-            <div class="pipe-spec-card-header">
-              <span style="font-weight:700;font-size:11px;color:#38bdf8;display:flex;align-items:center;gap:5px;">
-                <i class="bi bi-info-circle-fill"></i> <span id="pspec-title">Standard Pipe Details</span>
-              </span>
-              <span id="pspec-rating" style="font-size:10px;font-family:monospace;padding:2px 6px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);color:#38bdf8;border-radius:4px;font-weight:600;">PN --</span>
-            </div>
-            <div class="pipe-spec-grid">
-              <div class="pipe-spec-item">
-                <span class="pipe-spec-item-label">Inner Dia (ID)</span>
-                <span class="pipe-spec-item-value" id="pspec-id" style="color:#34d399;font-weight:700;">-- mm</span>
-              </div>
-              <div class="pipe-spec-item">
-                <span class="pipe-spec-item-label">Outer Dia (OD)</span>
-                <span class="pipe-spec-item-value" id="pspec-od">-- mm</span>
-              </div>
-              <div class="pipe-spec-item">
-                <span class="pipe-spec-item-label">Nominal Bore</span>
-                <span class="pipe-spec-item-value" id="pspec-nb">--</span>
-              </div>
-              <div class="pipe-spec-item">
-                <span class="pipe-spec-item-label">Wall Thickness</span>
-                <span class="pipe-spec-item-value" id="pspec-wall">-- mm</span>
-              </div>
-              <div class="pipe-spec-item">
-                <span class="pipe-spec-item-label">SDR / Schedule</span>
-                <span class="pipe-spec-item-value" id="pspec-sch">--</span>
-              </div>
-              <div class="pipe-spec-item">
-                <span class="pipe-spec-item-label">Material Roughness</span>
-                <span class="pipe-spec-item-value" id="pspec-rough" style="font-size:10.5px;color:#cbd5e1;">--</span>
-              </div>
-            </div>
-            <div style="margin-top:7px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);font-size:10px;color:#94a3b8;display:flex;align-items:center;gap:4px;">
-              <i class="bi bi-check2-circle" style="color:#34d399;"></i> <span>Hydraulic velocity &amp; Darcy friction use exact <strong>ID</strong></span>
+      <!-- RIGHT PROPERTIES PANEL -->
+      <div id="pn-props-panel">
+
+        <!-- Empty state -->
+        <div id="pn-props-empty">
+          <div style="text-align:center;padding:40px 10px;color:#475569;">
+            <i class="bi bi-cursor-fill" style="font-size:2rem;display:block;margin-bottom:10px;color:#30363d;"></i>
+            <div style="font-size:12px;line-height:1.6;">
+              Click any node or pipe segment to inspect and edit its hydraulic properties.
             </div>
           </div>
         </div>
 
-        <!-- ── Custom Diameter Group (shown when custom mode active) ── -->
-        <div id="pp-custom-dim-group" style="display:none;">
-          <div class="pp-row" style="display:flex;gap:8px;">
-            <div class="pp-field" style="flex:1;">
-              <label class="pp-label">Diameter (mm)</label>
-              <input id="pp-diameter" type="number" min="5" step="1" class="pp-input" value="100">
+        <!-- Node properties panel -->
+        <div id="pn-props-node" style="display:none;">
+          <div class="pp-section-title"><i class="bi bi-circle-fill" style="font-size:8px;"></i> Node Properties</div>
+
+          <div style="display:flex;gap:6px;margin-bottom:10px;">
+            <span class="pp-chip" id="np-id">N-?</span>
+            <span class="pp-chip" id="np-type" style="color:#a855f7;border-color:#a855f7;background:rgba(168,85,247,0.08);">?</span>
+          </div>
+
+          <label class="pp-label">Label</label>
+          <input id="np-label" type="text" class="pp-input" placeholder="Node label">
+
+          <label class="pp-label">Elevation (m)</label>
+          <input id="np-elev" type="number" step="0.1" class="pp-input" placeholder="0">
+
+          <!-- Pump-only fields -->
+          <div id="np-pump-fields" style="display:none;">
+            <div class="pp-section-title" style="margin-top:8px;"><i class="bi bi-gear-fill"></i> Pump Data</div>
+
+            <label class="pp-label">Design Flow Rate (m³/h)</label>
+            <input id="np-flow" type="number" step="0.5" min="0" class="pp-input" value="10">
+
+            <label class="pp-label">Pump Configuration</label>
+            <select id="np-pump-config" class="pp-input">
+              <option value="end_suction">End Suction (1 suction + 1 discharge)</option>
+              <option value="inline">Inline (1 in + 1 out)</option>
+              <option value="double_suction">Double Suction (2 suction + 1 discharge)</option>
+              <option value="double_discharge">Double Discharge (1 suction + 2 discharge)</option>
+              <option value="double_both">Double Both (2 suction + 2 discharge)</option>
+            </select>
+          </div>
+
+          <!-- Fitting-specific fields (Valve, Elbow, Tee) -->
+          <div id="np-fitting-fields" style="display:none;">
+            <div class="pp-section-title" style="margin-top:8px;"><i class="bi bi-tools"></i> Fitting Configuration</div>
+            <label class="pp-label">Fitting Model / Subtype</label>
+            <select id="np-fitting-key" class="pp-input"></select>
+
+            <!-- Quantity input -->
+            <div style="margin-top:8px;">
+              <label class="pp-label">Quantity (Units / Count)</label>
+              <input id="np-quantity" type="number" min="1" step="1" class="pp-input" value="1" placeholder="1" title="Number of identical inline units (scales K-factor linearly)">
             </div>
-            <div class="pp-field" style="flex:1;">
+
+            <!-- Tee-only branch rotation controls -->
+            <div id="np-tee-rotation-group" style="display:none;margin-top:8px;">
+              <label class="pp-label">Tee Branch Orientation</label>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <select id="np-tee-rotation" class="pp-input" style="flex:1;">
+                  <option value="0">0° — Branch Down</option>
+                  <option value="90">90° — Branch Left</option>
+                  <option value="180">180° — Branch Up</option>
+                  <option value="270">270° — Branch Right</option>
+                </select>
+                <button id="btn-rotate-tee" type="button" class="pn-btn" title="Rotate Branch 90°" style="padding:5px 8px;">
+                  <i class="bi bi-arrow-clockwise"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- K Factor & Custom K override -->
+            <div style="margin-top:10px;padding:8px;background:rgba(255,255,255,0.03);border:1px solid #30363d;border-radius:6px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                <label class="pp-label" style="margin:0;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                  <input type="checkbox" id="np-is-custom-k" style="accent-color:#f59e0b;cursor:pointer;">
+                  Custom K Factor
+                </label>
+                <span id="np-k-display" style="font-size:11px;font-weight:600;color:#fbbf24;font-family:monospace;">K = 0.40</span>
+              </div>
+              <div id="np-custom-k-group" style="display:none;margin-top:6px;">
+                <input id="np-custom-k" type="number" step="0.01" min="0" class="pp-input" placeholder="Enter custom K (e.g. 1.25)">
+                <div style="font-size:10px;color:#64748b;margin-top:2px;">Overrides standard table K value</div>
+              </div>
+            </div>
+          </div>
+          <div id="np-pump-desc" style="display:none;font-size:11px;color:#475569;margin-bottom:8px;">
+            The system TDH is calculated from the sum of all pipe losses from inlet to outlet.
+          </div>
+        </div><!-- end node props -->
+
+        <!-- Pipe (segment) properties panel -->
+        <div id="pn-props-pipe" style="display:none;">
+          <div class="pp-section-title"><i class="bi bi-dash-lg" style="font-size:8px;"></i> Pipe Segment Properties</div>
+
+          <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+            <span class="pp-chip" id="pp-id">P-?</span>
+            <span style="font-size:11px;color:#64748b;">
+              <span id="pp-from" style="color:#3b82f6;font-family:monospace;">?</span>
+              <i class="bi bi-arrow-right" style="font-size:9px;margin:0 2px;"></i>
+              <span id="pp-to" style="color:#3b82f6;font-family:monospace;">?</span>
+            </span>
+          </div>
+
+          <label class="pp-label">Label</label>
+          <input id="pp-label" type="text" class="pp-input" placeholder="Pipe label">
+
+          <!-- Dimension Mode Switcher -->
+          <div style="display:flex;gap:4px;margin-bottom:10px;background:#0d1117;padding:3px;border-radius:6px;border:1px solid #30363d;">
+            <button type="button" id="pp-mode-std" class="pn-btn active-tool" style="flex:1;justify-content:center;font-size:11px;padding:5px;" onclick="setPipeDimensionMode('standard')">
+              <i class="bi bi-collection"></i> Standard Pipe
+            </button>
+            <button type="button" id="pp-mode-custom" class="pn-btn" style="flex:1;justify-content:center;font-size:11px;padding:5px;" onclick="setPipeDimensionMode('custom')">
+              <i class="bi bi-pencil-square"></i> Custom
+            </button>
+          </div>
+
+          <!-- Standard Pipe Selector & Cascading Filters -->
+          <div id="pp-std-dim-group">
+            <div style="background:rgba(255,255,255,0.02);border:1px solid #30363d;border-radius:6px;padding:8px 9px;margin-bottom:10px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                <span class="pp-label" style="margin:0;color:#38bdf8;font-weight:700;"><i class="bi bi-funnel"></i> Standard Pipe Filter</span>
+                <span id="pp-filter-match-count" style="font-size:10px;color:#94a3b8;font-family:monospace;">-- matches</span>
+              </div>
+
+              <!-- 1. Standard Filter -->
+              <label class="pp-label">Standard</label>
+              <select id="pp-filter-standard" class="pp-input" style="margin-bottom:6px;">
+                <option value="all">All Standards</option>
+              </select>
+
+              <!-- 2. Material Filter -->
               <label class="pp-label">Material</label>
-              <select id="pp-material" class="pp-input">
-                <!-- Options populated by JS from MATERIALS array -->
+              <select id="pp-filter-material" class="pp-input" style="margin-bottom:6px;">
+                <option value="all">All Materials</option>
+              </select>
+
+              <!-- 3. SDR / Schedule Filter -->
+              <label class="pp-label">SDR / Schedule</label>
+              <select id="pp-filter-schedule" class="pp-input" style="margin-bottom:6px;">
+                <option value="all">All Schedules / SDRs</option>
+              </select>
+
+              <!-- 4. Pipe Size (NB / DN) -->
+              <label class="pp-label" style="color:#f8fafc;font-weight:700;">Select Pipe Size (NB / OD)</label>
+              <select id="pp-standard-pipe-select" class="pp-input" style="border-color:#38bdf8;margin-bottom:0;">
+                <!-- Populated dynamically -->
               </select>
             </div>
-          </div>
-        </div>
 
-        <div style="display:flex;gap:8px;">
-          <div style="flex:1;">
-            <label class="pp-label">Length (m)</label>
-            <input id="pp-length" type="number" min="0.1" step="0.5" class="pp-input" value="10">
+            <!-- Pipe Specification Details Card -->
+            <div id="pp-pipe-details-card" class="pipe-spec-card">
+              <div class="pipe-spec-card-header">
+                <span style="font-weight:700;font-size:11px;color:#38bdf8;display:flex;align-items:center;gap:5px;">
+                  <i class="bi bi-info-circle-fill"></i> <span id="pspec-title">Standard Pipe Details</span>
+                </span>
+                <span id="pspec-rating" style="font-size:10px;font-family:monospace;padding:2px 6px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);color:#38bdf8;border-radius:4px;font-weight:600;">PN --</span>
+              </div>
+              <div class="pipe-spec-grid">
+                <div class="pipe-spec-item">
+                  <span class="pipe-spec-item-label">Inner Dia (ID)</span>
+                  <span class="pipe-spec-item-value" id="pspec-id" style="color:#34d399;font-weight:700;">-- mm</span>
+                </div>
+                <div class="pipe-spec-item">
+                  <span class="pipe-spec-item-label">Outer Dia (OD)</span>
+                  <span class="pipe-spec-item-value" id="pspec-od">-- mm</span>
+                </div>
+                <div class="pipe-spec-item">
+                  <span class="pipe-spec-item-label">Nominal Bore</span>
+                  <span class="pipe-spec-item-value" id="pspec-nb">--</span>
+                </div>
+                <div class="pipe-spec-item">
+                  <span class="pipe-spec-item-label">Wall Thickness</span>
+                  <span class="pipe-spec-item-value" id="pspec-wall">-- mm</span>
+                </div>
+                <div class="pipe-spec-item">
+                  <span class="pipe-spec-item-label">SDR / Schedule</span>
+                  <span class="pipe-spec-item-value" id="pspec-sch">--</span>
+                </div>
+                <div class="pipe-spec-item">
+                  <span class="pipe-spec-item-label">Material Roughness</span>
+                  <span class="pipe-spec-item-value" id="pspec-rough" style="font-size:10.5px;color:#cbd5e1;">--</span>
+                </div>
+              </div>
+              <div style="margin-top:7px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);font-size:10px;color:#94a3b8;display:flex;align-items:center;gap:4px;">
+                <i class="bi bi-check2-circle" style="color:#34d399;"></i> <span>Hydraulic velocity &amp; Darcy friction use exact <strong>ID</strong></span>
+              </div>
+            </div>
           </div>
-          <div style="flex:1;">
-            <label class="pp-label">Elevation &Delta;Z (m) <span style="color:#475569;font-weight:400;">+ve=uphill</span></label>
-            <input id="pp-elev-change" type="number" step="0.5" class="pp-input" value="0">
+
+          <!-- Custom Diameter Group -->
+          <div id="pp-custom-dim-group" style="display:none;">
+            <div class="pp-row">
+              <div class="pp-field">
+                <label class="pp-label">Diameter (mm)</label>
+                <input id="pp-diameter" type="number" min="5" step="1" class="pp-input" value="100">
+              </div>
+              <div class="pp-field">
+                <label class="pp-label">Material</label>
+                <select id="pp-material" class="pp-input"></select>
+              </div>
+            </div>
           </div>
-        </div>
-        <!-- Elevation integrity indicator connecting endpoints -->
-        <div id="pp-elev-integrity-badge" style="font-size:10.5px;color:#94a3b8;margin-top:-4px;margin-bottom:8px;padding:3px 8px;background:rgba(255,255,255,0.02);border:1px solid #21262d;border-radius:4px;display:flex;align-items:center;justify-content:space-between;">
-          <span>Inlet: <strong id="pp-elev-from-val" style="color:#a78bfa;">0.0 m</strong></span>
-          <i class="bi bi-arrow-right" style="color:#475569;font-size:10px;"></i>
-          <span>Outlet: <strong id="pp-elev-to-val" style="color:#a78bfa;">0.0 m</strong></span>
-        </div>
-        <label class="pp-label">Routing</label>
-        <select id="pp-routing" class="pp-input">
-          <option value="auto">Auto (bends if needed)</option>
-          <option value="straight">Straight diagonal</option>
-          <option value="orthogonal">Orthogonal (L-shape)</option>
-        </select>
-        <div class="pp-section-title" style="margin-top:4px;">
-          <i class="bi bi-tools"></i> Fittings
-          <span style="float:right;">K<sub>total</sub>=<span id="pp-ktotal">0.00</span></span>
-        </div>
-        <div id="pp-fittings-list" style="max-height:180px;overflow-y:auto;"></div>
 
-        <div style="margin-top:8px;padding:6px 8px;background:rgba(255,255,255,0.02);border:1px solid #21262d;border-radius:6px;">
-          <label class="pp-label" style="margin-bottom:3px;">Additional Custom K (Additive)</label>
-          <input id="pp-custom-k" type="number" step="0.01" min="0" class="pp-input" placeholder="0.00" value="0">
-        </div>
-      </div>
-    </div><!-- end props panel -->
-  </div><!-- end canvas+props row -->
+          <div class="pp-row">
+            <div class="pp-field">
+              <label class="pp-label">Length (m)</label>
+              <input id="pp-length" type="number" min="0.1" step="0.5" class="pp-input" value="10">
+            </div>
+            <div class="pp-field">
+              <label class="pp-label" title="Elevation difference Delta Z = Z_to - Z_from">Elevation &Delta;Z (m)</label>
+              <input id="pp-elev-change" type="number" step="0.5" class="pp-input" value="0">
+            </div>
+          </div>
+          <!-- Elevation integrity indicator connecting endpoints -->
+          <div id="pp-elev-integrity-badge" style="font-size:10.5px;color:#94a3b8;margin-top:-6px;margin-bottom:8px;padding:4px 8px;background:rgba(255,255,255,0.02);border:1px solid #21262d;border-radius:6px;display:flex;align-items:center;justify-content:space-between;">
+            <span>Inlet: <strong id="pp-elev-from-val" style="color:#a78bfa;">0.0 m</strong></span>
+            <i class="bi bi-arrow-right" style="color:#475569;font-size:10px;"></i>
+            <span>Outlet: <strong id="pp-elev-to-val" style="color:#a78bfa;">0.0 m</strong></span>
+          </div>
 
-  <!-- Results section -->
+          <label class="pp-label">Routing</label>
+          <select id="pp-routing" class="pp-input">
+            <option value="auto">Auto (bends if needed)</option>
+            <option value="straight">Straight diagonal</option>
+            <option value="orthogonal">Orthogonal (L-shape)</option>
+          </select>
+
+          <!-- Custom Roughness (epsilon) & Hazen-Williams (C) Overrides -->
+          <div style="margin-top:8px;margin-bottom:10px;padding:8px 9px;background:rgba(255,255,255,0.02);border:1px solid #30363d;border-radius:6px;">
+            <div style="font-size:10.5px;font-weight:700;color:#38bdf8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">
+              <i class="bi bi-sliders2"></i> Custom Roughness &amp; C Factor
+            </div>
+
+            <!-- Custom Roughness factor -->
+            <div style="margin-bottom:6px;">
+              <label style="font-size:11px;color:#c9d1d9;cursor:pointer;display:flex;align-items:center;gap:5px;margin-bottom:3px;">
+                <input type="checkbox" id="pp-use-custom-roughness" style="accent-color:#38bdf8;cursor:pointer;">
+                <span>Use Custom Roughness &epsilon; (mm)</span>
+              </label>
+              <div id="pp-custom-roughness-wrap" style="display:none;margin-top:3px;">
+                <input id="pp-custom-roughness" type="number" step="0.001" min="0.0001" max="10" class="pp-input"
+                       placeholder="e.g. 0.046" style="margin-bottom:2px;" title="Absolute pipe wall roughness in mm">
+                <div style="font-size:9.5px;color:#64748b;">Overrides material table roughness for Darcy-Weisbach</div>
+              </div>
+            </div>
+
+            <!-- Custom Hazen-Williams C -->
+            <div>
+              <label style="font-size:11px;color:#c9d1d9;cursor:pointer;display:flex;align-items:center;gap:5px;margin-bottom:3px;">
+                <input type="checkbox" id="pp-use-custom-hazen" style="accent-color:#38bdf8;cursor:pointer;">
+                <span>Use Custom Hazen-Williams Factor (C)</span>
+              </label>
+              <div id="pp-custom-hazen-wrap" style="display:none;margin-top:3px;">
+                <input id="pp-custom-hazen-c" type="number" step="1" min="20" max="200" class="pp-input"
+                       placeholder="e.g. 130" style="margin-bottom:2px;" title="Hazen-Williams friction coefficient C">
+                <div style="font-size:9.5px;color:#64748b;">Overrides default C (e.g. Steel=120, HDPE=140, PVC=150)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fittings / minor losses -->
+          <div class="pp-section-title" style="margin-top:4px;">
+            <i class="bi bi-tools"></i> Fittings &amp; Valves
+            <span style="float:right;color:#e6edf3;">
+              K<sub>total</sub> = <span id="pp-ktotal">0.00</span>
+            </span>
+          </div>
+          <div id="pp-fittings-list" style="max-height:200px;overflow-y:auto;">
+            <!-- Fitting checkboxes and quantities populated by JS -->
+          </div>
+
+          <div style="margin-top:8px;padding:6px 8px;background:rgba(255,255,255,0.02);border:1px solid #21262d;border-radius:6px;">
+            <label class="pp-label" style="margin-bottom:3px;">Additional Custom K (Additive)</label>
+            <input id="pp-custom-k" type="number" step="0.01" min="0" class="pp-input" placeholder="0.00" value="0">
+          </div>
+
+          <div style="font-size:10px;color:#334155;margin-top:6px;">
+            Minor loss: h<sub>m</sub> = K &times; V&sup2; / (2g)
+          </div>
+        </div><!-- end pipe props -->
+
+      </div><!-- end props panel -->
+
+    </div><!-- end main row -->
+
+  </div><!-- end pn-outer -->
+
+  <!-- RESULTS SECTION -->
   <div id="pn-results-section" style="display:none;margin-top:16px;">
+
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
       <h2 style="font-size:1rem;font-weight:700;color:#e6edf3;margin:0;display:flex;align-items:center;gap:8px;">
-        <i class="bi bi-bar-chart-line" style="color:#22c55e;"></i> Friction Loss Results
+        <i class="bi bi-bar-chart-line" style="color:#22c55e;"></i>
+        Friction Loss Results
       </h2>
-      <span style="font-size:11px;color:#64748b;"><span id="res-count">0</span> pipe segments</span>
+      <span style="font-size:11px;color:#64748b;">
+        <span id="res-count">0</span> pipe segments analysed
+      </span>
     </div>
-    <!-- Summary cards -->
-    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+
+    <!-- Summary stat cards -->
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
       <div class="res-card" style="border-color:rgba(168,85,247,0.35);background:rgba(168,85,247,0.04);">
-        <div class="res-card-value" style="color:#c084fc;font-size:16px;"><span id="res-solver-status">Converged</span></div>
+        <div class="res-card-value" style="color:#c084fc;font-size:17px;">
+          <span id="res-solver-status">Converged</span>
+        </div>
         <div class="res-card-label" style="color:#c084fc;font-weight:700;">Solver: <span id="res-solver-name">GGM</span></div>
       </div>
       <div class="res-card" style="border-color:rgba(248,113,113,0.3);">
-        <div class="res-card-value" style="color:#f87171;"><span id="res-major">—</span> m</div>
-        <div class="res-card-label">Major Friction (<span id="res-method-label">Darcy-Weisbach</span>)</div>
+        <div class="res-card-value" style="color:#f87171;">
+          <span id="res-major">—</span> m
+        </div>
+        <div class="res-card-label">Major Friction Head (<span id="res-method-label">Darcy-Weisbach</span>)</div>
       </div>
       <div class="res-card" style="border-color:rgba(251,146,60,0.3);">
-        <div class="res-card-value" style="color:#fb923c;"><span id="res-minor">—</span> m</div>
-        <div class="res-card-label">Minor (Fittings &amp; Valves)</div>
+        <div class="res-card-value" style="color:#fb923c;">
+          <span id="res-minor">—</span> m
+        </div>
+        <div class="res-card-label">Minor Head (Fittings &amp; Valves)</div>
       </div>
       <div class="res-card" style="border-color:rgba(167,139,250,0.3);">
-        <div class="res-card-value" style="color:#a78bfa;"><span id="res-elev">—</span> m</div>
+        <div class="res-card-value" style="color:#a78bfa;">
+          <span id="res-elev">—</span> m
+        </div>
         <div class="res-card-label">Static Elevation Head</div>
       </div>
       <div class="res-card" style="border-color:rgba(251,191,36,0.4);background:rgba(251,191,36,0.04);">
-        <div class="res-card-value" style="color:#fbbf24;"><span id="res-total">—</span> m</div>
-        <div class="res-card-label" style="color:#d97706;font-weight:700;">Total System Head</div>
+        <div class="res-card-value" style="color:#fbbf24;">
+          <span id="res-total">—</span> m
+        </div>
+        <div class="res-card-label" style="color:#d97706;font-weight:700;">Total System Head Required</div>
       </div>
-      <!-- NPSHa Summary Card -->
+      <div class="res-card" style="border-color:rgba(56,189,248,0.35);background:rgba(56,189,248,0.04);">
+        <div class="res-card-value" style="color:#38bdf8;font-size:18px;">
+          <span id="res-r-sys">—</span>
+        </div>
+        <div class="res-card-label" style="color:#38bdf8;font-weight:700;">Consolidated R<sub>sys</sub></div>
+      </div>
+      <!-- NPSHa Available Summary Card -->
       <div class="res-card" style="border-color:rgba(20,184,166,0.4);background:rgba(20,184,166,0.05);cursor:pointer;"
-           title="Net Positive Suction Head Available (NPSHa). Click for formulas and engineering notes."
+           title="Net Positive Suction Head Available (NPSHa). Click for formulas, atmospheric/vapor pressure, and cavitation safety guide."
            onclick="showHydraulicHelp('npsh')">
-        <div class="res-card-value" style="color:#2dd4bf;font-size:18px;"><span id="res-npsha">—</span> m</div>
-        <div class="res-card-label" style="color:#14b8a6;font-weight:700;">NPSH Available (NPSHa) <i class="bi bi-info-circle" style="font-size:10px;"></i></div>
+        <div class="res-card-value" style="color:#2dd4bf;font-size:18px;">
+          <span id="res-npsha">—</span> m
+        </div>
+        <div class="res-card-label" style="color:#14b8a6;font-weight:700;">
+          NPSH Available (NPSHa) <i class="bi bi-info-circle" style="font-size:10px;"></i>
+        </div>
       </div>
     </div>
-    <!-- Results table -->
-    <div style="overflow-x:auto;border:1px solid #30363d;border-radius:8px;">
-      <table id="pn-results-table" style="width:100%;border-collapse:collapse;font-size:12px;">
+
+    <!-- Section: Pipe Hydraulic & Resistance Results -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <h3 style="font-size:0.88rem;font-weight:700;color:#cbd5e1;margin:0;display:flex;align-items:center;gap:6px;">
+        <i class="bi bi-water" style="color:#38bdf8;"></i> Pipe Segments &amp; Friction Losses
+      </h3>
+      <span style="font-size:11px;color:#64748b;">Losses calculated across continuous pipe runs &bull; Click header with info icon for engineering notes</span>
+    </div>
+
+    <!-- Per-segment table -->
+    <div style="overflow-x:auto;border:1px solid #30363d;border-radius:8px;margin-bottom:16px;">
+      <table id="pn-results-table">
         <thead>
           <tr style="background:#161b22;">
-            <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">ID</th>
-            <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Label</th>
-            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">D (mm)</th>
-            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">L (m)</th>
-            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Pipe volumetric flow rate (m³/h and L/s). Click for help notes &amp; formulas." onclick="showHydraulicHelp('flow_pressure')">Flow (m³/h) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
-            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Velocity (m/s)</th>
-            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Operating gauge pressure in pipe &amp; inlet/outlet drop. Click for help notes &amp; formulas." onclick="showHydraulicHelp('flow_pressure')">Pressure (kPa) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
-            <th style="padding:6px 10px;text-align:center;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Regime / Re</th>
-            <th id="th-friction-factor" style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Friction factor f or Hazen-Williams C. Click for help notes." onclick="showHydraulicHelp('exp_n')">f <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
-            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">K<sub>total</sub></th>
-            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Major friction head loss along pipe wall (hf = f * L/D * V²/2g). Click for help notes &amp; formulas." onclick="showHydraulicHelp('hf_major')">hf Major (m) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
-            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Minor head loss from fittings and valves (hm = K * V²/2g). Click for help notes &amp; formulas." onclick="showHydraulicHelp('hf_minor')">hf Minor (m) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
-            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Elev (m)</th>
-            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">h Total (m)</th>
-            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Consolidated Hydraulic Resistance R (hf = R * Q^n). Click for formulas and details." onclick="showHydraulicHelp('res_r')">Res. R <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
-            <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Flow Exponent n (2.0 for Darcy-Weisbach, 1.852 for Hazen-Williams). Click for formulas and details." onclick="showHydraulicHelp('exp_n')">Exp. n <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
+            <th style="text-align:left;">ID</th>
+            <th style="text-align:left;">Label</th>
+            <th>D (mm)</th>
+            <th>L (m)</th>
+            <th style="cursor:pointer;" title="Pipe volumetric flow rate (m³/h and L/s)." onclick="showHydraulicHelp('flow_pressure')">Flow (m³/h) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
+            <th>Velocity (m/s)</th>
+            <th style="cursor:pointer;" title="Operating gauge pressure in pipe &amp; inlet/outlet drop." onclick="showHydraulicHelp('flow_pressure')">Pressure (kPa) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
+            <th>Regime / Re</th>
+            <th id="th-friction-factor" style="cursor:pointer;" title="Friction factor f or Hazen-Williams C." onclick="showHydraulicHelp('exp_n')">f <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
+            <th>K<sub>total</sub></th>
+            <th style="cursor:pointer;" title="Major friction head loss along pipe wall (hf = f * L/D * V²/2g)." onclick="showHydraulicHelp('hf_major')">hf Major (m) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
+            <th style="cursor:pointer;" title="Minor head loss from fittings and valves (hm = K * V²/2g)." onclick="showHydraulicHelp('hf_minor')">hf Minor (m) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
+            <th>Elev (m)</th>
+            <th>h Total (m)</th>
+            <th style="cursor:pointer;" title="Consolidated Hydraulic Resistance R (hf = R * Q^n)." onclick="showHydraulicHelp('res_r')">Res. R <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
+            <th style="cursor:pointer;" title="Flow Exponent n." onclick="showHydraulicHelp('exp_n')">Exp. n <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
+            <th style="cursor:pointer;" title="Slurry Particle Settling Velocity Vt and Durand Critical Deposition Velocity Vc." onclick="showHydraulicHelp('slurry')">Slurry Vt / Vc <i class="bi bi-info-circle" style="color:#f59e0b;font-size:10px;"></i></th>
+            <th style="cursor:pointer;" title="Water Hammer Joukowsky wave speed 'a' and transient surge pressure delta-P." onclick="showHydraulicHelp('water_hammer')">Wave / Surge <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
+            <th style="cursor:pointer;" title="Barlow pipe wall circumferential hoop stress and safety factor." onclick="showHydraulicHelp('pipe_stress')">Hoop Stress <i class="bi bi-info-circle" style="color:#4ade80;font-size:10px;"></i></th>
           </tr>
         </thead>
         <tbody id="res-table-body"></tbody>
       </table>
     </div>
 
-    <!-- Node Results Table -->
-    <div style="margin-top:14px;">
-      <div style="font-weight:700;font-size:11px;color:#cbd5e1;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;">
-        <div style="display:flex;align-items:center;gap:6px;">
+    <!-- Section: Node Hydraulic Grade Line (HGL) & Pressures -->
+    <div style="margin-top:16px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <h3 style="font-size:0.88rem;font-weight:700;color:#cbd5e1;margin:0;display:flex;align-items:center;gap:6px;">
           <i class="bi bi-geo-alt-fill" style="color:#c084fc;"></i> Node Hydraulic Grade Line (HGL) &amp; Pressures
           <button type="button" class="pn-btn" onclick="showHydraulicHelp('hgl_pressures')"
             style="font-size:10px;padding:2px 8px;margin-left:6px;background:rgba(192,132,252,0.15);border:1px solid rgba(192,132,252,0.4);color:#c084fc;cursor:pointer;display:inline-flex;align-items:center;gap:4px;"
             title="Click to read help notes on HGL, Elevation, and Gauge Pressures">
             <i class="bi bi-info-circle"></i> Help Notes &amp; Formulas
           </button>
-        </div>
-        <span style="font-size:10px;color:#64748b;">Nodal piezometric heads &amp; pressures</span>
+        </h3>
+        <span style="font-size:11px;color:#64748b;">Nodal energy elevation and gauge pressures</span>
       </div>
       <div style="overflow-x:auto;border:1px solid #30363d;border-radius:8px;">
-        <table id="pn-node-results-table" style="width:100%;border-collapse:collapse;font-size:12px;">
+        <table id="pn-node-results-table">
           <thead>
             <tr style="background:#161b22;">
-              <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Node ID</th>
-              <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Label</th>
-              <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Type</th>
-              <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Physical elevation Z above datum. Click for help notes." onclick="showHydraulicHelp('hgl_pressures')">Elevation Z (m) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;"></i></th>
-              <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Hydraulic Grade Line (HGL = Z + P/(ρ·g), where g = 9.80665 m/s²). Click for help notes." onclick="showHydraulicHelp('hgl_pressures')">Total Head HGL (m) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;"></i></th>
-              <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Pressure Head (P/(ρ·g) = HGL - Z, where g = 9.80665 m/s²). Click for help notes." onclick="showHydraulicHelp('hgl_pressures')">Pressure Head P/(ρ·g) (m) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;"></i></th>
-              <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Gauge Pressure in kPa (Pressure Head * ρ * g / 1000). Click for help notes." onclick="showHydraulicHelp('hgl_pressures')">Pressure (kPa) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;"></i></th>
+              <th style="padding:6px 10px;text-align:left;">Node ID</th>
+              <th style="padding:6px 10px;text-align:left;">Label</th>
+              <th style="padding:6px 10px;text-align:left;">Type</th>
+              <th style="padding:6px 10px;text-align:right;cursor:pointer;" title="Physical elevation Z above datum." onclick="showHydraulicHelp('hgl_pressures')">Elevation Z (m) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;"></i></th>
+              <th style="padding:6px 10px;text-align:right;cursor:pointer;" title="Hydraulic Grade Line (HGL)." onclick="showHydraulicHelp('hgl_pressures')">Total Head HGL (m) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;"></i></th>
+              <th style="padding:6px 10px;text-align:right;cursor:pointer;" title="Pressure Head P/(ρ·g)." onclick="showHydraulicHelp('hgl_pressures')">Pressure Head P/(ρ·g) (m) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;"></i></th>
+              <th style="padding:6px 10px;text-align:right;cursor:pointer;" title="Gauge Pressure in kPa." onclick="showHydraulicHelp('hgl_pressures')">Pressure (kPa) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;"></i></th>
+              <th style="padding:6px 10px;text-align:right;">Demand (m³/h)</th>
             </tr>
           </thead>
           <tbody id="res-node-table-body"></tbody>
@@ -1727,46 +2364,246 @@
       </div>
     </div>
 
-    <div id="pn-formula-reference" style="margin-top:10px;font-size:11px;color:#64748b;line-height:1.8;">
+    <!-- Formula reference -->
+    <div id="pn-formula-reference"
+      style="margin-top:12px;padding:10px 14px;background:#161b22;border:1px solid #21262d;border-radius:8px;font-size:11px;color:#64748b;line-height:1.9;">
       <button type="button" class="pn-btn" onclick="showHydraulicHelp('res_r')"
-        style="font-size:10.5px;padding:2px 10px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.4);color:#38bdf8;cursor:pointer;display:inline-flex;align-items:center;gap:5px;float:right;margin-top:-2px;"
+        style="font-size:10.5px;padding:3px 10px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.4);color:#38bdf8;cursor:pointer;display:inline-flex;align-items:center;gap:5px;float:right;margin-top:-2px;"
         title="Click to view full hydraulic reference notes and formulas">
         <i class="bi bi-book-half"></i> Full Guide &amp; Formulas
       </button>
-      Darcy-Weisbach &bull; Swamee-Jain friction factor &bull; K-factor method (Crane TP-410) &bull; Water at 20&#8451;
+      <strong style="color:#8b949e;">Calculation methods:</strong>
+      Major losses: <code style="color:#58a6ff;">hf = f (L/D) V&sup2;/2g</code> &mdash;
+      Friction factor: <code style="color:#58a6ff;">Swamee-Jain approximation to Colebrook-White</code> &mdash;
+      Minor losses: <code style="color:#58a6ff;">hm = K V&sup2;/2g</code> (K-factor method, Crane TP-410) &mdash;
+      Fluid: <code style="color:#58a6ff;">water at 20&deg;C</code>
+    </div>
+
+  </div><!-- end results section -->
+
+  <!-- SLURRY & ADVANCED PIPELINE ANALYSIS MODAL -->
+  <div id="slurry-modal-overlay"
+    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;backdrop-filter:blur(4px);padding:16px;overflow-y:auto;"
+    onclick="if(event.target===this)toggleSlurryModal(false)">
+    <div style="max-width:680px;margin:30px auto;background:#161b22;border:1px solid #30363d;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.6);overflow:hidden;display:flex;flex-direction:column;">
+      
+      <!-- Modal Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #21262d;background:#0d1117;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <i class="bi bi-layers-fill" style="color:#f59e0b;font-size:1.25rem;"></i>
+          <div>
+            <h3 style="margin:0;font-size:1rem;font-weight:700;color:#f0f6fc;">Slurry Transport &amp; Advanced Pipeline Mechanics</h3>
+            <div style="font-size:11px;color:#8b949e;">Durand deposition velocity, particle settling, water hammer wave speed, Barlow hoop stress</div>
+          </div>
+        </div>
+        <button type="button" onclick="toggleSlurryModal(false)" style="background:none;border:none;color:#8b949e;cursor:pointer;font-size:1.3rem;" title="Close">&times;</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div style="padding:20px;display:flex;flex-direction:column;gap:16px;">
+        
+        <!-- Slurry Enable Switch -->
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <label for="slurry-enable-toggle" style="font-size:13px;font-weight:700;color:#f0f6fc;cursor:pointer;display:flex;align-items:center;gap:8px;margin:0;">
+              <input type="checkbox" id="slurry-enable-toggle" style="width:16px;height:16px;accent-color:#f59e0b;cursor:pointer;">
+              Enable Slurry Transport Calculations
+            </label>
+            <div style="font-size:11px;color:#8b949e;margin-top:2px;">
+              Computes particle settling velocity (Ferguson &amp; Church), Durand critical deposition velocity (Vc), and concentration conversions.
+            </div>
+          </div>
+          <span id="slurry-status-badge" style="font-size:10px;padding:3px 8px;border-radius:4px;background:rgba(255,255,255,0.05);color:#8b949e;font-weight:700;">Disabled</span>
+        </div>
+
+        <!-- Slurry Parameters Grid -->
+        <div id="slurry-params-grid" style="display:grid;grid-template-columns:repeat(2, 1fr);gap:12px;">
+          <div style="background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;">
+            <label class="pp-label" title="Median particle diameter d50 in millimeters">Particle Size d<sub>50</sub> (mm)</label>
+            <input id="slurry-d50" type="number" step="0.01" min="0.01" max="50" value="0.15" class="pp-input" style="margin-bottom:4px;">
+            <div style="font-size:10px;color:#64748b;">e.g. 0.05mm (silt/slimes), 0.15mm (fine sand), 0.5mm (medium sand)</div>
+          </div>
+
+          <div style="background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;">
+            <label class="pp-label" title="Specific gravity of dry solid mineral particles">Solids Specific Gravity (S<sub>s</sub>)</label>
+            <input id="slurry-solids-sg" type="number" step="0.05" min="1.05" max="8.0" value="2.65" class="pp-input" style="margin-bottom:4px;">
+            <div style="font-size:10px;color:#64748b;">e.g. 2.65 (Silica quartz), 3.0 (Basalt), 5.0 (Magnetite / Iron ore)</div>
+          </div>
+
+          <div style="background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;">
+            <label class="pp-label" title="Solids concentration by weight percentage">Solids Concentration C<sub>w</sub> (% wt)</label>
+            <input id="slurry-c-weight" type="number" step="1" min="1" max="75" value="25" class="pp-input" style="margin-bottom:4px;">
+            <div style="font-size:10px;color:#64748b;">Solids weight percent (mass fraction of dry solids in mixture)</div>
+          </div>
+
+          <div style="background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;">
+            <label class="pp-label" title="Calculated volumetric concentration Cv (%)">Volumetric Concentration C<sub>v</sub> (%)</label>
+            <input id="slurry-c-volume" type="text" readonly class="pp-input" value="11.2 %" style="background:#161b22;color:#38bdf8;font-weight:700;margin-bottom:4px;">
+            <div style="font-size:10px;color:#64748b;">Auto-converted: C<sub>v</sub> = (C<sub>w</sub>/S<sub>s</sub>) / [(C<sub>w</sub>/S<sub>s</sub>) + (1-C<sub>w</sub>)/S<sub>l</sub>]</div>
+          </div>
+        </div>
+
+        <!-- Advanced Pipe Analysis Summary -->
+        <div style="background:rgba(56,189,248,0.04);border:1px solid rgba(56,189,248,0.2);border-radius:8px;padding:12px;">
+          <div style="font-size:11px;font-weight:700;color:#38bdf8;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+            <i class="bi bi-info-circle"></i> Additional Pipe Analysis Calculations Included:
+          </div>
+          <ul style="margin:0;padding-left:18px;font-size:11.5px;color:#cbd5e1;line-height:1.6;">
+            <li><strong>Particle Settling Velocity (V<sub>t</sub>):</strong> Universal explicit formula (Ferguson &amp; Church 2004).</li>
+            <li><strong>Durand Critical Deposition Velocity (V<sub>c</sub>):</strong> Prevents bed deposition (sanding hazard).</li>
+            <li><strong>Joukowsky Water Hammer Analysis:</strong> Wave speed <code style="color:#58a6ff;">a</code> and transient surge <code style="color:#58a6ff;">&Delta;P</code>.</li>
+            <li><strong>Barlow Pipe Hoop Stress (&sigma;):</strong> Internal pressure stress and safety factor.</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div style="padding:12px 20px;border-top:1px solid #21262d;background:#0d1117;display:flex;justify-content:flex-end;gap:8px;">
+        <button type="button" class="pn-btn" onclick="toggleSlurryModal(false)">Close</button>
+        <button type="button" class="pn-btn pn-btn-success" onclick="applySlurrySettings()">Apply &amp; Recalculate</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MANAGE FITTINGS & MATERIALS MODAL -->
+  <div id="manage-modal-overlay"
+    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;backdrop-filter:blur(3px);"
+    onclick="if(event.target===this)toggleManageModal()">
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(860px,92vw);max-height:85vh;background:#161b22;border:1px solid #30363d;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+
+      <!-- Modal header -->
+      <div style="display:flex;align-items:center;padding:14px 20px;border-bottom:1px solid #21262d;flex-shrink:0;">
+        <i class="bi bi-database-gear" style="color:#a78bfa;font-size:1.1rem;margin-right:10px;"></i>
+        <h3 style="margin:0;font-size:.95rem;font-weight:700;color:#e6edf3;">Manage Reference Data</h3>
+        <div style="margin-left:auto;display:flex;gap:6px;">
+          <button class="pn-btn manage-tab-btn active" data-tab="fittings" onclick="switchManageTab('fittings')"
+            style="font-size:11px;padding:3px 10px;">
+            <i class="bi bi-tools"></i> Fittings
+          </button>
+          <button class="pn-btn manage-tab-btn" data-tab="materials" onclick="switchManageTab('materials')"
+            style="font-size:11px;padding:3px 10px;">
+            <i class="bi bi-bricks"></i> Materials
+          </button>
+        </div>
+        <button onclick="toggleManageModal()"
+          style="background:none;border:none;color:#8b949e;cursor:pointer;font-size:1.2rem;margin-left:12px;"
+          title="Close">&times;</button>
+      </div>
+
+      <!-- Fittings Tab -->
+      <div id="manage-tab-fittings" style="flex:1;overflow-y:auto;padding:16px 20px;">
+        <div style="display:flex;align-items:center;margin-bottom:12px;gap:8px;">
+          <span style="font-size:12px;color:#8b949e;">K-factors for minor loss calculations</span>
+          <button class="pn-btn pn-btn-success" onclick="showAddFittingForm()"
+            style="margin-left:auto;font-size:11px;padding:3px 10px;">
+            <i class="bi bi-plus-lg"></i> Add Fitting
+          </button>
+        </div>
+
+        <!-- Add fitting form -->
+        <div id="add-fitting-form"
+          style="display:none;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px;margin-bottom:12px;">
+          <div style="display:grid;grid-template-columns:1fr 1.5fr .8fr .8fr;gap:8px;align-items:end;">
+            <div>
+              <label class="pp-label" style="margin-bottom:4px;">Key (ID)</label>
+              <input id="new-fit-key" type="text" class="pp-input" placeholder="e.g. strainer_basket" style="font-size:11px;">
+            </div>
+            <div>
+              <label class="pp-label" style="margin-bottom:4px;">Label</label>
+              <input id="new-fit-label" type="text" class="pp-input" placeholder="e.g. Strainer Basket" style="font-size:11px;">
+            </div>
+            <div>
+              <label class="pp-label" style="margin-bottom:4px;">K Factor</label>
+              <input id="new-fit-k" type="number" step="0.01" min="0" class="pp-input" placeholder="e.g. 2.5" style="font-size:11px;">
+            </div>
+            <div>
+              <label class="pp-label" style="margin-bottom:4px;">Category</label>
+              <select id="new-fit-cat" class="pp-input" style="font-size:11px;">
+                <option value="valve">Valve</option>
+                <option value="elbow">Elbow</option>
+                <option value="tee">Tee</option>
+                <option value="entry_exit">Entry / Exit</option>
+                <option value="transition">Transition</option>
+                <option value="general" selected>General</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end;">
+            <button class="pn-btn" onclick="hideAddFittingForm()" style="font-size:11px;">Cancel</button>
+            <button class="pn-btn pn-btn-success" onclick="saveNewFitting()" style="font-size:11px;"><i class="bi bi-check-lg"></i> Save</button>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto;border:1px solid #21262d;border-radius:8px;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:#0d1117;">
+                <th style="text-align:left;padding:8px 10px;color:#8b949e;font-weight:600;">Key</th>
+                <th style="text-align:left;padding:8px 10px;color:#8b949e;font-weight:600;">Label</th>
+                <th style="text-align:center;padding:8px 10px;color:#8b949e;font-weight:600;">K Factor</th>
+                <th style="text-align:center;padding:8px 10px;color:#8b949e;font-weight:600;">Category</th>
+                <th style="text-align:center;padding:8px 10px;color:#8b949e;font-weight:600;width:100px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="manage-fittings-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Materials Tab -->
+      <div id="manage-tab-materials" style="display:none;flex:1;overflow-y:auto;padding:16px 20px;">
+        <div style="display:flex;align-items:center;margin-bottom:12px;gap:8px;">
+          <span style="font-size:12px;color:#8b949e;">Roughness values (&epsilon; mm) for Darcy-Weisbach</span>
+          <button class="pn-btn pn-btn-success" onclick="showAddMaterialForm()"
+            style="margin-left:auto;font-size:11px;padding:3px 10px;">
+            <i class="bi bi-plus-lg"></i> Add Material
+          </button>
+        </div>
+
+        <!-- Add material form -->
+        <div id="add-material-form"
+          style="display:none;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px;margin-bottom:12px;">
+          <div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:8px;align-items:end;">
+            <div>
+              <label class="pp-label" style="margin-bottom:4px;">Key (ID)</label>
+              <input id="new-mat-key" type="text" class="pp-input" placeholder="e.g. copper" style="font-size:11px;">
+            </div>
+            <div>
+              <label class="pp-label" style="margin-bottom:4px;">Label</label>
+              <input id="new-mat-label" type="text" class="pp-input" placeholder="e.g. Copper Tubing (e = 0.0015 mm)" style="font-size:11px;">
+            </div>
+            <div>
+              <label class="pp-label" style="margin-bottom:4px;">Roughness (mm)</label>
+              <input id="new-mat-rough" type="number" step="0.001" min="0" class="pp-input" placeholder="e.g. 0.0015" style="font-size:11px;">
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end;">
+            <button class="pn-btn" onclick="hideAddMaterialForm()" style="font-size:11px;">Cancel</button>
+            <button class="pn-btn pn-btn-success" onclick="saveNewMaterial()" style="font-size:11px;"><i class="bi bi-check-lg"></i> Save</button>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto;border:1px solid #21262d;border-radius:8px;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:#0d1117;">
+                <th style="text-align:left;padding:8px 10px;color:#8b949e;font-weight:600;">Key</th>
+                <th style="text-align:left;padding:8px 10px;color:#8b949e;font-weight:600;">Label</th>
+                <th style="text-align:center;padding:8px 10px;color:#8b949e;font-weight:600;">Roughness (mm)</th>
+                <th style="text-align:center;padding:8px 10px;color:#8b949e;font-weight:600;width:100px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="manage-materials-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   </div>
 
 </div><!-- end #tab-panel-pipenet -->
-
-<!-- Shared styles for the pipe network designer -->
-<style>
-  /* Toolbar button styles (scoped to this page) */
-  .pn-btn {
-    display:inline-flex;align-items:center;gap:5px;
-    padding:5px 10px;border-radius:6px;
-    border:1px solid #30363d;background:#21262d;
-    color:#c9d1d9;font-size:12px;cursor:pointer;
-    transition:all .15s;white-space:nowrap;
-  }
-  .pn-btn:hover { background:#2d333b;color:#e6edf3;border-color:#444c56; }
-  .pn-btn.active-tool { background:rgba(88,166,255,.15);border-color:#58a6ff;color:#58a6ff; }
-  .pn-btn-danger { border-color:rgba(248,81,73,.4);color:#f85149; }
-  .pn-btn-danger:hover { background:rgba(248,81,73,.1); }
-  .pn-btn-success { background:rgba(34,197,94,.15);border-color:#22c55e;color:#22c55e; }
-  .pn-btn-success:hover { background:rgba(34,197,94,.25); }
-  .pn-sep { width:1px;height:24px;background:#30363d;margin:0 4px;flex-shrink:0; }
-  /* Properties panel helpers */
-  .pp-label { display:block;font-size:11px;color:#8b949e;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em; }
-  .pp-input { width:100%;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;padding:5px 8px;font-size:12px;margin-bottom:10px;box-sizing:border-box; }
-  .pp-input:focus { outline:none;border-color:#58a6ff;box-shadow:0 0 0 3px rgba(88,166,255,.12); }
-  .pp-section-title { font-size:10px;font-weight:600;color:#58a6ff;text-transform:uppercase;letter-spacing:.1em;padding-bottom:6px;margin-bottom:8px;border-bottom:1px solid #21262d;margin-top:4px; }
-  .pp-chip { display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:11px;background:#21262d;border:1px solid #30363d;border-radius:4px;padding:2px 7px;color:#58a6ff; }
-  /* Results cards */
-  .res-card { background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;text-align:center;flex:1; }
-  .res-card-value { font-size:20px;font-weight:700;font-family:monospace; }
-  .res-card-label { font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-top:2px; }
-</style>
 
 <!-- Tab switching JS (inline, lightweight) -->
 <script>
@@ -1788,11 +2625,20 @@
     if (tab === 'selection') {
       if (sel) { sel.style.borderBottom = '2px solid #58a6ff'; sel.style.color = '#58a6ff'; }
       if (pn)  { pn.style.borderBottom  = '2px solid transparent'; pn.style.color  = '#8b949e'; }
+      // When switching back to selection tab, sync any edits from Pipe Network SG back to fluid density
+      if (typeof window.syncPipeNetworkSgToPumpSelection === 'function') {
+        window.syncPipeNetworkSgToPumpSelection();
+      }
     } else {
       if (pn)  { pn.style.borderBottom  = '2px solid #22c55e'; pn.style.color  = '#22c55e'; }
       if (sel) { sel.style.borderBottom = '2px solid transparent'; sel.style.color = '#8b949e'; }
-      // Trigger SVG resize when tab becomes visible
+      // When switching to pipe network tab, ensure SG in pipe network matches pump selection
+      if (typeof window.syncPumpSelectionSgToPipeNetwork === 'function') {
+        window.syncPumpSelectionSgToPipeNetwork();
+      }
+      // Trigger SVG resize and redraw when tab becomes visible
       if (typeof applyTransform === 'function') applyTransform();
+      if (typeof renderAll === 'function') renderAll();
     }
 
     // Remember the active tab for this browser session
@@ -1806,15 +2652,224 @@
   });
 </script>
 
-<script src="{{ url_for('static', filename='js/pump_selection.js') }}?v=20260905_1340"></script>
+<script>
+  window.__PMP_FITTINGS = {{ fittings_json | default('[]', true) | safe }};
+  window.__PMP_MATERIALS = {{ materials_json | default('[]', true) | safe }};
+  window.__PMP_STANDARD_PIPES = {{ standard_pipes_json | default('[]', true) | safe }};
+  window.__PMP_SESSION_PIPE_NETWORK = {{ pipe_network_json | default('null', true) | safe }};
+</script>
+
+<script src="{{ url_for('static', filename='js/pump_selection.js') }}?v=20260913_1635"></script>
 <script>
   if (typeof initSparklines === 'function') { initSparklines(); }
 </script>
 
-<!-- Load the pipe network JS after the DOM elements above are in place -->
+<script src="{{ url_for('static', filename='js/pipe_network.js') }}?v=20260913_1635"></script>
+
 <script>
-  window.__PMP_SESSION_PIPE_NETWORK = {{ pipe_network_json | default('null', true) | safe }};
-  window.__PMP_STANDARD_PIPES = {{ standard_pipes_json | default('[]', true) | safe }};
+  // ── Manage Reference Data Modal Logic ──────────────────────────────────────
+
+  function toggleManageModal(show) {
+    const overlay = document.getElementById('manage-modal-overlay');
+    if (!overlay) return;
+    const shouldShow = (show !== undefined) ? show : (overlay.style.display === 'none' || !overlay.style.display);
+    if (shouldShow) {
+      overlay.style.display = 'block';
+      refreshManageFittings();
+    } else {
+      overlay.style.display = 'none';
+    }
+  }
+
+  function switchManageTab(tab) {
+    document.querySelectorAll('.manage-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.manage-tab-btn[data-tab="${tab}"]`)?.classList.add('active');
+    const fTab = document.getElementById('manage-tab-fittings');
+    const mTab = document.getElementById('manage-tab-materials');
+    if (fTab) fTab.style.display = tab === 'fittings' ? 'block' : 'none';
+    if (mTab) mTab.style.display = tab === 'materials' ? 'block' : 'none';
+    if (tab === 'fittings') refreshManageFittings();
+    else refreshManageMaterials();
+  }
+
+  // ── Fittings CRUD ────────────────────────────────────────────────────────────
+
+  async function refreshManageFittings() {
+    try {
+      const res = await fetch('/api/pipe-network/fittings');
+      const data = await res.json();
+      const tbody = document.getElementById('manage-fittings-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      data.forEach(f => {
+        const tr = document.createElement('tr');
+        tr.style.cssText = 'border-top:1px solid #21262d;';
+        tr.innerHTML = `
+        <td style="padding:7px 10px;color:#58a6ff;font-family:monospace;font-size:11px;">${f.key}</td>
+        <td style="padding:7px 10px;color:#e6edf3;">${f.label}</td>
+        <td style="padding:7px 10px;text-align:center;color:#fbbf24;font-weight:600;">${f.K}</td>
+        <td style="padding:7px 10px;text-align:center;color:#8b949e;font-size:11px;">${f.category || '—'}</td>
+        <td style="padding:7px 10px;text-align:center;">
+          <button type="button" class="pn-btn" onclick="editFitting(${f.id}, '${f.key}', '${f.label.replace(/'/g, "\\'")}', ${f.K}, '${f.category}')" style="font-size:10px;padding:2px 6px;" title="Edit">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button type="button" class="pn-btn pn-btn-danger" onclick="deleteFitting(${f.id}, '${f.label.replace(/'/g, "\\'")}')" style="font-size:10px;padding:2px 6px;" title="Delete">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>`;
+        tbody.appendChild(tr);
+      });
+    } catch(e) {
+      console.warn('refreshManageFittings notice:', e);
+    }
+  }
+
+  function showAddFittingForm() { const f = document.getElementById('add-fitting-form'); if (f) f.style.display = 'block'; }
+  function hideAddFittingForm() { const f = document.getElementById('add-fitting-form'); if (f) f.style.display = 'none'; }
+
+  async function saveNewFitting() {
+    const key = document.getElementById('new-fit-key')?.value.trim();
+    const label = document.getElementById('new-fit-label')?.value.trim();
+    const K = document.getElementById('new-fit-k')?.value;
+    const category = document.getElementById('new-fit-cat')?.value;
+    if (!key || !label || !K) return alert('All fields are required.');
+    const res = await fetch('/api/pipe-network/fittings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, label, K: parseFloat(K), category })
+    });
+    const result = await res.json();
+    if (!res.ok) return alert(result.error || 'Failed to save');
+    if (typeof FITTINGS !== 'undefined') {
+      FITTINGS.push(result);
+      if (typeof rebuildFittingUI === 'function') rebuildFittingUI();
+    }
+    hideAddFittingForm();
+    const kInp = document.getElementById('new-fit-key'); if (kInp) kInp.value = '';
+    const lInp = document.getElementById('new-fit-label'); if (lInp) lInp.value = '';
+    const kfInp = document.getElementById('new-fit-k'); if (kfInp) kfInp.value = '';
+    refreshManageFittings();
+  }
+
+  async function editFitting(id, key, label, K, category) {
+    const newLabel = prompt('Label:', label);
+    if (newLabel === null) return;
+    const newK = prompt('K Factor:', K);
+    if (newK === null) return;
+    const res = await fetch(`/api/pipe-network/fittings/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label: newLabel, K: parseFloat(newK) })
+    });
+    if (!res.ok) { const e = await res.json(); return alert(e.error || 'Failed'); }
+    const updated = await res.json();
+    if (typeof FITTINGS !== 'undefined') {
+      const idx = FITTINGS.findIndex(f => f.key === key);
+      if (idx >= 0) FITTINGS[idx] = updated;
+      if (typeof rebuildFittingUI === 'function') rebuildFittingUI();
+    }
+    refreshManageFittings();
+  }
+
+  async function deleteFitting(id, label) {
+    if (!confirm(`Delete fitting "${label}"?`)) return;
+    const res = await fetch(`/api/pipe-network/fittings/${id}`, { method: 'DELETE' });
+    if (!res.ok) { const e = await res.json(); return alert(e.error || 'Failed'); }
+    if (typeof FITTINGS !== 'undefined') {
+      const idx = FITTINGS.findIndex(f => f.id === id);
+      if (idx >= 0) FITTINGS.splice(idx, 1);
+      if (typeof rebuildFittingUI === 'function') rebuildFittingUI();
+    }
+    refreshManageFittings();
+  }
+
+  // ── Materials CRUD ───────────────────────────────────────────────────────────
+
+  async function refreshManageMaterials() {
+    try {
+      const res = await fetch('/api/pipe-network/materials');
+      const data = await res.json();
+      const tbody = document.getElementById('manage-materials-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      data.forEach(m => {
+        const tr = document.createElement('tr');
+        tr.style.cssText = 'border-top:1px solid #21262d;';
+        tr.innerHTML = `
+        <td style="padding:7px 10px;color:#58a6ff;font-family:monospace;font-size:11px;">${m.key}</td>
+        <td style="padding:7px 10px;color:#e6edf3;">${m.label}</td>
+        <td style="padding:7px 10px;text-align:center;color:#fbbf24;font-weight:600;">${m.roughness_mm}</td>
+        <td style="padding:7px 10px;text-align:center;">
+          <button type="button" class="pn-btn" onclick="editMaterial(${m.id}, '${m.key}', '${m.label.replace(/'/g, "\\'")}', ${m.roughness_mm})" style="font-size:10px;padding:2px 6px;" title="Edit">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button type="button" class="pn-btn pn-btn-danger" onclick="deleteMaterial(${m.id}, '${m.label.replace(/'/g, "\\'")}')" style="font-size:10px;padding:2px 6px;" title="Delete">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>`;
+        tbody.appendChild(tr);
+      });
+    } catch(e) {
+      console.warn('refreshManageMaterials notice:', e);
+    }
+  }
+
+  function showAddMaterialForm() { const f = document.getElementById('add-material-form'); if (f) f.style.display = 'block'; }
+  function hideAddMaterialForm() { const f = document.getElementById('add-material-form'); if (f) f.style.display = 'none'; }
+
+  async function saveNewMaterial() {
+    const key = document.getElementById('new-mat-key')?.value.trim();
+    const label = document.getElementById('new-mat-label')?.value.trim();
+    const roughness_mm = document.getElementById('new-mat-rough')?.value;
+    if (!key || !label || !roughness_mm) return alert('All fields are required.');
+    const res = await fetch('/api/pipe-network/materials', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, label, roughness_mm: parseFloat(roughness_mm) })
+    });
+    const result = await res.json();
+    if (!res.ok) return alert(result.error || 'Failed to save');
+    if (typeof MATERIALS !== 'undefined') {
+      MATERIALS.push(result);
+      if (typeof rebuildMaterialUI === 'function') rebuildMaterialUI();
+    }
+    hideAddMaterialForm();
+    const kInp = document.getElementById('new-mat-key'); if (kInp) kInp.value = '';
+    const lInp = document.getElementById('new-mat-label'); if (lInp) lInp.value = '';
+    const rInp = document.getElementById('new-mat-rough'); if (rInp) rInp.value = '';
+    refreshManageMaterials();
+  }
+
+  async function editMaterial(id, key, label, roughness_mm) {
+    const newLabel = prompt('Label:', label);
+    if (newLabel === null) return;
+    const newRough = prompt('Roughness (mm):', roughness_mm);
+    if (newRough === null) return;
+    const res = await fetch(`/api/pipe-network/materials/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label: newLabel, roughness_mm: parseFloat(newRough) })
+    });
+    if (!res.ok) { const e = await res.json(); return alert(e.error || 'Failed'); }
+    const updated = await res.json();
+    if (typeof MATERIALS !== 'undefined') {
+      const idx = MATERIALS.findIndex(m => m.key === key);
+      if (idx >= 0) MATERIALS[idx] = updated;
+      if (typeof rebuildMaterialUI === 'function') rebuildMaterialUI();
+    }
+    refreshManageMaterials();
+  }
+
+  async function deleteMaterial(id, label) {
+    if (!confirm(`Delete material "${label}"?`)) return;
+    const res = await fetch(`/api/pipe-network/materials/${id}`, { method: 'DELETE' });
+    if (!res.ok) { const e = await res.json(); return alert(e.error || 'Failed'); }
+    if (typeof MATERIALS !== 'undefined') {
+      const idx = MATERIALS.findIndex(m => m.id === id);
+      if (idx >= 0) MATERIALS.splice(idx, 1);
+      if (typeof rebuildMaterialUI === 'function') rebuildMaterialUI();
+    }
+    refreshManageMaterials();
+  }
 </script>
-<script src="{{ url_for('static', filename='js/pipe_network.js') }}?v=20260912_1315"></script>
 {% endblock %}

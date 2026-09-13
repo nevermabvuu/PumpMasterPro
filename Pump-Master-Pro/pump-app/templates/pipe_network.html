@@ -145,6 +145,214 @@
     font-size: 13px;
   }
 
+  /* Left sidebar: Network Members tree & list */
+  #pn-left-sidebar {
+    width: 220px;
+    min-width: 180px;
+    max-width: 260px;
+    background: #161b22;
+    border-right: 1px solid #30363d;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    font-size: 12px;
+    z-index: 5;
+    transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+
+  #pn-left-sidebar.collapsed {
+    width: 44px !important;
+    min-width: 44px !important;
+    overflow: hidden !important;
+  }
+
+  #pn-left-sidebar.collapsed .pn-sidebar-tools {
+    padding: 6px 4px;
+    gap: 4px;
+  }
+
+  #pn-left-sidebar.collapsed .pn-sidebar-tool-btn {
+    padding: 6px 0;
+    justify-content: center;
+    border-radius: 4px;
+  }
+
+  #pn-left-sidebar.collapsed .pn-sidebar-tool-btn .tool-label,
+  #pn-left-sidebar.collapsed .pn-sidebar-tool-btn .tool-shortcut,
+  #pn-left-sidebar.collapsed .pn-sidebar-tools-header,
+  #pn-left-sidebar.collapsed .pn-sidebar-header span {
+    display: none !important;
+  }
+
+  #pn-left-sidebar.collapsed .pn-sidebar-header {
+    padding: 8px 4px !important;
+    justify-content: center !important;
+    border-bottom: none !important;
+  }
+
+  .pn-sidebar-header {
+    padding: 10px 12px;
+    background: #0d1117;
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .pn-sidebar-tools-header {
+    padding: 8px 12px 4px 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8b949e;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #0d1117;
+  }
+
+  .pn-sidebar-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px 14px 10px;
+    background: #0d1117;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .pn-sidebar-tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #cbd5e1;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+    user-select: none;
+    width: 100%;
+  }
+
+  .pn-sidebar-tool-btn:hover {
+    background: #21262d;
+    border-color: #58a6ff;
+    color: #f0f6fc;
+  }
+
+  .pn-sidebar-tool-btn.active-tool {
+    background: rgba(56, 189, 248, 0.15) !important;
+    border-color: #38bdf8 !important;
+    color: #38bdf8 !important;
+    font-weight: 600;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.25);
+  }
+
+  .pn-sidebar-tool-btn.btn-danger-tool:hover {
+    background: rgba(248, 81, 73, 0.15);
+    border-color: #f85149;
+    color: #f85149;
+  }
+
+  .pn-sidebar-tool-btn .tool-icon {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    flex-shrink: 0;
+  }
+
+  .pn-sidebar-tool-btn .tool-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pn-sidebar-tool-btn .tool-shortcut {
+    font-size: 9px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #8b949e;
+    font-family: monospace;
+  }
+
+  .pn-sidebar-section-header {
+    padding: 8px 12px 4px 12px;
+    background: #161b22;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid #21262d;
+  }
+
+  .pn-sidebar-search {
+    padding: 6px 10px;
+    border-bottom: 1px solid #21262d;
+    background: #161b22;
+  }
+
+  .pn-sidebar-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 8px;
+  }
+
+  .pn-member-group-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8b949e;
+    margin: 6px 4px 4px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .pn-member-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #c9d1d9;
+    border: 1px solid transparent;
+    transition: all 0.12s ease;
+    margin-bottom: 2px;
+  }
+
+  .pn-member-item:hover {
+    background: rgba(88, 166, 255, 0.1);
+    color: #e6edf3;
+    border-color: rgba(88, 166, 255, 0.3);
+  }
+
+  .pn-member-item.active {
+    background: rgba(88, 166, 255, 0.2);
+    border-color: #58a6ff;
+    color: #58a6ff;
+    font-weight: 600;
+  }
+
+  .pn-member-badge {
+    font-size: 9px;
+    font-family: monospace;
+    padding: 1px 5px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
   /* Toolbar buttons */
   .pn-btn {
     display: inline-flex;
@@ -570,54 +778,6 @@
        Contains: mode tools | add-node tools | separator | zoom | file ops
        ──────────────────────────────────────────────────────────────────── -->
   <div id="pn-toolbar">
-
-    <!-- Mode tools -->
-    <button id="btn-select" class="pn-btn active-tool" data-mode="select" title="Select / Move (S)">
-      <i class="bi bi-cursor"></i> Select
-    </button>
-    <button id="btn-connect" class="pn-btn" data-mode="connect" title="Draw Pipe (C)">
-      <i class="bi bi-arrow-right-short" style="font-size:16px;"></i> Pipe
-    </button>
-
-    <div class="pn-sep"></div>
-
-    <!-- Add node tools -->
-    <span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;">Add:</span>
-    <button id="btn-add-reservoir" class="pn-btn" data-mode="add-reservoir" title="Place Reservoir / Sump">
-      <i class="bi bi-water" style="color:#3b82f6;"></i> Reservoir
-    </button>
-    <button id="btn-add-pump" class="pn-btn" data-mode="add-pump" title="Place Pump">
-      <i class="bi bi-gear-fill" style="color:#a855f7;"></i> Pump
-    </button>
-    <button id="btn-add-tank" class="pn-btn" data-mode="add-tank" title="Place Tank">
-      <i class="bi bi-cup-fill" style="color:#22c55e;"></i> Tank
-    </button>
-    <button id="btn-add-junction" class="pn-btn" data-mode="add-junction" title="Place Manifold Junction">
-      <i class="bi bi-intersect" style="color:#f59e0b;"></i> Junction
-    </button>
-    <button id="btn-add-discharge" class="pn-btn" data-mode="add-discharge" title="Place Faucet / Discharge Tap">
-      <i class="bi bi-droplet-fill" style="color:#0284c7;"></i> Faucet
-    </button>
-    <div class="pn-sep"></div>
-    <button id="btn-add-tee" class="pn-btn" data-mode="add-tee" title="Place 3-Way Pipe Tee Fitting">
-      <i class="bi bi-diagram-3" style="color:#f97316;"></i> Tee
-    </button>
-    <button id="btn-add-valve" class="pn-btn" data-mode="add-valve" title="Place Valve (Gate, Globe, Ball, etc.)">
-      <i class="bi bi-heptagon-half" style="color:#ef4444;"></i> Valve
-    </button>
-    <button id="btn-add-elbow" class="pn-btn" data-mode="add-elbow" title="Place 90° / 45° Elbow Fitting">
-      <i class="bi bi-arrow-return-right" style="color:#ec4899;"></i> Elbow
-    </button>
-
-    <div class="pn-sep"></div>
-
-    <!-- Delete -->
-    <button id="btn-delete" class="pn-btn pn-btn-danger" title="Delete selected element (Delete key)">
-      <i class="bi bi-trash3"></i>
-    </button>
-
-    <div class="pn-sep"></div>
-
     <span
       style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-right:-2px;">View:</span>
     <button id="btn-view-schematic" class="pn-btn" title="Schematic View">
@@ -728,6 +888,14 @@
         °C
       </label>
 
+      <span style="color:#484f58;font-size:10px;">/</span>
+      <label style="font-size:11px;color:#94a3b8;margin:0;white-space:nowrap;" title="Liquid saturation vapor pressure Pv in kPa (auto-synced with temperature or custom override for NPSHa calculation)">
+        Pv
+        <input id="pn-vapor-pressure" type="number" step="0.05" min="0.01" max="150" value="2.34" class="pp-input"
+               style="width:52px;display:inline-block;margin:0 2px;padding:2px 4px;height:24px;font-size:11px;" title="Liquid saturation vapor pressure Pv in kPa">
+        kPa
+      </label>
+
       <span style="color:#484f58;font-size:10px;">|</span>
       <i class="bi bi-water" style="color:#38bdf8;font-size:12px;" title="Fluid Specific Gravity (SG) relative to water (1.0)"></i>
       <label style="font-size:11px;color:#94a3b8;margin:0;white-space:nowrap;" title="Fluid Specific Gravity (SG)">
@@ -736,6 +904,11 @@
                style="width:50px;display:inline-block;margin:0 2px;padding:2px 4px;height:24px;font-size:11px;" title="Specific Gravity (SG)">
       </label>
     </div>
+
+    <!-- Slurry & Advanced Pipeline Analysis Tool -->
+    <button id="btn-toggle-slurry" type="button" class="pn-btn" title="Slurry Transport & Advanced Pipe Analytics (Settling velocity, Durand critical deposition, Joukowsky surge, Barlow hoop stress)">
+      <i class="bi bi-layers-fill" style="color:#f59e0b;"></i> Slurry / Advanced
+    </button>
 
     <!-- Calculate button -->
     <button id="pn-calc-btn" class="pn-btn pn-btn-success" style="margin-left:auto;">
@@ -748,6 +921,98 @@
        MAIN ROW: SVG Canvas (left) + Properties Panel (right)
        ──────────────────────────────────────────────────────────────────── -->
   <div id="pn-main-row">
+
+    <!-- ─────────────────────────────────────────────────────────────────
+         LHS SIDEBAR: Add Network Members Tool Palette & Elements Tree
+         ───────────────────────────────────────────────────────────────── -->
+    <div id="pn-left-sidebar">
+      <!-- Sidebar Header with collapse button -->
+      <div class="pn-sidebar-header">
+        <span style="font-weight:700;color:#f0f6fc;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-tools" style="color:#58a6ff;"></i>
+          Add Network Members
+        </span>
+        <button id="btn-toggle-left-sidebar" type="button" class="pn-btn" style="padding:2px 6px;font-size:11px;" title="Collapse / Expand Left Sidebar">
+          <i class="bi bi-chevron-bar-left"></i>
+        </button>
+      </div>
+
+      <!-- Section 1: Member Creation Tools (Tool Palette) -->
+      <div class="pn-sidebar-tools-header">
+        <span>Component Toolbox</span>
+        <span style="font-size:10px;color:#64748b;">Click or key</span>
+      </div>
+      <div class="pn-sidebar-tools">
+        <!-- Select / Move -->
+        <button id="btn-select" type="button" class="pn-sidebar-tool-btn active-tool" data-mode="select" title="Select / Move elements (S)">
+          <span class="tool-icon"><i class="bi bi-cursor-fill" style="color:#58a6ff;"></i></span>
+          <span class="tool-label">Select / Move</span>
+          <span class="tool-shortcut">S</span>
+        </button>
+
+        <!-- Draw Pipe -->
+        <button id="btn-connect" type="button" class="pn-sidebar-tool-btn" data-mode="connect" title="Draw Pipe (C)">
+          <span class="tool-icon"><i class="bi bi-arrow-right-short" style="color:#38bdf8;font-size:18px;"></i></span>
+          <span class="tool-label">Draw Pipe</span>
+          <span class="tool-shortcut">C</span>
+        </button>
+
+        <!-- Reservoir / Sump -->
+        <button id="btn-add-reservoir" type="button" class="pn-sidebar-tool-btn" data-mode="add-reservoir" title="Place Sump / Reservoir">
+          <span class="tool-icon"><i class="bi bi-water" style="color:#3b82f6;"></i></span>
+          <span class="tool-label">Reservoir / Sump</span>
+        </button>
+
+        <!-- Pump Station -->
+        <button id="btn-add-pump" type="button" class="pn-sidebar-tool-btn" data-mode="add-pump" title="Place Centrifugal Pump Station">
+          <span class="tool-icon"><i class="bi bi-gear-fill" style="color:#a855f7;"></i></span>
+          <span class="tool-label">Pump Station</span>
+        </button>
+
+        <!-- Storage Tank -->
+        <button id="btn-add-tank" type="button" class="pn-sidebar-tool-btn" data-mode="add-tank" title="Place Storage Tank">
+          <span class="tool-icon"><i class="bi bi-cup-fill" style="color:#22c55e;"></i></span>
+          <span class="tool-label">Storage Tank</span>
+        </button>
+
+        <!-- Junction -->
+        <button id="btn-add-junction" type="button" class="pn-sidebar-tool-btn" data-mode="add-junction" title="Place Pipe Junction / Node">
+          <span class="tool-icon"><i class="bi bi-intersect" style="color:#f59e0b;"></i></span>
+          <span class="tool-label">Junction</span>
+        </button>
+
+        <!-- Tee Fitting -->
+        <button id="btn-add-tee" type="button" class="pn-sidebar-tool-btn" data-mode="add-tee" title="Place 3-Way Pipe Tee Fitting">
+          <span class="tool-icon"><i class="bi bi-diagram-3" style="color:#f97316;"></i></span>
+          <span class="tool-label">Tee (3-Way)</span>
+        </button>
+
+        <!-- Valve -->
+        <button id="btn-add-valve" type="button" class="pn-sidebar-tool-btn" data-mode="add-valve" title="Place Valve (Gate, Globe, Check, Ball)">
+          <span class="tool-icon"><i class="bi bi-heptagon-half" style="color:#ef4444;"></i></span>
+          <span class="tool-label">Inline Valve</span>
+        </button>
+
+        <!-- Elbow -->
+        <button id="btn-add-elbow" type="button" class="pn-sidebar-tool-btn" data-mode="add-elbow" title="Place 90° / 45° Elbow Waypoint">
+          <span class="tool-icon"><i class="bi bi-arrow-return-right" style="color:#ec4899;"></i></span>
+          <span class="tool-label">Elbow Bend</span>
+        </button>
+
+        <!-- Discharge -->
+        <button id="btn-add-discharge" type="button" class="pn-sidebar-tool-btn" data-mode="add-discharge" title="Place Open Discharge Point">
+          <span class="tool-icon"><i class="bi bi-droplet-fill" style="color:#0284c7;"></i></span>
+          <span class="tool-label">Discharge Outlet</span>
+        </button>
+
+        <!-- Delete -->
+        <button id="btn-delete" type="button" class="pn-sidebar-tool-btn btn-danger-tool" title="Delete Selected Element (Del / Backspace)">
+          <span class="tool-icon"><i class="bi bi-trash3" style="color:#f85149;"></i></span>
+          <span class="tool-label" style="color:#f85149;">Delete Selected</span>
+          <span class="tool-shortcut">Del</span>
+        </button>
+      </div>
+    </div><!-- end left sidebar -->
 
     <!-- SVG Canvas -->
     <div id="pn-canvas-wrap">
@@ -849,6 +1114,12 @@
           <div class="pp-section-title" style="margin-top:8px;"><i class="bi bi-tools"></i> Fitting Configuration</div>
           <label class="pp-label">Fitting Model / Subtype</label>
           <select id="np-fitting-key" class="pp-input"></select>
+
+          <!-- Quantity input -->
+          <div style="margin-top:8px;">
+            <label class="pp-label">Quantity (Units / Count)</label>
+            <input id="np-quantity" type="number" min="1" step="1" class="pp-input" value="1" placeholder="1" title="Number of identical inline units (scales K-factor linearly)">
+          </div>
 
           <!-- Tee-only branch rotation controls -->
           <div id="np-tee-rotation-group" style="display:none;margin-top:8px;">
@@ -1025,6 +1296,39 @@
           <option value="orthogonal">Orthogonal (L-shape)</option>
         </select>
 
+        <!-- Custom Roughness (epsilon) & Hazen-Williams (C) Overrides -->
+        <div style="margin-top:8px;margin-bottom:10px;padding:8px 9px;background:rgba(255,255,255,0.02);border:1px solid #30363d;border-radius:6px;">
+          <div style="font-size:10.5px;font-weight:700;color:#38bdf8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">
+            <i class="bi bi-sliders2"></i> Custom Roughness &amp; C Factor
+          </div>
+
+          <!-- Custom Roughness factor -->
+          <div style="margin-bottom:6px;">
+            <label style="font-size:11px;color:#c9d1d9;cursor:pointer;display:flex;align-items:center;gap:5px;margin-bottom:3px;">
+              <input type="checkbox" id="pp-use-custom-roughness" style="accent-color:#38bdf8;cursor:pointer;">
+              <span>Use Custom Roughness &epsilon; (mm)</span>
+            </label>
+            <div id="pp-custom-roughness-wrap" style="display:none;margin-top:3px;">
+              <input id="pp-custom-roughness" type="number" step="0.001" min="0.0001" max="10" class="pp-input"
+                     placeholder="e.g. 0.046" style="margin-bottom:2px;" title="Absolute pipe wall roughness in mm (Darcy-Weisbach / Colebrook)">
+              <div style="font-size:9.5px;color:#64748b;">Overrides material table roughness for Darcy-Weisbach</div>
+            </div>
+          </div>
+
+          <!-- Custom Hazen-Williams C -->
+          <div>
+            <label style="font-size:11px;color:#c9d1d9;cursor:pointer;display:flex;align-items:center;gap:5px;margin-bottom:3px;">
+              <input type="checkbox" id="pp-use-custom-hazen" style="accent-color:#38bdf8;cursor:pointer;">
+              <span>Use Custom Hazen-Williams Factor (C)</span>
+            </label>
+            <div id="pp-custom-hazen-wrap" style="display:none;margin-top:3px;">
+              <input id="pp-custom-hazen-c" type="number" step="1" min="20" max="200" class="pp-input"
+                     placeholder="e.g. 130" style="margin-bottom:2px;" title="Hazen-Williams friction coefficient C">
+              <div style="font-size:9.5px;color:#64748b;">Overrides default C (e.g. Steel=120, PVC/HDPE=140-150)</div>
+            </div>
+          </div>
+        </div>
+
         <!-- Fittings / minor losses -->
         <div class="pp-section-title" style="margin-top:4px;">
           <i class="bi bi-tools"></i> Fittings &amp; Valves
@@ -1147,6 +1451,9 @@
           <th>h Total (m)</th>
           <th style="cursor:pointer;" title="Consolidated Hydraulic Resistance R (hf = R * Q^n). Click for formulas and details." onclick="showHydraulicHelp('res_r')">Res. R <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
           <th style="cursor:pointer;" title="Flow Exponent n (2.0 for Darcy-Weisbach, 1.852 for Hazen-Williams). Click for formulas and details." onclick="showHydraulicHelp('exp_n')">Exp. n <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
+          <th style="cursor:pointer;" title="Slurry Particle Settling Velocity Vt (Ferguson &amp; Church) and Durand Critical Deposition Velocity Vc. Click for slurry guide." onclick="showHydraulicHelp('slurry')">Slurry Vt / Vc <i class="bi bi-info-circle" style="color:#f59e0b;font-size:10px;"></i></th>
+          <th style="cursor:pointer;" title="Water Hammer Joukowsky wave speed 'a' and transient surge pressure delta-P. Click for water hammer guide." onclick="showHydraulicHelp('water_hammer')">Wave / Surge <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
+          <th style="cursor:pointer;" title="Barlow pipe wall circumferential hoop stress and safety factor vs allowable stress." onclick="showHydraulicHelp('pipe_stress')">Hoop Stress <i class="bi bi-info-circle" style="color:#4ade80;font-size:10px;"></i></th>
         </tr>
       </thead>
       <tbody id="res-table-body"></tbody>
@@ -1201,6 +1508,95 @@
   </div>
 
 </div><!-- end results section -->
+
+<!-- ─────────────────────────────────────────────────────────────────────────
+     SLURRY & ADVANCED PIPELINE ANALYSIS MODAL
+     ───────────────────────────────────────────────────────────────────────── -->
+<div id="slurry-modal-overlay"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;backdrop-filter:blur(4px);padding:16px;overflow-y:auto;"
+  onclick="if(event.target===this)toggleSlurryModal(false)">
+  <div style="max-width:680px;margin:30px auto;background:#161b22;border:1px solid #30363d;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.6);overflow:hidden;display:flex;flex-direction:column;">
+    
+    <!-- Modal Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #21262d;background:#0d1117;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <i class="bi bi-layers-fill" style="color:#f59e0b;font-size:1.25rem;"></i>
+        <div>
+          <h3 style="margin:0;font-size:1rem;font-weight:700;color:#f0f6fc;">Slurry Transport &amp; Advanced Pipeline Mechanics</h3>
+          <div style="font-size:11px;color:#8b949e;">Durand deposition velocity, particle settling, water hammer wave speed, Barlow hoop stress</div>
+        </div>
+      </div>
+      <button type="button" onclick="toggleSlurryModal(false)" style="background:none;border:none;color:#8b949e;cursor:pointer;font-size:1.3rem;" title="Close">&times;</button>
+    </div>
+
+    <!-- Modal Body -->
+    <div style="padding:20px;display:flex;flex-direction:column;gap:16px;">
+      
+      <!-- Slurry Enable Switch -->
+      <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <label for="slurry-enable-toggle" style="font-size:13px;font-weight:700;color:#f0f6fc;cursor:pointer;display:flex;align-items:center;gap:8px;margin:0;">
+            <input type="checkbox" id="slurry-enable-toggle" style="width:16px;height:16px;accent-color:#f59e0b;cursor:pointer;">
+            Enable Slurry Transport Calculations
+          </label>
+          <div style="font-size:11px;color:#8b949e;margin-top:2px;">
+            Computes particle settling velocity (Ferguson &amp; Church), Durand critical deposition velocity (Vc), and concentration conversions.
+          </div>
+        </div>
+        <span id="slurry-status-badge" style="font-size:10px;padding:3px 8px;border-radius:4px;background:rgba(255,255,255,0.05);color:#8b949e;font-weight:700;">Disabled</span>
+      </div>
+
+      <!-- Slurry Parameters Grid -->
+      <div id="slurry-params-grid" style="display:grid;grid-template-columns:repeat(2, 1fr);gap:12px;">
+        <div style="background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;">
+          <label class="pp-label" title="Median particle diameter d50 in millimeters">Particle Size d<sub>50</sub> (mm)</label>
+          <input id="slurry-d50" type="number" step="0.01" min="0.01" max="50" value="0.15" class="pp-input" style="margin-bottom:4px;">
+          <div style="font-size:10px;color:#64748b;">e.g. 0.05mm (silt/slimes), 0.15mm (fine sand), 0.5mm (medium sand)</div>
+        </div>
+
+        <div style="background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;">
+          <label class="pp-label" title="Specific gravity of dry solid mineral particles">Solids Specific Gravity (S<sub>s</sub>)</label>
+          <input id="slurry-solids-sg" type="number" step="0.05" min="1.05" max="8.0" value="2.65" class="pp-input" style="margin-bottom:4px;">
+          <div style="font-size:10px;color:#64748b;">e.g. 2.65 (Silica quartz), 3.0 (Basalt), 5.0 (Magnetite / Iron ore)</div>
+        </div>
+
+        <div style="background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;">
+          <label class="pp-label" title="Solids concentration by weight percentage">Solids Concentration C<sub>w</sub> (% wt)</label>
+          <input id="slurry-c-weight" type="number" step="1" min="1" max="75" value="25" class="pp-input" style="margin-bottom:4px;">
+          <div style="font-size:10px;color:#64748b;">Solids weight percent (mass fraction of dry solids in mixture)</div>
+        </div>
+
+        <div style="background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;">
+          <label class="pp-label" title="Calculated volumetric concentration Cv (%)">Volumetric Concentration C<sub>v</sub> (%)</label>
+          <input id="slurry-c-volume" type="text" readonly class="pp-input" value="11.2 %" style="background:#161b22;color:#38bdf8;font-weight:700;margin-bottom:4px;">
+          <div style="font-size:10px;color:#64748b;">Auto-converted: C<sub>v</sub> = (C<sub>w</sub>/S<sub>s</sub>) / [(C<sub>w</sub>/S<sub>s</sub>) + (1-C<sub>w</sub>)/S<sub>l</sub>]</div>
+        </div>
+      </div>
+
+      <!-- Advanced Pipe Analysis Summary -->
+      <div style="background:rgba(56,189,248,0.04);border:1px solid rgba(56,189,248,0.2);border-radius:8px;padding:12px;">
+        <div style="font-size:11px;font-weight:700;color:#38bdf8;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-info-circle"></i> Additional Pipe Analysis Calculations Included:
+        </div>
+        <ul style="margin:0;padding-left:18px;font-size:11.5px;color:#cbd5e1;line-height:1.6;">
+          <li><strong>Particle Settling Velocity (V<sub>t</sub>):</strong> Universal explicit formula (Ferguson &amp; Church 2004) covering laminar Stokes to turbulent Newton regimes.</li>
+          <li><strong>Durand Critical Deposition Velocity (V<sub>c</sub>):</strong> Prevents bed deposition (sanding hazard) by alerting if pipeline velocity V &lt; 1.2 V<sub>c</sub>.</li>
+          <li><strong>Joukowsky Water Hammer Analysis:</strong> Composite wave speed <code style="color:#58a6ff;">a = &radic;(K_f / &rho; / (1 + (K_f/E)(D/t)))</code> and surge pressure <code style="color:#58a6ff;">&Delta;P = &rho; &middot; a &middot; &Delta;V</code>.</li>
+          <li><strong>Barlow Pipe Hoop Stress (&sigma;):</strong> <code style="color:#58a6ff;">&sigma; = (P &middot; OD) / (2t)</code> with safety factor vs material allowable yield stress.</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Modal Footer -->
+    <div style="padding:12px 20px;border-top:1px solid #21262d;background:#0d1117;display:flex;justify-content:flex-end;gap:8px;">
+      <button type="button" class="pn-btn" onclick="toggleSlurryModal(false)">Close</button>
+      <button type="button" class="pn-btn pn-btn-success" onclick="applySlurrySettings()">Apply &amp; Recalculate</button>
+    </div>
+
+  </div>
+</div>
+
 <!-- ─────────────────────────────────────────────────────────────────────────
      MANAGE FITTINGS & MATERIALS MODAL
      ───────────────────────────────────────────────────────────────────────── -->

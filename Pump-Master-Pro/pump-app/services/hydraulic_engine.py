@@ -107,7 +107,8 @@ def fluid_kinematic_viscosity_m2s(temperature_c: float = 20.0) -> float:
 # Standard Hazen-Williams C values by material key
 DEFAULT_HAZEN_WILLIAMS_C: Dict[str, float] = {
     'pvc': 150.0,
-    'plastic_pe': 150.0,
+    'plastic_pe': 140.0,
+    'hdpe': 140.0,
     'stainless_steel': 140.0,
     'ductile_iron': 130.0,
     'commercial_steel': 120.0,
@@ -123,10 +124,232 @@ DEFAULT_ROUGHNESS_MM: Dict[str, float] = {
     'stainless_steel': 0.015,
     'pvc': 0.002,
     'plastic_pe': 0.007,
+    'hdpe': 0.007,
     'galvanised_steel': 0.150,
     'ductile_iron': 0.250,
     'cast_iron': 0.260,
 }
+
+# Pipe Young's elastic modulus E (GPa) for Joukowsky water hammer analysis
+PIPE_ELASTIC_MODULUS_GPA: Dict[str, float] = {
+    'commercial_steel': 207.0,
+    'stainless_steel': 193.0,
+    'galvanised_steel': 200.0,
+    'ductile_iron': 170.0,
+    'cast_iron': 100.0,
+    'copper': 117.0,
+    'concrete': 30.0,
+    'pvc': 3.0,
+    'plastic_pe': 1.0,
+    'hdpe': 1.0,
+}
+
+# Allowable pipe material tensile/yield stress (MPa) for Barlow hoop stress safety factor
+PIPE_ALLOWABLE_STRESS_MPA: Dict[str, float] = {
+    'commercial_steel': 138.0,  # ASTM A53 Grade B typical allowable design stress
+    'stainless_steel': 137.0,   # 304/316 SS allowable
+    'galvanised_steel': 138.0,
+    'ductile_iron': 150.0,
+    'cast_iron': 40.0,
+    'copper': 70.0,
+    'pvc': 14.0,
+    'plastic_pe': 8.0,
+    'hdpe': 8.0,
+    'concrete': 5.0,
+}
+
+
+def particle_settling_velocity_m_s(
+    d50_mm: float = 0.15,
+    s_solids: float = 2.65,
+    s_liquid: float = 1.0,
+    temperature_c: float = 20.0
+) -> Dict[str, float]:
+    """
+    Computes solid particle terminal settling velocity Vt in carrier liquid.
+    Uses Ferguson & Church (2004) universal explicit particle settling equation:
+        R = (S_s - S_l) / S_l
+        Vt = (R * g * d^2) / [ C1 * nu + sqrt(0.75 * C2 * R * g * d^3) ]
+    Where:
+        C1 = 18.0 (Stokes laminar limit)
+        C2 = 0.8 (natural angular grains turbulent boundary)
+    Returns:
+        - settling_velocity_ms (terminal settling velocity, m/s)
+        - stokes_velocity_ms (theoretical Stokes law velocity, m/s)
+        - particle_reynolds (settling Reynolds number Rep = Vt * d / nu)
+    """
+    g = GRAVITY
+    nu = fluid_kinematic_viscosity_m2s(temperature_c)
+    d = max(1e-6, float(d50_mm) / 1000.0)  # meters
+    ss = max(1.01, float(s_solids))
+    sl = max(0.5, float(s_liquid))
+    R = (ss - sl) / sl
+
+    c1 = 18.0
+    c2 = 0.8
+    num = R * g * (d ** 2)
+    denom = (c1 * nu) + math.sqrt(max(0.0, 0.75 * c2 * R * g * (d ** 3)))
+    vt = num / denom if denom > 0 else 0.0
+
+    # Theoretical Stokes' law (valid for Rep < 0.1)
+    rho_l = fluid_density_kg_m3(temperature_c, sl)
+    mu_l = rho_l * nu
+    vt_stokes = (g * (ss * 1000.0 - rho_l) * (d ** 2)) / (18.0 * mu_l) if mu_l > 0 else vt
+
+    rep = (vt * d) / nu if nu > 0 else 0.0
+    return {
+        'settling_velocity_ms': float(round(vt, 4)),
+        'stokes_velocity_ms': float(round(vt_stokes, 4)),
+        'particle_reynolds': float(round(rep, 3)),
+    }
+
+
+def critical_deposition_velocity_m_s(
+    d50_mm: float = 0.15,
+    diameter_m: float = 0.1,
+    s_solids: float = 2.65,
+    s_liquid: float = 1.0,
+    cv_volume_fraction: float = 0.15
+) -> Dict[str, Any]:
+    """
+    Computes critical deposition velocity (Durand-Condolios / Wilson equation) Vc:
+        Vc = F_L * sqrt( 2 * g * D * (S_s - S_l) / S_l )
+    Where F_L is Durand factor determined by particle diameter and volumetric concentration.
+    Ensures mean slurry pipeline velocity stays safely above Vc to prevent bed deposition (sanding).
+    """
+    g = GRAVITY
+    d_mm = max(0.01, float(d50_mm))
+    D = max(0.01, float(diameter_m))
+    ss = max(1.01, float(s_solids))
+    sl = max(0.5, float(s_liquid))
+    cv = max(0.01, min(0.5, float(cv_volume_fraction)))
+
+    # Durand parameter F_L calculation
+    if d_mm >= 0.5:
+        fl = 1.34 * ((cv / 0.15) ** 0.05)
+    else:
+        fl = 1.34 * ((d_mm / 0.5) ** 0.25) * ((cv / 0.15) ** 0.05)
+    fl = max(0.75, min(1.45, fl))
+
+    vc = fl * math.sqrt(max(0.0, 2.0 * g * D * ((ss - sl) / sl)))
+    return {
+        'critical_velocity_ms': float(round(vc, 3)),
+        'durand_fl': float(round(fl, 3)),
+        'recommended_min_velocity_ms': float(round(1.2 * vc, 3)),  # 20% safety margin
+    }
+
+
+def slurry_mixture_properties(
+    c_weight_percent: float = 25.0,
+    s_solids: float = 2.65,
+    s_liquid: float = 1.0,
+    temperature_c: float = 20.0
+) -> Dict[str, float]:
+    """
+    Calculates slurry mixture specific gravity, volumetric concentration, and slurry density.
+        Cw = Solids mass fraction
+        Cv = (Cw / Ss) / [ (Cw / Ss) + (1 - Cw) / Sl ]
+        Sm = Sl + Cv * (Ss - Sl)
+        rho_m = Sm * rho_water(T)
+    """
+    cw = max(0.0, min(80.0, float(c_weight_percent))) / 100.0
+    ss = max(1.01, float(s_solids))
+    sl = max(0.5, float(s_liquid))
+
+    vol_solids = cw / ss
+    vol_liquid = (1.0 - cw) / sl
+    total_vol = vol_solids + vol_liquid
+    cv = vol_solids / total_vol if total_vol > 0 else 0.0
+
+    sm = sl + cv * (ss - sl)
+    rho_w = fluid_density_kg_m3(temperature_c, 1.0)
+    rho_m = sm * rho_w
+
+    return {
+        'c_weight_percent': float(round(cw * 100.0, 2)),
+        'c_volume_percent': float(round(cv * 100.0, 2)),
+        'c_volume_fraction': float(round(cv, 4)),
+        'mixture_sg': float(round(sm, 3)),
+        'slurry_density_kg_m3': float(round(rho_m, 1)),
+    }
+
+
+def water_hammer_analysis(
+    velocity_m_s: float,
+    diameter_mm: float,
+    wall_thickness_mm: Optional[float] = None,
+    material: str = 'commercial_steel',
+    fluid_density: float = 998.2
+) -> Dict[str, float]:
+    """
+    Joukowsky transient surge analysis for sudden valve closure / pump trip:
+        a = sqrt( (K / rho) / [ 1 + (K / E) * (D / t) ] )
+        Delta_P_surge = rho * a * Delta_V / 1000  (kPa)
+        Delta_H_surge = a * Delta_V / g           (m)
+    """
+    g = GRAVITY
+    k_fluid = 2.19e9  # Water bulk modulus (Pa)
+    e_pipe = PIPE_ELASTIC_MODULUS_GPA.get(material, 200.0) * 1e9  # Pipe Young's modulus (Pa)
+
+    d_m = max(0.01, float(diameter_mm) / 1000.0)
+    t_m = max(0.001, (float(wall_thickness_mm) / 1000.0) if wall_thickness_mm and wall_thickness_mm > 0 else d_m * 0.05)
+    rho = max(500.0, float(fluid_density))
+
+    # Wave speed celerity
+    denom = 1.0 + (k_fluid / e_pipe) * (d_m / t_m)
+    wave_speed = math.sqrt((k_fluid / rho) / denom)
+
+    # Surge magnitude for rapid shutdown Delta_V = V
+    v = abs(float(velocity_m_s))
+    delta_p_kpa = (rho * wave_speed * v) / 1000.0
+    delta_h_m = (wave_speed * v) / g
+
+    return {
+        'wave_speed_ms': float(round(wave_speed, 1)),
+        'surge_head_m': float(round(delta_h_m, 2)),
+        'surge_pressure_kpa': float(round(delta_p_kpa, 2)),
+    }
+
+
+def pipe_stress_analysis(
+    pressure_kpa: float,
+    od_mm: Optional[float],
+    wall_thickness_mm: Optional[float],
+    material: str = 'commercial_steel'
+) -> Dict[str, float]:
+    """
+    Barlow's formula for internal pressure hoop tensile stress:
+        sigma_hoop = (P * D_o) / (2 * t)
+    """
+    p_pa = max(0.0, float(pressure_kpa)) * 1000.0
+    od = max(0.01, float(od_mm) / 1000.0) if od_mm and od_mm > 0 else 0.1143
+    t = max(0.001, float(wall_thickness_mm) / 1000.0) if wall_thickness_mm and wall_thickness_mm > 0 else od * 0.05
+
+    sigma_hoop_pa = (p_pa * od) / (2.0 * t)
+    sigma_hoop_mpa = sigma_hoop_pa / 1e6
+    allowable_mpa = PIPE_ALLOWABLE_STRESS_MPA.get(material, 138.0)
+    sf = allowable_mpa / sigma_hoop_mpa if sigma_hoop_mpa > 1e-3 else 99.9
+
+    return {
+        'hoop_stress_mpa': float(round(sigma_hoop_mpa, 2)),
+        'allowable_stress_mpa': float(allowable_mpa),
+        'safety_factor': float(round(min(99.9, sf), 2)),
+    }
+
+
+def pipe_wall_shear_stress_pa(
+    friction_factor: float,
+    density_kg_m3: float,
+    velocity_m_s: float
+) -> float:
+    """
+    Computes pipe wall shear stress tau_w (Pa = N/m^2):
+        tau_w = (f * rho * V^2) / 8
+    """
+    f = max(0.005, float(friction_factor))
+    rho = max(500.0, float(density_kg_m3))
+    v = abs(float(velocity_m_s))
+    return float(round((f * rho * (v ** 2)) / 8.0, 2))
 
 
 # ============================================================================
@@ -216,6 +439,7 @@ class Node:
     k_factor: float = 0.0                 # If node was created as an inline fitting
     custom_k: Optional[float] = None
     fitting_key: Optional[str] = None
+    quantity: int = 1                     # Inline fitting units / count
 
     @property
     def is_boundary(self) -> bool:
@@ -235,6 +459,7 @@ class Node:
             'k_factor': self.k_factor,
             'custom_k': self.custom_k,
             'fitting_key': self.fitting_key,
+            'quantity': self.quantity,
             'is_boundary': self.is_boundary,
         }
 
@@ -257,6 +482,11 @@ class Node:
 
         cust_k = data.get('custom_k') or props.get('custom_k')
         fit_key = data.get('fitting_key') or props.get('fitting_key')
+        raw_qty = data.get('quantity') or props.get('quantity') or 1
+        try:
+            qty = max(1, int(raw_qty))
+        except (ValueError, TypeError):
+            qty = 1
 
         return cls(
             id=str(data.get('id', '')),
@@ -270,6 +500,7 @@ class Node:
             k_factor=k_val,
             custom_k=float(cust_k) if cust_k is not None else None,
             fitting_key=str(fit_key) if fit_key else None,
+            quantity=qty,
         )
 
 
@@ -379,8 +610,8 @@ class PipeEdge:
             length_m=float(l_m),
             diameter_mm=float(d_mm),
             material=str(mat),
-            roughness_mm=float(data.get('roughness_mm') or props.get('roughness_mm')) if (data.get('roughness_mm') or props.get('roughness_mm')) else None,
-            hazen_williams_c=float(data.get('hazen_williams_c') or props.get('hazen_williams_c')) if (data.get('hazen_williams_c') or props.get('hazen_williams_c')) else None,
+            roughness_mm=float(data.get('custom_roughness_mm') or props.get('custom_roughness_mm') or data.get('roughness_mm') or props.get('roughness_mm')) if (data.get('custom_roughness_mm') or props.get('custom_roughness_mm') or data.get('roughness_mm') or props.get('roughness_mm')) else None,
+            hazen_williams_c=float(data.get('custom_hazen_c') or props.get('custom_hazen_c') or data.get('hazen_williams_c') or props.get('hazen_williams_c')) if (data.get('custom_hazen_c') or props.get('custom_hazen_c') or data.get('hazen_williams_c') or props.get('hazen_williams_c')) else None,
             fittings=fittings_list,
             custom_k=float(cust_k or 0.0),
             elev_change_m=float(dz or 0.0),
@@ -565,16 +796,32 @@ class NetworkGraph:
                     k_val = getattr(node_obj, 'k_factor', 0.0) or 0.0
                     if getattr(node_obj, 'custom_k', None) is not None:
                         k_val = float(getattr(node_obj, 'custom_k'))
-                    if getattr(node_obj, 'node_type', '') in ('valve', 'elbow', 'tee') or k_val > 0:
+                    fit_id = f'fit_{node_obj.id}'
+                    # Check if already included in upstream or downstream pipe fittings
+                    already_present = any(getattr(f, 'id', '') == fit_id for f in upstream_pipe.fittings) or \
+                                      any(getattr(f, 'id', '') == fit_id for f in downstream_pipe.fittings)
+                    if not already_present and (getattr(node_obj, 'node_type', '') in ('valve', 'elbow', 'tee') or k_val > 0):
                         fit_label = node_obj.label or node_obj.id
                         merged_fittings.append(Fitting(
-                            id=f'fit_{node_obj.id}',
+                            id=fit_id,
                             type=node_obj.node_type or 'fitting',
                             label=fit_label,
                             k_factor=float(k_val),
-                            count=1,
+                            count=getattr(node_obj, 'quantity', 1) or 1,
                         ))
                 merged_fittings.extend(downstream_pipe.fittings)
+
+                # Deduplicate by explicit fitting ID if any duplicate was merged
+                seen_fit_ids = set()
+                unique_fittings = []
+                for f in merged_fittings:
+                    fid = getattr(f, 'id', None)
+                    if fid and str(fid).startswith('fit_'):
+                        if fid in seen_fit_ids:
+                            continue
+                        seen_fit_ids.add(fid)
+                    unique_fittings.append(f)
+                merged_fittings = unique_fittings
 
                 # Total elevation change between endpoints
                 start_n = consolidated.nodes.get(start_node_id)
@@ -703,6 +950,22 @@ class EdgeHydraulicResult:
     pressure_kpa: Optional[float] = None
     pressure_drop_kpa: Optional[float] = None
 
+    # Advanced Pipe Analysis
+    wall_shear_stress_pa: Optional[float] = None
+    hydraulic_gradient_m_km: Optional[float] = None
+    wave_speed_ms: Optional[float] = None
+    surge_pressure_kpa: Optional[float] = None
+    hoop_stress_mpa: Optional[float] = None
+    stress_safety_factor: Optional[float] = None
+
+    # Slurry Hydraulic Analysis
+    is_slurry: bool = False
+    settling_velocity_ms: Optional[float] = None
+    critical_velocity_ms: Optional[float] = None
+    deposition_margin_ratio: Optional[float] = None
+    deposition_status: Optional[str] = None
+    slurry_head_loss_m: Optional[float] = None
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             'id': self.pipe_id,
@@ -742,6 +1005,20 @@ class EdgeHydraulicResult:
             'pressure_out_kpa': round(self.pressure_out_kpa, 2) if self.pressure_out_kpa is not None else None,
             'pressure_kpa': round(self.pressure_kpa, 2) if self.pressure_kpa is not None else (round(self.hf_friction_m * 9.80665, 2) if self.hf_friction_m is not None else None),
             'pressure_drop_kpa': round(self.pressure_drop_kpa, 2) if self.pressure_drop_kpa is not None else (round(self.hf_friction_m * 9.80665, 2) if self.hf_friction_m is not None else None),
+            # Advanced pipe mechanics
+            'wall_shear_stress_pa': round(self.wall_shear_stress_pa, 2) if self.wall_shear_stress_pa is not None else None,
+            'hydraulic_gradient_m_km': round(self.hydraulic_gradient_m_km, 3) if self.hydraulic_gradient_m_km is not None else None,
+            'wave_speed_ms': round(self.wave_speed_ms, 1) if self.wave_speed_ms is not None else None,
+            'surge_pressure_kpa': round(self.surge_pressure_kpa, 2) if self.surge_pressure_kpa is not None else None,
+            'hoop_stress_mpa': round(self.hoop_stress_mpa, 2) if self.hoop_stress_mpa is not None else None,
+            'stress_safety_factor': round(self.stress_safety_factor, 2) if self.stress_safety_factor is not None else None,
+            # Slurry analytics
+            'is_slurry': self.is_slurry,
+            'settling_velocity_ms': round(self.settling_velocity_ms, 4) if self.settling_velocity_ms is not None else None,
+            'critical_velocity_ms': round(self.critical_velocity_ms, 3) if self.critical_velocity_ms is not None else None,
+            'deposition_margin_ratio': round(self.deposition_margin_ratio, 2) if self.deposition_margin_ratio is not None else None,
+            'deposition_status': self.deposition_status,
+            'slurry_head_loss_m': round(self.slurry_head_loss_m, 4) if self.slurry_head_loss_m is not None else None,
         }
 
 
@@ -749,12 +1026,20 @@ def calculate_consolidated_pipe(
     pipe: PipeEdge,
     flow_m3h: float,
     friction_method: str = 'darcy_weisbach',
-    kinematic_viscosity: float = KINEMATIC_VISCOSITY_WATER_20C
+    kinematic_viscosity: float = KINEMATIC_VISCOSITY_WATER_20C,
+    fluid_density: float = 998.2,
+    is_slurry: bool = False,
+    slurry_d50_mm: float = 0.15,
+    slurry_solids_sg: float = 2.65,
+    slurry_c_weight: float = 25.0,
+    operating_pressure_kpa: Optional[float] = None
 ) -> EdgeHydraulicResult:
     """
     Calculates consolidated hydraulic quantities for a single continuous pipe edge.
     Aggregates main pipe friction + all child fittings without splitting the pipe.
     Computes consolidated R and n for network solvers (GGM, Hardy Cross, Newton-Raphson).
+    Includes water hammer wave speed, Joukowsky surge pressure, Barlow hoop stress,
+    and Ferguson-Church / Durand settling & critical deposition velocity for slurries.
     """
     method = (friction_method or 'darcy_weisbach').lower().strip()
     if method not in ('darcy_weisbach', 'hazen_williams'):
@@ -817,35 +1102,22 @@ def calculate_consolidated_pipe(
 
     # Major and Consolidated Calculations
     if method == 'darcy_weisbach':
-        # Darcy-Weisbach:
-        # hf_major = f * (L / D) * (V^2 / 2g)
-        # hf_minor = K_tot * (V^2 / 2g)
-        # hf_total = [ (f*L/D) + K_tot ] * [8 / (g * pi^2 * D^4)] * Q^2
         f = colebrook_swamee_jain(Re, pipe.roughness, D_m)
         hf_major = f * (L_m / D_m) * vel_head
         hf_friction = hf_major + hf_minor
 
-        # Consolidated resistance R_dw (where hf = R_dw * Q^2)
-        # V = 4Q / (pi * D^2) -> V^2/(2g) = 8 / (g * pi^2 * D^4) * Q^2
         geometric_factor = 8.0 / (GRAVITY * (math.pi ** 2) * (D_m ** 4))
         resistance_R = geometric_factor * ((f * L_m / D_m) + K_tot)
         flow_exponent_n = 2.0
         derivative_dh_dq = 2.0 * resistance_R * Q_m3s if Q_m3s > 0 else 0.0
 
     else:
-        # Hazen-Williams (SI units):
-        # hf_major = 10.67 * L * C^(-1.852) * D^(-4.87) * Q^(1.852)
         C = pipe.hw_c
         R_major_hw = 10.67 * L_m * (C ** (-1.852)) * (D_m ** (-4.87))
         hf_major = R_major_hw * (Q_m3s ** 1.852) if Q_m3s > 0 else 0.0
         hf_friction = hf_major + hf_minor
 
-        # Effective Darcy f equivalent for reporting
         f = (hf_major / (L_m / D_m * vel_head)) if (vel_head > 0 and L_m > 0) else 0.02
-
-        # Equivalent length for minor losses in HW formulation: Leq = K_tot * (D / 0.02)
-        # Total effective length: L_eff = L + Leq
-        # Consolidated resistance: R_hw = 10.67 * L_eff * C^(-1.852) * D^(-4.87)
         Leq = K_tot * (D_m / 0.02)
         L_eff = L_m + Leq
         resistance_R = 10.67 * L_eff * (C ** (-1.852)) * (D_m ** (-4.87))
@@ -858,6 +1130,55 @@ def calculate_consolidated_pipe(
     # Elevation head
     hf_elev = pipe.elev_change_m
     h_total = hf_friction + hf_elev
+
+    # Advanced Pipe Analysis
+    wall_shear = pipe_wall_shear_stress_pa(f, fluid_density, V_ms)
+    hyd_gradient = (hf_friction / L_m) * 1000.0 if L_m > 0 else 0.0
+
+    # Water Hammer Joukowsky wave speed & surge
+    t_mm = (pipe.od_mm - pipe.diameter_mm) / 2.0 if (pipe.od_mm and pipe.od_mm > pipe.diameter_mm) else None
+    wh_analysis = water_hammer_analysis(V_ms, pipe.diameter_mm, wall_thickness_mm=t_mm, material=pipe.material, fluid_density=fluid_density)
+
+    # Hoop Stress Analysis
+    calc_p_kpa = operating_pressure_kpa if operating_pressure_kpa is not None else (hf_friction * (fluid_density * GRAVITY / 1000.0))
+    stress_analysis = pipe_stress_analysis(calc_p_kpa, pipe.od_mm, wall_thickness_mm=t_mm, material=pipe.material)
+
+    # Slurry Hydraulic Analysis
+    settling_vt = None
+    critical_vc = None
+    margin_ratio = None
+    dep_status = None
+    slurry_hf = None
+
+    if is_slurry:
+        slurry_props = slurry_mixture_properties(slurry_c_weight, slurry_solids_sg, s_liquid=fluid_density / 1000.0)
+        settle = particle_settling_velocity_m_s(slurry_d50_mm, slurry_solids_sg, s_liquid=fluid_density / 1000.0)
+        settling_vt = settle['settling_velocity_ms']
+
+        dep = critical_deposition_velocity_m_s(slurry_d50_mm, D_m, slurry_solids_sg, s_liquid=fluid_density / 1000.0, cv_volume_fraction=slurry_props['c_volume_fraction'])
+        critical_vc = dep['critical_velocity_ms']
+
+        if critical_vc > 0:
+            margin_ratio = V_ms / critical_vc
+            if margin_ratio >= 1.2:
+                dep_status = 'Safe Suspension (V > 1.2 Vc)'
+            elif margin_ratio >= 1.0:
+                dep_status = 'Marginal (Vc <= V < 1.2 Vc)'
+            else:
+                dep_status = 'High Deposition Risk (V < Vc — Sanding Hazard!)'
+
+        # Durand slurry head loss adjustment
+        # i_m = i_w * [ 1 + 82 * Cv * (V^2 * sqrt(Cd) / (g * D * (Ss - Sl)))^-1.5 ]
+        iw = hf_major / L_m if L_m > 0 else 0.0
+        ss = max(1.01, float(slurry_solids_sg))
+        sl = max(0.5, float(fluid_density / 1000.0))
+        cv = slurry_props['c_volume_fraction']
+        d_m = max(1e-6, float(slurry_d50_mm) / 1000.0)
+        cd = (4.0 / 3.0) * (GRAVITY * d_m * (ss - sl)) / (max(0.01, settling_vt) ** 2) if settling_vt else 1.0
+        psi = (V_ms ** 2) * math.sqrt(max(0.01, cd)) / max(1e-4, (GRAVITY * D_m * (ss - sl)))
+        phi = 82.0 * (psi ** (-1.5)) if psi > 1e-3 else 82.0
+        im = iw * (1.0 + phi * cv) * slurry_props['mixture_sg']
+        slurry_hf = (im * L_m) + hf_minor
 
     return EdgeHydraulicResult(
         pipe_id=pipe.id,
@@ -893,8 +1214,20 @@ def calculate_consolidated_pipe(
         id_mm=pipe.id_mm,
         pressure_rating=pipe.pressure_rating,
         hazen_williams_c=C if method == 'hazen_williams' else None,
-        pressure_drop_kpa=round(hf_friction * 9.80665, 2),
-        pressure_kpa=round(hf_friction * 9.80665, 2),
+        pressure_drop_kpa=round(hf_friction * (fluid_density * GRAVITY / 1000.0), 2),
+        pressure_kpa=round(hf_friction * (fluid_density * GRAVITY / 1000.0), 2),
+        wall_shear_stress_pa=wall_shear,
+        hydraulic_gradient_m_km=hyd_gradient,
+        wave_speed_ms=wh_analysis['wave_speed_ms'],
+        surge_pressure_kpa=wh_analysis['surge_pressure_kpa'],
+        hoop_stress_mpa=stress_analysis['hoop_stress_mpa'],
+        stress_safety_factor=stress_analysis['safety_factor'],
+        is_slurry=is_slurry,
+        settling_velocity_ms=settling_vt,
+        critical_velocity_ms=critical_vc,
+        deposition_margin_ratio=margin_ratio,
+        deposition_status=dep_status,
+        slurry_head_loss_m=slurry_hf,
     )
 
 
@@ -1266,6 +1599,12 @@ def solve_network(
     temperature_c: float = 20.0,
     specific_gravity: float = 1.0,
     barometric_pressure_kpa: Optional[float] = None,
+    vapor_pressure_kpa: Optional[float] = None,
+    is_slurry: bool = False,
+    slurry_d50_mm: float = 0.15,
+    slurry_solids_sg: float = 2.65,
+    slurry_c_weight: float = 25.0,
+    slurry_c_volume: Optional[float] = None,
 ) -> NetworkSolverResult:
     """
     Unified entry point executing the chosen network analysis method:
@@ -1277,9 +1616,11 @@ def solve_network(
     Calculates:
       1. Hydraulic Grade Line (HGL) and nodal pressures using gravitational constant g = 9.80665 m/s^2.
       2. Major and minor losses across all pipes and consolidated fittings.
-      3. Environmental barometric pressure and liquid vapor pressure from site altitude & fluid temperature.
+      3. Environmental barometric pressure and liquid vapor pressure from site altitude & fluid temperature (or manual input).
       4. Net Positive Suction Head Available (NPSHa) at the suction of any pump station or network inlet:
              NPSHa = h_atm - h_vp + h_suction_gauge + V_suction^2 / (2 * g)
+      5. Slurry particle settling velocity, Durand critical deposition velocity, and concentration conversions.
+      6. Joukowsky water hammer surge and Barlow hoop stress across all continuous lines.
     """
     method = (solver_method or 'ggm').lower().strip()
     if method not in ('ggm', 'newton_raphson', 'hardy_cross', 'linear_theory'):
@@ -1302,11 +1643,20 @@ def solve_network(
     temp_c = float(temperature_c if temperature_c is not None else 20.0)
     sg = float(specific_gravity if specific_gravity is not None and specific_gravity > 0 else 1.0)
 
-    # Liquid vapor pressure P_v (kPa) from Antoine equation at operating temperature
-    p_vapor_kpa = water_vapor_pressure_kpa(temp_c)
+    # Liquid vapor pressure P_v (kPa): explicit input override or Antoine equation
+    if vapor_pressure_kpa is not None and float(vapor_pressure_kpa) > 0:
+        p_vapor_kpa = float(vapor_pressure_kpa)
+    else:
+        p_vapor_kpa = water_vapor_pressure_kpa(temp_c)
 
-    # Fluid density rho (kg/m^3) and kinematic viscosity nu (m^2/s)
-    fluid_density = fluid_density_kg_m3(temp_c, sg)
+    # Slurry fluid properties vs clear liquid
+    slurry_info = None
+    if is_slurry:
+        slurry_info = slurry_mixture_properties(slurry_c_weight, slurry_solids_sg, s_liquid=sg, temperature_c=temp_c)
+        fluid_density = slurry_info['slurry_density_kg_m3']
+        sg = slurry_info['mixture_sg']
+    else:
+        fluid_density = fluid_density_kg_m3(temp_c, sg)
     fluid_viscosity = fluid_kinematic_viscosity_m2s(temp_c)
 
     loops = find_network_fundamental_loops(graph)
@@ -1483,8 +1833,15 @@ def solve_network(
 
         q_m3s = flows_m3s.get(pid, q_global_m3s)
         res = calculate_consolidated_pipe(
-            pipe, flow_m3h=q_m3s * 3600.0, friction_method=friction_method,
-            kinematic_viscosity=fluid_viscosity
+            pipe,
+            flow_m3h=q_m3s * 3600.0,
+            friction_method=friction_method,
+            kinematic_viscosity=fluid_viscosity,
+            fluid_density=fluid_density,
+            is_slurry=is_slurry,
+            slurry_d50_mm=slurry_d50_mm,
+            slurry_solids_sg=slurry_solids_sg,
+            slurry_c_weight=slurry_c_weight,
         )
         pipe_results[pid] = res
         total_major += res.hf_major_m
@@ -1498,7 +1855,7 @@ def solve_network(
         density_kg_m3=fluid_density, g_constant=g_accel
     )
 
-    # Map node pressures to incident pipe edges
+    # Map node pressures to incident pipe edges and re-evaluate pipe hoop stress with actual pressure
     node_pressures = {n.node_id: n.pressure_kpa for n in node_results}
     for pid, res in pipe_results.items():
         p_in = node_pressures.get(res.from_node)
@@ -1513,6 +1870,14 @@ def solve_network(
             res.pressure_kpa = round(p_in, 2)
         elif p_out is not None:
             res.pressure_kpa = round(p_out, 2)
+
+        # Update Barlow hoop stress using actual operating pressure
+        pipe_obj = graph.pipes.get(pid)
+        if pipe_obj and res.pressure_kpa is not None:
+            t_mm = (pipe_obj.od_mm - pipe_obj.diameter_mm) / 2.0 if (pipe_obj.od_mm and pipe_obj.od_mm > pipe_obj.diameter_mm) else None
+            stress_re = pipe_stress_analysis(max(0.0, res.pressure_kpa), pipe_obj.od_mm, wall_thickness_mm=t_mm, material=pipe_obj.material)
+            res.hoop_stress_mpa = stress_re['hoop_stress_mpa']
+            res.stress_safety_factor = stress_re['safety_factor']
 
     total_head = total_major + total_minor + total_elev
 
@@ -1623,6 +1988,13 @@ def solve_network(
         'suction_velocity_head_m': round(suction_vel_head_m, 3),
         'cavitation_status': cavitation_status,
         'cavitation_color': cavitation_color,
+        # Slurry transport metrics
+        'is_slurry': bool(is_slurry),
+        'slurry_d50_mm': slurry_d50_mm if is_slurry else None,
+        'slurry_solids_sg': slurry_solids_sg if is_slurry else None,
+        'slurry_c_weight': slurry_c_weight if is_slurry else None,
+        'slurry_c_volume': slurry_info['c_volume_percent'] if slurry_info else None,
+        'slurry_settling_velocity_ms': particle_settling_velocity_m_s(slurry_d50_mm, slurry_solids_sg, s_liquid=sg)['settling_velocity_ms'] if is_slurry else None,
     }
 
     return NetworkSolverResult(

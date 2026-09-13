@@ -340,6 +340,115 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // ── Bidirectional Specific Gravity (SG) synchronization with Pipe Network ──
+  function getPumpSelectionSg() {
+    const liquid = document.getElementById('liquidSel')?.value || 'water';
+    if (liquid === 'water') {
+      const rho = parseFloat(document.getElementById('input_rho_water')?.value) || 1000;
+      return rho / 1000.0;
+    } else if (liquid === 'viscous') {
+      const rho = parseFloat(document.getElementById('input_rho_viscous')?.value || document.querySelector('#viscousParams input[name="rho"]')?.value) || 1000;
+      return rho / 1000.0;
+    } else if (liquid === 'slurry') {
+      const sl = parseFloat(document.getElementById('sg_l')?.value || 1.0) || 1.0;
+      const ss = parseFloat(document.getElementById('sg_s')?.value || 2.65) || 2.65;
+      const cv = parseFloat(document.getElementById('slurry_cv')?.value || 0.20) || 0.20;
+      const sm = sl * (1 - cv) + ss * cv;
+      return sm > 0 ? sm : 1.0;
+    }
+    return 1.0;
+  }
+
+  function syncPumpSelectionSgToStorage() {
+    const sg = getPumpSelectionSg();
+    if (!isNaN(sg) && sg > 0) {
+      localStorage.setItem('pmpro_shared_fluid_sg', sg.toFixed(3));
+      // Update badge in Pump Selection panel
+      const badge = document.getElementById('ps_calculated_sg_badge');
+      if (badge) badge.textContent = sg.toFixed(3);
+      // Sync into Pipe Network SG input and state if present on page
+      const pnSg = document.getElementById('pn-sg');
+      if (pnSg && document.activeElement !== pnSg) {
+        pnSg.value = sg.toFixed(2);
+      }
+      if (typeof window.__pn_set_sg === 'function') {
+        window.__pn_set_sg(sg);
+      }
+    }
+  }
+
+  function syncPumpSelectionSgToPipeNetwork() {
+    syncPumpSelectionSgToStorage();
+  }
+
+  function applyExternalSgToPumpSelection(newSgVal) {
+    if (!newSgVal || isNaN(parseFloat(newSgVal))) return;
+    const sg = parseFloat(newSgVal);
+    const liquid = document.getElementById('liquidSel')?.value || 'water';
+    if (liquid === 'water') {
+      const r = document.getElementById('input_rho_water');
+      if (r && document.activeElement !== r) {
+        r.value = (sg * 1000).toFixed(1);
+      }
+    } else if (liquid === 'viscous') {
+      const r = document.getElementById('input_rho_viscous') || document.querySelector('#viscousParams input[name="rho"]');
+      if (r && document.activeElement !== r) {
+        r.value = (sg * 1000).toFixed(1);
+      }
+    } else if (liquid === 'slurry') {
+      const sl = parseFloat(document.getElementById('sg_l')?.value || 1.0) || 1.0;
+      const ss = parseFloat(document.getElementById('sg_s')?.value || 2.65) || 2.65;
+      if (ss > sl) {
+        let newCv = (sg - sl) / (ss - sl);
+        newCv = Math.max(0, Math.min(0.6, newCv));
+        const cvEl = document.getElementById('slurry_cv');
+        if (cvEl && document.activeElement !== cvEl) {
+          cvEl.value = newCv.toFixed(2);
+        }
+        updateSlurryCalculator();
+      }
+    }
+    const badge = document.getElementById('ps_calculated_sg_badge');
+    if (badge) badge.textContent = sg.toFixed(3);
+  }
+
+  function syncPipeNetworkSgToPumpSelection() {
+    const pnSg = document.getElementById('pn-sg');
+    if (pnSg) {
+      const val = parseFloat(pnSg.value);
+      if (!isNaN(val) && val > 0) {
+        applyExternalSgToPumpSelection(val);
+      }
+    }
+  }
+
+  window.getPumpSelectionSg = getPumpSelectionSg;
+  window.syncPumpSelectionSgToPipeNetwork = syncPumpSelectionSgToPipeNetwork;
+  window.syncPipeNetworkSgToPumpSelection = syncPipeNetworkSgToPumpSelection;
+
+  // Attach input listeners for SG sync
+  ['input_rho_water', 'input_temperature_c', 'liquidSel', 'input_rho_viscous', 'sg_l', 'sg_s', 'slurry_cv'].forEach(id => {
+    const el = document.getElementById(id);
+    el?.addEventListener('input', syncPumpSelectionSgToStorage);
+    el?.addEventListener('change', syncPumpSelectionSgToStorage);
+  });
+  document.querySelectorAll('#viscousParams input').forEach(inp => {
+    inp.addEventListener('input', syncPumpSelectionSgToStorage);
+    inp.addEventListener('change', syncPumpSelectionSgToStorage);
+  });
+  slurryInputs.forEach(inp => {
+    inp.addEventListener('input', syncPumpSelectionSgToStorage);
+    inp.addEventListener('change', syncPumpSelectionSgToStorage);
+  });
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'pmpro_shared_fluid_sg' && e.newValue) {
+      applyExternalSgToPumpSelection(e.newValue);
+    }
+  });
+
+  syncPumpSelectionSgToStorage();
+
 
   // ── Pump comparison checkbox logic ─────────────────────────────────────────
   // Beginners Note: Builds a comparison URL when multiple pumps are selected via checkboxes

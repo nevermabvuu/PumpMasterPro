@@ -283,7 +283,13 @@ const state = {
   altitude_m: 0,
   barometric_pressure_kpa: 101.325,
   temperature_c: 20,
+  vapor_pressure_kpa: 2.34,
   specific_gravity: 1.0,
+  // Slurry transport configuration
+  is_slurry: false,
+  slurry_d50_mm: 0.15,
+  slurry_solids_sg: 2.65,
+  slurry_c_weight: 25.0,
 };
 
 let svgEl, nodesGroup, pipesGroup, draftPipeLine;
@@ -562,6 +568,10 @@ function defaultPipeProps(id) {
     fittings: [],
     custom_k: 0.0,
     routing: 'auto',   // 'auto' | 'straight' | 'orthogonal'
+    use_custom_roughness: false,
+    custom_roughness_mm: null,
+    use_custom_hazen: false,
+    custom_hazen_c: null,
   };
 }
 /**
@@ -849,12 +859,15 @@ function getNetworkPayload(extra = {}) {
   const barometricPressure = baroEl ? (parseFloat(baroEl.value) || 101.325) : (state.barometric_pressure_kpa || 101.325);
   const tempEl = document.getElementById('pn-temperature');
   const temperature = tempEl ? (parseFloat(tempEl.value) || 20) : (state.temperature_c || 20);
+  const vpEl = document.getElementById('pn-vapor-pressure');
+  const vaporPressure = vpEl ? (parseFloat(vpEl.value) || 2.34) : (state.vapor_pressure_kpa || 2.34);
   const sgEl = document.getElementById('pn-sg');
   const specificGravity = sgEl ? (parseFloat(sgEl.value) || 1.0) : (state.specific_gravity || 1.0);
 
   state.altitude_m = altitude;
   state.barometric_pressure_kpa = barometricPressure;
   state.temperature_c = temperature;
+  state.vapor_pressure_kpa = vaporPressure;
   state.specific_gravity = specificGravity;
 
   return {
@@ -868,7 +881,12 @@ function getNetworkPayload(extra = {}) {
     altitude_m: altitude,
     barometric_pressure_kpa: barometricPressure,
     temperature_c: temperature,
+    vapor_pressure_kpa: vaporPressure,
     specific_gravity: specificGravity,
+    is_slurry: Boolean(state.is_slurry),
+    slurry_d50_mm: parseFloat(state.slurry_d50_mm || 0.15),
+    slurry_solids_sg: parseFloat(state.slurry_solids_sg || 2.65),
+    slurry_c_weight: parseFloat(state.slurry_c_weight || 25.0),
     lastCalculation: state.lastCalculation || null,
     pan: state.pan,
     zoom: state.zoom,
@@ -1019,6 +1037,31 @@ function loadNetworkFromStorage() {
     state.temperature_c = parseFloat(d.temperature_c) || 20;
     const tempInput = document.getElementById('pn-temperature');
     if (tempInput) tempInput.value = state.temperature_c;
+  }
+  if (d.vapor_pressure_kpa !== undefined) {
+    state.vapor_pressure_kpa = parseFloat(d.vapor_pressure_kpa) || 2.34;
+    const vpInput = document.getElementById('pn-vapor-pressure');
+    if (vpInput) vpInput.value = state.vapor_pressure_kpa.toFixed(2);
+  } else if (state.temperature_c !== undefined) {
+    const t = Math.max(0.1, Math.min(100.0, state.temperature_c));
+    const pMmhg = Math.pow(10, 8.07131 - (1730.63 / (233.426 + t)));
+    state.vapor_pressure_kpa = parseFloat((pMmhg * 0.133322).toFixed(2));
+    const vpInput = document.getElementById('pn-vapor-pressure');
+    if (vpInput) vpInput.value = state.vapor_pressure_kpa.toFixed(2);
+  }
+  if (d.is_slurry !== undefined) {
+    state.is_slurry = Boolean(d.is_slurry);
+    state.slurry_d50_mm = parseFloat(d.slurry_d50_mm || 0.15);
+    state.slurry_solids_sg = parseFloat(d.slurry_solids_sg || 2.65);
+    state.slurry_c_weight = parseFloat(d.slurry_c_weight || 25.0);
+    const badge = document.getElementById('slurry-status-badge');
+    if (badge) {
+      badge.textContent = state.is_slurry ? 'Enabled' : 'Disabled';
+      badge.style.background = state.is_slurry ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)';
+      badge.style.color = state.is_slurry ? '#f59e0b' : '#8b949e';
+    }
+    const btn = document.getElementById('btn-toggle-slurry');
+    if (btn) btn.classList.toggle('active-tool', state.is_slurry);
   }
   if (d.specific_gravity !== undefined) {
     state.specific_gravity = parseFloat(d.specific_gravity) || 1.0;
@@ -1292,10 +1335,144 @@ function renderLegend() {
   }
 }
 
+function renderNetworkMembers() {
+  const filterInput = document.getElementById('pn-member-filter');
+  const filterText = (filterInput?.value || '').trim().toLowerCase();
+
+  const nodesContainer = document.getElementById('pn-sidebar-nodes-list');
+  const pipesContainer = document.getElementById('pn-sidebar-pipes-list');
+  const countBadge = document.getElementById('pn-member-count-badge');
+  const nodeCountEl = document.getElementById('pn-sidebar-node-count');
+  const pipeCountEl = document.getElementById('pn-sidebar-pipe-count');
+
+  if (countBadge) countBadge.textContent = state.nodes.length + state.pipes.length;
+  if (nodeCountEl) nodeCountEl.textContent = state.nodes.length;
+  if (pipeCountEl) pipeCountEl.textContent = state.pipes.length;
+
+  if (nodesContainer) {
+    let nodesHtml = '';
+    const filteredNodes = state.nodes.filter(n => {
+      if (!filterText) return true;
+      const label = (n.props?.label || n.id).toLowerCase();
+      const type = (n.type || '').toLowerCase();
+      return label.includes(filterText) || type.includes(filterText) || n.id.toLowerCase().includes(filterText);
+    });
+
+    if (filteredNodes.length === 0) {
+      nodesHtml = '<div style="font-size:11px;color:#64748b;font-style:italic;padding:4px 8px;">No matching nodes</div>';
+    } else {
+      const typeIcons = {
+        'reservoir': { icon: 'bi-water', color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' },
+        'pump': { icon: 'bi-gear-fill', color: '#a855f7', bg: 'rgba(168,85,247,0.15)' },
+        'tank': { icon: 'bi-cup-fill', color: '#22c55e', bg: 'rgba(34,197,94,0.15)' },
+        'junction': { icon: 'bi-intersect', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
+        'discharge': { icon: 'bi-droplet-fill', color: '#0284c7', bg: 'rgba(2,132,199,0.15)' },
+        'tee': { icon: 'bi-diagram-3', color: '#f97316', bg: 'rgba(249,115,22,0.15)' },
+        'valve': { icon: 'bi-heptagon-half', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
+        'elbow': { icon: 'bi-arrow-return-right', color: '#ec4899', bg: 'rgba(236,72,153,0.15)' },
+      };
+
+      filteredNodes.forEach(node => {
+        const isSel = state.selected?.kind === 'node' && state.selected.id === node.id;
+        const cfg = typeIcons[node.type] || { icon: 'bi-circle', color: '#94a3b8', bg: 'rgba(148,163,184,0.15)' };
+        const elev = node.props?.elevation_m !== undefined ? node.props.elevation_m : 0;
+
+        nodesHtml += `
+          <div class="pn-member-item ${isSel ? 'active' : ''}" onclick="selectItem('node', '${node.id}'); if(window.innerWidth < 768) toggleLeftSidebar(false);">
+            <div style="width:22px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;background:${cfg.bg};flex-shrink:0;">
+              <i class="bi ${cfg.icon}" style="color:${cfg.color};font-size:12px;"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
+                <span style="font-weight:600;font-size:11.5px;color:#f0f6fc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                  ${node.props?.label || node.id}
+                </span>
+                <span class="pn-member-badge" style="background:#21262d;color:#8b949e;">${node.id}</span>
+              </div>
+              <div style="font-size:10px;color:#8b949e;display:flex;align-items:center;justify-content:space-between;margin-top:1px;">
+                <span style="text-transform:capitalize;">${node.type}</span>
+                <span>Z: <strong style="color:#a78bfa;">${elev}m</strong></span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+    nodesContainer.innerHTML = nodesHtml;
+  }
+
+  if (pipesContainer) {
+    let pipesHtml = '';
+    const filteredPipes = state.pipes.filter(p => {
+      if (!filterText) return true;
+      const label = (p.props?.label || p.id).toLowerCase();
+      const fn = (p.fromNodeId || '').toLowerCase();
+      const tn = (p.toNodeId || '').toLowerCase();
+      return label.includes(filterText) || fn.includes(filterText) || tn.includes(filterText) || p.id.toLowerCase().includes(filterText);
+    });
+
+    if (filteredPipes.length === 0) {
+      pipesHtml = '<div style="font-size:11px;color:#64748b;font-style:italic;padding:4px 8px;">No matching pipes</div>';
+    } else {
+      filteredPipes.forEach(pipe => {
+        const isSel = state.selected?.kind === 'pipe' && state.selected.id === pipe.id;
+        const d_mm = pipe.props?.id_mm || pipe.props?.diameter_mm || 100;
+        const len = pipe.props?.length_m || 10;
+        const fitCount = (pipe.props?.fittings || []).length;
+
+        pipesHtml += `
+          <div class="pn-member-item ${isSel ? 'active' : ''}" onclick="selectItem('pipe', '${pipe.id}'); if(window.innerWidth < 768) toggleLeftSidebar(false);">
+            <div style="width:22px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;background:rgba(56,189,248,0.12);flex-shrink:0;">
+              <i class="bi bi-water" style="color:#38bdf8;font-size:12px;"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
+                <span style="font-weight:600;font-size:11.5px;color:#f0f6fc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                  ${pipe.props?.label || pipe.id}
+                </span>
+                <span class="pn-member-badge" style="background:#21262d;color:#38bdf8;">${pipe.fromNodeId}&rarr;${pipe.toNodeId}</span>
+              </div>
+              <div style="font-size:10px;color:#8b949e;display:flex;align-items:center;justify-content:space-between;margin-top:1px;">
+                <span>D${Math.round(d_mm)}mm &bull; ${len}m</span>
+                ${fitCount > 0 ? `<span style="color:#fbbf24;">${fitCount} fits</span>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+    pipesContainer.innerHTML = pipesHtml;
+  }
+}
+
+function toggleLeftSidebar(forceOpen) {
+  const sidebar = document.getElementById('pn-left-sidebar');
+  const toggleBtn = document.getElementById('btn-toggle-left-sidebar');
+  if (!sidebar) return;
+
+  const shouldOpen = forceOpen !== undefined ? forceOpen : sidebar.classList.contains('collapsed');
+  if (shouldOpen) {
+    sidebar.classList.remove('collapsed');
+    if (toggleBtn) {
+      toggleBtn.innerHTML = '<i class="bi bi-chevron-bar-left"></i>';
+      toggleBtn.title = 'Collapse Left Sidebar';
+    }
+    localStorage.setItem('pmpro_lhs_sidebar_collapsed', 'false');
+  } else {
+    sidebar.classList.add('collapsed');
+    if (toggleBtn) {
+      toggleBtn.innerHTML = '<i class="bi bi-chevron-bar-right"></i>';
+      toggleBtn.title = 'Expand Left Sidebar';
+    }
+    localStorage.setItem('pmpro_lhs_sidebar_collapsed', 'true');
+  }
+}
+
 function renderAll() {
   renderPipes();
   renderNodes();
   renderLegend();
+  renderNetworkMembers();
   updateDraftLine();
   saveNetworkToStorage();
 }
@@ -1661,10 +1838,10 @@ function getTeeArms(node) {
 }
 
 /**
- * Return current effective K-factor for any fitting node (valve, elbow, tee).
+ * Return unit K-factor for any fitting node (valve, elbow, tee).
  * Respects custom K override when node.props.is_custom_k is true.
  */
-function getNodeKFactor(node) {
+function getNodeUnitKFactor(node) {
   if (!node) return 0;
   if (node.props.is_custom_k && node.props.custom_k !== null && node.props.custom_k !== undefined && !isNaN(Number(node.props.custom_k))) {
     return Number(node.props.custom_k);
@@ -1689,6 +1866,16 @@ function getNodeKFactor(node) {
     'check_valve_ball': 4.50,
   };
   return defaults[key] || 0;
+}
+
+/**
+ * Return current effective K-factor for any fitting node, scaled by quantity.
+ */
+function getNodeKFactor(node) {
+  if (!node) return 0;
+  const unitK = getNodeUnitKFactor(node);
+  const qty = Math.max(1, parseInt(node.props?.quantity, 10) || 1);
+  return unitK * qty;
 }
 
 function getValveArms(node) {
@@ -1983,7 +2170,8 @@ function drawValveNode(g, sel, node) {
   }
 
   // K-factor badge below valve
-  const badgeText = `K=${kVal.toFixed(2)}${isCustom ? '*' : ''}`;
+  const qty = Math.max(1, parseInt(node?.props?.quantity, 10) || 1);
+  const badgeText = `K=${kVal.toFixed(2)}${qty > 1 ? ` (x${qty})` : ''}${isCustom ? '*' : ''}`;
   const badgeY = 22;
   const badgeW = Math.max(46, badgeText.length * 6.5 + 8);
   const badgeBg = mkSVG('rect', {
@@ -2012,6 +2200,7 @@ function drawTeeNode(g, sel, node) {
   const isBranch = node.props.fitting_key === 'tee_branch_flow';
   const kVal = getNodeKFactor(node);
   const isCustom = Boolean(node.props.is_custom_k);
+  const qty = Math.max(1, parseInt(node?.props?.quantity, 10) || 1);
 
   // Group with branch orientation rotation applied
   const tg = mkSVG('g', { transform: `rotate(${rot})` });
@@ -2064,7 +2253,7 @@ function drawTeeNode(g, sel, node) {
   g.appendChild(tg);
 
   // K-factor badge (always horizontal for readability)
-  const badgeText = `K=${kVal.toFixed(2)}${isCustom ? '*' : ''}`;
+  const badgeText = `K=${kVal.toFixed(2)}${qty > 1 ? ` (x${qty})` : ''}${isCustom ? '*' : ''}`;
   const badgeY = -22;
   const badgeW = Math.max(48, badgeText.length * 6.5 + 10);
   const badgeBg = mkSVG('rect', {
@@ -2381,6 +2570,11 @@ function applyTransform() {
 // ============================================================================
 
 function onCanvasClick(e) {
+  // If the user was dragging/panning the canvas, do not trigger click/deselection
+  if (state.justPanned || (state.panDrag && state.panDrag.moved)) {
+    state.justPanned = false;
+    return;
+  }
   if (state.mode === 'select') { selectItem(null); return; }
   if (state.mode.startsWith('add-')) {
     const type = state.mode.replace('add-', '');
@@ -2996,6 +3190,7 @@ function renderPopoverNodeValve(node, pop) {
   const currentKey = node.props.fitting_key || 'gate_valve_open';
   const isCustom = Boolean(node.props.is_custom_k);
   const currentK = getNodeKFactor(node);
+  const qty = Math.max(1, parseInt(node.props?.quantity, 10) || 1);
 
   const valveOptions = [
     { key: 'ball_valve_open', label: 'Ball Valve (Full Bore)', K: 0.05, icon: 'bi-record-circle' },
@@ -3035,7 +3230,13 @@ function renderPopoverNodeValve(node, pop) {
         ${optionsHtml}
       </div>
 
-      <div class="pn-popover-section-label" style="margin-top:10px;">Custom K-Factor</div>
+      <div class="pn-popover-section-label" style="margin-top:10px;">Quantity (Count)</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="pop-node-qty" class="pn-popover-input" min="1" step="1" value="${qty}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:5px 8px;font-size:12px;width:60px;text-align:center;">
+        <span style="font-size:10.5px;color:#94a3b8;">Total K = <strong style="color:#fbbf24;">${currentK.toFixed(2)}</strong></span>
+      </div>
+
+      <div class="pn-popover-section-label" style="margin-top:10px;">Custom K-Factor (Unit)</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#cbd5e1;margin:0;">
           <input type="checkbox" id="pop-is-custom-k" ${isCustom ? 'checked' : ''} style="accent-color:#f59e0b;cursor:pointer;">
@@ -3046,8 +3247,8 @@ function renderPopoverNodeValve(node, pop) {
         </span>
       </div>
       <div id="pop-custom-k-wrap" style="display:${isCustom ? 'flex' : 'none'};align-items:center;gap:6px;">
-        <input type="number" id="pop-custom-k" class="pn-popover-input" step="0.05" min="0" value="${node.props.custom_k ?? currentK}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:6px 9px;font-size:12px;width:100px;">
-        <span style="font-size:10px;color:#94a3b8;">(loss = K·V²/2g)</span>
+        <input type="number" id="pop-custom-k" class="pn-popover-input" step="0.05" min="0" value="${node.props.custom_k ?? (currentK / qty)}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:6px 9px;font-size:12px;width:100px;">
+        <span style="font-size:10px;color:#94a3b8;">(unit K)</span>
       </div>
     </div>
   `;
@@ -3065,13 +3266,26 @@ function renderPopoverNodeValve(node, pop) {
     };
   });
 
+  const qtyIn = pop.querySelector('#pop-node-qty');
+  if (qtyIn) {
+    const onQty = (e) => {
+      node.props.quantity = Math.max(1, parseInt(e.target.value, 10) || 1);
+      renderAll();
+      showNodeProps(node);
+      updateKDisplay(node);
+      saveNetworkToStorage();
+    };
+    qtyIn.oninput = onQty;
+    qtyIn.onchange = onQty;
+  }
+
   const isCustomCb = pop.querySelector('#pop-is-custom-k');
   const customKIn = pop.querySelector('#pop-custom-k');
 
   isCustomCb.onchange = (e) => {
     node.props.is_custom_k = e.target.checked;
     if (node.props.is_custom_k && (node.props.custom_k === null || node.props.custom_k === undefined)) {
-      node.props.custom_k = getNodeKFactor(node);
+      node.props.custom_k = getNodeUnitKFactor(node);
     }
     renderAll();
     showNodeProps(node);
@@ -3096,6 +3310,7 @@ function renderPopoverNodeTee(node, pop) {
   const currentKey = node.props.fitting_key || 'tee_run_through';
   const isCustom = Boolean(node.props.is_custom_k);
   const currentK = getNodeKFactor(node);
+  const qty = Math.max(1, parseInt(node.props?.quantity, 10) || 1);
   const rot = node.props.rotation_deg || 0;
 
   const teeOptions = [
@@ -3131,6 +3346,12 @@ function renderPopoverNodeTee(node, pop) {
         ${optionsHtml}
       </div>
 
+      <div class="pn-popover-section-label" style="margin-top:10px;">Quantity (Count)</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="pop-node-qty" class="pn-popover-input" min="1" step="1" value="${qty}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:5px 8px;font-size:12px;width:60px;text-align:center;">
+        <span style="font-size:10.5px;color:#94a3b8;">Total K = <strong style="color:#fbbf24;">${currentK.toFixed(2)}</strong></span>
+      </div>
+
       <div class="pn-popover-section-label" style="margin-top:10px;">Branch Orientation</div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
         <button id="pop-btn-rotate-tee" class="pn-btn" style="flex:1;padding:5px 8px;font-size:11px;">
@@ -3141,7 +3362,7 @@ function renderPopoverNodeTee(node, pop) {
         </span>
       </div>
 
-      <div class="pn-popover-section-label" style="margin-top:10px;">Custom K-Factor</div>
+      <div class="pn-popover-section-label" style="margin-top:10px;">Custom K-Factor (Unit)</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#cbd5e1;margin:0;">
           <input type="checkbox" id="pop-is-custom-k" ${isCustom ? 'checked' : ''} style="accent-color:#f59e0b;cursor:pointer;">
@@ -3152,8 +3373,8 @@ function renderPopoverNodeTee(node, pop) {
         </span>
       </div>
       <div id="pop-custom-k-wrap" style="display:${isCustom ? 'flex' : 'none'};align-items:center;gap:6px;">
-        <input type="number" id="pop-custom-k" class="pn-popover-input" step="0.05" min="0" value="${node.props.custom_k ?? currentK}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:6px 9px;font-size:12px;width:100px;">
-        <span style="font-size:10px;color:#94a3b8;">(loss = K·V²/2g)</span>
+        <input type="number" id="pop-custom-k" class="pn-popover-input" step="0.05" min="0" value="${node.props.custom_k ?? (currentK / qty)}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:6px 9px;font-size:12px;width:100px;">
+        <span style="font-size:10px;color:#94a3b8;">(unit K)</span>
       </div>
     </div>
   `;
@@ -3171,6 +3392,19 @@ function renderPopoverNodeTee(node, pop) {
     };
   });
 
+  const qtyIn = pop.querySelector('#pop-node-qty');
+  if (qtyIn) {
+    const onQty = (e) => {
+      node.props.quantity = Math.max(1, parseInt(e.target.value, 10) || 1);
+      renderAll();
+      showNodeProps(node);
+      updateKDisplay(node);
+      saveNetworkToStorage();
+    };
+    qtyIn.oninput = onQty;
+    qtyIn.onchange = onQty;
+  }
+
   pop.querySelector('#pop-btn-rotate-tee').onclick = () => {
     node.props.rotation_deg = ((node.props.rotation_deg || 0) + 90) % 360;
     renderAll();
@@ -3185,7 +3419,7 @@ function renderPopoverNodeTee(node, pop) {
   isCustomCb.onchange = (e) => {
     node.props.is_custom_k = e.target.checked;
     if (node.props.is_custom_k && (node.props.custom_k === null || node.props.custom_k === undefined)) {
-      node.props.custom_k = getNodeKFactor(node);
+      node.props.custom_k = getNodeUnitKFactor(node);
     }
     renderAll();
     showNodeProps(node);
@@ -3210,6 +3444,7 @@ function renderPopoverNodeElbow(node, pop) {
   const currentKey = node.props.fitting_key || 'elbow_90_standard';
   const isCustom = Boolean(node.props.is_custom_k);
   const currentK = getNodeKFactor(node);
+  const qty = Math.max(1, parseInt(node.props?.quantity, 10) || 1);
 
   const elbowOptions = [
     { key: 'elbow_90_standard', label: '90° Standard Elbow', K: 0.90, desc: 'Short radius standard bend' },
@@ -3245,7 +3480,13 @@ function renderPopoverNodeElbow(node, pop) {
         ${optionsHtml}
       </div>
 
-      <div class="pn-popover-section-label" style="margin-top:10px;">Custom K-Factor</div>
+      <div class="pn-popover-section-label" style="margin-top:10px;">Quantity (Count)</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="pop-node-qty" class="pn-popover-input" min="1" step="1" value="${qty}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:5px 8px;font-size:12px;width:60px;text-align:center;">
+        <span style="font-size:10.5px;color:#94a3b8;">Total K = <strong style="color:#fbbf24;">${currentK.toFixed(2)}</strong></span>
+      </div>
+
+      <div class="pn-popover-section-label" style="margin-top:10px;">Custom K-Factor (Unit)</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#cbd5e1;margin:0;">
           <input type="checkbox" id="pop-is-custom-k" ${isCustom ? 'checked' : ''} style="accent-color:#f59e0b;cursor:pointer;">
@@ -3256,8 +3497,8 @@ function renderPopoverNodeElbow(node, pop) {
         </span>
       </div>
       <div id="pop-custom-k-wrap" style="display:${isCustom ? 'flex' : 'none'};align-items:center;gap:6px;">
-        <input type="number" id="pop-custom-k" class="pn-popover-input" step="0.05" min="0" value="${node.props.custom_k ?? currentK}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:6px 9px;font-size:12px;width:100px;">
-        <span style="font-size:10px;color:#94a3b8;">(loss = K·V²/2g)</span>
+        <input type="number" id="pop-custom-k" class="pn-popover-input" step="0.05" min="0" value="${node.props.custom_k ?? (currentK / qty)}" style="background:#090d16 !important;color:#ffffff !important;border:1px solid #334155 !important;border-radius:6px;padding:6px 9px;font-size:12px;width:100px;">
+        <span style="font-size:10px;color:#94a3b8;">(unit K)</span>
       </div>
     </div>
   `;
@@ -3275,13 +3516,26 @@ function renderPopoverNodeElbow(node, pop) {
     };
   });
 
+  const qtyIn = pop.querySelector('#pop-node-qty');
+  if (qtyIn) {
+    const onQty = (e) => {
+      node.props.quantity = Math.max(1, parseInt(e.target.value, 10) || 1);
+      renderAll();
+      showNodeProps(node);
+      updateKDisplay(node);
+      saveNetworkToStorage();
+    };
+    qtyIn.oninput = onQty;
+    qtyIn.onchange = onQty;
+  }
+
   const isCustomCb = pop.querySelector('#pop-is-custom-k');
   const customKIn = pop.querySelector('#pop-custom-k');
 
   isCustomCb.onchange = (e) => {
     node.props.is_custom_k = e.target.checked;
     if (node.props.is_custom_k && (node.props.custom_k === null || node.props.custom_k === undefined)) {
-      node.props.custom_k = getNodeKFactor(node);
+      node.props.custom_k = getNodeUnitKFactor(node);
     }
     renderAll();
     showNodeProps(node);
@@ -3685,8 +3939,9 @@ function updateKDisplay(node) {
   const el = document.getElementById('np-k-display');
   if (!el || !node) return;
   const kVal = getNodeKFactor(node);
+  const qty = Math.max(1, parseInt(node.props?.quantity, 10) || 1);
   const isCustom = Boolean(node.props.is_custom_k);
-  el.textContent = `K = ${kVal.toFixed(2)}${isCustom ? ' (Custom)' : ''}`;
+  el.textContent = `K = ${kVal.toFixed(2)}${qty > 1 ? ` (${qty}×)` : ''}${isCustom ? ' (Custom)' : ''}`;
   el.style.color = isCustom ? '#f59e0b' : '#38bdf8';
 }
 
@@ -3713,6 +3968,7 @@ function showNodeProps(node) {
     fittingDiv.style.display = isFitting ? '' : 'none';
     if (isFitting) {
       populateFittingOptions(node.type, node.props.fitting_key);
+      setVal('np-quantity', node.props.quantity || 1);
     }
   }
 
@@ -4209,10 +4465,45 @@ function showPipeProps(pipe) {
   setVal('pp-material', pipe.props.material);
   setVal('pp-routing', pipe.props.routing || 'auto');
   setVal('pp-custom-k', pipe.props.custom_k ?? 0);
+
+  const fittingMap = {};
+  (pipe.props.fittings || []).forEach(f => {
+    if (typeof f === 'object' && f !== null) {
+      fittingMap[f.key || f.type] = f.count || 1;
+    } else {
+      fittingMap[f] = 1;
+    }
+  });
+
   document.querySelectorAll('.pp-fitting-cb').forEach(cb => {
-    cb.checked = (pipe.props.fittings || []).includes(cb.value);
+    const isChecked = Boolean(fittingMap[cb.value]);
+    cb.checked = isChecked;
+    const row = cb.closest('.pp-fitting-row') || cb.parentElement;
+    const qtyWrap = row?.querySelector('.pp-fitting-qty-wrap');
+    const qtyInp = row?.querySelector('.pp-fitting-qty');
+    if (qtyWrap) qtyWrap.style.display = isChecked ? 'flex' : 'none';
+    if (qtyInp) qtyInp.value = fittingMap[cb.value] || 1;
   });
   refreshKTotal(pipe.props.fittings || [], pipe.props.custom_k || 0);
+
+  // Custom Roughness & Hazen-Williams fields
+  const useRoughCb = document.getElementById('pp-use-custom-roughness');
+  const roughWrap = document.getElementById('pp-custom-roughness-wrap');
+  const roughInp = document.getElementById('pp-custom-roughness');
+  if (useRoughCb) {
+    useRoughCb.checked = Boolean(pipe.props.use_custom_roughness);
+    if (roughWrap) roughWrap.style.display = useRoughCb.checked ? '' : 'none';
+    if (roughInp) roughInp.value = pipe.props.custom_roughness_mm !== null && pipe.props.custom_roughness_mm !== undefined ? pipe.props.custom_roughness_mm : '';
+  }
+
+  const useHazenCb = document.getElementById('pp-use-custom-hazen');
+  const hazenWrap = document.getElementById('pp-custom-hazen-wrap');
+  const hazenInp = document.getElementById('pp-custom-hazen-c');
+  if (useHazenCb) {
+    useHazenCb.checked = Boolean(pipe.props.use_custom_hazen);
+    if (hazenWrap) hazenWrap.style.display = useHazenCb.checked ? '' : 'none';
+    if (hazenInp) hazenInp.value = pipe.props.custom_hazen_c !== null && pipe.props.custom_hazen_c !== undefined ? pipe.props.custom_hazen_c : '';
+  }
 
   // Set dimension mode and populate standard pipe dropdowns and details card
   const dimMode = pipe.props.dimension_mode || 'standard';
@@ -4269,7 +4560,7 @@ function setMode(mode) {
   };
   setVal('pn-status', labels[mode] || mode);
 
-  const cursors = { 'select': 'default', 'connect': 'crosshair' };
+  const cursors = { 'select': 'grab', 'connect': 'crosshair' };
   svgEl.style.cursor = cursors[mode] || 'cell';
   renderNodes();
 }
@@ -4323,6 +4614,20 @@ function onNodeFittingChange() {
   }
 }
 
+function onNodeQuantityChange() {
+  const node = state.selected?.kind === 'node' ? findNode(state.selected.id) : null;
+  if (node && (node.type === 'valve' || node.type === 'elbow' || node.type === 'tee')) {
+    const val = parseInt(document.getElementById('np-quantity')?.value, 10);
+    node.props.quantity = (!isNaN(val) && val >= 1) ? val : 1;
+    updateKDisplay(node);
+    renderAll();
+    saveNetworkToStorage();
+    if (state.selected?.kind === 'node' && state.selected.id === node.id) {
+      showContextPopover('node', node.id);
+    }
+  }
+}
+
 function onGlobalFlowChange() {
   saveNetworkToStorage();
 }
@@ -4359,10 +4664,34 @@ function onPipePropChange() {
   const ppCustK = document.getElementById('pp-custom-k');
   if (ppCustK) pipe.props.custom_k = parseFloat(ppCustK.value) || 0;
   pipe.props.fittings = [];
-  document.querySelectorAll('.pp-fitting-cb:checked').forEach(cb =>
-    pipe.props.fittings.push(cb.value)
-  );
+  document.querySelectorAll('.pp-fitting-cb:checked').forEach(cb => {
+    const row = cb.closest('.pp-fitting-row') || cb.parentElement;
+    const qtyInp = row?.querySelector('.pp-fitting-qty');
+    const count = qtyInp ? Math.max(1, parseInt(qtyInp.value, 10) || 1) : 1;
+    if (count > 1) {
+      pipe.props.fittings.push({ key: cb.value, count: count });
+    } else {
+      pipe.props.fittings.push(cb.value);
+    }
+  });
   refreshKTotal(pipe.props.fittings, pipe.props.custom_k);
+
+  // Custom roughness & Hazen-Williams
+  const useRoughCb = document.getElementById('pp-use-custom-roughness');
+  const roughInp = document.getElementById('pp-custom-roughness');
+  if (useRoughCb) {
+    pipe.props.use_custom_roughness = useRoughCb.checked;
+    const val = parseFloat(roughInp?.value);
+    pipe.props.custom_roughness_mm = (!isNaN(val) && val > 0) ? val : null;
+  }
+  const useHazenCb = document.getElementById('pp-use-custom-hazen');
+  const hazenInp = document.getElementById('pp-custom-hazen-c');
+  if (useHazenCb) {
+    pipe.props.use_custom_hazen = useHazenCb.checked;
+    const val = parseFloat(hazenInp?.value);
+    pipe.props.custom_hazen_c = (!isNaN(val) && val > 0) ? val : null;
+  }
+
   updatePipeDetailsCard(pipe.props);
 
   // Automatically split into separate pipe IDs if characteristics differ across an inline fitting,
@@ -4395,6 +4724,8 @@ async function runCalculation() {
   const barometricPressure = baroEl ? (parseFloat(baroEl.value) || 101.325) : (state.barometric_pressure_kpa || 101.325);
   const tempEl = document.getElementById('pn-temperature');
   const temperature = tempEl ? (parseFloat(tempEl.value) || 20) : (state.temperature_c || 20);
+  const vpEl = document.getElementById('pn-vapor-pressure');
+  const vaporPressure = vpEl ? (parseFloat(vpEl.value) || 2.34) : (state.vapor_pressure_kpa || 2.34);
   const sgEl = document.getElementById('pn-sg');
   const specificGravity = sgEl ? (parseFloat(sgEl.value) || 1.0) : (state.specific_gravity || 1.0);
 
@@ -4405,7 +4736,12 @@ async function runCalculation() {
     altitude_m: altitude,
     barometric_pressure_kpa: barometricPressure,
     temperature_c: temperature,
+    vapor_pressure_kpa: vaporPressure,
     specific_gravity: specificGravity,
+    is_slurry: Boolean(state.is_slurry),
+    slurry_d50_mm: parseFloat(state.slurry_d50_mm || 0.15),
+    slurry_solids_sg: parseFloat(state.slurry_solids_sg || 2.65),
+    slurry_c_weight: parseFloat(state.slurry_c_weight || 25.0),
     nodes: state.nodes.map(node => ({
       id: node.id,
       type: node.type,
@@ -4417,18 +4753,21 @@ async function runCalculation() {
       const allFittings = [...(pipe.props.fittings || [])];
       const toNode = findNode(pipe.toNodeId);
       if (toNode && toNode.props.fitting_key) {
+        const qty = Math.max(1, parseInt(toNode.props.quantity, 10) || 1);
         if (toNode.props.is_custom_k && toNode.props.custom_k !== null && toNode.props.custom_k !== undefined) {
           allFittings.push({
             id: `fit_${toNode.id}`,
             key: toNode.props.fitting_key,
             k: parseFloat(toNode.props.custom_k) || 0,
-            label: `${toNode.props.label || toNode.id} (Custom K=${toNode.props.custom_k})`
+            count: qty,
+            label: `${toNode.props.label || toNode.id} (Custom K=${toNode.props.custom_k}${qty > 1 ? ` x${qty}` : ''})`
           });
         } else {
           allFittings.push({
             id: `fit_${toNode.id}`,
             key: toNode.props.fitting_key,
-            label: toNode.props.label || toNode.id,
+            count: qty,
+            label: `${toNode.props.label || toNode.id}${qty > 1 ? ` (x${qty})` : ''}`,
           });
         }
       }
@@ -4449,6 +4788,8 @@ async function runCalculation() {
         od_mm: pipe.props.od_mm,
         id_mm: pipe.props.id_mm,
         pressure_rating: pipe.props.pressure_rating,
+        custom_roughness_mm: pipe.props.use_custom_roughness && pipe.props.custom_roughness_mm ? parseFloat(pipe.props.custom_roughness_mm) : null,
+        custom_hazen_c: pipe.props.use_custom_hazen && pipe.props.custom_hazen_c ? parseFloat(pipe.props.custom_hazen_c) : null,
       };
     }),
   };
@@ -4581,6 +4922,9 @@ function displayResults(data) {
           <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">h Total (m)</th>
           <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Consolidated Hydraulic Resistance R (hf = R * Q^n). Click for formulas and calculation details." onclick="showHydraulicHelp('res_r')">Res. R <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
           <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Flow Exponent n (2.0 for Darcy-Weisbach, 1.852 for Hazen-Williams). Click for formulas and calculation details." onclick="showHydraulicHelp('exp_n')">Exp. n <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Slurry Settling Velocity Vt (Ferguson &amp; Church) and Durand Critical Velocity Vc. Click for slurry notes." onclick="showHydraulicHelp('slurry')">Slurry V<sub>t</sub> / V<sub>c</sub> <i class="bi bi-info-circle" style="color:#f59e0b;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Joukowsky Water Hammer wave speed 'a' and transient surge pressure delta-P. Click for water hammer notes." onclick="showHydraulicHelp('water_hammer')">Wave / Surge <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Barlow pipe wall circumferential hoop stress and safety factor vs allowable yield." onclick="showHydraulicHelp('pipe_stress')">Hoop Stress <i class="bi bi-info-circle" style="color:#4ade80;font-size:10px;margin-left:2px;"></i></th>
         </tr>
       `;
     }
@@ -4609,6 +4953,34 @@ function displayResults(data) {
       } else if (r.pressure_drop_kpa !== undefined) {
         pSub = `<div style="font-size:9.5px;color:#64748b;" title="Friction Pressure Drop">&Delta;P ${r.pressure_drop_kpa.toFixed(1)}</div>`;
       }
+
+      // Slurry deposition display
+      let slurryCell = `<span style="color:#64748b;">—</span>`;
+      if (r.is_slurry && r.critical_velocity_ms !== null && r.critical_velocity_ms !== undefined) {
+        const depColor = r.deposition_margin_ratio >= 1.2 ? '#22c55e' : (r.deposition_margin_ratio >= 1.0 ? '#f59e0b' : '#f87171');
+        const vtStr = r.settling_velocity_ms !== undefined && r.settling_velocity_ms !== null ? r.settling_velocity_ms.toFixed(3) : '—';
+        slurryCell = `
+          <div style="font-family:monospace;font-size:11px;font-weight:600;color:${depColor};">${r.critical_velocity_ms.toFixed(2)} m/s</div>
+          <div style="font-size:9.5px;color:#94a3b8;" title="Particle settling velocity Vt">V<sub>t</sub>: ${vtStr} m/s</div>
+        `;
+      }
+
+      // Water hammer Joukowsky wave speed & surge
+      const waveSpeed = r.wave_speed_ms !== undefined && r.wave_speed_ms !== null ? r.wave_speed_ms : null;
+      const surgeKpa = r.surge_pressure_kpa !== undefined && r.surge_pressure_kpa !== null ? r.surge_pressure_kpa : null;
+      const whCell = waveSpeed ? `
+        <div style="font-family:monospace;font-size:11px;color:#38bdf8;">${Math.round(waveSpeed)} m/s</div>
+        <div style="font-size:9.5px;color:#f59e0b;" title="Instantaneous Joukowsky surge pressure &Delta;P">+${Math.round(surgeKpa || 0)} kPa</div>
+      ` : `<span style="color:#64748b;">—</span>`;
+
+      // Barlow hoop stress
+      const hoopMpa = r.hoop_stress_mpa !== undefined && r.hoop_stress_mpa !== null ? r.hoop_stress_mpa : null;
+      const sf = r.stress_safety_factor !== undefined && r.stress_safety_factor !== null ? r.stress_safety_factor : null;
+      const sfColor = sf && sf >= 2.0 ? '#4ade80' : (sf && sf >= 1.2 ? '#f59e0b' : '#f87171');
+      const stressCell = hoopMpa !== null ? `
+        <div style="font-family:monospace;font-size:11px;color:#cbd5e1;">${hoopMpa.toFixed(1)} MPa</div>
+        <div style="font-size:9.5px;color:${sfColor};font-weight:600;" title="Safety factor vs allowable yield stress">SF ${sf ? sf.toFixed(1) : '—'}</div>
+      ` : `<span style="color:#64748b;">—</span>`;
 
       tbody.innerHTML += `
         <tr style="border-bottom:1px solid #21262d" onmouseover="this.style.background='#1c2330'" onmouseout="this.style.background=''">
@@ -4643,10 +5015,13 @@ function displayResults(data) {
           <td style="padding:6px 10px;text-align:right;font-weight:700;color:#fbbf24">${r.h_total_m}</td>
           <td style="padding:6px 10px;text-align:right;font-family:monospace;color:#38bdf8">${r.resistance_R !== undefined ? r.resistance_R.toFixed(1) : '—'}</td>
           <td style="padding:6px 10px;text-align:right;font-family:monospace;color:#94a3b8">${r.flow_exponent_n !== undefined ? r.flow_exponent_n.toFixed(3) : (s.friction_method === 'hazen_williams' ? '1.852' : '2.000')}</td>
+          <td style="padding:6px 10px;text-align:right;">${slurryCell}</td>
+          <td style="padding:6px 10px;text-align:right;">${whCell}</td>
+          <td style="padding:6px 10px;text-align:right;">${stressCell}</td>
         </tr>`;
     });
     (data.errors || []).forEach(err => {
-      tbody.innerHTML += `<tr><td colspan="16" style="padding:6px 10px;color:#f85149">Error in ${err.id}: ${err.error}</td></tr>`;
+      tbody.innerHTML += `<tr><td colspan="19" style="padding:6px 10px;color:#f85149">Error in ${err.id}: ${err.error}</td></tr>`;
     });
   }
 
@@ -4957,27 +5332,55 @@ function init() {
       }
     }
     if (state.panDrag) {
-      state.pan.x = state.panDrag.startPanX + (e.clientX - state.panDrag.startX);
-      state.pan.y = state.panDrag.startPanY + (e.clientY - state.panDrag.startY);
+      const dx = e.clientX - state.panDrag.startX;
+      const dy = e.clientY - state.panDrag.startY;
+      if (Math.hypot(dx, dy) > 3) {
+        state.panDrag.moved = true;
+      }
+      state.pan.x = state.panDrag.startPanX + dx;
+      state.pan.y = state.panDrag.startPanY + dy;
       applyTransform();
     }
   });
 
   svgEl.addEventListener('mouseup', () => {
     hideAlignmentGuides();
-    if (state.nodeDrag || state.panDrag) {
+    if (state.panDrag) {
+      svgEl.style.cursor = state.mode === 'select' ? 'grab' : (state.mode === 'connect' ? 'crosshair' : 'cell');
+      if (state.panDrag.moved) {
+        state.justPanned = true;
+        setTimeout(() => { state.justPanned = false; }, 100);
+      }
+    }
+    if (state.nodeDrag || state.panDrag?.moved) {
       saveNetworkToStorage();
     }
     state.nodeDrag = null;
     state.panDrag = null;
   });
 
+  window.addEventListener('mouseup', () => {
+    if (state.panDrag) {
+      svgEl.style.cursor = state.mode === 'select' ? 'grab' : (state.mode === 'connect' ? 'crosshair' : 'cell');
+      if (state.panDrag.moved) {
+        state.justPanned = true;
+        setTimeout(() => { state.justPanned = false; }, 100);
+      }
+      state.panDrag = null;
+    }
+    state.nodeDrag = null;
+  });
+
   svgEl.addEventListener('mousedown', e => {
-    if (e.button === 1) {
+    // Middle click (button 1) OR spacebar pressed OR clicking on the background canvas in select mode
+    const isCanvasBg = (e.target === svgEl || e.target.id === 'pn-svg' || e.target.tagName === 'svg' || e.target.id === 'pn-pipes' || e.target.id === 'pn-nodes');
+    if (e.button === 1 || (e.button === 0 && (state.mode === 'select' || state.spacePressed || e.altKey) && isCanvasBg)) {
       state.panDrag = {
         startX: e.clientX, startY: e.clientY,
-        startPanX: state.pan.x, startPanY: state.pan.y
+        startPanX: state.pan.x, startPanY: state.pan.y,
+        moved: false,
       };
+      svgEl.style.cursor = 'grabbing';
       e.preventDefault();
     }
   });
@@ -4991,11 +5394,22 @@ function init() {
 
   // Keyboard
   document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') {
+      state.spacePressed = true;
+      svgEl.style.cursor = 'grab';
+    }
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     if (e.key === 'Escape') setMode('select');
     if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
     if (e.key === 's' || e.key === 'S') setMode('select');
     if (e.key === 'c' || e.key === 'C') setMode('connect');
+  });
+
+  document.addEventListener('keyup', e => {
+    if (e.code === 'Space') {
+      state.spacePressed = false;
+      svgEl.style.cursor = state.mode === 'select' ? 'grab' : (state.mode === 'connect' ? 'crosshair' : 'cell');
+    }
   });
 
   // Toolbar
@@ -5142,10 +5556,23 @@ function init() {
   baroInput?.addEventListener('input', syncBaroToAltitude);
   baroInput?.addEventListener('change', syncBaroToAltitude);
 
+  // Vapor pressure sync & calculation (Antoine equation: log10(P_mmHg) = A - B / (C + T))
+  const vpInput = document.getElementById('pn-vapor-pressure');
+  function calcWaterVaporPressureKPa(tempC) {
+    const t = Math.max(0.1, Math.min(100.0, tempC));
+    const pMmhg = Math.pow(10, 8.07131 - (1730.63 / (233.426 + t)));
+    return parseFloat((pMmhg * 0.133322).toFixed(2));
+  }
+
   tempInput?.addEventListener('input', () => {
     const t = parseFloat(tempInput.value);
     if (!isNaN(t)) {
       state.temperature_c = t;
+      const pv = calcWaterVaporPressureKPa(t);
+      state.vapor_pressure_kpa = pv;
+      if (vpInput && document.activeElement !== vpInput) {
+        vpInput.value = pv.toFixed(2);
+      }
       saveNetworkToStorage();
     }
   });
@@ -5153,22 +5580,150 @@ function init() {
     const t = parseFloat(tempInput.value);
     if (!isNaN(t)) {
       state.temperature_c = t;
+      const pv = calcWaterVaporPressureKPa(t);
+      state.vapor_pressure_kpa = pv;
+      if (vpInput && document.activeElement !== vpInput) {
+        vpInput.value = pv.toFixed(2);
+      }
       saveNetworkToStorage();
     }
   });
+
+  vpInput?.addEventListener('input', () => {
+    const pv = parseFloat(vpInput.value);
+    if (!isNaN(pv) && pv > 0) {
+      state.vapor_pressure_kpa = pv;
+      saveNetworkToStorage();
+    }
+  });
+  vpInput?.addEventListener('change', () => {
+    const pv = parseFloat(vpInput.value);
+    if (!isNaN(pv) && pv > 0) {
+      state.vapor_pressure_kpa = pv;
+      saveNetworkToStorage();
+    }
+  });
+
+  // Slurry modal & parameter controls
+  document.getElementById('btn-toggle-slurry')?.addEventListener('click', () => toggleSlurryModal(true));
+
+  const slurryToggle = document.getElementById('slurry-enable-toggle');
+  slurryToggle?.addEventListener('change', () => {
+    state.is_slurry = slurryToggle.checked;
+    updateSlurryModalUI();
+    saveNetworkToStorage();
+  });
+
+  function updateSlurryModalUI() {
+    const isEn = Boolean(state.is_slurry);
+    const badge = document.getElementById('slurry-status-badge');
+    if (badge) {
+      badge.textContent = isEn ? 'Enabled' : 'Disabled';
+      badge.style.background = isEn ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)';
+      badge.style.color = isEn ? '#f59e0b' : '#8b949e';
+    }
+    const btn = document.getElementById('btn-toggle-slurry');
+    if (btn) {
+      btn.classList.toggle('active-tool', isEn);
+    }
+    // Update Cv calculation in modal: Cv = (Cw/Ss) / [ (Cw/Ss) + (1-Cw)/Sl ]
+    const cw = parseFloat(document.getElementById('slurry-c-weight')?.value || 25.0) / 100.0;
+    const ss = Math.max(1.01, parseFloat(document.getElementById('slurry-solids-sg')?.value || 2.65));
+    const sl = Math.max(0.5, parseFloat(state.specific_gravity || 1.0));
+    const volS = cw / ss;
+    const volL = (1.0 - cw) / sl;
+    const cv = (volS / (volS + volL)) * 100.0;
+    const cvInput = document.getElementById('slurry-c-volume');
+    if (cvInput) cvInput.value = `${cv.toFixed(1)} %`;
+  }
+
+  ['slurry-d50', 'slurry-solids-sg', 'slurry-c-weight'].forEach(id => {
+    const el = document.getElementById(id);
+    el?.addEventListener('input', () => {
+      state.slurry_d50_mm = parseFloat(document.getElementById('slurry-d50')?.value || 0.15);
+      state.slurry_solids_sg = parseFloat(document.getElementById('slurry-solids-sg')?.value || 2.65);
+      state.slurry_c_weight = parseFloat(document.getElementById('slurry-c-weight')?.value || 25.0);
+      updateSlurryModalUI();
+      saveNetworkToStorage();
+    });
+  });
+
+  window.toggleSlurryModal = function(forceOpen) {
+    const modal = document.getElementById('slurry-modal-overlay');
+    if (!modal) return;
+    const show = forceOpen !== undefined ? forceOpen : modal.style.display === 'none';
+    modal.style.display = show ? 'block' : 'none';
+    if (show) {
+      if (slurryToggle) slurryToggle.checked = Boolean(state.is_slurry);
+      setVal('slurry-d50', state.slurry_d50_mm || 0.15);
+      setVal('slurry-solids-sg', state.slurry_solids_sg || 2.65);
+      setVal('slurry-c-weight', state.slurry_c_weight || 25.0);
+      updateSlurryModalUI();
+    }
+  };
+
+  window.applySlurrySettings = function() {
+    state.is_slurry = Boolean(document.getElementById('slurry-enable-toggle')?.checked);
+    state.slurry_d50_mm = parseFloat(document.getElementById('slurry-d50')?.value || 0.15);
+    state.slurry_solids_sg = parseFloat(document.getElementById('slurry-solids-sg')?.value || 2.65);
+    state.slurry_c_weight = parseFloat(document.getElementById('slurry-c-weight')?.value || 25.0);
+    toggleSlurryModal(false);
+    saveNetworkToStorage();
+    runCalculation();
+    toast(`Slurry calculations ${state.is_slurry ? 'enabled' : 'disabled'}.`, 'info');
+  };
+
+  // Shared SG initialization and bidirectional sync
+  window.__pn_set_sg = function(sgVal) {
+    if (typeof sgVal === 'number' && !isNaN(sgVal) && sgVal > 0) {
+      state.specific_gravity = sgVal;
+      if (sgInput && document.activeElement !== sgInput) {
+        sgInput.value = sgVal.toFixed(2);
+      }
+    }
+  };
+
+  const psSg = (typeof window.getPumpSelectionSg === 'function') ? window.getPumpSelectionSg() : null;
+  const sharedSg = psSg || localStorage.getItem('pmpro_shared_fluid_sg');
+  if (sharedSg && !isNaN(parseFloat(sharedSg))) {
+    const val = parseFloat(sharedSg);
+    state.specific_gravity = val;
+    if (sgInput) sgInput.value = val.toFixed(2);
+  }
 
   sgInput?.addEventListener('input', () => {
     const sg = parseFloat(sgInput.value);
     if (!isNaN(sg) && sg > 0) {
       state.specific_gravity = sg;
+      localStorage.setItem('pmpro_shared_fluid_sg', sg.toString());
       saveNetworkToStorage();
+      if (typeof window.syncPipeNetworkSgToPumpSelection === 'function') {
+        window.syncPipeNetworkSgToPumpSelection();
+      }
     }
   });
   sgInput?.addEventListener('change', () => {
     const sg = parseFloat(sgInput.value);
     if (!isNaN(sg) && sg > 0) {
       state.specific_gravity = sg;
+      localStorage.setItem('pmpro_shared_fluid_sg', sg.toString());
       saveNetworkToStorage();
+      if (typeof window.syncPipeNetworkSgToPumpSelection === 'function') {
+        window.syncPipeNetworkSgToPumpSelection();
+      }
+    }
+  });
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'pmpro_shared_fluid_sg' && e.newValue) {
+      const val = parseFloat(e.newValue);
+      if (!isNaN(val) && val > 0) {
+        state.specific_gravity = val;
+        if (sgInput && document.activeElement !== sgInput) {
+          sgInput.value = val.toFixed(2);
+        }
+        saveNetworkToStorage();
+      }
     }
   });
 
@@ -5184,6 +5739,10 @@ function init() {
   const npFlow = document.getElementById('np-flow');
   npFlow?.addEventListener('input', onPumpFlowChange);
   npFlow?.addEventListener('change', onPumpFlowChange);
+
+  const npQty = document.getElementById('np-quantity');
+  npQty?.addEventListener('input', onNodeQuantityChange);
+  npQty?.addEventListener('change', onNodeQuantityChange);
 
   document.getElementById('np-fitting-key')?.addEventListener('change', onNodeFittingChange);
   document.getElementById('np-pump-config')?.addEventListener('change', onPumpConfigChange);
@@ -5211,7 +5770,7 @@ function init() {
         const valGroup = document.getElementById('np-custom-k-val-group');
         if (valGroup) valGroup.style.display = node.props.is_custom_k ? '' : 'none';
         if (node.props.is_custom_k && (node.props.custom_k === null || node.props.custom_k === undefined)) {
-          node.props.custom_k = getNodeKFactor(node);
+          node.props.custom_k = getNodeUnitKFactor(node);
           setVal('np-custom-k', node.props.custom_k);
         }
         updateKDisplay(node);
@@ -5262,7 +5821,20 @@ function init() {
     el?.addEventListener('input', onPipePropChange);
     el?.addEventListener('change', onPipePropChange);
   });
-  document.getElementById('pp-fittings-list')?.addEventListener('change', onPipePropChange);
+  
+  document.getElementById('pp-fittings-list')?.addEventListener('change', (e) => {
+    if (e.target.classList.contains('pp-fitting-cb')) {
+      const row = e.target.closest('.pp-fitting-row') || e.target.parentElement;
+      const qtyWrap = row?.querySelector('.pp-fitting-qty-wrap');
+      if (qtyWrap) qtyWrap.style.display = e.target.checked ? 'flex' : 'none';
+    }
+    onPipePropChange();
+  });
+  document.getElementById('pp-fittings-list')?.addEventListener('input', (e) => {
+    if (e.target.classList.contains('pp-fitting-qty')) {
+      onPipePropChange();
+    }
+  });
 
   // Standard pipe filter listeners
   document.getElementById('pp-filter-standard')?.addEventListener('change', () => onStandardPipeFilterChange('standard'));
@@ -5285,13 +5857,23 @@ function init() {
   // Populate fittings
   const fList = document.getElementById('pp-fittings-list');
   const nFitSel = document.getElementById('np-fitting-key');
+  if (fList) fList.innerHTML = '';
   FITTINGS.forEach(f => {
     if (fList) {
-      const lbl = document.createElement('label');
-      lbl.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:5px;cursor:pointer;font-size:12px;color:#94a3b8;';
-      lbl.innerHTML = `<input type="checkbox" class="pp-fitting-cb" value="${f.key}" style="accent-color:#58a6ff;cursor:pointer;flex-shrink:0;">
-        <span>${f.label} <span style="color:#475569">(K=${f.K})</span></span>`;
-      fList.appendChild(lbl);
+      const row = document.createElement('div');
+      row.className = 'pp-fitting-row';
+      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;font-size:12px;color:#94a3b8;gap:6px;';
+      row.innerHTML = `
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex:1;margin:0;">
+          <input type="checkbox" class="pp-fitting-cb" value="${f.key}" style="accent-color:#58a6ff;cursor:pointer;flex-shrink:0;">
+          <span>${f.label} <span style="color:#475569">(K=${f.K})</span></span>
+        </label>
+        <div class="pp-fitting-qty-wrap" style="display:none;align-items:center;gap:3px;flex-shrink:0;">
+          <span style="font-size:10px;color:#64748b;">Qty:</span>
+          <input type="number" class="pp-fitting-qty" data-key="${f.key}" min="1" step="1" value="1" style="width:42px;background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#e6edf3;padding:1px 4px;font-size:11px;text-align:center;">
+        </div>
+      `;
+      fList.appendChild(row);
     }
     if (nFitSel) {
       const opt = document.createElement('option');
@@ -5299,6 +5881,34 @@ function init() {
       nFitSel.appendChild(opt);
     }
   });
+
+  // Custom roughness & Hazen-Williams listeners in pipe properties
+  const ppUseRoughCb = document.getElementById('pp-use-custom-roughness');
+  ppUseRoughCb?.addEventListener('change', () => {
+    const wrap = document.getElementById('pp-custom-roughness-wrap');
+    if (wrap) wrap.style.display = ppUseRoughCb.checked ? '' : 'none';
+    onPipePropChange();
+  });
+  const ppCustRough = document.getElementById('pp-custom-roughness');
+  ppCustRough?.addEventListener('input', onPipePropChange);
+  ppCustRough?.addEventListener('change', onPipePropChange);
+
+  const ppUseHazenCb = document.getElementById('pp-use-custom-hazen');
+  ppUseHazenCb?.addEventListener('change', () => {
+    const wrap = document.getElementById('pp-custom-hazen-wrap');
+    if (wrap) wrap.style.display = ppUseHazenCb.checked ? '' : 'none';
+    onPipePropChange();
+  });
+  const ppCustHazen = document.getElementById('pp-custom-hazen-c');
+  ppCustHazen?.addEventListener('input', onPipePropChange);
+  ppCustHazen?.addEventListener('change', onPipePropChange);
+
+  // LHS Network Members sidebar controls
+  document.getElementById('btn-toggle-left-sidebar')?.addEventListener('click', () => toggleLeftSidebar());
+  document.getElementById('pn-member-filter')?.addEventListener('input', renderNetworkMembers);
+  if (localStorage.getItem('pmpro_lhs_sidebar_collapsed') === 'true') {
+    toggleLeftSidebar(false);
+  }
 
   // Ensure state is flushed to storage on tab unload or visibility hidden
   window.addEventListener('beforeunload', () => {
@@ -5358,7 +5968,7 @@ function loadDemoNetwork() {
     },
     {
       id: 'N-3', type: 'valve', x: 540, y: 320,
-      props: { label: 'Gate Valve', elevation_m: 2, fitting_key: 'gate_valve_open' }
+      props: { label: 'Gate Valve', elevation_m: 2, fitting_key: 'gate_valve_open', quantity: 1 }
     },
     {
       id: 'N-4', type: 'discharge', x: 760, y: 320,
@@ -5385,7 +5995,7 @@ function loadDemoNetwork() {
         length_m: 4,
         material: 'commercial_steel',
         elev_change_m: 0,
-        fittings: ['entry_bellmouth'],
+        fittings: [],
         routing: 'straight'
       }
     },
@@ -5407,7 +6017,7 @@ function loadDemoNetwork() {
         length_m: 12,
         material: 'commercial_steel',
         elev_change_m: 2,
-        fittings: ['check_valve_swing'],
+        fittings: [],
         routing: 'straight'
       }
     },
@@ -5429,7 +6039,7 @@ function loadDemoNetwork() {
         length_m: 20,
         material: 'commercial_steel',
         elev_change_m: 8,
-        fittings: ['exit_abrupt'],
+        fittings: [],
         routing: 'straight'
       }
     },
@@ -5543,10 +6153,16 @@ const HYDRAULIC_HELP_TOPICS = {
             </thead>
             <tbody>
               <tr style="border-bottom:1px solid #21262d;">
-                <td style="padding:4px 8px;font-weight:600;color:#38bdf8;">PVC / HDPE / PE100</td>
-                <td style="padding:4px 8px;font-family:monospace;">0.0015 – 0.007</td>
+                <td style="padding:4px 8px;font-weight:600;color:#38bdf8;">PVC / uPVC</td>
+                <td style="padding:4px 8px;font-family:monospace;">0.0015 – 0.0025</td>
                 <td style="padding:4px 8px;font-family:monospace;">150</td>
-                <td style="padding:4px 8px;color:#94a3b8;">Smooth plastic bore, no corrosion fouling</td>
+                <td style="padding:4px 8px;color:#94a3b8;">Ultra-smooth plastic bore, no corrosion fouling</td>
+              </tr>
+              <tr style="border-bottom:1px solid #21262d;">
+                <td style="padding:4px 8px;font-weight:600;color:#38bdf8;">HDPE / PE100 Polyethylene</td>
+                <td style="padding:4px 8px;font-family:monospace;">0.007</td>
+                <td style="padding:4px 8px;font-family:monospace;">140</td>
+                <td style="padding:4px 8px;color:#94a3b8;">Standard C = 140 for continuous extruded PE100</td>
               </tr>
               <tr style="border-bottom:1px solid #21262d;">
                 <td style="padding:4px 8px;font-weight:600;color:#58a6ff;">Commercial Steel / Sch 40</td>

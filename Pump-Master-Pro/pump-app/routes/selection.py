@@ -21,7 +21,7 @@ if _app_dir not in sys.path:
 
 import json
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, flash, abort
-from models import Pump, StandardPipe
+from models import Pump, StandardPipe, PipeFitting, PipeMaterial
 from utils import (
     _get_float, get_visible_pumps_query, get_current_organisation,
     UNITS_FLOW, UNITS_HEAD, UNITS_POWER, UNITS_DENSITY, UNITS_SIZE, convert_unit
@@ -302,6 +302,11 @@ def pump_selection():
     standard_pipes = StandardPipe.query.filter_by(is_active=True).order_by(StandardPipe.sort_order).all()
     standard_pipes_json = json.dumps([p.to_dict() for p in standard_pipes])
 
+    fittings = PipeFitting.query.filter_by(is_active=True).order_by(PipeFitting.sort_order).all()
+    materials = PipeMaterial.query.filter_by(is_active=True).order_by(PipeMaterial.sort_order).all()
+    fittings_json = json.dumps([f.to_dict() for f in fittings])
+    materials_json = json.dumps([m.to_dict() for m in materials])
+
     # ── Render template with results and filter options ─────────────────────
     return render_template('pump_selection.html',
                            results=results,
@@ -322,6 +327,8 @@ def pump_selection():
                            unit_pow=unit_pow,
                            pipe_network_json=pipe_network_json,
                            standard_pipes_json=standard_pipes_json,
+                           fittings_json=fittings_json,
+                           materials_json=materials_json,
                            sort_by=form_data.get('sort_by', 'rating'))
 
 

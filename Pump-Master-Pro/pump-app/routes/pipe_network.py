@@ -353,6 +353,16 @@ def calculate_network():
     # 3. Fluid specific gravity (SG) — determines fluid density relative to water
     specific_gravity = float(data.get('specific_gravity', 1.0) or 1.0)
 
+    # 4. Vapor pressure override (kPa)
+    vapor_pressure_kpa = float(data['vapor_pressure_kpa']) if (data.get('vapor_pressure_kpa') is not None and str(data.get('vapor_pressure_kpa')).strip() != '') else None
+
+    # 5. Slurry transport parameters
+    is_slurry = bool(data.get('is_slurry', False))
+    slurry_d50_mm = float(data.get('slurry_d50_mm', 0.15) or 0.15)
+    slurry_solids_sg = float(data.get('slurry_solids_sg', 2.65) or 2.65)
+    slurry_c_weight = float(data.get('slurry_c_weight', 25.0) or 25.0)
+    slurry_c_volume = float(data.get('slurry_c_volume')) if data.get('slurry_c_volume') is not None else None
+
     raw_pipes = data['pipes']
     raw_nodes = data.get('nodes')
 
@@ -412,6 +422,12 @@ def calculate_network():
                 temperature_c=temperature_c,
                 specific_gravity=specific_gravity,
                 barometric_pressure_kpa=barometric_pressure_kpa,
+                vapor_pressure_kpa=vapor_pressure_kpa,
+                is_slurry=is_slurry,
+                slurry_d50_mm=slurry_d50_mm,
+                slurry_solids_sg=slurry_solids_sg,
+                slurry_c_weight=slurry_c_weight,
+                slurry_c_volume=slurry_c_volume,
             )
             results = [p.to_dict() for p in solver_res.pipe_results]
             node_results = [n.to_dict() for n in solver_res.node_results]

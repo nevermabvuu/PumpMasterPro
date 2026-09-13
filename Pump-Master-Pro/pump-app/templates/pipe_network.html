@@ -699,9 +699,43 @@
     <label style="font-size:11px;color:#8b949e;white-space:nowrap;">
       Flow rate
       <input id="pn-global-flow" type="number" min="0.1" step="0.5" value="15" class="pp-input"
-        style="width:70px;display:inline-block;margin:0 4px 0 4px;">
+        style="width:65px;display:inline-block;margin:0 4px 0 4px;">
       m³/h
     </label>
+
+    <!-- Environmental & Fluid Properties: Altitude/Pressure, Temperature, SG -->
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.03);padding:2px 10px;border-radius:6px;border:1px solid #30363d;" title="Site atmospheric conditions and fluid properties affecting viscosity, vapor pressure, and NPSHa">
+      <i class="bi bi-clouds" style="color:#a78bfa;font-size:12px;" title="Site altitude and barometric atmospheric pressure"></i>
+      <label style="font-size:11px;color:#94a3b8;font-weight:600;margin:0;white-space:nowrap;" title="Site Altitude above sea level (m)">
+        Alt
+        <input id="pn-altitude" type="number" step="50" min="-500" max="6000" value="0" class="pp-input"
+               style="width:55px;display:inline-block;margin:0 2px;padding:2px 4px;height:24px;font-size:11px;" title="Site altitude in meters above sea level">
+        m
+      </label>
+      <span style="color:#484f58;font-size:10px;">/</span>
+      <label style="font-size:11px;color:#94a3b8;margin:0;white-space:nowrap;" title="Barometric atmospheric pressure (auto-synced with altitude via International Barometric Formula)">
+        <input id="pn-barometric" type="number" step="0.1" min="40" max="115" value="101.3" class="pp-input"
+               style="width:55px;display:inline-block;margin:0 2px;padding:2px 4px;height:24px;font-size:11px;" title="Barometric atmospheric pressure in kPa">
+        kPa
+      </label>
+
+      <span style="color:#484f58;font-size:10px;">|</span>
+      <i class="bi bi-thermometer-half" style="color:#f87171;font-size:12px;" title="Liquid operating temperature (°C) — determines liquid vapor pressure and kinematic viscosity"></i>
+      <label style="font-size:11px;color:#94a3b8;margin:0;white-space:nowrap;" title="Liquid operating temperature (°C)">
+        Temp
+        <input id="pn-temperature" type="number" step="1" min="0" max="100" value="20" class="pp-input"
+               style="width:45px;display:inline-block;margin:0 2px;padding:2px 4px;height:24px;font-size:11px;" title="Liquid operating temperature in °C">
+        °C
+      </label>
+
+      <span style="color:#484f58;font-size:10px;">|</span>
+      <i class="bi bi-water" style="color:#38bdf8;font-size:12px;" title="Fluid Specific Gravity (SG) relative to water (1.0)"></i>
+      <label style="font-size:11px;color:#94a3b8;margin:0;white-space:nowrap;" title="Fluid Specific Gravity (SG)">
+        SG
+        <input id="pn-sg" type="number" step="0.01" min="0.5" max="3.0" value="1.00" class="pp-input"
+               style="width:50px;display:inline-block;margin:0 2px;padding:2px 4px;height:24px;font-size:11px;" title="Specific Gravity (SG)">
+      </label>
+    </div>
 
     <!-- Calculate button -->
     <button id="pn-calc-btn" class="pn-btn pn-btn-success" style="margin-left:auto;">
@@ -1071,6 +1105,17 @@
       </div>
       <div class="res-card-label" style="color:#38bdf8;font-weight:700;">Consolidated R<sub>sys</sub></div>
     </div>
+    <!-- NPSHa Available Summary Card -->
+    <div class="res-card" style="border-color:rgba(20,184,166,0.4);background:rgba(20,184,166,0.05);cursor:pointer;"
+         title="Net Positive Suction Head Available (NPSHa). Click for formulas, atmospheric/vapor pressure, and cavitation safety guide."
+         onclick="showHydraulicHelp('npsh')">
+      <div class="res-card-value" style="color:#2dd4bf;font-size:18px;">
+        <span id="res-npsha">—</span> m
+      </div>
+      <div class="res-card-label" style="color:#14b8a6;font-weight:700;">
+        NPSH Available (NPSHa) <i class="bi bi-info-circle" style="font-size:10px;"></i>
+      </div>
+    </div>
   </div>
 
   <!-- Section: Pipe Hydraulic & Resistance Results -->
@@ -1078,7 +1123,7 @@
     <h3 style="font-size:0.88rem;font-weight:700;color:#cbd5e1;margin:0;display:flex;align-items:center;gap:6px;">
       <i class="bi bi-water" style="color:#38bdf8;"></i> Pipe Segments &amp; Friction Losses
     </h3>
-    <span style="font-size:11px;color:#64748b;">Losses calculated across continuous pipe runs</span>
+    <span style="font-size:11px;color:#64748b;">Losses calculated across continuous pipe runs &bull; Click any header with an info icon for engineering notes</span>
   </div>
 
   <!-- Per-segment table -->
@@ -1090,16 +1135,18 @@
           <th style="text-align:left;">Label</th>
           <th>D (mm)</th>
           <th>L (m)</th>
+          <th style="cursor:pointer;" title="Pipe volumetric flow rate (m³/h and L/s). Click for help notes &amp; formulas." onclick="showHydraulicHelp('flow_pressure')">Flow (m³/h) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
           <th>Velocity (m/s)</th>
+          <th style="cursor:pointer;" title="Operating gauge pressure in pipe &amp; inlet/outlet drop. Click for help notes &amp; formulas." onclick="showHydraulicHelp('flow_pressure')">Pressure (kPa) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
           <th>Regime / Re</th>
-          <th id="th-friction-factor">f</th>
+          <th id="th-friction-factor" style="cursor:pointer;" title="Friction factor f or Hazen-Williams C. Click for help notes." onclick="showHydraulicHelp('exp_n')">f <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
           <th>K<sub>total</sub></th>
-          <th>hf Major (m)</th>
-          <th>hf Minor (m)</th>
+          <th style="cursor:pointer;" title="Major friction head loss along pipe wall (hf = f * L/D * V²/2g). Click for help notes &amp; formulas." onclick="showHydraulicHelp('hf_major')">hf Major (m) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
+          <th style="cursor:pointer;" title="Minor head loss from fittings and valves (hm = K * V²/2g). Click for help notes &amp; formulas." onclick="showHydraulicHelp('hf_minor')">hf Minor (m) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
           <th>Elev (m)</th>
           <th>h Total (m)</th>
-          <th>Res. R</th>
-          <th>Exp. n</th>
+          <th style="cursor:pointer;" title="Consolidated Hydraulic Resistance R (hf = R * Q^n). Click for formulas and details." onclick="showHydraulicHelp('res_r')">Res. R <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
+          <th style="cursor:pointer;" title="Flow Exponent n (2.0 for Darcy-Weisbach, 1.852 for Hazen-Williams). Click for formulas and details." onclick="showHydraulicHelp('exp_n')">Exp. n <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;"></i></th>
         </tr>
       </thead>
       <tbody id="res-table-body"></tbody>
@@ -1111,6 +1158,11 @@
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
       <h3 style="font-size:0.88rem;font-weight:700;color:#cbd5e1;margin:0;display:flex;align-items:center;gap:6px;">
         <i class="bi bi-geo-alt-fill" style="color:#c084fc;"></i> Node Hydraulic Grade Line (HGL) &amp; Pressures
+        <button type="button" class="pn-btn" onclick="showHydraulicHelp('hgl_pressures')"
+          style="font-size:10px;padding:2px 8px;margin-left:6px;background:rgba(192,132,252,0.15);border:1px solid rgba(192,132,252,0.4);color:#c084fc;cursor:pointer;display:inline-flex;align-items:center;gap:4px;"
+          title="Click to read help notes on HGL, Elevation, and Gauge Pressures">
+          <i class="bi bi-info-circle"></i> Help Notes &amp; Formulas
+        </button>
       </h3>
       <span style="font-size:11px;color:#64748b;">Nodal energy elevation and gauge pressures</span>
     </div>
@@ -1121,10 +1173,10 @@
             <th style="padding:6px 10px;text-align:left;">Node ID</th>
             <th style="padding:6px 10px;text-align:left;">Label</th>
             <th style="padding:6px 10px;text-align:left;">Type</th>
-            <th style="padding:6px 10px;text-align:right;">Elevation Z (m)</th>
-            <th style="padding:6px 10px;text-align:right;">Total Head HGL (m)</th>
-            <th style="padding:6px 10px;text-align:right;">Pressure Head P/γ (m)</th>
-            <th style="padding:6px 10px;text-align:right;">Pressure (kPa)</th>
+            <th style="padding:6px 10px;text-align:right;cursor:pointer;" title="Physical elevation Z above datum. Click for help notes." onclick="showHydraulicHelp('hgl_pressures')">Elevation Z (m) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;"></i></th>
+            <th style="padding:6px 10px;text-align:right;cursor:pointer;" title="Hydraulic Grade Line (HGL = Z + P/(ρ·g), where g = 9.80665 m/s²). Click for help notes." onclick="showHydraulicHelp('hgl_pressures')">Total Head HGL (m) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;"></i></th>
+            <th style="padding:6px 10px;text-align:right;cursor:pointer;" title="Pressure Head (P/(ρ·g) = HGL - Z, where g = 9.80665 m/s²). Click for help notes." onclick="showHydraulicHelp('hgl_pressures')">Pressure Head P/(ρ·g) (m) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;"></i></th>
+            <th style="padding:6px 10px;text-align:right;cursor:pointer;" title="Gauge Pressure in kPa (Pressure Head * ρ * g / 1000). Click for help notes." onclick="showHydraulicHelp('hgl_pressures')">Pressure (kPa) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;"></i></th>
             <th style="padding:6px 10px;text-align:right;">Demand (m³/h)</th>
           </tr>
         </thead>
@@ -1136,6 +1188,11 @@
   <!-- Formula reference -->
   <div id="pn-formula-reference"
     style="margin-top:12px;padding:10px 14px;background:#161b22;border:1px solid #21262d;border-radius:8px;font-size:11px;color:#64748b;line-height:1.9;">
+    <button type="button" class="pn-btn" onclick="showHydraulicHelp('res_r')"
+      style="font-size:10.5px;padding:3px 10px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.4);color:#38bdf8;cursor:pointer;display:inline-flex;align-items:center;gap:5px;float:right;margin-top:-2px;"
+      title="Click to view full hydraulic reference notes and formulas">
+      <i class="bi bi-book-half"></i> Full Guide &amp; Formulas
+    </button>
     <strong style="color:#8b949e;">Calculation methods:</strong>
     Major losses: <code style="color:#58a6ff;">hf = f (L/D) V&sup2;/2g</code> &mdash;
     Friction factor: <code style="color:#58a6ff;">Swamee-Jain approximation to Colebrook-White</code> &mdash;

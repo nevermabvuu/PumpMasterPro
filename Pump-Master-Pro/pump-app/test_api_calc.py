@@ -36,6 +36,9 @@ assert len(data_dw["results"]) == 1, f"Expected 1 consolidated continuous pipe, 
 pipe_res = data_dw["results"][0]
 assert abs(pipe_res["length_m"] - 100.0) < 1e-4, f"Expected length 100m, got {pipe_res['length_m']}"
 assert pipe_res["flow_exponent_n"] == 2.0, "Expected n=2.0 for Darcy-Weisbach"
+assert pipe_res.get("flow_m3h") == 25.0, f"Expected flow_m3h=25.0, got {pipe_res.get('flow_m3h')}"
+assert "pressure_kpa" in pipe_res, "Expected pressure_kpa in pipe_res"
+print(f"  Verified flow_m3h={pipe_res['flow_m3h']} m3/h, pressure_kpa={pipe_res['pressure_kpa']} kPa, pressure_in_kpa={pipe_res.get('pressure_in_kpa')}, pressure_out_kpa={pipe_res.get('pressure_out_kpa')}")
 
 # Now Hazen-Williams
 payload_hw = dict(payload_dw)

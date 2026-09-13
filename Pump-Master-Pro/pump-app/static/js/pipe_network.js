@@ -279,6 +279,11 @@ const state = {
   viewMode: 'industrial', // 'industrial' (Visual thick 3D pipes) | 'schematic' (Thin 2D single-line)
   lastCalculation: null,
   pendingSelect: null,
+  // Environmental & fluid conditions
+  altitude_m: 0,
+  barometric_pressure_kpa: 101.325,
+  temperature_c: 20,
+  specific_gravity: 1.0,
 };
 
 let svgEl, nodesGroup, pipesGroup, draftPipeLine;
@@ -837,6 +842,21 @@ function getNetworkPayload(extra = {}) {
   const methodEl = document.getElementById('pn-friction-method');
   const frictionMethod = methodEl ? (methodEl.value || 'darcy_weisbach') : 'darcy_weisbach';
 
+  // Environmental and fluid parameters
+  const altEl = document.getElementById('pn-altitude');
+  const altitude = altEl ? (parseFloat(altEl.value) || 0) : (state.altitude_m || 0);
+  const baroEl = document.getElementById('pn-barometric');
+  const barometricPressure = baroEl ? (parseFloat(baroEl.value) || 101.325) : (state.barometric_pressure_kpa || 101.325);
+  const tempEl = document.getElementById('pn-temperature');
+  const temperature = tempEl ? (parseFloat(tempEl.value) || 20) : (state.temperature_c || 20);
+  const sgEl = document.getElementById('pn-sg');
+  const specificGravity = sgEl ? (parseFloat(sgEl.value) || 1.0) : (state.specific_gravity || 1.0);
+
+  state.altitude_m = altitude;
+  state.barometric_pressure_kpa = barometricPressure;
+  state.temperature_c = temperature;
+  state.specific_gravity = specificGravity;
+
   return {
     version: 3,
     nodes: state.nodes,
@@ -845,6 +865,10 @@ function getNetworkPayload(extra = {}) {
     globalFlow: globalFlow,
     solverMethod: solverMethod,
     frictionMethod: frictionMethod,
+    altitude_m: altitude,
+    barometric_pressure_kpa: barometricPressure,
+    temperature_c: temperature,
+    specific_gravity: specificGravity,
     lastCalculation: state.lastCalculation || null,
     pan: state.pan,
     zoom: state.zoom,
@@ -978,6 +1002,28 @@ function loadNetworkFromStorage() {
   if (d.globalFlow) {
     const flowInput = document.getElementById('pn-global-flow');
     if (flowInput) flowInput.value = d.globalFlow;
+  }
+
+  // Restore environmental & fluid condition inputs
+  if (d.altitude_m !== undefined) {
+    state.altitude_m = parseFloat(d.altitude_m) || 0;
+    const altInput = document.getElementById('pn-altitude');
+    if (altInput) altInput.value = state.altitude_m;
+  }
+  if (d.barometric_pressure_kpa !== undefined) {
+    state.barometric_pressure_kpa = parseFloat(d.barometric_pressure_kpa) || 101.325;
+    const baroInput = document.getElementById('pn-barometric');
+    if (baroInput) baroInput.value = state.barometric_pressure_kpa.toFixed(1);
+  }
+  if (d.temperature_c !== undefined) {
+    state.temperature_c = parseFloat(d.temperature_c) || 20;
+    const tempInput = document.getElementById('pn-temperature');
+    if (tempInput) tempInput.value = state.temperature_c;
+  }
+  if (d.specific_gravity !== undefined) {
+    state.specific_gravity = parseFloat(d.specific_gravity) || 1.0;
+    const sgInput = document.getElementById('pn-sg');
+    if (sgInput) sgInput.value = state.specific_gravity.toFixed(2);
   }
 
   if (d.pan && typeof d.pan.x === 'number' && typeof d.pan.y === 'number') {
@@ -4342,10 +4388,24 @@ async function runCalculation() {
   const solverMethod = document.getElementById('pn-solver-method')?.value || 'ggm';
   const frictionMethod = document.getElementById('pn-friction-method')?.value || 'darcy_weisbach';
 
+  // Environmental and fluid parameters
+  const altEl = document.getElementById('pn-altitude');
+  const altitude = altEl ? (parseFloat(altEl.value) || 0) : (state.altitude_m || 0);
+  const baroEl = document.getElementById('pn-barometric');
+  const barometricPressure = baroEl ? (parseFloat(baroEl.value) || 101.325) : (state.barometric_pressure_kpa || 101.325);
+  const tempEl = document.getElementById('pn-temperature');
+  const temperature = tempEl ? (parseFloat(tempEl.value) || 20) : (state.temperature_c || 20);
+  const sgEl = document.getElementById('pn-sg');
+  const specificGravity = sgEl ? (parseFloat(sgEl.value) || 1.0) : (state.specific_gravity || 1.0);
+
   const payload = {
     flow_m3h: globalFlow,
     solver_method: solverMethod,
     friction_method: frictionMethod,
+    altitude_m: altitude,
+    barometric_pressure_kpa: barometricPressure,
+    temperature_c: temperature,
+    specific_gravity: specificGravity,
     nodes: state.nodes.map(node => ({
       id: node.id,
       type: node.type,
@@ -4434,6 +4494,17 @@ function displayResults(data) {
   setVal('res-r-sys', s.total_system_R !== undefined ? s.total_system_R.toFixed(2) : '—');
   setVal('res-method-label', s.friction_method === 'hazen_williams' ? 'Hazen-Williams' : 'Darcy-Weisbach');
 
+  // Populate NPSH Available card (NPSHa)
+  const npshaVal = s.npsha_m !== undefined ? s.npsha_m : null;
+  const npshaEl = document.getElementById('res-npsha');
+  if (npshaEl) {
+    npshaEl.textContent = npshaVal !== null ? npshaVal.toFixed(2) : '—';
+    if (npshaVal !== null) {
+      npshaEl.style.color = s.cavitation_color || (npshaVal >= 4.5 ? '#2dd4bf' : npshaVal >= 2.5 ? '#f59e0b' : '#f87171');
+      npshaEl.title = `NPSHa: ${npshaVal.toFixed(2)} m (${s.cavitation_risk || 'Cavitation Assessment'}). Patm=${(s.atmospheric_pressure_kpa || 101.325).toFixed(1)} kPa, Pv=${(s.vapor_pressure_kpa || 2.34).toFixed(2)} kPa. Click for NPSH guide.`;
+    }
+  }
+
   // Populate solver summary card
   const solverStatusEl = document.getElementById('res-solver-status');
   if (solverStatusEl) {
@@ -4469,14 +4540,50 @@ function displayResults(data) {
     const activeSolverDesc = solverDescriptions[s.solver_method] || (s.solver_name || 'Global Gradient Method (GGM)');
     const frictionDesc = s.friction_method === 'hazen_williams'
       ? `Major friction: <code style="color:#38bdf8;">hf = 10.67 &times; L &times; C<sup>-1.852</sup> &times; D<sup>-4.87</sup> &times; Q<sup>1.852</sup></code> (Hazen-Williams, n=1.852)`
-      : `Major friction: <code style="color:#58a6ff;">hf = f &times; (L/D) &times; V&sup2;/2g</code> (Colebrook-White / Swamee-Jain, n=2.000)`;
+      : `Major friction: <code style="color:#58a6ff;">hf = f &times; (L/D) &times; V&sup2;/2g</code> (Darcy-Weisbach / Swamee-Jain, g=9.80665 m/s&sup2;)`;
+
+    const altVal = s.altitude_m !== undefined ? s.altitude_m : (state.altitude_m || 0);
+    const patmVal = s.atmospheric_pressure_kpa !== undefined ? s.atmospheric_pressure_kpa : (state.barometric_pressure_kpa || 101.325);
+    const tempVal = s.temperature_c !== undefined ? s.temperature_c : (state.temperature_c || 20);
+    const rhoVal = s.density_kg_m3 !== undefined ? s.density_kg_m3 : 998.2;
+    const npshaText = s.npsha_m !== undefined ? ` &bull; <strong style="color:${s.cavitation_color || '#2dd4bf'};">NPSHa:</strong> ${s.npsha_m.toFixed(2)} m (${s.cavitation_risk || 'Normal'})` : '';
 
     formulaRef.innerHTML = `
       <div style="margin-bottom:4px;"><strong style="color:#c084fc;">Network Solver:</strong> <span style="color:#f8fafc;">${activeSolverDesc}</span></div>
-      <div><strong style="color:#8b949e;">Friction Formulation:</strong> ${frictionDesc} &mdash;
+      <div style="margin-bottom:4px;"><strong style="color:#8b949e;">Friction Formulation:</strong> ${frictionDesc} &mdash;
       Minor losses: <code style="color:#58a6ff;">hm = K &times; V&sup2;/2g</code> (Crane TP-410) &mdash;
-      Fluid: <code style="color:#58a6ff;">Water @ 20&deg;C</code></div>
+      g: <code style="color:#38bdf8;">9.80665 m/s&sup2;</code></div>
+      <div style="font-size:11px;color:#94a3b8;"><strong style="color:#38bdf8;">Site &amp; Fluid:</strong> Altitude: <span style="color:#e2e8f0;">${altVal} m</span> (P<sub>atm</sub>: <span style="color:#e2e8f0;">${patmVal.toFixed(1)} kPa</span>) &bull; Fluid: <span style="color:#e2e8f0;">Water @ ${tempVal}&deg;C</span> (&rho;: <span style="color:#e2e8f0;">${rhoVal.toFixed(1)} kg/m&sup3;</span>, SG: <span style="color:#e2e8f0;">${(s.specific_gravity || state.specific_gravity || 1.0).toFixed(3)}</span>)${npshaText}</div>
     `;
+  }
+
+  // Synchronize pipe results table header
+  const resTable = document.getElementById('pn-results-table');
+  if (resTable) {
+    const thead = resTable.querySelector('thead');
+    if (thead) {
+      const fricTitle = s.friction_method === 'hazen_williams' ? 'HW C / f' : 'f';
+      thead.innerHTML = `
+        <tr style="background:#161b22;">
+          <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">ID</th>
+          <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Label</th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">D (mm)</th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">L (m)</th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Pipe volumetric flow rate (m³/h and L/s). Click for help notes & formulas." onclick="showHydraulicHelp('flow_pressure')">Flow (m&sup3;/h) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Velocity (m/s)</th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Operating gauge pressure in pipe &amp; inlet/outlet drop. Click for help notes & formulas." onclick="showHydraulicHelp('flow_pressure')">Pressure (kPa) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:center;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Regime / Re</th>
+          <th id="th-friction-factor" style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Friction factor f or Hazen-Williams C. Click for help notes." onclick="showHydraulicHelp('exp_n')">${fricTitle} <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">K<sub>total</sub></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Major friction head loss in straight pipe (Darcy-Weisbach or Hazen-Williams). Click for help notes." onclick="showHydraulicHelp('hf_major')">hf Major (m) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Minor head loss across fittings, valves, bends, and restrictions (Crane TP-410). Click for help notes." onclick="showHydraulicHelp('hf_minor')">hf Minor (m) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Elev (m)</th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">h Total (m)</th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Consolidated Hydraulic Resistance R (hf = R * Q^n). Click for formulas and calculation details." onclick="showHydraulicHelp('res_r')">Res. R <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Flow Exponent n (2.0 for Darcy-Weisbach, 1.852 for Hazen-Williams). Click for formulas and calculation details." onclick="showHydraulicHelp('exp_n')">Exp. n <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
+        </tr>
+      `;
+    }
   }
 
   const tbody = document.getElementById('res-table-body');
@@ -4488,6 +4595,20 @@ function displayResults(data) {
       const fricCell = s.friction_method === 'hazen_williams'
         ? `<span style="color:#38bdf8;font-weight:600;">C=${r.hazen_williams_c || 120}</span><br><span style="font-size:9.5px;color:#64748b;">(f=${r.friction_factor})</span>`
         : `<span style="font-family:monospace;">${r.friction_factor}</span>`;
+
+      // Flow rate for this segment
+      const flowM3h = r.flow_m3h !== undefined ? r.flow_m3h : (state.flow_m3h || 0);
+      const flowLs = flowM3h / 3.6;
+
+      // Pipe Pressure calculation
+      const pVal = r.pressure_kpa !== undefined ? r.pressure_kpa : (r.pressure_drop_kpa !== undefined ? r.pressure_drop_kpa : 0);
+      const pColor = pVal >= 0 ? '#4ade80' : '#f87171';
+      let pSub = '';
+      if (r.pressure_in_kpa !== undefined && r.pressure_out_kpa !== undefined) {
+        pSub = `<div style="font-size:9.5px;color:#94a3b8;" title="Inlet &rarr; Outlet Pressure">${r.pressure_in_kpa.toFixed(1)} &rarr; ${r.pressure_out_kpa.toFixed(1)}</div>`;
+      } else if (r.pressure_drop_kpa !== undefined) {
+        pSub = `<div style="font-size:9.5px;color:#64748b;" title="Friction Pressure Drop">&Delta;P ${r.pressure_drop_kpa.toFixed(1)}</div>`;
+      }
 
       tbody.innerHTML += `
         <tr style="border-bottom:1px solid #21262d" onmouseover="this.style.background='#1c2330'" onmouseout="this.style.background=''">
@@ -4501,8 +4622,16 @@ function displayResults(data) {
             ${r.od_mm ? `<div style="font-size:10px;color:#64748b;">OD ${r.od_mm}</div>` : ''}
           </td>
           <td style="padding:6px 10px;text-align:right">${r.length_m}</td>
+          <td style="padding:6px 10px;text-align:right;font-family:monospace;color:#38bdf8;font-weight:600;">
+            ${flowM3h.toFixed(2)}
+            <div style="font-size:9.5px;color:#64748b;">${flowLs.toFixed(2)} L/s</div>
+          </td>
           <td style="padding:6px 10px;text-align:right">${r.velocity_ms}
             <span style="font-size:10px;color:${vc}"> ${r.velocity_status}</span></td>
+          <td style="padding:6px 10px;text-align:right;font-family:monospace;font-weight:600;color:${pColor}">
+            ${pVal.toFixed(1)}
+            ${pSub}
+          </td>
           <td style="padding:6px 10px;text-align:center">
             <span style="color:${rc};font-size:11px">${r.regime}</span><br>
             <span style="color:#64748b;font-size:10px">Re ${r.reynolds.toLocaleString()}</span></td>
@@ -4517,11 +4646,30 @@ function displayResults(data) {
         </tr>`;
     });
     (data.errors || []).forEach(err => {
-      tbody.innerHTML += `<tr><td colspan="14" style="padding:6px 10px;color:#f85149">Error in ${err.id}: ${err.error}</td></tr>`;
+      tbody.innerHTML += `<tr><td colspan="16" style="padding:6px 10px;color:#f85149">Error in ${err.id}: ${err.error}</td></tr>`;
     });
   }
 
   // Populate Node Hydraulic Grade Line (HGL) & Pressures table
+  const nodeTable = document.getElementById('pn-node-results-table');
+  if (nodeTable) {
+    const nodeThead = nodeTable.querySelector('thead');
+    if (nodeThead) {
+      nodeThead.innerHTML = `
+        <tr style="background:#161b22;">
+          <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Node ID</th>
+          <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Label</th>
+          <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Type</th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Geometric physical elevation Z above datum. Click for help notes." onclick="showHydraulicHelp('hgl_pressures')">Elevation Z (m) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Hydraulic Grade Line [HGL = Z + P/(rho*g), g=9.80665 m/s²]. Click for help notes & formulas." onclick="showHydraulicHelp('hgl_pressures')">Total Head HGL (m) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Pressure Head [P/(rho*g) = HGL - Z, g=9.80665 m/s²]. Click for help notes & formulas." onclick="showHydraulicHelp('hgl_pressures')">Pressure Head P/(&rho;&middot;g) (m) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Gauge Pressure in kPa: P = (Pressure Head * rho * g) / 1000 with g=9.80665 m/s². Click for help notes & formulas." onclick="showHydraulicHelp('hgl_pressures')">Pressure (kPa) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Demand (m&sup3;/h)</th>
+        </tr>
+      `;
+    }
+  }
+
   const nodeTbody = document.getElementById('res-node-table-body');
   if (nodeTbody && Array.isArray(data.node_results)) {
     nodeTbody.innerHTML = '';
@@ -4945,6 +5093,85 @@ function init() {
   document.getElementById('pn-global-flow')?.addEventListener('input', onGlobalFlowChange);
   document.getElementById('pn-global-flow')?.addEventListener('change', onGlobalFlowChange);
 
+  // Environmental & Fluid Inputs: Two-way sync between altitude (m) and barometric pressure (kPa)
+  const altInput = document.getElementById('pn-altitude');
+  const baroInput = document.getElementById('pn-barometric');
+  const tempInput = document.getElementById('pn-temperature');
+  const sgInput = document.getElementById('pn-sg');
+
+  /**
+   * Two-way barometric sync: Converts altitude (m) to barometric pressure (kPa)
+   * Formula: International Standard Atmosphere (ISA) barometric formula:
+   * P_atm = P0 * (1 - 2.25577e-5 * z)^5.25588
+   */
+  function syncAltitudeToBaro() {
+    if (!altInput) return;
+    const z = parseFloat(altInput.value);
+    if (!isNaN(z)) {
+      state.altitude_m = z;
+      const p = 101.325 * Math.pow(Math.max(0.01, 1.0 - 2.25577e-5 * z), 5.25588);
+      state.barometric_pressure_kpa = parseFloat(p.toFixed(2));
+      if (baroInput && document.activeElement !== baroInput) {
+        baroInput.value = p.toFixed(2);
+      }
+      saveNetworkToStorage();
+    }
+  }
+
+  /**
+   * Two-way barometric sync: Converts barometric pressure (kPa) to altitude (m)
+   * Formula: Inversion of ISA barometric formula:
+   * z = (1 - (P_atm / 101.325)^(1 / 5.25588)) / 2.25577e-5
+   */
+  function syncBaroToAltitude() {
+    if (!baroInput) return;
+    const p = parseFloat(baroInput.value);
+    if (!isNaN(p) && p > 0) {
+      state.barometric_pressure_kpa = p;
+      const z = (1.0 - Math.pow(p / 101.325, 1.0 / 5.25588)) / 2.25577e-5;
+      state.altitude_m = parseFloat(z.toFixed(1));
+      if (altInput && document.activeElement !== altInput) {
+        altInput.value = z.toFixed(1);
+      }
+      saveNetworkToStorage();
+    }
+  }
+
+  altInput?.addEventListener('input', syncAltitudeToBaro);
+  altInput?.addEventListener('change', syncAltitudeToBaro);
+  baroInput?.addEventListener('input', syncBaroToAltitude);
+  baroInput?.addEventListener('change', syncBaroToAltitude);
+
+  tempInput?.addEventListener('input', () => {
+    const t = parseFloat(tempInput.value);
+    if (!isNaN(t)) {
+      state.temperature_c = t;
+      saveNetworkToStorage();
+    }
+  });
+  tempInput?.addEventListener('change', () => {
+    const t = parseFloat(tempInput.value);
+    if (!isNaN(t)) {
+      state.temperature_c = t;
+      saveNetworkToStorage();
+    }
+  });
+
+  sgInput?.addEventListener('input', () => {
+    const sg = parseFloat(sgInput.value);
+    if (!isNaN(sg) && sg > 0) {
+      state.specific_gravity = sg;
+      saveNetworkToStorage();
+    }
+  });
+  sgInput?.addEventListener('change', () => {
+    const sg = parseFloat(sgInput.value);
+    if (!isNaN(sg) && sg > 0) {
+      state.specific_gravity = sg;
+      saveNetworkToStorage();
+    }
+  });
+
   // Property inputs (handle both input and change events for real-time saving)
   const npLabel = document.getElementById('np-label');
   npLabel?.addEventListener('input', onNodeLabelChange);
@@ -5221,5 +5448,699 @@ function loadDemoNetwork() {
   applyTransform();
   saveNetworkToStorage();
 }
+
+// ============================================================================
+// HYDRAULIC HELP NOTES & GOVERNING FORMULAS MODAL
+// ============================================================================
+const HYDRAULIC_HELP_TOPICS = {
+  hf_major: {
+    badge: 'Pipe Friction Loss',
+    badgeColor: '#38bdf8',
+    title: 'hf Major — Straight Pipe Friction Head Loss',
+    subtitle: 'Darcy-Weisbach / Colebrook-White / Swamee-Jain & Hazen-Williams formulations',
+    content: `
+      <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.25);border-radius:8px;padding:14px;margin-bottom:16px;">
+        <h4 style="margin:0 0 6px 0;color:#38bdf8;font-size:13px;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-water"></i> What is Major Friction Loss (h<sub>f,major</sub>)?
+        </h4>
+        <p style="margin:0;font-size:12.5px;color:#e2e8f0;line-height:1.6;">
+          <strong>Major friction loss (h<sub>f,major</sub>)</strong> is the continuous hydraulic energy head dissipated due to fluid shear stresses and viscous wall friction along the straight length of a pipe.
+        </p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:14px;margin-bottom:16px;">
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+          <div style="font-weight:700;color:#58a6ff;margin-bottom:8px;font-size:12px;display:flex;align-items:center;gap:6px;">
+            <i class="bi bi-calculator"></i> 1. Darcy-Weisbach Equation (Universal Standard)
+          </div>
+          <div style="font-family:monospace;font-size:12px;color:#58a6ff;background:#161b22;padding:8px 10px;border-radius:4px;margin-bottom:8px;line-height:1.5;">
+            h<sub>f</sub> = f &times; (L / D) &times; [ V&sup2; / (2 &times; g) ]
+          </div>
+          <ul style="margin:0;padding-left:18px;font-size:11.5px;color:#94a3b8;line-height:1.6;">
+            <li><strong>f:</strong> Darcy friction factor (dimensionless)</li>
+            <li><strong>L:</strong> Pipe segment length (m)</li>
+            <li><strong>D:</strong> Pipe internal diameter (m)</li>
+            <li><strong>V:</strong> Mean fluid flow velocity (m/s) = Q / A</li>
+            <li><strong>g:</strong> Gravitational acceleration = <strong>9.80665 m/s&sup2;</strong></li>
+          </ul>
+        </div>
+
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+          <div style="font-weight:700;color:#38bdf8;margin-bottom:8px;font-size:12px;display:flex;align-items:center;gap:6px;">
+            <i class="bi bi-water"></i> 2. Hazen-Williams Empirical Equation
+          </div>
+          <div style="font-family:monospace;font-size:12px;color:#38bdf8;background:#161b22;padding:8px 10px;border-radius:4px;margin-bottom:8px;line-height:1.5;">
+            h<sub>f</sub> = 10.67 &times; L &times; C<sup>-1.852</sup> &times; D<sup>-4.87</sup> &times; Q<sup>1.852</sup>
+          </div>
+          <ul style="margin:0;padding-left:18px;font-size:11.5px;color:#94a3b8;line-height:1.6;">
+            <li><strong>C:</strong> Roughness coefficient (e.g. 150 for PVC, 120 for new steel)</li>
+            <li><strong>Q:</strong> Flow in m&sup3;/s, <strong>D:</strong> diameter in m, <strong>L:</strong> length in m</li>
+            <li>Applicable only for ambient water (15&deg;C–25&deg;C) in water supply and fire networks.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;margin-bottom:16px;">
+        <div style="font-weight:700;color:#cbd5e1;margin-bottom:6px;font-size:12px;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-diagram-2" style="color:#c084fc;"></i> Flow Regimes &amp; Friction Factor Determination
+        </div>
+        <p style="margin:0 0 8px 0;font-size:12px;color:#94a3b8;line-height:1.6;">
+          In the Darcy-Weisbach formulation, the friction factor <strong>f</strong> depends on the Reynolds number <code style="color:#e2e8f0;">Re = (V &times; D) / &nu;</code> (where &nu; is kinematic viscosity, temperature dependent) and pipe relative roughness <code style="color:#e2e8f0;">&epsilon; / D</code>:
+        </p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:10px;font-size:11.5px;">
+          <div style="background:#161b22;padding:8px 12px;border-radius:6px;border-left:3px solid #22c55e;">
+            <strong style="color:#22c55e;">Laminar Flow (Re &lt; 2300):</strong><br>
+            Exact Poiseuille solution: <code style="color:#4ade80;">f = 64 / Re</code><br>
+            Loss is purely viscous, independent of pipe wall roughness &epsilon;.
+          </div>
+          <div style="background:#161b22;padding:8px 12px;border-radius:6px;border-left:3px solid #f59e0b;">
+            <strong style="color:#f59e0b;">Transitional Flow (2300 &le; Re &le; 4000):</strong><br>
+            Cubic spline interpolation bridging the laminar limit (64/2300) to the turbulent boundary at Re=4000.
+          </div>
+          <div style="background:#161b22;padding:8px 12px;border-radius:6px;border-left:3px solid #60a5fa;">
+            <strong style="color:#60a5fa;">Turbulent Flow (Re &gt; 4000):</strong><br>
+            Swamee-Jain explicit formula modeling the implicit Colebrook-White equation:
+            <div style="font-family:monospace;font-size:10.5px;color:#93c5fd;margin-top:4px;">
+              f = 0.25 / [ log10( (&epsilon; / 3.7D) + 5.74 / Re<sup>0.9</sup> ) ]&sup2;
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+        <div style="font-weight:700;color:#cbd5e1;margin-bottom:6px;font-size:12px;">
+          <i class="bi bi-layers" style="color:#fbbf24;"></i> Typical Absolute Roughness Values (&epsilon;)
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:11.5px;color:#cbd5e1;">
+            <thead>
+              <tr style="border-bottom:1px solid #30363d;color:#8b949e;text-align:left;">
+                <th style="padding:4px 8px;">Pipe Material</th>
+                <th style="padding:4px 8px;">Roughness &epsilon; (mm)</th>
+                <th style="padding:4px 8px;">Hazen-Williams C</th>
+                <th style="padding:4px 8px;">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom:1px solid #21262d;">
+                <td style="padding:4px 8px;font-weight:600;color:#38bdf8;">PVC / HDPE / PE100</td>
+                <td style="padding:4px 8px;font-family:monospace;">0.0015 – 0.007</td>
+                <td style="padding:4px 8px;font-family:monospace;">150</td>
+                <td style="padding:4px 8px;color:#94a3b8;">Smooth plastic bore, no corrosion fouling</td>
+              </tr>
+              <tr style="border-bottom:1px solid #21262d;">
+                <td style="padding:4px 8px;font-weight:600;color:#58a6ff;">Commercial Steel / Sch 40</td>
+                <td style="padding:4px 8px;font-family:monospace;">0.045</td>
+                <td style="padding:4px 8px;font-family:monospace;">120</td>
+                <td style="padding:4px 8px;color:#94a3b8;">Industrial standard for piping systems</td>
+              </tr>
+              <tr style="border-bottom:1px solid #21262d;">
+                <td style="padding:4px 8px;font-weight:600;color:#a78bfa;">Stainless Steel (304 / 316)</td>
+                <td style="padding:4px 8px;font-family:monospace;">0.015</td>
+                <td style="padding:4px 8px;font-family:monospace;">140</td>
+                <td style="padding:4px 8px;color:#94a3b8;">Chemical, hygienic, and food process lines</td>
+              </tr>
+              <tr>
+                <td style="padding:4px 8px;font-weight:600;color:#f87171;">Cast Iron / Aged Ductile Iron</td>
+                <td style="padding:4px 8px;font-family:monospace;">0.15 – 0.26</td>
+                <td style="padding:4px 8px;font-family:monospace;">100</td>
+                <td style="padding:4px 8px;color:#94a3b8;">Municipal mains subject to tuberculation over time</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `
+  },
+
+  hf_minor: {
+    badge: 'Fitting Loss',
+    badgeColor: '#fb923c',
+    title: 'hf Minor — Minor Head Losses in Fittings & Valves',
+    subtitle: 'Crane Technical Paper 410 (TP-410) loss coefficients (K-factor) and equivalent lengths',
+    content: `
+      <div style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.25);border-radius:8px;padding:14px;margin-bottom:16px;">
+        <h4 style="margin:0 0 6px 0;color:#fb923c;font-size:13px;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-diagram-3"></i> What is Minor Head Loss (h<sub>f,minor</sub>)?
+        </h4>
+        <p style="margin:0;font-size:12.5px;color:#e2e8f0;line-height:1.6;">
+          <strong>Minor loss (h<sub>f,minor</sub> or h<sub>m</sub>)</strong> represents the localized hydraulic energy dissipation caused by flow separation, vortex generation, recirculation eddies, and turbulence whenever fluid passes through bends, fittings, valves, contractions, or expansions.
+        </p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:14px;margin-bottom:16px;">
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+          <div style="font-weight:700;color:#fb923c;margin-bottom:8px;font-size:12px;display:flex;align-items:center;gap:6px;">
+            <i class="bi bi-calculator"></i> 1. K-Factor Formulation (Crane TP-410)
+          </div>
+          <div style="font-family:monospace;font-size:12px;color:#fb923c;background:#161b22;padding:8px 10px;border-radius:4px;margin-bottom:8px;line-height:1.5;">
+            h<sub>m</sub> = &Sigma;K &times; [ V&sup2; / (2 &times; g) ]
+          </div>
+          <ul style="margin:0;padding-left:18px;font-size:11.5px;color:#94a3b8;line-height:1.6;">
+            <li><strong>&Sigma;K:</strong> Sum of dimensionless loss coefficients of all inline fittings and valves</li>
+            <li><strong>V:</strong> Local velocity in the associated pipe diameter (m/s)</li>
+            <li><strong>g:</strong> Gravitational acceleration = <strong>9.80665 m/s&sup2;</strong></li>
+            <li><strong>V&sup2;/(2g):</strong> Velocity head (kinetic energy per unit weight of fluid)</li>
+          </ul>
+        </div>
+
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+          <div style="font-weight:700;color:#f59e0b;margin-bottom:8px;font-size:12px;display:flex;align-items:center;gap:6px;">
+            <i class="bi bi-arrow-left-right"></i> 2. Equivalent Length Method (L<sub>eq</sub>)
+          </div>
+          <div style="font-family:monospace;font-size:12px;color:#f59e0b;background:#161b22;padding:8px 10px;border-radius:4px;margin-bottom:8px;line-height:1.5;">
+            L<sub>eq</sub> = (K &times; D) / f &nbsp;&nbsp;&rArr;&nbsp;&nbsp; L<sub>total</sub> = L<sub>pipe</sub> + &Sigma;L<sub>eq</sub>
+          </div>
+          <p style="margin:0;font-size:11.5px;color:#94a3b8;line-height:1.6;">
+            Converts each fitting into an equivalent extra meterage of straight pipe producing the exact same friction loss. Widely used in Hazen-Williams network formulations.
+          </p>
+        </div>
+      </div>
+
+      <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+        <div style="font-weight:700;color:#cbd5e1;margin-bottom:8px;font-size:12px;">
+          <i class="bi bi-wrench-adjustable" style="color:#38bdf8;"></i> Standard Loss Coefficients (K) per Crane TP-410
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:10px;font-size:11px;">
+          <div style="background:#161b22;padding:8px 10px;border-radius:4px;">
+            <strong style="color:#58a6ff;">Valves (Fully Open):</strong>
+            <ul style="margin:4px 0 0 0;padding-left:16px;color:#cbd5e1;line-height:1.6;">
+              <li>Gate Valve: <strong>K &approx; 0.17 – 0.20</strong></li>
+              <li>Ball Valve (Full Bore): <strong>K &approx; 0.05 – 0.10</strong></li>
+              <li>Butterfly Valve: <strong>K &approx; 0.35 – 0.60</strong></li>
+              <li>Swing Check Valve: <strong>K &approx; 2.0 – 2.5</strong></li>
+              <li>Globe Valve: <strong>K &approx; 4.0 – 6.0</strong></li>
+            </ul>
+          </div>
+          <div style="background:#161b22;padding:8px 10px;border-radius:4px;">
+            <strong style="color:#38bdf8;">Bends &amp; Elbows:</strong>
+            <ul style="margin:4px 0 0 0;padding-left:16px;color:#cbd5e1;line-height:1.6;">
+              <li>90&deg; Standard Elbow: <strong>K &approx; 0.75</strong></li>
+              <li>90&deg; Long Radius (R=1.5D): <strong>K &approx; 0.45</strong></li>
+              <li>45&deg; Standard Elbow: <strong>K &approx; 0.35</strong></li>
+              <li>180&deg; Return Bend: <strong>K &approx; 1.50</strong></li>
+            </ul>
+          </div>
+          <div style="background:#161b22;padding:8px 10px;border-radius:4px;">
+            <strong style="color:#a78bfa;">Tees &amp; Transitions:</strong>
+            <ul style="margin:4px 0 0 0;padding-left:16px;color:#cbd5e1;line-height:1.6;">
+              <li>Tee Flow-Through: <strong>K &approx; 0.35</strong></li>
+              <li>Tee Branch-Flow: <strong>K &approx; 1.40</strong></li>
+              <li>Pipe Entrance (Flush): <strong>K = 0.50</strong></li>
+              <li>Pipe Exit (Discharge): <strong>K = 1.00</strong></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  npsh: {
+    badge: 'Suction & Cavitation',
+    badgeColor: '#2dd4bf',
+    title: 'NPSHa — Net Positive Suction Head Available',
+    subtitle: 'Atmospheric pressure head, fluid vapor pressure, suction lift, and cavitation margin',
+    content: `
+      <div style="background:rgba(45,212,191,0.08);border:1px solid rgba(45,212,191,0.25);border-radius:8px;padding:14px;margin-bottom:16px;">
+        <h4 style="margin:0 0 6px 0;color:#2dd4bf;font-size:13px;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-shield-check"></i> What is Net Positive Suction Head Available (NPSHa)?
+        </h4>
+        <p style="margin:0;font-size:12.5px;color:#e2e8f0;line-height:1.6;">
+          <strong>NPSHa (m)</strong> is the absolute total hydraulic head available at the pump suction nozzle above the vapor pressure of the liquid. It measures the net physical margin preventing the liquid from vaporizing and boiling as it enters the pump impeller eye.
+        </p>
+      </div>
+
+      <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;margin-bottom:16px;">
+        <div style="font-weight:700;color:#2dd4bf;margin-bottom:8px;font-size:12px;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-calculator"></i> Governing Engineering Formula
+        </div>
+        <div style="font-family:monospace;font-size:12.5px;color:#2dd4bf;background:#161b22;padding:10px 14px;border-radius:4px;margin-bottom:10px;line-height:1.6;">
+          NPSHa = h<sub>atm</sub> &minus; h<sub>vp</sub> + h<sub>suction,gauge</sub> + [ V<sub>s</sub>&sup2; / (2 &times; g) ]
+          <div style="font-size:11.5px;color:#94a3b8;margin-top:4px;">
+            Or from supply surface: NPSHa = [ (P<sub>atm</sub> &minus; P<sub>v</sub>) / (&rho; &times; g) ] &plusmn; Z<sub>s</sub> &minus; h<sub>f,suction</sub>
+          </div>
+        </div>
+        <ul style="margin:0;padding-left:18px;font-size:11.5px;color:#94a3b8;line-height:1.6;">
+          <li><strong>h<sub>atm</sub>:</strong> Atmospheric pressure head = <code style="color:#e2e8f0;">(P<sub>atm</sub> &times; 1000) / (&rho; &times; g)</code> (m)</li>
+          <li><strong>h<sub>vp</sub>:</strong> Vapor pressure head = <code style="color:#e2e8f0;">(P<sub>v</sub> &times; 1000) / (&rho; &times; g)</code> (m)</li>
+          <li><strong>P<sub>atm</sub>:</strong> Site barometric pressure in kPa (corrected for altitude)</li>
+          <li><strong>P<sub>v</sub>:</strong> Liquid saturation vapor pressure in kPa (Antoine equation at liquid temperature)</li>
+          <li><strong>&rho;:</strong> Fluid density in kg/m&sup3; (&rho;<sub>water</sub>(T) &times; SG)</li>
+          <li><strong>g:</strong> Gravitational acceleration constant = <strong>9.80665 m/s&sup2;</strong></li>
+          <li><strong>Z<sub>s</sub>:</strong> Static suction elevation relative to pump centerline (+ for flooded suction, &minus; for suction lift)</li>
+          <li><strong>h<sub>f,suction</sub>:</strong> Total suction piping friction loss (major straight pipe + minor fittings)</li>
+        </ul>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:14px;margin-bottom:16px;">
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+          <div style="font-weight:700;color:#38bdf8;margin-bottom:6px;font-size:12px;">
+            <i class="bi bi-cloud-arrow-up"></i> Site Altitude &amp; Barometric Drop
+          </div>
+          <p style="margin:0 0 8px 0;font-size:11.5px;color:#cbd5e1;line-height:1.6;">
+            As site altitude increases, atmospheric pressure drops according to the International Standard Atmosphere (ISA) formula:
+          </p>
+          <div style="font-family:monospace;font-size:10.5px;color:#38bdf8;background:#161b22;padding:6px 8px;border-radius:4px;margin-bottom:6px;">
+            P<sub>atm</sub> = 101.325 &times; (1 &minus; 2.25577&times;10<sup>-5</sup> &times; z)<sup>5.25588</sup>
+          </div>
+          <p style="margin:0;font-size:11px;color:#94a3b8;line-height:1.5;">
+            &bull; Sea level (0 m): P<sub>atm</sub> = 101.3 kPa &rarr; h<sub>atm</sub> &approx; <strong>10.33 m</strong><br>
+            &bull; 1000 m altitude: P<sub>atm</sub> = 89.9 kPa &rarr; h<sub>atm</sub> &approx; <strong>9.18 m</strong> (&minus;1.15 m loss)<br>
+            &bull; 2000 m altitude: P<sub>atm</sub> = 79.5 kPa &rarr; h<sub>atm</sub> &approx; <strong>8.12 m</strong> (&minus;2.21 m loss)
+          </p>
+        </div>
+
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+          <div style="font-weight:700;color:#fb7185;margin-bottom:6px;font-size:12px;">
+            <i class="bi bi-thermometer-half"></i> Temperature &amp; Vapor Pressure (P<sub>v</sub>)
+          </div>
+          <p style="margin:0 0 8px 0;font-size:11.5px;color:#cbd5e1;line-height:1.6;">
+            Hot liquids boil at substantially higher pressures, drastically penalizing available suction head:
+          </p>
+          <div style="font-family:monospace;font-size:10.5px;color:#fb7185;background:#161b22;padding:6px 8px;border-radius:4px;margin-bottom:6px;">
+            log10(P<sub>v,bar</sub>) = 5.20389 &minus; 1733.926 / (T&deg;C + 233.665)
+          </div>
+          <p style="margin:0;font-size:11px;color:#94a3b8;line-height:1.5;">
+            &bull; Water @ 20&deg;C: P<sub>v</sub> = 2.34 kPa &rarr; h<sub>vp</sub> = <strong>0.24 m</strong><br>
+            &bull; Water @ 60&deg;C: P<sub>v</sub> = 19.9 kPa &rarr; h<sub>vp</sub> = <strong>2.07 m</strong><br>
+            &bull; Water @ 90&deg;C: P<sub>v</sub> = 70.1 kPa &rarr; h<sub>vp</sub> = <strong>7.41 m</strong> (extreme risk)
+          </p>
+        </div>
+      </div>
+
+      <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+        <div style="font-weight:700;color:#cbd5e1;margin-bottom:8px;font-size:12px;">
+          <i class="bi bi-exclamation-triangle" style="color:#f87171;"></i> Cavitation Assessment &amp; HI 9.6.1 Margins
+        </div>
+        <p style="margin:0 0 8px 0;font-size:11.5px;color:#cbd5e1;line-height:1.6;">
+          Centrifugal pumps require a minimum Net Positive Suction Head (NPSHr) specified by the pump curve. The Hydraulic Institute (ANSI/HI 9.6.1) standard mandates:
+        </p>
+        <div style="font-family:monospace;font-size:11.5px;color:#4ade80;background:#161b22;padding:6px 10px;border-radius:4px;margin-bottom:8px;">
+          NPSHa &ge; NPSHr + Margin (typically 0.5 m to 1.0 m, or NPSHa / NPSHr &ge; 1.20 to 1.35)
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:8px;font-size:11px;">
+          <div style="background:#161b22;padding:8px 10px;border-radius:4px;border-left:3px solid #2dd4bf;">
+            <strong style="color:#2dd4bf;">NPSHa &ge; 4.5 m (Safe):</strong><br>
+            Ample suction head available. Safe against cavitation for most standard centrifugal pumps.
+          </div>
+          <div style="background:#161b22;padding:8px 10px;border-radius:4px;border-left:3px solid #f59e0b;">
+            <strong style="color:#f59e0b;">2.5 m &le; NPSHa &lt; 4.5 m (Marginal):</strong><br>
+            Verify specific pump curve NPSHr. Check high-flow operating runout conditions.
+          </div>
+          <div style="background:#161b22;padding:8px 10px;border-radius:4px;border-left:3px solid #f87171;">
+            <strong style="color:#f87171;">NPSHa &lt; 2.5 m (High Cavitation Risk):</strong><br>
+            Severe danger of vapor bubble collapse, pitting erosion, loss of prime, seal destruction, and impeller cavitation damage!
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  res_r: {
+    badge: 'Hydraulic Engine Parameter',
+    badgeColor: '#38bdf8',
+    title: 'Res. R — Consolidated Hydraulic Resistance Coefficient',
+    subtitle: 'Consolidated geometric and friction factor representation for pipe networks',
+    content: `
+      <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.25);border-radius:8px;padding:14px;margin-bottom:16px;">
+        <h4 style="margin:0 0 6px 0;color:#38bdf8;font-size:13px;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-info-circle-fill"></i> What is Hydraulic Resistance (R)?
+        </h4>
+        <p style="margin:0;font-size:12.5px;color:#e2e8f0;line-height:1.6;">
+          <strong>Hydraulic Resistance (R)</strong> is the consolidated physical impedance factor that relates volumetric flow rate (Q) directly to friction head loss (h<sub>f</sub>) across a continuous pipe segment and all its accumulated inline fittings/valves:
+        </p>
+        <div style="margin:10px 0;padding:10px 14px;background:#0d1117;border-left:3px solid #38bdf8;border-radius:4px;font-family:monospace;font-size:13px;color:#38bdf8;">
+          h<sub>f</sub> = R &times; Q<sup>n</sup> &nbsp;&nbsp;&nbsp;&harr;&nbsp;&nbsp;&nbsp; &Delta;P = (&rho; &times; g) &times; R &times; Q<sup>n</sup>
+        </div>
+        <p style="margin:0;font-size:11.5px;color:#94a3b8;">
+          Where <strong>Q</strong> is volumetric flow in m&sup3;/s, <strong>h<sub>f</sub></strong> is head loss in meters of liquid column, <strong>n</strong> is the flow exponent (2.000 for Darcy-Weisbach, 1.852 for Hazen-Williams), <strong>g</strong> is gravitational acceleration (9.80665 m/s&sup2;), and <strong>&rho;</strong> is fluid density (kg/m&sup3;).
+        </p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:14px;margin-bottom:16px;">
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+          <div style="font-weight:700;color:#58a6ff;margin-bottom:8px;font-size:12px;display:flex;align-items:center;gap:6px;">
+            <i class="bi bi-calculator"></i> Darcy-Weisbach Formulation (n = 2.0)
+          </div>
+          <div style="font-family:monospace;font-size:11.5px;color:#e6edf3;background:#161b22;padding:8px 10px;border-radius:4px;margin-bottom:8px;line-height:1.5;">
+            R = [ 8 / (&pi;&sup2; &times; g &times; D<sup>4</sup>) ] &times; [ f &times; (L / D) + &Sigma;K ]
+          </div>
+          <ul style="margin:0;padding-left:18px;font-size:11.5px;color:#94a3b8;line-height:1.6;">
+            <li><strong>f:</strong> Darcy friction factor (from Swamee-Jain / Colebrook-White)</li>
+            <li><strong>L:</strong> Pipe segment length (m)</li>
+            <li><strong>D:</strong> Internal pipe diameter (m)</li>
+            <li><strong>&Sigma;K:</strong> Sum of minor loss coefficients (valves, elbows, reducers, tees)</li>
+            <li><strong>g:</strong> Gravitational acceleration (9.80665 m/s&sup2;)</li>
+          </ul>
+        </div>
+
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+          <div style="font-weight:700;color:#38bdf8;margin-bottom:8px;font-size:12px;display:flex;align-items:center;gap:6px;">
+            <i class="bi bi-water"></i> Hazen-Williams Formulation (n = 1.852)
+          </div>
+          <div style="font-family:monospace;font-size:11.5px;color:#e6edf3;background:#161b22;padding:8px 10px;border-radius:4px;margin-bottom:8px;line-height:1.5;">
+            R = 10.67 &times; L<sub>eff</sub> &times; C<sup>-1.852</sup> &times; D<sup>-4.87</sup>
+          </div>
+          <ul style="margin:0;padding-left:18px;font-size:11.5px;color:#94a3b8;line-height:1.6;">
+            <li><strong>C:</strong> Hazen-Williams roughness coefficient (e.g. 120–150 for PVC/Commercial Steel)</li>
+            <li><strong>L<sub>eff</sub>:</strong> Effective length incorporating inline minor fittings equivalent length</li>
+            <li><strong>D:</strong> Internal diameter (m)</li>
+            <li><strong>Units:</strong> meters of head per (m&sup3;/s)<sup>1.852</sup></li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+        <div style="font-weight:700;color:#cbd5e1;margin-bottom:6px;font-size:12px;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-cpu" style="color:#c084fc;"></i> Role in Network Solvers (GGM, Newton-Raphson, Hardy Cross, Linear Theory)
+        </div>
+        <p style="margin:0 0 8px 0;font-size:12px;color:#94a3b8;line-height:1.6;">
+          In multi-pipe, branching, and looped networks, water divides across paths non-linearly. Solvers require the first derivative of head loss with respect to flow:
+        </p>
+        <div style="font-family:monospace;font-size:12px;color:#c084fc;background:#161b22;padding:6px 10px;border-radius:4px;display:inline-block;margin-bottom:8px;">
+          dh<sub>f</sub> / dQ = n &times; R &times; |Q|<sup>n - 1</sup>
+        </div>
+        <p style="margin:0;font-size:11.5px;color:#94a3b8;line-height:1.6;">
+          This derivative directly forms the diagonal elements of the network resistance matrix <strong>A<sub>12</sub></strong> in the Global Gradient Method (EPANET standard) and acts as the Jacobian denominator for flow corrections in Newton-Raphson and Hardy Cross balancing.
+        </p>
+      </div>
+    `
+  },
+
+  exp_n: {
+    badge: 'Friction Model Exponent',
+    badgeColor: '#fbbf24',
+    title: 'Exp. n — Flow Exponent',
+    subtitle: 'The non-linear scaling power relating volumetric flow rate to friction head loss',
+    content: `
+      <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:8px;padding:14px;margin-bottom:16px;">
+        <h4 style="margin:0 0 6px 0;color:#fbbf24;font-size:13px;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-graph-up"></i> What is the Flow Exponent (n)?
+        </h4>
+        <p style="margin:0;font-size:12.5px;color:#e2e8f0;line-height:1.6;">
+          The <strong>Flow Exponent (n)</strong> defines the exact degree of non-linearity in the pipe friction equation:
+        </p>
+        <div style="margin:10px 0;padding:10px 14px;background:#0d1117;border-left:3px solid #fbbf24;border-radius:4px;font-family:monospace;font-size:13px;color:#fbbf24;">
+          h<sub>f</sub> = R &times; |Q|<sup>n - 1</sup> Q
+        </div>
+        <p style="margin:0;font-size:11.5px;color:#94a3b8;">
+          It dictates how steeply friction losses rise when volumetric flow rate increases through the piping system.
+        </p>
+      </div>
+
+      <div style="overflow-x:auto;margin-bottom:16px;border:1px solid #30363d;border-radius:8px;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="background:#0d1117;border-bottom:1px solid #30363d;">
+              <th style="text-align:left;padding:8px 12px;color:#8b949e;">Friction Method</th>
+              <th style="text-align:center;padding:8px 12px;color:#8b949e;">Value (n)</th>
+              <th style="text-align:left;padding:8px 12px;color:#8b949e;">Physical &amp; Engineering Basis</th>
+              <th style="text-align:left;padding:8px 12px;color:#8b949e;">Recommended Application</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid #21262d;">
+              <td style="padding:10px 12px;font-weight:700;color:#58a6ff;">Darcy-Weisbach</td>
+              <td style="padding:10px 12px;text-align:center;font-family:monospace;color:#58a6ff;font-weight:700;">2.000</td>
+              <td style="padding:10px 12px;color:#cbd5e1;">Kinetic energy dissipation is physically proportional to velocity squared (V&sup2;/2g). Derived from the fundamental Navier-Stokes momentum equations with gravitational acceleration g = 9.80665 m/s&sup2;.</td>
+              <td style="padding:10px 12px;color:#94a3b8;">Universal standard for all fluids (water, slurries, hydrocarbons), temperatures, and both laminar &amp; turbulent regimes.</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 12px;font-weight:700;color:#38bdf8;">Hazen-Williams</td>
+              <td style="padding:10px 12px;text-align:center;font-family:monospace;color:#38bdf8;font-weight:700;">1.852</td>
+              <td style="padding:10px 12px;color:#cbd5e1;">Empirical formula developed from historical water flow test observations. Neglects fluid temperature and kinematic viscosity variations.</td>
+              <td style="padding:10px 12px;color:#94a3b8;">Municipal drinking water distribution networks and fire sprinkler systems (ambient water at 15&deg;C–25&deg;C only).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+        <div style="font-weight:700;color:#cbd5e1;margin-bottom:6px;font-size:12px;">
+          <i class="bi bi-lightbulb" style="color:#fbbf24;"></i> Practical Flow Scaling Example:
+        </div>
+        <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6;">
+          If you double the flow rate through a pipe run (2&times; Q):
+          <br>&bull; With <strong>n = 2.000</strong> (Darcy-Weisbach), friction head loss increases by <strong>4.00&times;</strong> (2&sup2; = 4).
+          <br>&bull; With <strong>n = 1.852</strong> (Hazen-Williams), friction head loss increases by <strong>3.61&times;</strong> (2<sup>1.852</sup> &approx; 3.61).
+        </p>
+      </div>
+    `
+  },
+
+  hgl_pressures: {
+    badge: 'Hydraulic Grade Line',
+    badgeColor: '#c084fc',
+    title: 'Node Hydraulic Grade Line (HGL) & Gauge Pressures',
+    subtitle: 'Nodal piezometric energy elevations, static heights, and gauge pressures',
+    content: `
+      <div style="background:rgba(192,132,252,0.08);border:1px solid rgba(192,132,252,0.25);border-radius:8px;padding:14px;margin-bottom:16px;">
+        <h4 style="margin:0 0 6px 0;color:#c084fc;font-size:13px;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-geo-alt-fill"></i> What is the Hydraulic Grade Line (HGL)?
+        </h4>
+        <p style="margin:0;font-size:12.5px;color:#e2e8f0;line-height:1.6;">
+          The <strong>Hydraulic Grade Line (HGL)</strong> represents the total piezometric head of the fluid at any point in the network. It equals the physical elevation of the node plus its pressure head:
+        </p>
+        <div style="margin:10px 0;padding:10px 14px;background:#0d1117;border-left:3px solid #c084fc;border-radius:4px;font-family:monospace;font-size:13px;color:#c084fc;">
+          Total Head (HGL) = Elevation Z + Pressure Head [ P / (&rho; &times; g) ]
+        </div>
+        <p style="margin:0;font-size:11.5px;color:#94a3b8;">
+          Where <strong>g = 9.80665 m/s&sup2;</strong> is the gravitational constant, and <strong>&rho;</strong> is the liquid density in kg/m&sup3;. If you tapped a vertical open piezometer tube into the pipe at that node, the liquid column would rise to the exact height of the HGL.
+        </p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:14px;margin-bottom:16px;">
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+          <div style="font-weight:700;color:#a78bfa;margin-bottom:6px;font-size:12px;">
+            1. Elevation Z (m)
+          </div>
+          <p style="margin:0;font-size:11.5px;color:#94a3b8;line-height:1.6;">
+            The physical geometric height of the node/pipe centerline above the reference datum (e.g. 0 m ground level or site datum).
+          </p>
+        </div>
+
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+          <div style="font-weight:700;color:#fbbf24;margin-bottom:6px;font-size:12px;">
+            2. Total Head HGL (m)
+          </div>
+          <p style="margin:0;font-size:11.5px;color:#94a3b8;line-height:1.6;">
+            The piezometric head energy elevation. Across pipes, HGL drops by friction loss (h<sub>f</sub>). Across pump stations, HGL jumps upward by the Total Dynamic Head (TDH) delivered by the pump.
+          </p>
+        </div>
+
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+          <div style="font-weight:700;color:#38bdf8;margin-bottom:6px;font-size:12px;">
+            3. Pressure Head P / (&rho;&middot;g) (m)
+          </div>
+          <div style="font-family:monospace;font-size:11px;color:#38bdf8;margin-bottom:4px;">Pressure Head = HGL &minus; Z</div>
+          <p style="margin:0;font-size:11.5px;color:#94a3b8;line-height:1.6;">
+            The vertical height of liquid column supported solely by fluid pressure, expressed in meters of liquid column (m).
+          </p>
+        </div>
+
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+          <div style="font-weight:700;color:#4ade80;margin-bottom:6px;font-size:12px;">
+            4. Gauge Pressure P (kPa)
+          </div>
+          <div style="font-family:monospace;font-size:11px;color:#4ade80;margin-bottom:4px;">P (kPa) = [ Pressure Head (m) &times; &rho; &times; g ] / 1000</div>
+          <p style="margin:0;font-size:11.5px;color:#94a3b8;line-height:1.6;">
+            The physical gauge pressure exerted on pipe walls and fittings. Calculated using gravitational constant <strong>g = 9.80665 m/s&sup2;</strong> and temperature-corrected density &rho;.
+          </p>
+        </div>
+      </div>
+
+      <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+        <div style="font-weight:700;color:#f87171;margin-bottom:6px;font-size:12px;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-exclamation-triangle-fill"></i> Suction Lift &amp; Cavitation Warning Guidelines
+        </div>
+        <ul style="margin:0;padding-left:18px;font-size:12px;color:#cbd5e1;line-height:1.6;">
+          <li><strong style="color:#4ade80;">Positive Pressure (P &ge; 0 kPa):</strong> Normal pressurized pipe condition. Displayed in green.</li>
+          <li><strong style="color:#f87171;">Negative Pressure (P &lt; 0 kPa):</strong> Indicates vacuum or suction lift. Displayed in red.</li>
+          <li><strong style="color:#f87171;">Cavitation Warning:</strong> Water boils when absolute pressure drops below its saturation vapor pressure P<sub>v</sub> (e.g. 2.34 kPa @ 20&deg;C, equivalent to &approx; <strong>-98.7 kPa gauge</strong> at sea level). Operating near this limit causes destructive impeller cavitation!</li>
+        </ul>
+      </div>
+    `
+  },
+
+  flow_pressure: {
+    badge: 'Pipe Results',
+    badgeColor: '#4ade80',
+    title: 'Pipe Flow Rate & Internal Operating Pressure',
+    subtitle: 'Volumetric flow distribution, pressure ratings, and pipe drop',
+    content: `
+      <div style="background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.25);border-radius:8px;padding:14px;margin-bottom:16px;">
+        <h4 style="margin:0 0 6px 0;color:#4ade80;font-size:13px;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-speedometer2"></i> Flow and Pressure in Individual Pipe Runs
+        </h4>
+        <p style="margin:0;font-size:12.5px;color:#e2e8f0;line-height:1.6;">
+          In real-world networks, flow rates and pressures differ across segments based on geometry, elevation changes, and parallel branch resistances.
+        </p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:14px;margin-bottom:16px;">
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+          <div style="font-weight:700;color:#38bdf8;margin-bottom:6px;font-size:12px;">
+            Pipe Flow Rate (m&sup3;/h &amp; L/s)
+          </div>
+          <p style="margin:0 0 8px 0;font-size:11.5px;color:#cbd5e1;line-height:1.6;">
+            The volumetric rate of fluid passing through that pipe run. The table simultaneously displays both standard engineering units:
+          </p>
+          <div style="font-family:monospace;font-size:11.5px;color:#38bdf8;background:#161b22;padding:6px 10px;border-radius:4px;margin-bottom:8px;">
+            L/s = m&sup3;/h &divide; 3.6
+          </div>
+          <p style="margin:0;font-size:11.5px;color:#94a3b8;line-height:1.6;">
+            In branched and looped systems, each pipe's flow is solved by network continuity (&Sigma;Q = 0 at every junction).
+          </p>
+        </div>
+
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+          <div style="font-weight:700;color:#4ade80;margin-bottom:6px;font-size:12px;">
+            Pipe Operating Pressure (kPa)
+          </div>
+          <p style="margin:0 0 8px 0;font-size:11.5px;color:#cbd5e1;line-height:1.6;">
+            The internal fluid pressure inside the pipe. The table displays:
+          </p>
+          <div style="font-family:monospace;font-size:11.5px;color:#4ade80;background:#161b22;padding:6px 10px;border-radius:4px;margin-bottom:8px;">
+            P<sub>avg</sub> with subtitle: P<sub>inlet</sub> &rarr; P<sub>outlet</sub>
+          </div>
+          <p style="margin:0;font-size:11.5px;color:#94a3b8;line-height:1.6;">
+            Enables mechanical engineers to verify that maximum operating pressures remain safely below the selected pipe's working pressure rating (e.g. PN10, PN16, ASME Schedule 40).
+          </p>
+        </div>
+      </div>
+
+      <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;">
+        <div style="font-weight:700;color:#cbd5e1;margin-bottom:6px;font-size:12px;">
+          <i class="bi bi-arrows-expand" style="color:#58a6ff;"></i> Pressure Drop (&Delta;P):
+        </div>
+        <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6;">
+          The change in pressure from inlet to outlet is governed by friction losses (h<sub>f</sub>) and static elevation changes (&Delta;Z):
+          <br><code style="color:#58a6ff;">&Delta;P = [ (&rho; &times; g) &times; (h<sub>f</sub> + &Delta;Z) ] / 1000 = [ (&rho; &times; 9.80665) &times; h<sub>total</sub> ] / 1000 (kPa)</code>
+        </p>
+      </div>
+    `
+  }
+};
+
+window.showHydraulicHelp = function(topic = 'hf_major') {
+  let modal = document.getElementById('pn-help-modal-overlay');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'pn-help-modal-overlay';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99999;backdrop-filter:blur(4px);padding:16px;overflow-y:auto;';
+    modal.onclick = function(e) {
+      if (e.target === modal) hideHydraulicHelp();
+    };
+    modal.innerHTML = `
+      <div style="max-width:860px;margin:24px auto;background:#161b22;border:1px solid #30363d;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,0.6);display:flex;flex-direction:column;overflow:hidden;">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #21262d;background:#0d1117;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <i class="bi bi-book-half" style="color:#38bdf8;font-size:1.25rem;"></i>
+            <div>
+              <h3 style="margin:0;font-size:0.98rem;font-weight:700;color:#f0f6fc;">Hydraulic Calculations Guide &amp; Engineering Notes</h3>
+              <div style="font-size:11px;color:#8b949e;">Governing equations, friction loss notes, environmental fluid properties, and NPSHa calculation</div>
+            </div>
+          </div>
+          <button type="button" onclick="hideHydraulicHelp()" style="background:none;border:none;color:#8b949e;cursor:pointer;font-size:1.4rem;line-height:1;padding:4px 8px;" title="Close (Esc)">&times;</button>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div style="display:flex;gap:6px;padding:10px 16px;background:#161b22;border-bottom:1px solid #21262d;overflow-x:auto;">
+          <button type="button" class="pn-help-tab-btn" data-topic="hf_major" onclick="switchHydraulicHelpTab('hf_major')">
+            <i class="bi bi-water" style="color:#38bdf8;"></i> hf Major (Friction)
+          </button>
+          <button type="button" class="pn-help-tab-btn" data-topic="hf_minor" onclick="switchHydraulicHelpTab('hf_minor')">
+            <i class="bi bi-diagram-3" style="color:#fb923c;"></i> hf Minor (Fittings)
+          </button>
+          <button type="button" class="pn-help-tab-btn" data-topic="npsh" onclick="switchHydraulicHelpTab('npsh')">
+            <i class="bi bi-shield-check" style="color:#2dd4bf;"></i> NPSH &amp; Cavitation
+          </button>
+          <button type="button" class="pn-help-tab-btn" data-topic="hgl_pressures" onclick="switchHydraulicHelpTab('hgl_pressures')">
+            <i class="bi bi-geo-alt-fill" style="color:#c084fc;"></i> Node HGL &amp; Pressures
+          </button>
+          <button type="button" class="pn-help-tab-btn" data-topic="flow_pressure" onclick="switchHydraulicHelpTab('flow_pressure')">
+            <i class="bi bi-speedometer2" style="color:#4ade80;"></i> Pipe Flow &amp; Pressure
+          </button>
+          <button type="button" class="pn-help-tab-btn" data-topic="res_r" onclick="switchHydraulicHelpTab('res_r')">
+            <i class="bi bi-lightning-charge" style="color:#38bdf8;"></i> Hydraulic Resistance (R)
+          </button>
+          <button type="button" class="pn-help-tab-btn" data-topic="exp_n" onclick="switchHydraulicHelpTab('exp_n')">
+            <i class="bi bi-graph-up" style="color:#fbbf24;"></i> Flow Exponent (n)
+          </button>
+        </div>
+
+        <!-- Modal Body Content Container -->
+        <div id="pn-help-modal-body" style="padding:20px;overflow-y:auto;max-height:calc(85vh - 150px);line-height:1.6;font-size:13px;color:#cbd5e1;"></div>
+
+        <!-- Footer -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 20px;border-top:1px solid #21262d;background:#0d1117;font-size:11px;color:#64748b;">
+          <span>Standards: Darcy-Weisbach (g = 9.80665 m/s&sup2;) &bull; Crane TP-410 &bull; HI 9.6.1 (NPSH) &bull; EPANET GGM &bull; Hazen-Williams</span>
+          <button type="button" class="pn-btn" onclick="hideHydraulicHelp()" style="padding:4px 16px;font-size:12px;">Close</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Escape key closes modal
+    document.addEventListener('keydown', function(evt) {
+      if (evt.key === 'Escape' && modal.style.display !== 'none') {
+        hideHydraulicHelp();
+      }
+    });
+  }
+
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  switchHydraulicHelpTab(topic);
+};
+
+window.hideHydraulicHelp = function() {
+  const modal = document.getElementById('pn-help-modal-overlay');
+  if (modal) {
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+};
+
+window.switchHydraulicHelpTab = function(topic) {
+  const container = document.getElementById('pn-help-modal-body');
+  if (!container) return;
+
+  const data = HYDRAULIC_HELP_TOPICS[topic] || HYDRAULIC_HELP_TOPICS.res_r;
+
+  // Update tab button active styles
+  document.querySelectorAll('.pn-help-tab-btn').forEach(btn => {
+    const isActive = btn.getAttribute('data-topic') === topic;
+    btn.style.cssText = `
+      background: ${isActive ? '#21262d' : '#0d1117'};
+      border: 1px solid ${isActive ? '#58a6ff' : '#30363d'};
+      color: ${isActive ? '#f0f6fc' : '#8b949e'};
+      font-weight: ${isActive ? '600' : '400'};
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 11.5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    `;
+  });
+
+  container.innerHTML = `
+    <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #21262d;padding-bottom:10px;">
+      <div>
+        <span style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,0.06);color:${data.badgeColor};font-weight:700;">
+          ${data.badge}
+        </span>
+        <h2 style="margin:6px 0 2px 0;font-size:1.15rem;color:#f0f6fc;font-weight:700;">${data.title}</h2>
+        <div style="font-size:12px;color:#8b949e;">${data.subtitle}</div>
+      </div>
+    </div>
+    ${data.content}
+  `;
+};
 
 document.addEventListener('DOMContentLoaded', init);

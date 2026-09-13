@@ -34,15 +34,20 @@ from models import db, PipeFitting, PipeMaterial, StandardPipe
 from services.hydraulic_engine import (
     Fitting, Node, PipeEdge, NetworkGraph,
     calculate_consolidated_pipe, DEFAULT_HAZEN_WILLIAMS_C,
-    solve_network, NetworkSolverResult, NodeHydraulicResult
+    solve_network, NetworkSolverResult, NodeHydraulicResult,
+    fluid_kinematic_viscosity_m2s, fluid_density_kg_m3,
+    water_vapor_pressure_kpa, altitude_to_barometric_pressure_kpa,
+    GRAVITY
 )
 
 # -- Blueprint registration --------------------------------------------------
 pipe_network_bp = Blueprint('pipe_network', __name__)
 
 # -- Physical constants ------------------------------------------------------
-GRAVITY = 9.81           # gravitational acceleration (m/s^2)
+# Gravitational constant g = 9.80665 m/s^2
+G_ACCEL = GRAVITY        # Standard gravitational acceleration (m/s^2)
 KINEMATIC_VISCOSITY = 1.004e-6   # water at 20 C (m^2/s)
+
 
 
 # -- Database-backed lookup helpers (cached per-request via Flask g) ----------
@@ -98,10 +103,12 @@ def friction_factor(Re, epsilon_mm, diameter_m):
     return f_turb
 
 
-def calculate_segment(seg, global_flow_m3h, friction_method='darcy_weisbach'):
+def calculate_segment(seg, global_flow_m3h, friction_method='darcy_weisbach',
+                      temperature_c=20.0, specific_gravity=1.0):
     """
     Calculate all hydraulic quantities for one pipe segment using the consolidated
     hydraulic engine pipeline. Accumulates child fittings without splitting the pipe.
+    Incorporates temperature-dependent kinematic viscosity and specific gravity.
     """
     fitting_k = get_fitting_k_map()
     roughness_map = get_roughness_map()
@@ -161,7 +168,11 @@ def calculate_segment(seg, global_flow_m3h, friction_method='darcy_weisbach'):
         flow_m3h=flow_m3h,
     )
 
-    res = calculate_consolidated_pipe(pipe_edge, flow_m3h=flow_m3h, friction_method=friction_method)
+    nu = fluid_kinematic_viscosity_m2s(temperature_c)
+    res = calculate_consolidated_pipe(
+        pipe_edge, flow_m3h=flow_m3h, friction_method=friction_method,
+        kinematic_viscosity=nu
+    )
     return res.to_dict()
 
 
@@ -331,6 +342,17 @@ def calculate_network():
     if solver_method not in ('ggm', 'newton_raphson', 'hardy_cross', 'linear_theory'):
         solver_method = 'ggm'
 
+    # Environmental & Fluid Parameters:
+    # 1. Site altitude (m above sea level) or barometric pressure override (kPa)
+    altitude_m = float(data.get('altitude_m', 0.0) or 0.0)
+    barometric_pressure_kpa = float(data.get('barometric_pressure_kpa')) if data.get('barometric_pressure_kpa') is not None else None
+
+    # 2. Fluid operating temperature (°C) — determines saturation vapor pressure and viscosity
+    temperature_c = float(data.get('temperature_c', 20.0) if data.get('temperature_c') is not None else 20.0)
+
+    # 3. Fluid specific gravity (SG) — determines fluid density relative to water
+    specific_gravity = float(data.get('specific_gravity', 1.0) or 1.0)
+
     raw_pipes = data['pipes']
     raw_nodes = data.get('nodes')
 
@@ -339,21 +361,6 @@ def calculate_network():
 
     # =========================================================================
     # STEP 1: GRAPH TOPOLOGY INGESTION & CONSOLIDATION
-    # =========================================================================
-    # If both nodes and pipes are sent from the canvas, run structural graph
-    # consolidation to eliminate degree-2 pseudo-nodes (e.g. inline valves, elbows,
-    # or inline tees).
-    #
-    # Structural Consolidation Rules:
-    # 1. FITTINGS AS ATTRIBUTES: Inline fittings do not split a continuous pipe run.
-    #    Their loss coefficients (K-factor) and equivalent lengths are accumulated
-    #    directly into the parent continuous pipe segment.
-    # 2. GENUINE SPLIT PRESERVATION: True nodes are strictly preserved for:
-    #    - Physical branches (degree >= 3 junctions / manifolds)
-    #    - Pipe diameter transitions (D1 != D2, e.g. reducers / expanders)
-    #    - Material or roughness transitions (e.g. Steel -> PVC)
-    #    - Boundary conditions (Reservoirs, Tanks, Fixed head, External demands)
-    #    - Active pump stations
     # =========================================================================
     results = []
     node_results = []
@@ -400,7 +407,11 @@ def calculate_network():
                 graph=consolidated,
                 solver_method=solver_method,
                 friction_method=friction_method,
-                global_flow_m3h=global_flow
+                global_flow_m3h=global_flow,
+                altitude_m=altitude_m,
+                temperature_c=temperature_c,
+                specific_gravity=specific_gravity,
+                barometric_pressure_kpa=barometric_pressure_kpa,
             )
             results = [p.to_dict() for p in solver_res.pipe_results]
             node_results = [n.to_dict() for n in solver_res.node_results]
@@ -413,7 +424,10 @@ def calculate_network():
             total_major, total_minor, total_elev, total_R = 0.0, 0.0, 0.0, 0.0
             for seg in pipe_list_to_calc:
                 try:
-                    res = calculate_segment(seg, global_flow, friction_method=friction_method)
+                    res = calculate_segment(
+                        seg, global_flow, friction_method=friction_method,
+                        temperature_c=temperature_c, specific_gravity=specific_gravity
+                    )
                     results.append(res)
                     total_major += res['hf_major_m']
                     total_minor += res['hf_minor_m']
@@ -434,6 +448,9 @@ def calculate_network():
                 'solver_name': solver_method.upper(),
                 'converged': True,
                 'iterations': 1,
+                'altitude_m': altitude_m,
+                'temperature_c': temperature_c,
+                'specific_gravity': specific_gravity,
             }
     else:
         # Fallback for flat pipe list (legacy mode)
@@ -441,7 +458,10 @@ def calculate_network():
         total_major, total_minor, total_elev, total_R = 0.0, 0.0, 0.0, 0.0
         for seg in pipe_list_to_calc:
             try:
-                res = calculate_segment(seg, global_flow, friction_method=friction_method)
+                res = calculate_segment(
+                    seg, global_flow, friction_method=friction_method,
+                    temperature_c=temperature_c, specific_gravity=specific_gravity
+                )
                 results.append(res)
                 total_major += res['hf_major_m']
                 total_minor += res['hf_minor_m']
@@ -462,6 +482,9 @@ def calculate_network():
             'solver_name': solver_method.upper(),
             'converged': True,
             'iterations': 1,
+            'altitude_m': altitude_m,
+            'temperature_c': temperature_c,
+            'specific_gravity': specific_gravity,
         }
 
     # Auto-sync calculation results and duty point to session['active_selection']

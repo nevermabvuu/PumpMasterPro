@@ -31,9 +31,78 @@ from typing import List, Dict, Optional, Tuple, Any, Union
 import numpy as np
 
 # Physical Constants
-GRAVITY = 9.81                   # m/s^2
-KINEMATIC_VISCOSITY_WATER_20C = 1.004e-6  # m^2/s
-DENSITY_WATER = 1000.0           # kg/m^3
+# Gravitational constant g (m/s^2) — standard acceleration of gravity (ISO 80000-3 / CODATA)
+GRAVITY = 9.80665                # Standard gravitational constant g (m/s^2)
+G_ACCEL = 9.80665                # Alias for gravitational constant g (m/s^2)
+KINEMATIC_VISCOSITY_WATER_20C = 1.004e-6  # Kinematic viscosity of pure water at 20°C (m^2/s)
+DENSITY_WATER = 1000.0           # Reference density of pure water at 4°C (kg/m^3)
+STANDARD_ATM_KPA = 101.325       # Standard sea-level atmospheric pressure (kPa)
+
+
+# ============================================================================
+# ENVIRONMENTAL & FLUID PROPERTY HELPERS (ALTITUDE, BAROMETRIC, VAPOR PRESSURE, DENSITY)
+# ============================================================================
+
+def altitude_to_barometric_pressure_kpa(altitude_m: float) -> float:
+    """
+    Converts site altitude (m above sea level) to atmospheric barometric pressure (kPa)
+    using the International Barometric Formula (US Standard Atmosphere / ICAO standard):
+        P_atm = P_0 * (1 - L * z / T_0) ^ (g * M / (R * L))
+              = 101.325 * (1 - 2.25577e-5 * z) ^ 5.25588
+    Where:
+        z   = site altitude in meters
+        g   = standard gravitational constant (9.80665 m/s^2)
+        P_0 = 101.325 kPa (sea level reference pressure)
+    """
+    z = max(-500.0, min(float(altitude_m), 9000.0))
+    return float(STANDARD_ATM_KPA * ((1.0 - 2.25577e-5 * z) ** 5.25588))
+
+
+def barometric_pressure_to_altitude_m(p_kpa: float) -> float:
+    """
+    Inverts the International Barometric Formula to calculate site altitude (m)
+    from measured barometric pressure (kPa).
+    """
+    p = max(10.0, min(float(p_kpa), 120.0))
+    return float((1.0 - (p / STANDARD_ATM_KPA) ** (1.0 / 5.25588)) / 2.25577e-5)
+
+
+def water_vapor_pressure_kpa(temperature_c: float) -> float:
+    """
+    Calculates liquid water saturation vapor pressure P_v (kPa) at temperature T (°C)
+    using the Antoine equation for pure water (0°C to 100°C):
+        log10(P_v [mmHg]) = A - B / (C + T)
+        P_v [kPa] = P_v [mmHg] * 0.133322368
+    Where:
+        A = 8.07131, B = 1730.63, C = 233.426 (NIST Chemistry WebBook standard constants)
+    """
+    t = max(0.01, min(float(temperature_c), 100.0))
+    p_mmhg = 10.0 ** (8.07131 - (1730.63 / (233.426 + t)))
+    return float(p_mmhg * 0.133322368)
+
+
+def fluid_density_kg_m3(temperature_c: float = 20.0, specific_gravity: float = 1.0) -> float:
+    """
+    Calculates fluid density rho (kg/m^3) at liquid temperature (°C) and specific gravity:
+        rho = Specific Gravity (SG) * rho_water(T)
+    Pure water density variation with temperature is calculated via empirical polynomial:
+        rho_water(T) = 1000 * (1 - (T - 4)^2 / 500000)
+    """
+    t = max(0.0, min(float(temperature_c), 100.0))
+    rho_water_t = 1000.0 * (1.0 - ((t - 4.0) ** 2) / 500000.0)
+    sg = max(0.1, float(specific_gravity))
+    return float(sg * rho_water_t)
+
+
+def fluid_kinematic_viscosity_m2s(temperature_c: float = 20.0) -> float:
+    """
+    Calculates temperature-dependent kinematic viscosity nu (m^2/s) of water:
+        nu(T) = 1.792e-6 / (1 + 0.0337 * T + 0.000221 * T^2)
+    Yields nu ≈ 1.004e-6 m^2/s at 20°C, decreasing as temperature rises.
+    """
+    t = max(0.0, min(float(temperature_c), 100.0))
+    return float(1.792e-6 / (1.0 + 0.0337 * t + 0.000221 * (t ** 2)))
+
 
 # Standard Hazen-Williams C values by material key
 DEFAULT_HAZEN_WILLIAMS_C: Dict[str, float] = {
@@ -629,6 +698,10 @@ class EdgeHydraulicResult:
     pressure_rating: Optional[str] = None
 
     hazen_williams_c: Optional[float] = None
+    pressure_in_kpa: Optional[float] = None
+    pressure_out_kpa: Optional[float] = None
+    pressure_kpa: Optional[float] = None
+    pressure_drop_kpa: Optional[float] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -665,6 +738,10 @@ class EdgeHydraulicResult:
             'od_mm': self.od_mm,
             'id_mm': self.id_mm,
             'pressure_rating': self.pressure_rating,
+            'pressure_in_kpa': round(self.pressure_in_kpa, 2) if self.pressure_in_kpa is not None else None,
+            'pressure_out_kpa': round(self.pressure_out_kpa, 2) if self.pressure_out_kpa is not None else None,
+            'pressure_kpa': round(self.pressure_kpa, 2) if self.pressure_kpa is not None else (round(self.hf_friction_m * 9.80665, 2) if self.hf_friction_m is not None else None),
+            'pressure_drop_kpa': round(self.pressure_drop_kpa, 2) if self.pressure_drop_kpa is not None else (round(self.hf_friction_m * 9.80665, 2) if self.hf_friction_m is not None else None),
         }
 
 
@@ -816,6 +893,8 @@ def calculate_consolidated_pipe(
         id_mm=pipe.id_mm,
         pressure_rating=pipe.pressure_rating,
         hazen_williams_c=C if method == 'hazen_williams' else None,
+        pressure_drop_kpa=round(hf_friction * 9.80665, 2),
+        pressure_kpa=round(hf_friction * 9.80665, 2),
     )
 
 
@@ -834,14 +913,21 @@ class LoopDefinition:
 class NodeHydraulicResult:
     """
     Hydraulic results at a network node (Hydraulic Grade Line HGL, pressures, elevation).
+    Formulation:
+      Total Piezometric Head: HGL = Z + P / (rho * g)
+      Pressure Head:          h_p = HGL - Z (m)
+      Gauge Pressure:         P   = (h_p * rho * g) / 1000 (kPa)
+    Where:
+      g   = gravitational constant (9.80665 m/s^2)
+      rho = fluid density (kg/m^3) = Specific Gravity (SG) * rho_water(T)
     """
     node_id: str
     label: str
     node_type: str
     elevation_m: float
-    head_m: float                   # Total piezometric head H = Z + P/gamma
-    pressure_head_m: float          # P/gamma = H - Z (m)
-    pressure_kpa: float             # Gauge pressure in kPa = pressure_head_m * 9.81
+    head_m: float                   # Total piezometric head H = Z + P / (rho * g)
+    pressure_head_m: float          # Pressure head P / (rho * g) = H - Z (m)
+    pressure_kpa: float             # Gauge pressure in kPa = (pressure_head_m * rho * g) / 1000
     demand_m3h: float               # External demand / inflow (+ out, - in)
     is_fixed_head: bool = False
 
@@ -911,62 +997,67 @@ def find_network_fundamental_loops(graph: NetworkGraph) -> List[List[Tuple[str, 
             adj[p.from_node].append((p.to_node, pid, 1))
             adj[p.to_node].append((p.from_node, pid, -1))
 
+    parent: Dict[str, Optional[Tuple[str, str, int]]] = {node_keys[0]: None}
+    visited = {node_keys[0]}
+    queue = [node_keys[0]]
     tree_edges = set()
-    parent: Dict[str, Tuple[str, str, int]] = {}
-    visited = set()
+
+    while queue:
+        u = queue.pop(0)
+        for v, pid, d in adj[u]:
+            if v not in visited:
+                visited.add(v)
+                parent[v] = (u, pid, d)
+                tree_edges.add(pid)
+                queue.append(v)
+
     chords = []
+    for pid, p in graph.pipes.items():
+        if pid not in tree_edges and p.from_node in visited and p.to_node in visited:
+            chords.append((pid, p.from_node, p.to_node))
 
-    for start_node in node_keys:
-        if start_node in visited:
-            continue
-        visited.add(start_node)
-        queue = [start_node]
-        while queue:
-            curr = queue.pop(0)
-            for nxt, pid, d in adj[curr]:
-                if pid in tree_edges:
-                    continue
-                if nxt not in visited:
-                    visited.add(nxt)
-                    parent[nxt] = (curr, pid, d)
-                    tree_edges.add(pid)
-                    queue.append(nxt)
-                else:
-                    if not any(c[0] == pid for c in chords):
-                        chords.append((pid, curr, nxt, d))
-
-    def get_ancestors(node: str):
-        anc = []
+    def get_path_to_root(node: str) -> List[Tuple[str, str, int]]:
+        path = []
         curr = node
-        while curr in parent:
-            p_node, pid, d = parent[curr]
-            anc.append((curr, p_node, pid, d))
-            curr = p_node
-        return anc
+        while parent.get(curr) is not None:
+            prev, pid, d = parent[curr]
+            path.append((curr, pid, d))
+            curr = prev
+        return path
 
     loops = []
-    for chord_id, u, v, d_uv in chords:
-        anc_u = get_ancestors(u)
-        anc_v = get_ancestors(v)
-        nodes_u = [u] + [x[1] for x in anc_u]
-        nodes_v = [v] + [x[1] for x in anc_v]
+    for chord_id, u, v in chords:
+        path_u = get_path_to_root(u)
+        path_v = get_path_to_root(v)
+
+        nodes_in_v = {curr: i for i, (curr, _, _) in enumerate(path_v)}
         lca = None
-        for n in nodes_u:
-            if n in nodes_v:
-                lca = n
+        u_prefix_len = 0
+        v_prefix_len = 0
+
+        for i, (curr, _, _) in enumerate(path_u):
+            if curr in nodes_in_v:
+                lca = curr
+                u_prefix_len = i
+                v_prefix_len = nodes_in_v[curr]
                 break
-        loop: List[Tuple[str, int]] = [(chord_id, d_uv)]
-        for curr, p_node, pid, d in anc_v:
-            if curr == lca: break
+
+        if lca is None:
+            if u in nodes_in_v:
+                lca = u
+                v_prefix_len = nodes_in_v[u]
+            elif v in {curr for curr, _, _ in path_u}:
+                lca = v
+                u_prefix_len = [curr for curr, _, _ in path_u].index(v)
+
+        loop = [(chord_id, 1)]
+        for j in range(u_prefix_len):
+            _, pid, d = path_u[j]
             loop.append((pid, -d))
-            if p_node == lca: break
-        u_to_lca = []
-        for curr, p_node, pid, d in anc_u:
-            if curr == lca: break
-            u_to_lca.append((pid, d))
-            if p_node == lca: break
-        for pid, d in reversed(u_to_lca):
+        for j in range(v_prefix_len - 1, -1, -1):
+            _, pid, d = path_v[j]
             loop.append((pid, d))
+
         loops.append(loop)
 
     return loops
@@ -976,13 +1067,19 @@ def compute_node_heads_and_pressures(
     graph: NetworkGraph,
     pipe_results: Dict[str, EdgeHydraulicResult],
     flows_m3s: Dict[str, float],
-    global_flow_m3h: float
+    global_flow_m3h: float,
+    density_kg_m3: float = DENSITY_WATER,
+    g_constant: float = GRAVITY,
 ) -> Tuple[List[NodeHydraulicResult], float]:
     """
     Calculates the exact Hydraulic Grade Line (HGL) head_m and gauge pressures (kPa)
     across all nodes in the network.
     Correctly models suction lift, pump dynamic head addition (TDH), inline fittings,
     and discharge atmospheric boundary conditions.
+
+    Pressure conversion uses:
+        P (kPa) = [ Pressure Head (m) * rho * g ] / 1000
+    Where g is gravitational constant (9.80665 m/s^2) and rho is fluid density (kg/m^3).
     """
     # 1. Identify boundary nodes
     ref_node_id = None
@@ -1063,11 +1160,14 @@ def compute_node_heads_and_pressures(
             heads[nid] = node.head_m if node.head_m is not None else node.elevation_m
 
     node_results = []
+    # Hydrostatic pressure factor: (rho * g) / 1000 converts m liquid head directly to kPa
+    head_to_kpa_factor = (density_kg_m3 * g_constant) / 1000.0
+
     for nid, node in graph.nodes.items():
         h = heads.get(nid, node.elevation_m)
         elev = node.elevation_m
         press_head = h - elev
-        press_kpa = press_head * 9.81
+        press_kpa = press_head * head_to_kpa_factor
         node_results.append(NodeHydraulicResult(
             node_id=nid,
             label=node.label or nid,
@@ -1161,7 +1261,11 @@ def solve_network(
     friction_method: str = 'darcy_weisbach',
     global_flow_m3h: float = 20.0,
     tolerance: float = 1e-5,
-    max_iterations: int = 100
+    max_iterations: int = 100,
+    altitude_m: float = 0.0,
+    temperature_c: float = 20.0,
+    specific_gravity: float = 1.0,
+    barometric_pressure_kpa: Optional[float] = None,
 ) -> NetworkSolverResult:
     """
     Unified entry point executing the chosen network analysis method:
@@ -1170,12 +1274,40 @@ def solve_network(
       - 'hardy_cross': Hardy Cross Method (Loop Head Balancing)
       - 'linear_theory': Linear Theory Method (Isaacs & Mills / Successive Linearization)
 
-    Compatible across single pump circuits, series runs, branched manifolds,
-    and looped networks with consolidated resistances.
+    Calculates:
+      1. Hydraulic Grade Line (HGL) and nodal pressures using gravitational constant g = 9.80665 m/s^2.
+      2. Major and minor losses across all pipes and consolidated fittings.
+      3. Environmental barometric pressure and liquid vapor pressure from site altitude & fluid temperature.
+      4. Net Positive Suction Head Available (NPSHa) at the suction of any pump station or network inlet:
+             NPSHa = h_atm - h_vp + h_suction_gauge + V_suction^2 / (2 * g)
     """
     method = (solver_method or 'ggm').lower().strip()
     if method not in ('ggm', 'newton_raphson', 'hardy_cross', 'linear_theory'):
         method = 'ggm'
+
+    # =========================================================================
+    # STEP 1: SITE ENVIRONMENTAL & FLUID THERMODYNAMIC PROPERTY EVALUATION
+    # =========================================================================
+    # Standard Gravitational constant g (m/s^2)
+    g_accel = GRAVITY
+
+    # Barometric pressure and site altitude
+    if barometric_pressure_kpa is not None and float(barometric_pressure_kpa) > 0:
+        p_atm_kpa = float(barometric_pressure_kpa)
+        site_alt_m = barometric_pressure_to_altitude_m(p_atm_kpa)
+    else:
+        site_alt_m = float(altitude_m or 0.0)
+        p_atm_kpa = altitude_to_barometric_pressure_kpa(site_alt_m)
+
+    temp_c = float(temperature_c if temperature_c is not None else 20.0)
+    sg = float(specific_gravity if specific_gravity is not None and specific_gravity > 0 else 1.0)
+
+    # Liquid vapor pressure P_v (kPa) from Antoine equation at operating temperature
+    p_vapor_kpa = water_vapor_pressure_kpa(temp_c)
+
+    # Fluid density rho (kg/m^3) and kinematic viscosity nu (m^2/s)
+    fluid_density = fluid_density_kg_m3(temp_c, sg)
+    fluid_viscosity = fluid_kinematic_viscosity_m2s(temp_c)
 
     loops = find_network_fundamental_loops(graph)
     has_loops = len(loops) > 0
@@ -1201,7 +1333,10 @@ def solve_network(
                         p = graph.pipes.get(pid)
                         if not p: continue
                         q_cur = flows_m3s.get(pid, 0.0)
-                        calc = calculate_consolidated_pipe(p, flow_m3h=q_cur * 3600.0, friction_method=friction_method)
+                        calc = calculate_consolidated_pipe(
+                            p, flow_m3h=q_cur * 3600.0, friction_method=friction_method,
+                            kinematic_viscosity=fluid_viscosity
+                        )
                         R = calc.resistance_R
                         n = calc.flow_exponent_n
                         hf = R * (abs(q_cur) ** (n - 1.0)) * q_cur if abs(q_cur) > 1e-12 else 0.0
@@ -1235,7 +1370,10 @@ def solve_network(
                         p = graph.pipes.get(pid)
                         if not p: continue
                         q_cur = flows_m3s.get(pid, 0.0)
-                        calc = calculate_consolidated_pipe(p, flow_m3h=q_cur * 3600.0, friction_method=friction_method)
+                        calc = calculate_consolidated_pipe(
+                            p, flow_m3h=q_cur * 3600.0, friction_method=friction_method,
+                            kinematic_viscosity=fluid_viscosity
+                        )
                         R = calc.resistance_R
                         n = calc.flow_exponent_n
                         hf = R * (abs(q_cur) ** (n - 1.0)) * q_cur if abs(q_cur) > 1e-12 else 0.0
@@ -1269,7 +1407,10 @@ def solve_network(
                         p = graph.pipes.get(pid)
                         if not p: continue
                         q_cur = flows_m3s.get(pid, 0.0)
-                        calc = calculate_consolidated_pipe(p, flow_m3h=q_cur * 3600.0, friction_method=friction_method)
+                        calc = calculate_consolidated_pipe(
+                            p, flow_m3h=q_cur * 3600.0, friction_method=friction_method,
+                            kinematic_viscosity=fluid_viscosity
+                        )
                         R = calc.resistance_R
                         n = calc.flow_exponent_n
                         hf = R * (abs(q_cur) ** (n - 1.0)) * q_cur if abs(q_cur) > 1e-12 else 0.0
@@ -1303,7 +1444,10 @@ def solve_network(
                         p = graph.pipes.get(pid)
                         if not p: continue
                         q_cur = flows_m3s.get(pid, 0.0)
-                        calc = calculate_consolidated_pipe(p, flow_m3h=q_cur * 3600.0, friction_method=friction_method)
+                        calc = calculate_consolidated_pipe(
+                            p, flow_m3h=q_cur * 3600.0, friction_method=friction_method,
+                            kinematic_viscosity=fluid_viscosity
+                        )
                         R = calc.resistance_R
                         n = calc.flow_exponent_n
                         hf = R * (abs(q_cur) ** (n - 1.0)) * q_cur if abs(q_cur) > 1e-12 else 0.0
@@ -1338,19 +1482,109 @@ def solve_network(
             pipe.elev_change_m = graph.nodes[pipe.to_node].elevation_m - graph.nodes[pipe.from_node].elevation_m
 
         q_m3s = flows_m3s.get(pid, q_global_m3s)
-        res = calculate_consolidated_pipe(pipe, flow_m3h=q_m3s * 3600.0, friction_method=friction_method)
+        res = calculate_consolidated_pipe(
+            pipe, flow_m3h=q_m3s * 3600.0, friction_method=friction_method,
+            kinematic_viscosity=fluid_viscosity
+        )
         pipe_results[pid] = res
         total_major += res.hf_major_m
         total_minor += res.hf_minor_m
         total_elev += res.hf_elevation_m
         total_R += res.resistance_R
 
-    # Assemble per-node hydraulic results (HGL and pressures)
+    # Assemble per-node hydraulic results (HGL and gauge pressures) using fluid density and g
     node_results, pump_tdh = compute_node_heads_and_pressures(
-        graph, pipe_results, flows_m3s, global_flow_m3h
+        graph, pipe_results, flows_m3s, global_flow_m3h,
+        density_kg_m3=fluid_density, g_constant=g_accel
     )
 
+    # Map node pressures to incident pipe edges
+    node_pressures = {n.node_id: n.pressure_kpa for n in node_results}
+    for pid, res in pipe_results.items():
+        p_in = node_pressures.get(res.from_node)
+        p_out = node_pressures.get(res.to_node)
+        if p_in is not None:
+            res.pressure_in_kpa = round(p_in, 2)
+        if p_out is not None:
+            res.pressure_out_kpa = round(p_out, 2)
+        if p_in is not None and p_out is not None:
+            res.pressure_kpa = round((p_in + p_out) / 2.0, 2)
+        elif p_in is not None:
+            res.pressure_kpa = round(p_in, 2)
+        elif p_out is not None:
+            res.pressure_kpa = round(p_out, 2)
+
     total_head = total_major + total_minor + total_elev
+
+    # =========================================================================
+    # STEP 2: NET POSITIVE SUCTION HEAD AVAILABLE (NPSHa) CALCULATION
+    # =========================================================================
+    # Standard equation:
+    #   NPSHa = h_atm - h_vp + h_suction_gauge + h_v_suction
+    # Where:
+    #   h_atm       = (P_atm * 1000) / (rho * g)  [m liquid column]
+    #   h_vp        = (P_v * 1000) / (rho * g)    [m liquid column]
+    #   h_suction   = (HGL_suction - Z_pump)       [gauge pressure head at pump suction, m]
+    #   h_v_suction = V_suction^2 / (2 * g)        [velocity head in suction pipe, m]
+    # =========================================================================
+    h_atm_m = (p_atm_kpa * 1000.0) / (fluid_density * g_accel)
+    h_vapor_m = (p_vapor_kpa * 1000.0) / (fluid_density * g_accel)
+
+    suction_node_id = None
+    suction_pump_id = None
+    suction_pipe_id = None
+    suction_press_head_m = 0.0
+    suction_vel_head_m = 0.0
+
+    pump_node_ids = [nid for nid, node in graph.nodes.items() if node.node_type == 'pump']
+    if pump_node_ids:
+        suction_pump_id = pump_node_ids[0]
+        pump_node = graph.nodes[suction_pump_id]
+        pump_elev = pump_node.elevation_m
+
+        # Incoming pipe feeding pump inlet
+        incoming_pipes = [p for p in graph.pipes.values() if p.to_node == suction_pump_id]
+        if incoming_pipes:
+            suction_pipe = incoming_pipes[0]
+            suction_pipe_id = suction_pipe.id
+            suction_node_id = suction_pipe.from_node
+            p_res = pipe_results.get(suction_pipe_id)
+            if p_res:
+                suction_vel_head_m = p_res.velocity_head_m
+        else:
+            suction_node_id = suction_pump_id
+
+        # Gauge head at suction node relative to pump impeller datum
+        suction_node_res = next((nr for nr in node_results if nr.node_id == suction_node_id), None)
+        if suction_node_res:
+            suction_press_head_m = suction_node_res.head_m - pump_elev
+    else:
+        # If no pump node is present, evaluate NPSHa relative to the network inlet/source
+        if node_results:
+            first_node = node_results[0]
+            suction_node_id = first_node.node_id
+            suction_press_head_m = first_node.pressure_head_m
+            for pid, p in graph.pipes.items():
+                if p.from_node == suction_node_id:
+                    suction_pipe_id = pid
+                    p_res = pipe_results.get(pid)
+                    if p_res:
+                        suction_vel_head_m = p_res.velocity_head_m
+                    break
+
+    # Final NPSHa
+    npsha_m = max(0.0, h_atm_m - h_vapor_m + suction_press_head_m + suction_vel_head_m)
+
+    # Cavitation Risk Assessment
+    if npsha_m >= 4.5:
+        cavitation_status = 'Safe — Adequate NPSHa Margin'
+        cavitation_color = '#22c55e'
+    elif npsha_m >= 2.5:
+        cavitation_status = 'Marginal — Verify Pump NPSHr Curve'
+        cavitation_color = '#f59e0b'
+    else:
+        cavitation_status = 'High Cavitation Risk — NPSHa Critically Low'
+        cavitation_color = '#f87171'
 
     summary = {
         'total_hf_major_m': round(total_major, 3),
@@ -1370,6 +1604,25 @@ def solve_network(
         'pump_tdh_required_m': round(pump_tdh, 3),
         'has_loops': has_loops,
         'loops_count': len(loops),
+        # Environmental and fluid condition summary
+        'altitude_m': round(site_alt_m, 1),
+        'barometric_pressure_kpa': round(p_atm_kpa, 2),
+        'temperature_c': round(temp_c, 1),
+        'specific_gravity': round(sg, 3),
+        'density_kg_m3': round(fluid_density, 1),
+        'kinematic_viscosity_m2s': fluid_viscosity,
+        'vapor_pressure_kpa': round(p_vapor_kpa, 3),
+        'atmospheric_head_m': round(h_atm_m, 3),
+        'vapor_head_m': round(h_vapor_m, 3),
+        'gravitational_constant_g': g_accel,
+        # NPSH calculation results
+        'npsha_m': round(npsha_m, 2),
+        'suction_node_id': suction_node_id or 'Inlet',
+        'suction_pipe_id': suction_pipe_id,
+        'suction_pressure_head_m': round(suction_press_head_m, 3),
+        'suction_velocity_head_m': round(suction_vel_head_m, 3),
+        'cavitation_status': cavitation_status,
+        'cavitation_color': cavitation_color,
     }
 
     return NetworkSolverResult(
@@ -1387,3 +1640,4 @@ def solve_network(
         flows_m3h={pid: q * 3600.0 for pid, q in flows_m3s.items()},
         summary=summary
     )
+

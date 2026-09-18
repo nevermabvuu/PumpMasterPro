@@ -325,6 +325,140 @@ function loadSavedDisplaySettings() {
 }
 
 // ============================================================================
+// ENGINEERING UNIT CONVERSION CONSTANTS & HYDRAULIC NORMALIZATION
+// ============================================================================
+/**
+ * Engineering Unit Conversion Engine:
+ * All internal simulation state in the hydraulic engine and graph data models
+ * operate strictly on canonical SI Base units:
+ *   - Volumetric Flow: m³/h
+ *   - Head / Friction Loss: metres of fluid column (m)
+ *   - Geometric Elevation & Pipe Length: metres (m)
+ *   - Internal & External Pipe Diameters: millimetres (mm)
+ *   - Gauge & Barometric Pressure: kilopascals (kPa)
+ *   - Fluid Velocity: metres per second (m/s)
+ *
+ * User display units (e.g. US gpm, ft, in, psi) are converted bidirectionally
+ * between user-facing UI controls and base SI simulation values.
+ */
+const UNITS_CONFIG = {
+  flow: {
+    'm3h':   { name: 'm³/h',   factor_to_base: 1.0,         decimals: 2 },
+    'ls':    { name: 'L/s',    factor_to_base: 3.6,         decimals: 2 },
+    'lmin':  { name: 'L/min',  factor_to_base: 0.06,        decimals: 1 },
+    'gpm':   { name: 'US gpm', factor_to_base: 0.227124707, decimals: 2 },
+    'ukgpm': { name: 'UK gpm', factor_to_base: 0.2727654,   decimals: 2 },
+    'cfs':   { name: 'ft³/s',  factor_to_base: 101.9406,    decimals: 3 },
+    'mgd':   { name: 'MGD',    factor_to_base: 157.7255,    decimals: 3 },
+  },
+  head: {
+    'm':   { name: 'm',   factor_to_base: 1.0,       decimals: 2 },
+    'ft':  { name: 'ft',  factor_to_base: 0.3048,    decimals: 2 },
+    'kpa': { name: 'kPa', factor_to_base: 0.1019716, decimals: 1 }, // H (m) = P (kPa) / (SG * 9.80665)
+    'bar': { name: 'bar', factor_to_base: 10.19716,  decimals: 3 },
+    'psi': { name: 'psi', factor_to_base: 0.70307,   decimals: 2 },
+  },
+  diameter: {
+    'mm': { name: 'mm', factor_to_base: 1.0,  decimals: 1 },
+    'in': { name: 'in', factor_to_base: 25.4, decimals: 2 },
+  },
+  length: {
+    'm':  { name: 'm',  factor_to_base: 1.0,    decimals: 2 },
+    'ft': { name: 'ft', factor_to_base: 0.3048, decimals: 2 },
+  },
+  pressure: {
+    'kpa': { name: 'kPa', factor_to_base: 1.0,      decimals: 1 },
+    'bar': { name: 'bar', factor_to_base: 100.0,    decimals: 3 },
+    'psi': { name: 'psi', factor_to_base: 6.894757, decimals: 2 },
+    'm':   { name: 'm',   factor_to_base: 9.80665,  decimals: 2 }, // P (kPa) = H (m) * SG * 9.80665
+    'ft':  { name: 'ft',  factor_to_base: 2.989067, decimals: 2 },
+  },
+  velocity: {
+    'm/s':  { name: 'm/s',  factor_to_base: 1.0,    decimals: 2 },
+    'ft/s': { name: 'ft/s', factor_to_base: 0.3048, decimals: 2 },
+  }
+};
+
+/**
+ * toBaseSI(val, category, fromUnit, sg = 1.0)
+ * Converts a value from user-selected unit to internal SI base unit.
+ */
+function toBaseSI(val, category, fromUnit, sg = 1.0) {
+  if (val === null || val === undefined || isNaN(val)) return 0;
+  const num = parseFloat(val);
+  const cfg = UNITS_CONFIG[category]?.[fromUnit];
+  if (!cfg) return num;
+
+  if (category === 'head') {
+    if (fromUnit === 'm') return num;
+    if (fromUnit === 'ft') return num * 0.3048;
+    // Pressure to Head conversion: H = P (kPa) * 1000 / (rho * g) = P (kPa) / (SG * 9.80665)
+    const effectiveSg = Math.max(0.5, Math.min(5.0, sg || state.specific_gravity || 1.0));
+    if (fromUnit === 'kpa') return num / (effectiveSg * 9.80665);
+    if (fromUnit === 'bar') return (num * 100.0) / (effectiveSg * 9.80665);
+    if (fromUnit === 'psi') return (num * 6.894757) / (effectiveSg * 9.80665);
+  }
+
+  if (category === 'pressure') {
+    if (fromUnit === 'kpa') return num;
+    if (fromUnit === 'bar') return num * 100.0;
+    if (fromUnit === 'psi') return num * 6.894757;
+    const effectiveSg = Math.max(0.5, Math.min(5.0, sg || state.specific_gravity || 1.0));
+    if (fromUnit === 'm') return num * effectiveSg * 9.80665;
+    if (fromUnit === 'ft') return (num * 0.3048) * effectiveSg * 9.80665;
+  }
+
+  return num * (cfg.factor_to_base || 1.0);
+}
+
+/**
+ * fromBaseSI(val, category, toUnit, sg = 1.0)
+ * Converts an internal SI base unit value into user-selected unit.
+ */
+function fromBaseSI(val, category, toUnit, sg = 1.0) {
+  if (val === null || val === undefined || isNaN(val)) return 0;
+  const num = parseFloat(val);
+  const cfg = UNITS_CONFIG[category]?.[toUnit];
+  if (!cfg) return num;
+
+  if (category === 'head') {
+    if (toUnit === 'm') return num;
+    if (toUnit === 'ft') return num / 0.3048;
+    // Head to Pressure conversion: P (kPa) = H (m) * rho * g / 1000 = H (m) * SG * 9.80665
+    const effectiveSg = Math.max(0.5, Math.min(5.0, sg || state.specific_gravity || 1.0));
+    if (toUnit === 'kpa') return num * (effectiveSg * 9.80665);
+    if (toUnit === 'bar') return (num * (effectiveSg * 9.80665)) / 100.0;
+    if (toUnit === 'psi') return (num * (effectiveSg * 9.80665)) / 6.894757;
+  }
+
+  if (category === 'pressure') {
+    if (toUnit === 'kpa') return num;
+    if (toUnit === 'bar') return num / 100.0;
+    if (toUnit === 'psi') return num / 6.894757;
+    const effectiveSg = Math.max(0.5, Math.min(5.0, sg || state.specific_gravity || 1.0));
+    if (toUnit === 'm') return num / (effectiveSg * 9.80665);
+    if (toUnit === 'ft') return (num / (effectiveSg * 9.80665)) / 0.3048;
+  }
+
+  const factor = cfg.factor_to_base || 1.0;
+  return factor !== 0 ? num / factor : num;
+}
+
+/**
+ * convertUnit(val, category, fromUnit, toUnit, sg = 1.0)
+ * Converts a numerical value directly from one engineering unit to another in the same category.
+ */
+function convertUnit(val, category, fromUnit, toUnit, sg = 1.0) {
+  if (fromUnit === toUnit) return parseFloat(val) || 0;
+  const baseVal = toBaseSI(val, category, fromUnit, sg);
+  return fromBaseSI(baseVal, category, toUnit, sg);
+}
+
+function getUnitLabel(category, unit) {
+  return UNITS_CONFIG[category]?.[unit]?.name || unit;
+}
+
+// ============================================================================
 // STATE
 // ============================================================================
 
@@ -341,6 +475,16 @@ const state = {
   nodeDrag: null,
   viewMode: 'industrial', // 'industrial' (Visual thick 3D pipes) | 'schematic' (Thin 2D single-line)
   displaySettings: loadSavedDisplaySettings(), // User customizable diagram annotation layers
+  units: {
+    system: 'metric', // 'metric' | 'imperial' | 'custom'
+    flow: 'm3h',      // 'm3h' | 'ls' | 'lmin' | 'gpm' | 'ukgpm' | 'cfs' | 'mgd'
+    head: 'm',        // 'm' | 'ft' | 'kpa' | 'bar' | 'psi'
+    diameter: 'mm',   // 'mm' | 'in'
+    length: 'm',      // 'm' | 'ft'
+    pressure: 'kpa',  // 'kpa' | 'bar' | 'psi' | 'm' | 'ft'
+    velocity: 'm/s',  // 'm/s' | 'ft/s'
+    syncWithPumpSelection: true,
+  },
   lastCalculation: null,
   pendingSelect: null,
   // Environmental & fluid conditions
@@ -535,8 +679,16 @@ function updatePipeElevationLabels(pipe) {
   const tn = findNode(pipe.toNodeId);
   const fromEl = document.getElementById('pp-elev-from-val');
   const toEl = document.getElementById('pp-elev-to-val');
-  if (fromEl) fromEl.textContent = fn ? `${(fn.props.elevation_m || 0).toFixed(1)} m` : '--';
-  if (toEl) toEl.textContent = tn ? `${(tn.props.elevation_m || 0).toFixed(1)} m` : '--';
+  const uLen = state.units?.length || 'm';
+  const uLbl = getUnitLabel('length', uLen);
+  if (fromEl) {
+    const val = fromBaseSI(fn ? (fn.props.elevation_m || 0) : 0, 'length', uLen);
+    fromEl.textContent = fn ? `${val.toFixed(1)} ${uLbl}` : '--';
+  }
+  if (toEl) {
+    const val = fromBaseSI(tn ? (tn.props.elevation_m || 0) : 0, 'length', uLen);
+    toEl.textContent = tn ? `${val.toFixed(1)} ${uLbl}` : '--';
+  }
 }
 
 function reconcileAllPipesElevation() {
@@ -951,7 +1103,9 @@ function getNetworkPayload(extra = {}) {
     nodes: state.nodes,
     pipes: state.pipes,
     nextId: state.nextId,
-    globalFlow: globalFlow,
+    // Store global flow rate in internal base SI m³/h for persistent storage
+    globalFlow: toBaseSI(globalFlow, 'flow', state.units.flow || 'm3h'),
+    units: Object.assign({}, state.units),
     solverMethod: solverMethod,
     frictionMethod: frictionMethod,
     altitude_m: altitude,
@@ -1093,9 +1247,19 @@ function loadNetworkFromStorage() {
     ? Math.max(d.nextId, maxIdFromElements + 1)
     : maxIdFromElements + 1;
 
+  // Restore saved engineering units if present
+  if (d.units && typeof d.units === 'object') {
+    setPnUnits(d.units, { save: false, rerender: false, syncExternal: false });
+  }
+
   if (d.globalFlow) {
     const flowInput = document.getElementById('pn-global-flow');
-    if (flowInput) flowInput.value = d.globalFlow;
+    if (flowInput) {
+      // d.globalFlow is in base SI m³/h; convert to active display flow unit
+      const dispFlow = fromBaseSI(d.globalFlow, 'flow', state.units.flow || 'm3h');
+      const dec = (state.units.flow === 'cfs' || state.units.flow === 'mgd') ? 3 : 2;
+      flowInput.value = parseFloat(dispFlow.toFixed(dec));
+    }
   }
 
   // Restore environmental & fluid condition inputs
@@ -1639,10 +1803,24 @@ function renderPipes() {
       const line1Parts = [];
       if (ds.showPipeLabels) line1Parts.push(pipe.props.label || pipe.id);
       if (ds.showPipeDiameter) {
+        // Format nominal and internal diameter using active diameter unit (mm or in)
+        const rawDia = pipe.props.diameter_mm || 100;
+        const uDia = state.units.diameter || 'mm';
+        const dispDia = fromBaseSI(rawDia, 'diameter', uDia);
+        const uDiaLbl = getUnitLabel('diameter', uDia);
         const idVal = pipe.props.id_mm || (pipe.props.diameter_mm ? +(pipe.props.diameter_mm * 0.92).toFixed(1) : 100);
-        line1Parts.push(`DN${pipe.props.diameter_mm || 100} (ID ${idVal}mm)`);
+        const dispId = fromBaseSI(idVal, 'diameter', uDia);
+        const dec = uDia === 'in' ? 2 : 1;
+        line1Parts.push(`DN${pipe.props.nb_mm || Math.round(rawDia)} (${dispDia.toFixed(dec)}${uDiaLbl})`);
       }
-      if (ds.showPipeLength) line1Parts.push(`L:${pipe.props.length_m || 10}m`);
+      if (ds.showPipeLength) {
+        // Format pipe physical length in active length unit (m or ft)
+        const rawLen = pipe.props.length_m || 10;
+        const uLen = state.units.length || 'm';
+        const dispLen = fromBaseSI(rawLen, 'length', uLen);
+        const uLenLbl = getUnitLabel('length', uLen);
+        line1Parts.push(`L:${dispLen.toFixed(1)}${uLenLbl}`);
+      }
 
       const line2Parts = [];
       if (ds.showPipeMaterial) {
@@ -1665,19 +1843,33 @@ function renderPipes() {
 
       const line3Parts = [];
       const pipeRes = state.lastCalculation?.results?.[pipe.id];
+      const uFlow = state.units.flow || 'm3h';
+      const uFlowLbl = getUnitLabel('flow', uFlow);
       if (ds.showFlowRate) {
         if (pipeRes && pipeRes.flow_m3h !== undefined) {
-          line3Parts.push(`Q:${pipeRes.flow_m3h.toFixed(1)} m³/h →`);
+          // Flow rate from simulation result converted to active flow unit
+          const dispQ = fromBaseSI(pipeRes.flow_m3h, 'flow', uFlow);
+          line3Parts.push(`Q:${dispQ.toFixed(1)} ${uFlowLbl} →`);
         } else {
-          const gFlow = parseFloat(document.getElementById('pn-global-flow')?.value);
-          if (!isNaN(gFlow) && gFlow > 0) {
-            line3Parts.push(`Q:${gFlow.toFixed(1)} m³/h →`);
+          const gFlowRaw = parseFloat(document.getElementById('pn-global-flow')?.value);
+          if (!isNaN(gFlowRaw) && gFlowRaw > 0) {
+            line3Parts.push(`Q:${gFlowRaw.toFixed(1)} ${uFlowLbl} →`);
           }
         }
       }
       if (ds.showHydraulicResults && pipeRes) {
-        if (pipeRes.velocity_ms !== undefined) line3Parts.push(`v:${pipeRes.velocity_ms.toFixed(2)}m/s`);
-        if (pipeRes.hf_total_m !== undefined) line3Parts.push(`hf:${pipeRes.hf_total_m.toFixed(2)}m`);
+        if (pipeRes.velocity_ms !== undefined) {
+          // Fluid velocity in active velocity unit (m/s or ft/s)
+          const uVel = state.units.velocity || 'm/s';
+          const dispV = fromBaseSI(pipeRes.velocity_ms, 'velocity', uVel);
+          line3Parts.push(`v:${dispV.toFixed(2)}${getUnitLabel('velocity', uVel)}`);
+        }
+        if (pipeRes.hf_total_m !== undefined) {
+          // Head loss in active head unit (m, ft, kPa, etc.)
+          const uH = state.units.head || 'm';
+          const dispHf = fromBaseSI(pipeRes.hf_total_m, 'head', uH);
+          line3Parts.push(`hf:${dispHf.toFixed(2)}${getUnitLabel('head', uH)}`);
+        }
       }
 
       const lines = [];
@@ -2102,15 +2294,20 @@ function buildNodeSVG(node, isSel, minElev) {
     }
 
     if (ds.showNodeElevation) {
+      // Node elevation and relative head difference in active length unit (m or ft)
       const z = node.props.elevation_m || 0;
       const relZ = z - minElev;
+      const uLen = state.units.length || 'm';
+      const uLenLbl = getUnitLabel('length', uLen);
+      const dispZ = fromBaseSI(z, 'length', uLen);
+      const dispRelZ = fromBaseSI(relZ, 'length', uLen);
       const elevLbl = mkSVG('text', {
         x: 0, y: textY,
         'text-anchor': 'middle', 'font-size': 9,
         fill: '#64748b', 'font-family': 'Inter, sans-serif',
         'pointer-events': 'none',
       });
-      elevLbl.textContent = `Z: ${z}m (ΔH: +${relZ.toFixed(1)}m)`;
+      elevLbl.textContent = `Z: ${dispZ.toFixed(1)}${uLenLbl} (ΔH: +${dispRelZ.toFixed(1)}${uLenLbl})`;
       g.appendChild(elevLbl);
       textY += 13;
     }
@@ -2120,6 +2317,10 @@ function buildNodeSVG(node, isSel, minElev) {
       : (state.lastCalculation?.node_results?.[node.id]);
 
     if (ds.showNodeHGL && nodeRes && nodeRes.hgl_m !== undefined) {
+      // Node Hydraulic Grade Line (HGL) in active head unit (m or ft)
+      const uH = state.units.head || 'm';
+      const dispHgl = fromBaseSI(nodeRes.hgl_m, 'head', uH);
+      const uHLbl = getUnitLabel('head', uH);
       const hglLbl = mkSVG('text', {
         x: 0, y: textY,
         'text-anchor': 'middle', 'font-size': 9,
@@ -2127,19 +2328,23 @@ function buildNodeSVG(node, isSel, minElev) {
         'font-weight': '600',
         'pointer-events': 'none',
       });
-      hglLbl.textContent = `HGL: ${nodeRes.hgl_m.toFixed(2)}m`;
+      hglLbl.textContent = `HGL: ${dispHgl.toFixed(2)}${uHLbl}`;
       g.appendChild(hglLbl);
       textY += 13;
     }
 
     if (ds.showNodePressures && nodeRes && nodeRes.pressure_kpa !== undefined) {
+      // Node operating gauge pressure in active pressure unit (kPa, bar, psi, etc.)
+      const uP = state.units.pressure || 'kpa';
+      const dispP = fromBaseSI(nodeRes.pressure_kpa, 'pressure', uP);
+      const uPLbl = getUnitLabel('pressure', uP);
       const pLbl = mkSVG('text', {
         x: 0, y: textY,
         'text-anchor': 'middle', 'font-size': 9,
         fill: '#a78bfa', 'font-family': 'Inter, sans-serif',
         'pointer-events': 'none',
       });
-      pLbl.textContent = `P: ${nodeRes.pressure_kpa.toFixed(1)} kPa`;
+      pLbl.textContent = `P: ${dispP.toFixed(1)} ${uPLbl}`;
       g.appendChild(pLbl);
     }
   }
@@ -4143,13 +4348,19 @@ function showNodeProps(node) {
   setVal('np-id', node.id);
   setVal('np-type', node.type);
   setVal('np-label', node.props.label || '');
-  setVal('np-elev', node.props.elevation_m ?? 0);
+  // Format elevation in active length unit (m or ft)
+  const uLen = state.units.length || 'm';
+  const dispElev = fromBaseSI(node.props.elevation_m ?? 0, 'length', uLen);
+  setVal('np-elev', parseFloat(dispElev.toFixed(2)));
 
   const pumpDiv = document.getElementById('np-pump-fields');
   if (pumpDiv) {
     pumpDiv.style.display = node.type === 'pump' ? '' : 'none';
     if (node.type === 'pump') {
-      setVal('np-flow', node.props.flow_m3h ?? 10);
+      // Format pump flow in active flow unit (m³/h, L/s, US gpm, etc.)
+      const uFlow = state.units.flow || 'm3h';
+      const dispFlow = fromBaseSI(node.props.flow_m3h ?? 10, 'flow', uFlow);
+      setVal('np-flow', parseFloat(dispFlow.toFixed(2)));
       setVal('np-pump-config', node.props.pump_config || 'end_suction');
     }
   }
@@ -4650,9 +4861,15 @@ function showPipeProps(pipe) {
   setVal('pp-from', pipe.fromNodeId);
   setVal('pp-to', pipe.toNodeId);
   setVal('pp-label', pipe.props.label || '');
-  setVal('pp-diameter', pipe.props.diameter_mm);
-  setVal('pp-length', pipe.props.length_m);
-  setVal('pp-elev-change', pipe.props.elev_change_m);
+  // Format pipe diameter, length, and elevation change in active engineering units
+  const uDia = state.units.diameter || 'mm';
+  const uLen = state.units.length || 'm';
+  const dispDia = fromBaseSI(pipe.props.diameter_mm || 100, 'diameter', uDia);
+  const dispLen = fromBaseSI(pipe.props.length_m || 10, 'length', uLen);
+  const dispElevChg = fromBaseSI(pipe.props.elev_change_m || 0, 'length', uLen);
+  setVal('pp-diameter', parseFloat(dispDia.toFixed(uDia === 'in' ? 3 : 2)));
+  setVal('pp-length', parseFloat(dispLen.toFixed(2)));
+  setVal('pp-elev-change', parseFloat(dispElevChg.toFixed(2)));
   updatePipeElevationLabels(pipe);
   setVal('pp-material', pipe.props.material);
   setVal('pp-routing', pipe.props.routing || 'auto');
@@ -4772,14 +4989,19 @@ function onNodeLabelChange() {
 function onNodeElevChange() {
   const node = state.selected?.kind === 'node' ? findNode(state.selected.id) : null;
   if (node) {
-    const val = document.getElementById('np-elev').value;
-    syncElevationIntegrity('node', node.id, val);
+    const rawVal = parseFloat(document.getElementById('np-elev').value);
+    // Convert user input length to internal base SI meters
+    const valInMeters = isNaN(rawVal) ? 0 : toBaseSI(rawVal, 'length', state.units.length || 'm');
+    syncElevationIntegrity('node', node.id, valInMeters);
   }
 }
 function onPumpFlowChange() {
   const node = state.selected?.kind === 'node' ? findNode(state.selected.id) : null;
   if (node && node.type === 'pump') {
-    node.props.flow_m3h = parseFloat(document.getElementById('np-flow').value) || 10;
+    const rawVal = parseFloat(document.getElementById('np-flow').value);
+    // Convert pump flow from user-selected unit to internal base SI m³/h
+    const flowM3h = isNaN(rawVal) ? 10 : toBaseSI(rawVal, 'flow', state.units.flow || 'm3h');
+    node.props.flow_m3h = flowM3h;
     saveNetworkToStorage();
   }
 }
@@ -4821,11 +5043,13 @@ function onNodeQuantityChange() {
 }
 
 function onGlobalFlowChange(e) {
-  const val = parseFloat(document.getElementById('pn-global-flow')?.value);
-  if (!isNaN(val) && val > 0) {
+  const rawVal = parseFloat(document.getElementById('pn-global-flow')?.value);
+  if (!isNaN(rawVal) && rawVal > 0) {
+    // Normalize global flow rate to internal base SI m³/h
+    const flowM3h = toBaseSI(rawVal, 'flow', state.units.flow || 'm3h');
     state.nodes.forEach(n => {
       if (n.type === 'pump' && n.props) {
-        n.props.flow_m3h = val;
+        n.props.flow_m3h = flowM3h;
       }
     });
     saveNetworkToStorage();
@@ -4858,14 +5082,19 @@ function onPipePropChange() {
   }
 
   if (pipe.props.dimension_mode === 'custom') {
-    pipe.props.diameter_mm = parseFloat(document.getElementById('pp-diameter').value) || 100;
+    const rawDia = parseFloat(document.getElementById('pp-diameter').value) || 100;
+    // Normalize diameter from user unit (mm or in) to base SI mm
+    pipe.props.diameter_mm = toBaseSI(rawDia, 'diameter', state.units.diameter || 'mm');
     pipe.props.id_mm = pipe.props.diameter_mm;
     pipe.props.material = document.getElementById('pp-material').value;
     pipe.props.material_key = pipe.props.material;
   }
-  pipe.props.length_m = parseFloat(document.getElementById('pp-length').value) || 10;
-  const newElevVal = document.getElementById('pp-elev-change').value;
-  syncElevationIntegrity('pipe', pipe.id, newElevVal);
+  const rawLen = parseFloat(document.getElementById('pp-length').value) || 10;
+  // Normalize length from user unit (m or ft) to base SI meters
+  pipe.props.length_m = toBaseSI(rawLen, 'length', state.units.length || 'm');
+  const rawElevVal = parseFloat(document.getElementById('pp-elev-change').value);
+  const elevMeters = isNaN(rawElevVal) ? 0 : toBaseSI(rawElevVal, 'length', state.units.length || 'm');
+  syncElevationIntegrity('pipe', pipe.id, elevMeters);
   pipe.props.routing = document.getElementById('pp-routing').value;
   const ppCustK = document.getElementById('pp-custom-k');
   if (ppCustK) pipe.props.custom_k = parseFloat(ppCustK.value) || 0;
@@ -4919,7 +5148,9 @@ async function runCalculation() {
   if (state.pipes.length === 0) {
     toast('Add at least one pipe segment before calculating.', 'warn'); return;
   }
-  const globalFlow = parseFloat(document.getElementById('pn-global-flow').value) || 10;
+  const rawGlobalFlow = parseFloat(document.getElementById('pn-global-flow').value) || 10;
+  // Convert global flow rate from active flow unit to internal base SI m³/h for API calculation
+  const globalFlow = toBaseSI(rawGlobalFlow, 'flow', state.units.flow || 'm3h');
   const solverMethod = document.getElementById('pn-solver-method')?.value || 'ggm';
   const frictionMethod = document.getElementById('pn-friction-method')?.value || 'darcy_weisbach';
 
@@ -5045,22 +5276,39 @@ function displayResults(data) {
   const sec = document.getElementById('pn-results-section');
   if (sec) sec.style.display = '';
   const s = data.summary;
-  setVal('res-major', s.total_hf_major_m.toFixed(3));
-  setVal('res-minor', s.total_hf_minor_m.toFixed(3));
-  setVal('res-elev', s.total_elevation_m.toFixed(3));
-  setVal('res-total', s.total_system_head_m.toFixed(3));
+
+  // Active engineering units
+  const uH = state.units.head || 'm';
+  const uHLbl = getUnitLabel('head', uH);
+  const uDia = state.units.diameter || 'mm';
+  const uDiaLbl = getUnitLabel('diameter', uDia);
+  const uLen = state.units.length || 'm';
+  const uLenLbl = getUnitLabel('length', uLen);
+  const uFlow = state.units.flow || 'm3h';
+  const uFlowLbl = getUnitLabel('flow', uFlow);
+  const uVel = state.units.velocity || 'm/s';
+  const uVelLbl = getUnitLabel('velocity', uVel);
+  const uPress = state.units.pressure || 'kpa';
+  const uPLbl = getUnitLabel('pressure', uPress);
+
+  // Update Summary Cards with unit conversion
+  setVal('res-major', fromBaseSI(s.total_hf_major_m, 'head', uH).toFixed(3));
+  setVal('res-minor', fromBaseSI(s.total_hf_minor_m, 'head', uH).toFixed(3));
+  setVal('res-elev', fromBaseSI(s.total_elevation_m, 'head', uH).toFixed(3));
+  setVal('res-total', fromBaseSI(s.total_system_head_m, 'head', uH).toFixed(3));
   setVal('res-count', s.pipe_count);
   setVal('res-r-sys', s.total_system_R !== undefined ? s.total_system_R.toFixed(2) : '—');
   setVal('res-method-label', s.friction_method === 'hazen_williams' ? 'Hazen-Williams' : 'Darcy-Weisbach');
 
-  // Populate NPSH Available card (NPSHa)
+  // Populate NPSH Available card (NPSHa) converted to active head unit
   const npshaVal = s.npsha_m !== undefined ? s.npsha_m : null;
   const npshaEl = document.getElementById('res-npsha');
   if (npshaEl) {
-    npshaEl.textContent = npshaVal !== null ? npshaVal.toFixed(2) : '—';
+    const dispNpsha = npshaVal !== null ? fromBaseSI(npshaVal, 'head', uH) : null;
+    npshaEl.textContent = dispNpsha !== null ? dispNpsha.toFixed(2) : '—';
     if (npshaVal !== null) {
       npshaEl.style.color = s.cavitation_color || (npshaVal >= 4.5 ? '#2dd4bf' : npshaVal >= 2.5 ? '#f59e0b' : '#f87171');
-      npshaEl.title = `NPSHa: ${npshaVal.toFixed(2)} m (${s.cavitation_risk || 'Cavitation Assessment'}). Patm=${(s.atmospheric_pressure_kpa || 101.325).toFixed(1)} kPa, Pv=${(s.vapor_pressure_kpa || 2.34).toFixed(2)} kPa. Click for NPSH guide.`;
+      npshaEl.title = `NPSHa: ${dispNpsha.toFixed(2)} ${uHLbl} (${s.cavitation_risk || 'Cavitation Assessment'}). Patm=${(s.atmospheric_pressure_kpa || 101.325).toFixed(1)} kPa, Pv=${(s.vapor_pressure_kpa || 2.34).toFixed(2)} kPa. Click for NPSH guide.`;
     }
   }
 
@@ -5105,7 +5353,8 @@ function displayResults(data) {
     const patmVal = s.atmospheric_pressure_kpa !== undefined ? s.atmospheric_pressure_kpa : (state.barometric_pressure_kpa || 101.325);
     const tempVal = s.temperature_c !== undefined ? s.temperature_c : (state.temperature_c || 20);
     const rhoVal = s.density_kg_m3 !== undefined ? s.density_kg_m3 : 998.2;
-    const npshaText = s.npsha_m !== undefined ? ` &bull; <strong style="color:${s.cavitation_color || '#2dd4bf'};">NPSHa:</strong> ${s.npsha_m.toFixed(2)} m (${s.cavitation_risk || 'Normal'})` : '';
+    const dispNpshaFormula = s.npsha_m !== undefined ? fromBaseSI(s.npsha_m, 'head', uH).toFixed(2) : '';
+    const npshaText = s.npsha_m !== undefined ? ` &bull; <strong style="color:${s.cavitation_color || '#2dd4bf'};">NPSHa:</strong> ${dispNpshaFormula} ${uHLbl} (${s.cavitation_risk || 'Normal'})` : '';
 
     let fluidDesc = `<span style="color:#e2e8f0;">Water @ ${tempVal}&deg;C</span> (&rho;: <span style="color:#e2e8f0;">${rhoVal.toFixed(1)} kg/m&sup3;</span>, SG: <span style="color:#e2e8f0;">${(s.specific_gravity || state.specific_gravity || 1.0).toFixed(3)}</span>)`;
     if (s.is_slurry || state.is_slurry) {
@@ -5129,7 +5378,7 @@ function displayResults(data) {
     `;
   }
 
-  // Synchronize pipe results table header
+  // Synchronize pipe results table header with active engineering units
   const resTable = document.getElementById('pn-results-table');
   if (resTable) {
     const thead = resTable.querySelector('thead');
@@ -5139,22 +5388,22 @@ function displayResults(data) {
         <tr style="background:#161b22;">
           <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">ID</th>
           <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Label</th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">D (mm)</th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">L (m)</th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Pipe volumetric flow rate (m³/h and L/s). Click for help notes & formulas." onclick="showHydraulicHelp('flow_pressure')">Flow (m&sup3;/h) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Velocity (m/s)</th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Operating gauge pressure in pipe &amp; inlet/outlet drop. Click for help notes & formulas." onclick="showHydraulicHelp('flow_pressure')">Pressure (kPa) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">D (${uDiaLbl})</th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">L (${uLenLbl})</th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Pipe volumetric flow rate (${uFlowLbl}). Click for help notes & formulas." onclick="showHydraulicHelp('flow_pressure')">Flow (${uFlowLbl}) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Velocity (${uVelLbl})</th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Operating gauge pressure in pipe &amp; inlet/outlet drop (${uPLbl}). Click for help notes & formulas." onclick="showHydraulicHelp('flow_pressure')">Pressure (${uPLbl}) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
           <th style="padding:6px 10px;text-align:center;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Regime / Re</th>
           <th id="th-friction-factor" style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Friction factor f or Hazen-Williams C. Click for help notes." onclick="showHydraulicHelp('exp_n')">${fricTitle} <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
           <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">K<sub>total</sub></th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Major friction head loss in straight pipe (Darcy-Weisbach or Hazen-Williams). Click for help notes." onclick="showHydraulicHelp('hf_major')">hf Major (m) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Minor head loss across fittings, valves, bends, and restrictions (Crane TP-410). Click for help notes." onclick="showHydraulicHelp('hf_minor')">hf Minor (m) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Elev (m)</th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">h Total (m)</th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Major friction head loss in straight pipe (${uHLbl}). Click for help notes." onclick="showHydraulicHelp('hf_major')">hf Major (${uHLbl}) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Minor head loss across fittings, valves, bends, and restrictions (${uHLbl}). Click for help notes." onclick="showHydraulicHelp('hf_minor')">hf Minor (${uHLbl}) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Elev (${uHLbl})</th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">h Total (${uHLbl})</th>
           <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Consolidated Hydraulic Resistance R (hf = R * Q^n). Click for formulas and calculation details." onclick="showHydraulicHelp('res_r')">Res. R <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
           <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Flow Exponent n (2.0 for Darcy-Weisbach, 1.852 for Hazen-Williams). Click for formulas and calculation details." onclick="showHydraulicHelp('exp_n')">Exp. n <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Slurry Settling Velocity Vt (Ferguson &amp; Church) and Durand Critical Velocity Vc. Click for slurry notes." onclick="showHydraulicHelp('slurry')">Slurry V<sub>t</sub> / V<sub>c</sub> <i class="bi bi-info-circle" style="color:#f59e0b;font-size:10px;margin-left:2px;"></i></th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Joukowsky Water Hammer wave speed 'a' and transient surge pressure delta-P. Click for water hammer notes." onclick="showHydraulicHelp('water_hammer')">Wave / Surge <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Slurry Settling Velocity Vt and Durand Critical Velocity Vc. Click for slurry notes." onclick="showHydraulicHelp('slurry')">Slurry V<sub>t</sub> / V<sub>c</sub> <i class="bi bi-info-circle" style="color:#f59e0b;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Joukowsky Water Hammer wave speed and transient surge pressure. Click for water hammer notes." onclick="showHydraulicHelp('water_hammer')">Wave / Surge <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
           <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Barlow pipe wall circumferential hoop stress and safety factor vs allowable yield." onclick="showHydraulicHelp('pipe_stress')">Hoop Stress <i class="bi bi-info-circle" style="color:#4ade80;font-size:10px;margin-left:2px;"></i></th>
         </tr>
       `;
@@ -5171,19 +5420,37 @@ function displayResults(data) {
         ? `<span style="color:#38bdf8;font-weight:600;">C=${r.hazen_williams_c || 120}</span><br><span style="font-size:9.5px;color:#64748b;">(f=${r.friction_factor})</span>`
         : `<span style="font-family:monospace;">${r.friction_factor}</span>`;
 
-      // Flow rate for this segment
-      const flowM3h = r.flow_m3h !== undefined ? r.flow_m3h : (state.flow_m3h || 0);
-      const flowLs = flowM3h / 3.6;
+      // Diameter & Length in active units
+      const dispDia = fromBaseSI(r.diameter_mm, 'diameter', uDia);
+      const dispLen = fromBaseSI(r.length_m, 'length', uLen);
+      const dispVel = fromBaseSI(r.velocity_ms, 'velocity', uVel);
 
-      // Pipe Pressure calculation
+      // Flow rate for this segment in active flow unit
+      const flowM3h = r.flow_m3h !== undefined ? r.flow_m3h : (state.flow_m3h || 0);
+      const dispFlow = fromBaseSI(flowM3h, 'flow', uFlow);
+      const subFlowText = (uFlow === 'm3h')
+        ? `${(flowM3h / 3.6).toFixed(2)} L/s`
+        : `${flowM3h.toFixed(2)} m³/h`;
+
+      // Pipe Pressure calculation in active pressure unit
       const pVal = r.pressure_kpa !== undefined ? r.pressure_kpa : (r.pressure_drop_kpa !== undefined ? r.pressure_drop_kpa : 0);
+      const dispP = fromBaseSI(pVal, 'pressure', uPress);
       const pColor = pVal >= 0 ? '#4ade80' : '#f87171';
       let pSub = '';
       if (r.pressure_in_kpa !== undefined && r.pressure_out_kpa !== undefined) {
-        pSub = `<div style="font-size:9.5px;color:#94a3b8;" title="Inlet &rarr; Outlet Pressure">${r.pressure_in_kpa.toFixed(1)} &rarr; ${r.pressure_out_kpa.toFixed(1)}</div>`;
+        const pIn = fromBaseSI(r.pressure_in_kpa, 'pressure', uPress).toFixed(1);
+        const pOut = fromBaseSI(r.pressure_out_kpa, 'pressure', uPress).toFixed(1);
+        pSub = `<div style="font-size:9.5px;color:#94a3b8;" title="Inlet &rarr; Outlet Pressure">${pIn} &rarr; ${pOut}</div>`;
       } else if (r.pressure_drop_kpa !== undefined) {
-        pSub = `<div style="font-size:9.5px;color:#64748b;" title="Friction Pressure Drop">&Delta;P ${r.pressure_drop_kpa.toFixed(1)}</div>`;
+        const pDrop = fromBaseSI(r.pressure_drop_kpa, 'pressure', uPress).toFixed(1);
+        pSub = `<div style="font-size:9.5px;color:#64748b;" title="Friction Pressure Drop">&Delta;P ${pDrop}</div>`;
       }
+
+      // Head losses in active head unit
+      const dispHfMaj = fromBaseSI(r.hf_major_m, 'head', uH).toFixed(3);
+      const dispHfMin = fromBaseSI(r.hf_minor_m, 'head', uH).toFixed(3);
+      const dispHfElev = fromBaseSI(r.hf_elevation_m, 'head', uH).toFixed(3);
+      const dispHTot = fromBaseSI(r.h_total_m, 'head', uH).toFixed(3);
 
       // Slurry deposition display
       let slurryCell = `<span style="color:#64748b;">—</span>`;
@@ -5199,9 +5466,10 @@ function displayResults(data) {
       // Water hammer Joukowsky wave speed & surge
       const waveSpeed = r.wave_speed_ms !== undefined && r.wave_speed_ms !== null ? r.wave_speed_ms : null;
       const surgeKpa = r.surge_pressure_kpa !== undefined && r.surge_pressure_kpa !== null ? r.surge_pressure_kpa : null;
+      const dispSurge = surgeKpa !== null ? fromBaseSI(surgeKpa, 'pressure', uPress) : null;
       const whCell = waveSpeed ? `
         <div style="font-family:monospace;font-size:11px;color:#38bdf8;">${Math.round(waveSpeed)} m/s</div>
-        <div style="font-size:9.5px;color:#f59e0b;" title="Instantaneous Joukowsky surge pressure &Delta;P">+${Math.round(surgeKpa || 0)} kPa</div>
+        <div style="font-size:9.5px;color:#f59e0b;" title="Instantaneous Joukowsky surge pressure &Delta;P">+${Math.round(dispSurge || 0)} ${uPLbl}</div>
       ` : `<span style="color:#64748b;">—</span>`;
 
       // Barlow hoop stress
@@ -5213,6 +5481,7 @@ function displayResults(data) {
         <div style="font-size:9.5px;color:${sfColor};font-weight:600;" title="Safety factor vs allowable yield stress">SF ${sf ? sf.toFixed(1) : '—'}</div>
       ` : `<span style="color:#64748b;">—</span>`;
 
+      const diaDec = uDia === 'in' ? 2 : 1;
       tbody.innerHTML += `
         <tr style="border-bottom:1px solid #21262d" onmouseover="this.style.background='#1c2330'" onmouseout="this.style.background=''">
           <td style="padding:6px 10px;font-family:monospace;color:#58a6ff">${r.id}</td>
@@ -5221,18 +5490,18 @@ function displayResults(data) {
             ${r.schedule_sdr ? `<div style="font-size:10px;color:#94a3b8;">${r.standard || ''} ${r.schedule_sdr}</div>` : ''}
           </td>
           <td style="padding:6px 10px;text-align:right">
-            ${r.diameter_mm}
-            ${r.od_mm ? `<div style="font-size:10px;color:#64748b;">OD ${r.od_mm}</div>` : ''}
+            ${dispDia.toFixed(diaDec)}
+            ${r.od_mm ? `<div style="font-size:10px;color:#64748b;">OD ${fromBaseSI(r.od_mm, 'diameter', uDia).toFixed(diaDec)}</div>` : ''}
           </td>
-          <td style="padding:6px 10px;text-align:right">${r.length_m}</td>
+          <td style="padding:6px 10px;text-align:right">${dispLen.toFixed(1)}</td>
           <td style="padding:6px 10px;text-align:right;font-family:monospace;color:#38bdf8;font-weight:600;">
-            ${flowM3h.toFixed(2)}
-            <div style="font-size:9.5px;color:#64748b;">${flowLs.toFixed(2)} L/s</div>
+            ${dispFlow.toFixed(2)}
+            <div style="font-size:9.5px;color:#64748b;">${subFlowText}</div>
           </td>
-          <td style="padding:6px 10px;text-align:right">${r.velocity_ms}
+          <td style="padding:6px 10px;text-align:right">${dispVel.toFixed(2)}
             <span style="font-size:10px;color:${vc}"> ${r.velocity_status}</span></td>
           <td style="padding:6px 10px;text-align:right;font-family:monospace;font-weight:600;color:${pColor}">
-            ${pVal.toFixed(1)}
+            ${dispP.toFixed(1)}
             ${pSub}
           </td>
           <td style="padding:6px 10px;text-align:center">
@@ -5240,10 +5509,10 @@ function displayResults(data) {
             <span style="color:#64748b;font-size:10px">Re ${r.reynolds.toLocaleString()}</span></td>
           <td style="padding:6px 10px;text-align:right">${fricCell}</td>
           <td style="padding:6px 10px;text-align:right;color:#e2e8f0;font-weight:600">${r.K_total !== undefined ? r.K_total.toFixed(2) : '—'}</td>
-          <td style="padding:6px 10px;text-align:right;color:#f87171">${r.hf_major_m}</td>
-          <td style="padding:6px 10px;text-align:right;color:#fb923c">${r.hf_minor_m}</td>
-          <td style="padding:6px 10px;text-align:right;color:#a78bfa">${r.hf_elevation_m}</td>
-          <td style="padding:6px 10px;text-align:right;font-weight:700;color:#fbbf24">${r.h_total_m}</td>
+          <td style="padding:6px 10px;text-align:right;color:#f87171">${dispHfMaj}</td>
+          <td style="padding:6px 10px;text-align:right;color:#fb923c">${dispHfMin}</td>
+          <td style="padding:6px 10px;text-align:right;color:#a78bfa">${dispHfElev}</td>
+          <td style="padding:6px 10px;text-align:right;font-weight:700;color:#fbbf24">${dispHTot}</td>
           <td style="padding:6px 10px;text-align:right;font-family:monospace;color:#38bdf8">${r.resistance_R !== undefined ? r.resistance_R.toFixed(1) : '—'}</td>
           <td style="padding:6px 10px;text-align:right;font-family:monospace;color:#94a3b8">${r.flow_exponent_n !== undefined ? r.flow_exponent_n.toFixed(3) : (s.friction_method === 'hazen_williams' ? '1.852' : '2.000')}</td>
           <td style="padding:6px 10px;text-align:right;">${slurryCell}</td>
@@ -5256,7 +5525,7 @@ function displayResults(data) {
     });
   }
 
-  // Populate Node Hydraulic Grade Line (HGL) & Pressures table
+  // Populate Node Hydraulic Grade Line (HGL) & Pressures table with active engineering units
   const nodeTable = document.getElementById('pn-node-results-table');
   if (nodeTable) {
     const nodeThead = nodeTable.querySelector('thead');
@@ -5266,11 +5535,11 @@ function displayResults(data) {
           <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Node ID</th>
           <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Label</th>
           <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Type</th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Geometric physical elevation Z above datum. Click for help notes." onclick="showHydraulicHelp('hgl_pressures')">Elevation Z (m) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Hydraulic Grade Line [HGL = Z + P/(rho*g), g=9.80665 m/s²]. Click for help notes & formulas." onclick="showHydraulicHelp('hgl_pressures')">Total Head HGL (m) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Pressure Head [P/(rho*g) = HGL - Z, g=9.80665 m/s²]. Click for help notes & formulas." onclick="showHydraulicHelp('hgl_pressures')">Pressure Head P/(&rho;&middot;g) (m) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Gauge Pressure in kPa: P = (Pressure Head * rho * g) / 1000 with g=9.80665 m/s². Click for help notes & formulas." onclick="showHydraulicHelp('hgl_pressures')">Pressure (kPa) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Demand (m&sup3;/h)</th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Geometric physical elevation Z above datum (${uLenLbl}). Click for help notes." onclick="showHydraulicHelp('hgl_pressures')">Elevation Z (${uLenLbl}) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Hydraulic Grade Line [HGL = Z + P/(rho*g), g=9.80665 m/s²] (${uHLbl}). Click for help notes & formulas." onclick="showHydraulicHelp('hgl_pressures')">Total Head HGL (${uHLbl}) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Pressure Head [P/(rho*g) = HGL - Z, g=9.80665 m/s²] (${uHLbl}). Click for help notes & formulas." onclick="showHydraulicHelp('hgl_pressures')">Pressure Head P/(&rho;&middot;g) (${uHLbl}) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Gauge Pressure in ${uPLbl}. Click for help notes & formulas." onclick="showHydraulicHelp('hgl_pressures')">Pressure (${uPLbl}) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Demand (${uFlowLbl})</th>
         </tr>
       `;
     }
@@ -5293,7 +5562,13 @@ function displayResults(data) {
       };
       const badgeStyle = typeBadgeColors[n.node_type] || 'background:rgba(148,163,184,0.15);color:#cbd5e1;border:1px solid rgba(148,163,184,0.4)';
       const pVal = n.pressure_kpa !== undefined ? n.pressure_kpa : 0;
+      const dispP = fromBaseSI(pVal, 'pressure', uPress);
       const pColor = pVal >= 0 ? '#4ade80' : '#f87171';
+
+      const dispElev = fromBaseSI(n.elevation_m !== undefined ? n.elevation_m : 0, 'length', uLen);
+      const dispHead = n.head_m !== undefined ? fromBaseSI(n.head_m, 'head', uH).toFixed(2) : '—';
+      const dispPHead = n.pressure_head_m !== undefined ? fromBaseSI(n.pressure_head_m, 'head', uH).toFixed(2) : '—';
+      const dispDemand = fromBaseSI(n.demand_m3h || 0, 'flow', uFlow).toFixed(1);
 
       nodeTbody.innerHTML += `
         <tr style="border-bottom:1px solid #21262d" onmouseover="this.style.background='#1c2330'" onmouseout="this.style.background=''">
@@ -5304,11 +5579,11 @@ function displayResults(data) {
               ${n.node_type}
             </span>
           </td>
-          <td style="padding:6px 10px;text-align:right;font-family:monospace;color:#a78bfa;">${n.elevation_m !== undefined ? n.elevation_m.toFixed(2) : '0.00'}</td>
-          <td style="padding:6px 10px;text-align:right;font-family:monospace;font-weight:700;color:#fbbf24;">${n.head_m !== undefined ? n.head_m.toFixed(2) : '—'}</td>
-          <td style="padding:6px 10px;text-align:right;font-family:monospace;color:${pColor};">${n.pressure_head_m !== undefined ? n.pressure_head_m.toFixed(2) : '—'}</td>
-          <td style="padding:6px 10px;text-align:right;font-family:monospace;font-weight:600;color:${pColor};">${n.pressure_kpa !== undefined ? n.pressure_kpa.toFixed(1) : '—'}</td>
-          ${nodeTableHasDemand ? `<td style="padding:6px 10px;text-align:right;font-family:monospace;color:#94a3b8;">${(n.demand_m3h || 0).toFixed(1)}</td>` : ''}
+          <td style="padding:6px 10px;text-align:right;font-family:monospace;color:#a78bfa;">${dispElev.toFixed(2)}</td>
+          <td style="padding:6px 10px;text-align:right;font-family:monospace;font-weight:700;color:#fbbf24;">${dispHead}</td>
+          <td style="padding:6px 10px;text-align:right;font-family:monospace;color:${pColor};">${dispPHead}</td>
+          <td style="padding:6px 10px;text-align:right;font-family:monospace;font-weight:600;color:${pColor};">${dispP.toFixed(1)}</td>
+          ${nodeTableHasDemand ? `<td style="padding:6px 10px;text-align:right;font-family:monospace;color:#94a3b8;">${dispDemand}</td>` : ''}
         </tr>`;
     });
   }
@@ -5607,6 +5882,425 @@ function applySlurrySettings() {
   toast(`Slurry calculations ${state.is_slurry ? 'enabled' : 'disabled'}.`, 'info');
 }
 
+// ============================================================================
+// ENGINEERING UNITS CONTROLLER & BIDIRECTIONAL SYNCHRONIZATION
+// ============================================================================
+
+/**
+ * updateUnitLabels()
+ * Updates all static DOM unit spans, placeholders, and toolbar selectors across
+ * the Pipe Network Designer with the active engineering unit symbols.
+ */
+function updateUnitLabels() {
+  const uFlow = state.units.flow || 'm3h';
+  const uHead = state.units.head || 'm';
+  const uDia = state.units.diameter || 'mm';
+  const uLen = state.units.length || 'm';
+  const uPress = state.units.pressure || 'kpa';
+  const uVel = state.units.velocity || 'm/s';
+
+  const uFlowLbl = getUnitLabel('flow', uFlow);
+  const uHeadLbl = getUnitLabel('head', uHead);
+  const uDiaLbl = getUnitLabel('diameter', uDia);
+  const uLenLbl = getUnitLabel('length', uLen);
+  const uPressLbl = getUnitLabel('pressure', uPress);
+  const uVelLbl = getUnitLabel('velocity', uVel);
+
+  // Update dynamic unit label spans across toolbar, sidebars, and results
+  document.querySelectorAll('.pn-unit-flow-lbl').forEach(el => el.textContent = uFlowLbl);
+  document.querySelectorAll('.pn-unit-head-lbl').forEach(el => el.textContent = uHeadLbl);
+  document.querySelectorAll('.pn-unit-dia-lbl').forEach(el => el.textContent = uDiaLbl);
+  document.querySelectorAll('.pn-unit-len-lbl').forEach(el => el.textContent = uLenLbl);
+  document.querySelectorAll('.pn-unit-elev-lbl').forEach(el => el.textContent = uLenLbl);
+  document.querySelectorAll('.pn-unit-press-lbl').forEach(el => el.textContent = uPressLbl);
+  document.querySelectorAll('.pn-unit-vel-lbl').forEach(el => el.textContent = uVelLbl);
+
+  // Sync toolbar dropdowns if present in the DOM
+  const flowUnitSel = document.getElementById('pn-flow-unit');
+  if (flowUnitSel && flowUnitSel.value !== uFlow) flowUnitSel.value = uFlow;
+
+  const presetSel = document.getElementById('pn-unit-preset');
+  if (presetSel && presetSel.value !== state.units.system) presetSel.value = state.units.system;
+
+  // Sync Results Section unit selectors across results bar and summary cards
+  document.querySelectorAll('.pn-res-head-unit').forEach(sel => {
+    if (sel.value !== uHead) sel.value = uHead;
+  });
+  document.querySelectorAll('.pn-res-flow-unit').forEach(sel => {
+    if (sel.value !== uFlow) sel.value = uFlow;
+  });
+  document.querySelectorAll('.pn-res-press-unit').forEach(sel => {
+    if (sel.value !== uPress) sel.value = uPress;
+  });
+}
+
+/**
+ * setPnUnits(newUnits, options)
+ * High-level atomic setter for active engineering units.
+ * Updates state, smoothly converts active input values without loss of physical accuracy,
+ * updates DOM labels, triggers canvas & table re-renders, and broadcasts sync events.
+ */
+function setPnUnits(newUnits, options = {}) {
+  const opts = Object.assign({ save: true, rerender: true, syncExternal: true }, options);
+  const oldFlow = state.units.flow || 'm3h';
+
+  if (newUnits) {
+    if (newUnits.system) state.units.system = newUnits.system;
+    if (newUnits.flow) state.units.flow = newUnits.flow;
+    if (newUnits.head) state.units.head = newUnits.head;
+    if (newUnits.diameter) state.units.diameter = newUnits.diameter;
+    if (newUnits.length) state.units.length = newUnits.length;
+    if (newUnits.pressure) state.units.pressure = newUnits.pressure;
+    if (newUnits.velocity) state.units.velocity = newUnits.velocity;
+  }
+
+  // Smooth conversion for global flow input: convert numerical value to new unit
+  const flowInput = document.getElementById('pn-global-flow');
+  if (flowInput && oldFlow !== state.units.flow) {
+    const rawVal = parseFloat(flowInput.value);
+    if (!isNaN(rawVal) && rawVal > 0) {
+      const converted = convertUnit(rawVal, 'flow', oldFlow, state.units.flow);
+      const dec = (state.units.flow === 'cfs' || state.units.flow === 'mgd') ? 3 : 2;
+      flowInput.value = parseFloat(converted.toFixed(dec));
+    }
+  }
+
+  // Refresh properties panel if a node or pipe is currently selected
+  if (state.selected) {
+    if (state.selected.kind === 'node') {
+      const node = findNode(state.selected.id);
+      if (node) showNodeProps(node);
+    } else if (state.selected.kind === 'pipe') {
+      const pipe = findPipe(state.selected.id);
+      if (pipe) showPipeProps(pipe);
+    }
+  }
+
+  updateUnitLabels();
+
+  if (opts.rerender) {
+    renderAll();
+    if (state.lastCalculation) {
+      displayResults(state.lastCalculation);
+    }
+  }
+
+  if (opts.save) {
+    try {
+      localStorage.setItem('pmpro_pn_units', JSON.stringify(state.units));
+    } catch (e) { }
+    saveNetworkToStorage();
+  }
+
+  if (opts.syncExternal) {
+    // Notify Pump Selection or any other tab/listener
+    try {
+      const payload = {
+        units: Object.assign({}, state.units),
+        unit_q: state.units.flow,
+        unit_h: state.units.head,
+        unit_system: state.units.system,
+        source: 'pipe_network',
+        timestamp: Date.now()
+      };
+      localStorage.setItem('pmpro_units_active', JSON.stringify(payload));
+      localStorage.setItem('pmpro_pump_selection_units', JSON.stringify(payload));
+      window.dispatchEvent(new CustomEvent('pmp:units-changed', { detail: payload }));
+      if (typeof window.applyExternalUnitsToPumpSelection === 'function') {
+        window.applyExternalUnitsToPumpSelection(payload);
+      }
+    } catch (e) { }
+  }
+}
+
+/**
+ * Handles user changing the quick flow unit dropdown in the toolbar.
+ */
+function onFlowUnitChange(newFlowUnit) {
+  if (!newFlowUnit) return;
+  // Automatically identify if preset remains metric/imperial or becomes custom
+  let sys = state.units.system || 'metric';
+  const isImpFlow = (newFlowUnit === 'gpm' || newFlowUnit === 'ukgpm' || newFlowUnit === 'cfs' || newFlowUnit === 'mgd');
+  if (sys === 'metric' && isImpFlow) sys = 'custom';
+  if (sys === 'imperial' && !isImpFlow) sys = 'custom';
+
+  setPnUnits({ flow: newFlowUnit, system: sys });
+  toast(`Flow unit: ${getUnitLabel('flow', newFlowUnit)}`, 'info');
+}
+
+/**
+ * Handles user selecting Metric or Imperial preset from toolbar.
+ */
+function onUnitPresetChange(preset) {
+  if (preset === 'metric') {
+    setPnUnits({
+      system: 'metric',
+      flow: 'm3h',
+      head: 'm',
+      diameter: 'mm',
+      length: 'm',
+      pressure: 'kpa',
+      velocity: 'm/s'
+    });
+    toast('Switched to Metric (SI) units (m³/h, m, mm, kPa).', 'info');
+  } else if (preset === 'imperial') {
+    setPnUnits({
+      system: 'imperial',
+      flow: 'gpm',
+      head: 'ft',
+      diameter: 'in',
+      length: 'ft',
+      pressure: 'psi',
+      velocity: 'ft/s'
+    });
+    toast('Switched to US Customary units (US gpm, ft, in, psi).', 'info');
+  }
+}
+
+/**
+ * Toggles the detailed Units Configuration Modal overlay.
+ */
+function togglePnUnitsModal(forceOpen) {
+  let modal = document.getElementById('pn-units-modal-overlay');
+  if (!modal) {
+    console.warn('[PipeNetwork] #pn-units-modal-overlay not found in DOM.');
+    return;
+  }
+  // Safeguard: hoist to document.body to avoid parent CSS clipping or hidden ancestor tabs
+  if (modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+  modal.style.zIndex = '99999';
+
+  const isHidden = (modal.style.display === 'none' || !modal.style.display || getComputedStyle(modal).display === 'none');
+  const show = forceOpen !== undefined ? Boolean(forceOpen) : isHidden;
+  modal.style.display = show ? 'block' : 'none';
+  if (show) {
+    syncPnUnitsModalInputs();
+  }
+}
+
+function syncPnUnitsModalInputs() {
+  const presetSel = document.getElementById('pn-modal-unit-preset');
+  if (presetSel) presetSel.value = state.units.system || 'metric';
+
+  const setModalVal = (id, v) => {
+    const el = document.getElementById(id);
+    if (el) el.value = v;
+  };
+  setModalVal('pn-modal-unit-flow', state.units.flow || 'm3h');
+  setModalVal('pn-modal-unit-head', state.units.head || 'm');
+  setModalVal('pn-modal-unit-diameter', state.units.diameter || 'mm');
+  setModalVal('pn-modal-unit-length', state.units.length || 'm');
+  setModalVal('pn-modal-unit-pressure', state.units.pressure || 'kpa');
+  setModalVal('pn-modal-unit-velocity', state.units.velocity || 'm/s');
+}
+
+function applyPnUnitPreset(preset) {
+  const setModalVal = (id, v) => {
+    const el = document.getElementById(id);
+    if (el) el.value = v;
+  };
+  if (preset === 'metric') {
+    setModalVal('pn-modal-unit-flow', 'm3h');
+    setModalVal('pn-modal-unit-head', 'm');
+    setModalVal('pn-modal-unit-diameter', 'mm');
+    setModalVal('pn-modal-unit-length', 'm');
+    setModalVal('pn-modal-unit-pressure', 'kpa');
+    setModalVal('pn-modal-unit-velocity', 'm/s');
+  } else if (preset === 'imperial') {
+    setModalVal('pn-modal-unit-flow', 'gpm');
+    setModalVal('pn-modal-unit-head', 'ft');
+    setModalVal('pn-modal-unit-diameter', 'in');
+    setModalVal('pn-modal-unit-length', 'ft');
+    setModalVal('pn-modal-unit-pressure', 'psi');
+    setModalVal('pn-modal-unit-velocity', 'ft/s');
+  }
+}
+
+function onPnModalUnitChange() {
+  // If user changes individual dropdowns inside modal, update preset dropdown to 'custom'
+  const presetSel = document.getElementById('pn-modal-unit-preset');
+  if (presetSel) presetSel.value = 'custom';
+}
+
+function savePnModalUnits() {
+  const flow = document.getElementById('pn-modal-unit-flow')?.value || 'm3h';
+  const head = document.getElementById('pn-modal-unit-head')?.value || 'm';
+  const diameter = document.getElementById('pn-modal-unit-diameter')?.value || 'mm';
+  const length = document.getElementById('pn-modal-unit-length')?.value || 'm';
+  const pressure = document.getElementById('pn-modal-unit-pressure')?.value || 'kpa';
+  const velocity = document.getElementById('pn-modal-unit-velocity')?.value || 'm/s';
+
+  // Determine system name
+  let system = document.getElementById('pn-modal-unit-preset')?.value || 'custom';
+  const isMetric = (flow === 'm3h' && head === 'm' && diameter === 'mm' && length === 'm' && pressure === 'kpa' && velocity === 'm/s');
+  const isImperial = (flow === 'gpm' && head === 'ft' && diameter === 'in' && length === 'ft' && pressure === 'psi' && velocity === 'ft/s');
+  if (isMetric) system = 'metric';
+  else if (isImperial) system = 'imperial';
+  else system = 'custom';
+
+  setPnUnits({ system, flow, head, diameter, length, pressure, velocity });
+  togglePnUnitsModal(false);
+  toast('Engineering units updated!', 'success');
+}
+
+/**
+ * Initializes engineering units state on startup.
+ * Detects template-injected units, localStorage preferences, and attaches event handlers.
+ */
+function initUnits() {
+  // 1. Check template injection or localStorage for active units
+  let loadedUnits = null;
+  try {
+    const saved = localStorage.getItem('pmpro_pn_units');
+    if (saved) loadedUnits = JSON.parse(saved);
+  } catch (e) { }
+
+  if (!loadedUnits) {
+    // Check template injected globals from pump selection or session
+    const injectedQ = window.__PMP_UNIT_Q;
+    const injectedH = window.__PMP_UNIT_H;
+    const injectedSys = window.__PMP_UNIT_SYSTEM;
+    if (injectedQ || injectedH || injectedSys) {
+      const isImp = injectedSys === 'imperial' || injectedH === 'ft' || injectedQ === 'us_gpm' || injectedQ === 'gpm';
+      loadedUnits = {
+        system: isImp ? 'imperial' : 'metric',
+        flow: injectedQ === 'us_gpm' ? 'gpm' : (injectedQ === 'm3/h' ? 'm3h' : (injectedQ === 'l/s' ? 'ls' : (injectedQ || (isImp ? 'gpm' : 'm3h')))),
+        head: injectedH === 'ft' ? 'ft' : 'm',
+        diameter: isImp ? 'in' : 'mm',
+        length: isImp ? 'ft' : 'm',
+        pressure: isImp ? 'psi' : 'kpa',
+        velocity: isImp ? 'ft/s' : 'm/s',
+      };
+    }
+  }
+
+  if (loadedUnits) {
+    setPnUnits(loadedUnits, { save: false, rerender: false, syncExternal: false });
+  } else {
+    updateUnitLabels();
+  }
+
+  // Toolbar event listeners
+  const flowUnitSel = document.getElementById('pn-flow-unit');
+  flowUnitSel?.addEventListener('change', e => onFlowUnitChange(e.target.value));
+
+  const presetSel = document.getElementById('pn-unit-preset');
+  presetSel?.addEventListener('change', e => onUnitPresetChange(e.target.value));
+
+  const btnUnits = document.getElementById('btn-units-settings');
+  btnUnits?.addEventListener('click', () => togglePnUnitsModal(true));
+
+  // Modal event listeners
+  const modalPresetSel = document.getElementById('pn-modal-unit-preset');
+  modalPresetSel?.addEventListener('change', e => applyPnUnitPreset(e.target.value));
+
+  ['pn-modal-unit-flow', 'pn-modal-unit-head', 'pn-modal-unit-diameter', 'pn-modal-unit-length', 'pn-modal-unit-pressure', 'pn-modal-unit-velocity'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', onPnModalUnitChange);
+  });
+
+  document.getElementById('btn-apply-pn-units')?.addEventListener('click', savePnModalUnits);
+  document.getElementById('btn-close-pn-units-modal')?.addEventListener('click', () => togglePnUnitsModal(false));
+  document.getElementById('btn-cancel-pn-units-modal')?.addEventListener('click', () => togglePnUnitsModal(false));
+
+  const modalOverlay = document.getElementById('pn-units-modal-overlay');
+  modalOverlay?.addEventListener('click', e => {
+    if (e.target === modalOverlay) togglePnUnitsModal(false);
+  });
+
+  // Results section unit controls event listeners (supports both standalone & embedded views)
+  document.addEventListener('change', e => {
+    if (e.target && e.target.classList.contains('pn-res-head-unit')) {
+      const newHead = e.target.value;
+      if (newHead && newHead !== state.units.head) {
+        setPnUnits({ head: newHead }, { save: true, rerender: true, syncExternal: true });
+        toast(`Results Head unit changed to ${getUnitLabel('head', newHead)}`, 'info');
+      }
+    } else if (e.target && e.target.classList.contains('pn-res-flow-unit')) {
+      const newFlow = e.target.value;
+      if (newFlow && newFlow !== state.units.flow) {
+        setPnUnits({ flow: newFlow }, { save: true, rerender: true, syncExternal: true });
+        toast(`Results Flow unit changed to ${getUnitLabel('flow', newFlow)}`, 'info');
+      }
+    } else if (e.target && e.target.classList.contains('pn-res-press-unit')) {
+      const newPress = e.target.value;
+      if (newPress && newPress !== state.units.pressure) {
+        setPnUnits({ pressure: newPress }, { save: true, rerender: true, syncExternal: true });
+        toast(`Results Pressure unit changed to ${getUnitLabel('pressure', newPress)}`, 'info');
+      }
+    }
+  });
+
+  document.addEventListener('click', e => {
+    const btnMetric = e.target.closest('.btn-res-preset-metric');
+    if (btnMetric) {
+      e.preventDefault();
+      setPnUnits({
+        system: 'metric',
+        flow: 'm3h',
+        head: 'm',
+        diameter: 'mm',
+        length: 'm',
+        pressure: 'kpa',
+        velocity: 'm/s'
+      }, { save: true, rerender: true, syncExternal: true });
+      toast('Results converted to SI Metric (m, m³/h, kPa)', 'success');
+      return;
+    }
+
+    const btnImperial = e.target.closest('.btn-res-preset-imperial');
+    if (btnImperial) {
+      e.preventDefault();
+      setPnUnits({
+        system: 'imperial',
+        flow: 'gpm',
+        head: 'ft',
+        diameter: 'in',
+        length: 'ft',
+        pressure: 'psi',
+        velocity: 'ft/s'
+      }, { save: true, rerender: true, syncExternal: true });
+      toast('Results converted to US Customary (ft, gpm, psi)', 'success');
+      return;
+    }
+
+    const btnAllUnits = e.target.closest('.btn-res-all-units');
+    if (btnAllUnits) {
+      e.preventDefault();
+      togglePnUnitsModal(true);
+      return;
+    }
+  });
+
+  // Cross-tab and embedded event listener for units synchronization
+  window.addEventListener('storage', e => {
+    if (e.key === 'pmpro_pump_selection_units' || e.key === 'pmpro_units_active') {
+      try {
+        const payload = JSON.parse(e.newValue);
+        if (payload && payload.source !== 'pipe_network') {
+          const u = payload.units || {};
+          if (payload.unit_q) u.flow = payload.unit_q === 'us_gpm' ? 'gpm' : (payload.unit_q === 'm3/h' ? 'm3h' : (payload.unit_q === 'l/s' ? 'ls' : payload.unit_q));
+          if (payload.unit_h) u.head = payload.unit_h;
+          if (payload.unit_system) u.system = payload.unit_system;
+          setPnUnits(u, { save: true, rerender: true, syncExternal: false });
+        }
+      } catch (err) { }
+    }
+  });
+
+  window.addEventListener('pmp:units-changed', e => {
+    if (e.detail && e.detail.source !== 'pipe_network') {
+      const payload = e.detail;
+      const u = payload.units || {};
+      if (payload.unit_q) u.flow = payload.unit_q === 'us_gpm' ? 'gpm' : (payload.unit_q === 'm3/h' ? 'm3h' : (payload.unit_q === 'l/s' ? 'ls' : payload.unit_q));
+      if (payload.unit_h) u.head = payload.unit_h;
+      if (payload.unit_system) u.system = payload.unit_system;
+      setPnUnits(u, { save: true, rerender: true, syncExternal: false });
+    }
+  });
+}
+
 // Expose on window object so HTML inline event handlers (e.g. close buttons, toolbar buttons) can invoke them immediately
 window.toggleTheme = toggleTheme;
 window.toggleLegend = toggleLegend;
@@ -5619,6 +6313,16 @@ window.syncDiagramSettingsModalInputs = syncDiagramSettingsModalInputs;
 window.toggleSlurryModal = toggleSlurryModal;
 window.applySlurrySettings = applySlurrySettings;
 window.updateSlurryModalUI = updateSlurryModalUI;
+window.togglePnUnitsModal = togglePnUnitsModal;
+window.applyPnUnitPreset = applyPnUnitPreset;
+window.savePnModalUnits = savePnModalUnits;
+window.setPnUnits = setPnUnits;
+window.__pn_set_units = setPnUnits;
+window.__pn_get_units = () => Object.assign({}, state.units);
+window.__pn_get_flow_m3h = () => {
+  const raw = parseFloat(document.getElementById('pn-global-flow')?.value) || 0;
+  return toBaseSI(raw, 'flow', state.units.flow || 'm3h');
+};
 
 // ============================================================================
 // INIT
@@ -6481,6 +7185,9 @@ function init() {
   setMode('select');
   showPropsPanel('none');
 
+  // Initialize engineering units system and synchronization
+  initUnits();
+
   if (!loadNetworkFromStorage()) {
     loadDemoNetwork();
   } else {
@@ -6599,7 +7306,11 @@ function loadDemoNetwork() {
   state.pan = { x: 0, y: 0 };
   state.zoom = 1.0;
   const flowEl = document.getElementById('pn-global-flow');
-  if (flowEl) flowEl.value = 20;
+  if (flowEl) {
+    const dispFlow = fromBaseSI(20, 'flow', state.units.flow || 'm3h');
+    const dec = (state.units.flow === 'cfs' || state.units.flow === 'mgd') ? 3 : 2;
+    flowEl.value = parseFloat(dispFlow.toFixed(dec));
+  }
   const sec = document.getElementById('pn-results-section');
   if (sec) sec.style.display = 'none';
   reconcilePipeRuns();

@@ -31,6 +31,7 @@ import math
 import re
 from flask import Blueprint, render_template, request, jsonify, g, session
 from models import db, PipeFitting, PipeMaterial, StandardPipe
+from utils import UNITS_FLOW, UNITS_HEAD, UNITS_POWER, UNITS_DENSITY, UNITS_SIZE
 from services.hydraulic_engine import (
     Fitting, Node, PipeEdge, NetworkGraph,
     calculate_consolidated_pipe, DEFAULT_HAZEN_WILLIAMS_C,
@@ -213,6 +214,18 @@ def pipe_network():
     active_selection_json = json.dumps(active_sel)
     selection_form_data_json = json.dumps(sel_form)
 
+    # Engineering units metadata passed from active session/selection form
+    units_tables = {
+        'flow': UNITS_FLOW,
+        'head': UNITS_HEAD,
+        'power': UNITS_POWER,
+        'density': UNITS_DENSITY,
+        'size': UNITS_SIZE
+    }
+    unit_system = sel_form.get('unit_system') or active_sel.get('unit_system') or session.get('unit_system') or 'metric'
+    unit_q = sel_form.get('unit_q') or active_sel.get('unit_q') or session.get('unit_q') or 'm3h'
+    unit_h = sel_form.get('unit_h') or active_sel.get('unit_h') or session.get('unit_h') or 'm'
+
     return render_template('pipe_network.html',
                            fittings_json=fittings_json,
                            materials_json=materials_json,
@@ -221,7 +234,11 @@ def pipe_network():
                            active_selection_json=active_selection_json,
                            selection_form_data_json=selection_form_data_json,
                            active_selection=active_sel,
-                           selection_form_data=sel_form)
+                           selection_form_data=sel_form,
+                           units_tables=units_tables,
+                           unit_system=unit_system,
+                           unit_q=unit_q,
+                           unit_h=unit_h)
 
 
 

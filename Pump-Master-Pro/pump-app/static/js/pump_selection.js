@@ -107,6 +107,11 @@ function applyUnitPreset(preset) {
       btnImp.className = 'px-2.5 py-1 text-xs font-semibold rounded-md transition-all text-[#8b949e] hover:text-white';
     }
   }
+
+  // Broadcast updated unit configuration to Pipe Network
+  if (typeof syncPumpSelectionUnitsToPipeNetwork === 'function') {
+    syncPumpSelectionUnitsToPipeNetwork();
+  }
 }
 
 /**
@@ -171,6 +176,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       sel.dataset.prev = newUnit;
       updateSystemBadge();
+      // Synchronize unit change with Pipe Network
+      if (typeof syncPumpSelectionUnitsToPipeNetwork === 'function') {
+        syncPumpSelectionUnitsToPipeNetwork();
+      }
     });
   });
 
@@ -542,23 +551,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /**
    * syncPumpSelectionToPipeNetwork()
-   * Propagates flow rate (converted to m3/h), temperature (°C), SG, and comprehensive fluid properties
-   * (viscous viscosity/density, slurry mixture properties) into Pipe Network.
+   * Propagates flow rate (converted to m3/h), units (flow, head, system), temperature (°C), SG,
+   * and comprehensive fluid properties (viscous viscosity/density, slurry mixture properties) into Pipe Network.
    */
   function syncPumpSelectionToPipeNetwork() {
-    // 1. Specific Gravity and Fluid Details
+    // 1. Specific Gravity, Fluid Details, and Engineering Units
     syncPumpSelectionSgToStorage();
     syncPumpSelectionFluidDetailsToStorage();
+    syncPumpSelectionUnitsToPipeNetwork();
 
-    // 2. Flow Rate
+    // 2. Flow Rate (normalized to m3/h)
     const flowM3h = getPumpSelectionFlowM3h();
     if (flowM3h > 0) {
-      const pnFlow = document.getElementById('pn-global-flow');
-      if (pnFlow && document.activeElement !== pnFlow) {
-        pnFlow.value = (flowM3h % 1 !== 0) ? parseFloat(flowM3h.toFixed(2)) : flowM3h;
-      }
       if (typeof window.__pn_set_flow === 'function') {
         window.__pn_set_flow(flowM3h);
+      } else {
+        const pnFlow = document.getElementById('pn-global-flow');
+        const pnFlowUnit = document.getElementById('pn-flow-unit')?.value || 'm3h';
+        const factor = FLOW_UNIT_TO_M3H[pnFlowUnit] || 1.0;
+        const convFlow = flowM3h / factor;
+        if (pnFlow && document.activeElement !== pnFlow) {
+          pnFlow.value = (convFlow % 1 !== 0) ? parseFloat(convFlow.toFixed(2)) : convFlow;
+        }
       }
     }
 
@@ -570,6 +584,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (typeof window.__pn_set_temperature === 'function') {
       window.__pn_set_temperature(tempC);
+    }
+  }
+
+  /**
+   * syncPumpSelectionUnitsToPipeNetwork()
+   * Broadcasts active pump selection engineering units (Flow Q, Head H, NPSH, Static Head, Unit System)
+   * into localStorage and directly notifies Pipe Network instance.
+   *
+   * Engineering Rationale:
+   * Sizing pump curves and pipe network hydraulics requires strict dimensional consistency.
+   * If a user selects US gpm / ft on Pump Selection, Pipe Network automatically inherits
+   * those units for toolbar flow, node elevations, friction losses, and canvas annotations.
+   */
+  function syncPumpSelectionUnitsToPipeNetwork() {
+    const unitQ = document.getElementById('select_unit_q')?.value || 'm3h';
+    const unitH = document.getElementById('select_unit_h')?.value || 'm';
+    const unitSystem = document.getElementById('unitSystemInput')?.value || (unitQ === 'gpm' || unitH === 'ft' ? 'imperial' : 'metric');
+    const unitNpsh = document.getElementById('select_unit_npsh')?.value || unitH;
+    const unitStatic = document.getElementById('select_unit_static_head')?.value || unitH;
+
+    const units = {
+      flow: unitQ,
+      head: unitH,
+      system: unitSystem,
+      npsh: unitNpsh,
+      static_head: unitStatic,
+      diameter: unitSystem === 'imperial' ? 'in' : 'mm',
+      length: unitSystem === 'imperial' ? 'ft' : 'm',
+      pressure: unitSystem === 'imperial' ? 'psi' : 'kpa',
+      velocity: unitSystem === 'imperial' ? 'ft/s' : 'm/s',
+      source: 'pump_selection',
+      timestamp: Date.now()
+    };
+
+    try {
+      localStorage.setItem('pmpro_shared_units', JSON.stringify(units));
+    } catch (e) {
+      console.warn('Could not save shared units to localStorage:', e);
+    }
+
+    if (typeof window.__pn_set_units === 'function') {
+      window.__pn_set_units(units);
     }
   }
 
@@ -643,6 +699,44 @@ document.addEventListener('DOMContentLoaded', () => {
     if (badge) badge.textContent = sg.toFixed(3);
   }
 
+  /**
+   * applyExternalUnitsToPumpSelection(units)
+   * Receives unit updates from Pipe Network and synchronizes Pump Selection dropdowns and inputs.
+   */
+  function applyExternalUnitsToPumpSelection(units) {
+    if (!units) return;
+    let changed = false;
+    if (units.flow) {
+      const selQ = document.getElementById('select_unit_q');
+      if (selQ && selQ.value !== units.flow) {
+        const prev = selQ.value;
+        selQ.value = units.flow;
+        selQ.dataset.prev = units.flow;
+        const qInp = document.getElementById('input_q_duty');
+        if (qInp && qInp.value !== '') {
+          qInp.value = convertValue(qInp.value, prev, units.flow, 'flow');
+        }
+        changed = true;
+      }
+    }
+    if (units.head) {
+      const selH = document.getElementById('select_unit_h');
+      if (selH && selH.value !== units.head) {
+        const prev = selH.value;
+        selH.value = units.head;
+        selH.dataset.prev = units.head;
+        const hInp = document.getElementById('input_h_duty');
+        if (hInp && hInp.value !== '') {
+          hInp.value = convertValue(hInp.value, prev, units.head, 'head');
+        }
+        changed = true;
+      }
+    }
+    if (changed) {
+      updateSystemBadge();
+    }
+  }
+
   function syncPipeNetworkToPumpSelection() {
     // 1. SG
     const pnSg = document.getElementById('pn-sg');
@@ -653,16 +747,32 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // 2. Flow Rate
-    const pnFlow = document.getElementById('pn-global-flow');
-    if (pnFlow) {
-      const flowM3h = parseFloat(pnFlow.value);
-      if (!isNaN(flowM3h) && flowM3h > 0) {
-        setPumpSelectionFlowFromM3h(flowM3h);
+    // 2. Flow Rate (respecting active flow unit on Pipe Network)
+    let flowM3h = null;
+    if (typeof window.__pn_get_flow_m3h === 'function') {
+      flowM3h = window.__pn_get_flow_m3h();
+    } else {
+      const pnFlow = document.getElementById('pn-global-flow');
+      const pnFlowUnit = document.getElementById('pn-flow-unit')?.value || 'm3h';
+      if (pnFlow) {
+        const rawVal = parseFloat(pnFlow.value);
+        if (!isNaN(rawVal) && rawVal > 0) {
+          const factor = FLOW_UNIT_TO_M3H[pnFlowUnit] || 1.0;
+          flowM3h = rawVal * factor;
+        }
       }
     }
+    if (flowM3h !== null && flowM3h > 0) {
+      setPumpSelectionFlowFromM3h(flowM3h);
+    }
 
-    // 3. Temperature
+    // 3. Units from Pipe Network
+    if (typeof window.__pn_get_units === 'function') {
+      const pnUnits = window.__pn_get_units();
+      applyExternalUnitsToPumpSelection(pnUnits);
+    }
+
+    // 4. Temperature
     const pnTemp = document.getElementById('pn-temperature');
     if (pnTemp) {
       const tempC = parseFloat(pnTemp.value);
@@ -686,9 +796,11 @@ document.addEventListener('DOMContentLoaded', () => {
   window.syncPumpSelectionSgToPipeNetwork = syncPumpSelectionToPipeNetwork;
   window.syncPumpSelectionFluidDetailsToStorage = syncPumpSelectionFluidDetailsToStorage;
   window.syncPipeNetworkSgToPumpSelection = syncPipeNetworkToPumpSelection;
+  window.syncPumpSelectionUnitsToPipeNetwork = syncPumpSelectionUnitsToPipeNetwork;
+  window.applyExternalUnitsToPumpSelection = applyExternalUnitsToPumpSelection;
 
   // Attach input listeners for live Flow, Temp, Units, Fluid Type, and Fluid Properties sync
-  ['input_q_duty', 'select_unit_q', 'input_temperature_c', 'input_rho_water', 'liquidSel', 'input_rho_viscous', 'input_fluid_ph', 'input_fluid_concentration', 'sg_l', 'sg_s', 'sg_m', 'slurry_cv', 'slurry_cw', 'input_slurry_d50', 'select_unit_d50'].forEach(id => {
+  ['input_q_duty', 'select_unit_q', 'select_unit_h', 'select_unit_npsh', 'select_unit_static_head', 'input_temperature_c', 'input_rho_water', 'liquidSel', 'input_rho_viscous', 'input_fluid_ph', 'input_fluid_concentration', 'sg_l', 'sg_s', 'sg_m', 'slurry_cv', 'slurry_cw', 'input_slurry_d50', 'select_unit_d50'].forEach(id => {
     const el = document.getElementById(id);
     el?.addEventListener('input', syncPumpSelectionToPipeNetwork);
     el?.addEventListener('change', syncPumpSelectionToPipeNetwork);
@@ -706,10 +818,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'pmpro_shared_fluid_sg' && e.newValue) {
       applyExternalSgToPumpSelection(e.newValue);
     }
+    if (e.key === 'pmpro_shared_units' && e.newValue) {
+      try {
+        const u = JSON.parse(e.newValue);
+        if (u && u.source === 'pipe_network') {
+          applyExternalUnitsToPumpSelection(u);
+        }
+      } catch (err) {}
+    }
   });
 
   syncPumpSelectionSgToStorage();
   syncPumpSelectionFluidDetailsToStorage();
+  syncPumpSelectionUnitsToPipeNetwork();
 
 
   // ── Pump comparison checkbox logic ─────────────────────────────────────────

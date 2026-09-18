@@ -259,7 +259,70 @@ fetch('/api/pipe-network/standard-pipes')
       }
     }
   })
-  .catch(() => {});
+  .catch(() => { });
+
+// ============================================================================
+// ============================================================================
+// DIAGRAM DISPLAY SETTINGS DEFAULTS & PERSISTENCE
+// ============================================================================
+
+const DEFAULT_DISPLAY_SETTINGS = {
+  showPipeLabels: true,
+  showPipeDiameter: true,
+  showPipeLength: true,
+  showPipeMaterial: false,
+  showPipeRoughness: false,
+  showPipeKFactor: true,
+  showFlowRate: true,
+  showHydraulicResults: true,
+  showNodeLabels: true,
+  showNodeElevation: true,
+  showNodeHGL: true,
+  showNodePressures: false,
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function loadSavedDisplaySettings() {
+  try {
+    const saved = localStorage.getItem('pmpro_pn_display_settings');
+    if (saved) {
+      return Object.assign({}, DEFAULT_DISPLAY_SETTINGS, JSON.parse(saved));
+    }
+  } catch (e) { }
+  return Object.assign({}, DEFAULT_DISPLAY_SETTINGS);
+}
 
 // ============================================================================
 // STATE
@@ -277,6 +340,7 @@ const state = {
   panDrag: null,
   nodeDrag: null,
   viewMode: 'industrial', // 'industrial' (Visual thick 3D pipes) | 'schematic' (Thin 2D single-line)
+  displaySettings: loadSavedDisplaySettings(), // User customizable diagram annotation layers
   lastCalculation: null,
   pendingSelect: null,
   // Environmental & fluid conditions
@@ -285,11 +349,23 @@ const state = {
   temperature_c: 20,
   vapor_pressure_kpa: 2.34,
   specific_gravity: 1.0,
+  // Synchronized Fluid details from Pump Selection
+  liquid: 'water',
+  fluid_type: 'water',
+  viscosity_cSt: 1.0,
+  fluid_ph: 7.0,
+  fluid_concentration: '',
+  is_hazardous: false,
+  is_flammable: false,
+  is_viscous: false,
   // Slurry transport configuration
   is_slurry: false,
   slurry_d50_mm: 0.15,
   slurry_solids_sg: 2.65,
+  slurry_liquid_sg: 1.0,
+  slurry_sg: 1.0,
   slurry_c_weight: 25.0,
+  slurry_c_volume: 0.20,
 };
 
 let svgEl, nodesGroup, pipesGroup, draftPipeLine;
@@ -1554,18 +1630,77 @@ function renderPipes() {
       }));
     }
 
-    // Label: Displays the continuous Pipe ID/label (e.g. P-15) and diameter.
-    // Suppress text on very short connector segments (<42px) to keep canvas clean between close fittings.
+    // Dynamic Annotations: Render multi-line stacked text according to user displaySettings
     const segDistance = Math.hypot(toPt.x - fromPt.x, toPt.y - fromPt.y);
-    if (segDistance >= 42) {
-      const lbl = mkSVG('text', {
-        x: mid.x, y: mid.y - (state.viewMode === 'industrial' ? 22 : 10),
-        'font-size': 10, fill: '#8b949e',
-        'font-family': 'Inter, sans-serif',
-        'text-anchor': 'middle', 'pointer-events': 'none',
-      });
-      lbl.textContent = `${pipe.props.label || pipe.id}  D${pipe.props.diameter_mm}mm`;
-      g.appendChild(lbl);
+    const ds = state.displaySettings || DEFAULT_DISPLAY_SETTINGS;
+
+    // Suppress text on very short connector segments (<36px) to keep canvas clean between close fittings.
+    if (segDistance >= 36) {
+      const line1Parts = [];
+      if (ds.showPipeLabels) line1Parts.push(pipe.props.label || pipe.id);
+      if (ds.showPipeDiameter) {
+        const idVal = pipe.props.id_mm || (pipe.props.diameter_mm ? +(pipe.props.diameter_mm * 0.92).toFixed(1) : 100);
+        line1Parts.push(`DN${pipe.props.diameter_mm || 100} (ID ${idVal}mm)`);
+      }
+      if (ds.showPipeLength) line1Parts.push(`L:${pipe.props.length_m || 10}m`);
+
+      const line2Parts = [];
+      if (ds.showPipeMaterial) {
+        const matKey = pipe.props.material || 'commercial_steel';
+        const foundMat = (MATERIALS || []).find(m => m.key === matKey);
+        const matLabel = foundMat ? foundMat.label.split('(')[0].trim() : matKey;
+        const sch = pipe.props.schedule_sdr ? ` ${pipe.props.schedule_sdr}` : '';
+        line2Parts.push(`${matLabel}${sch}`);
+      }
+      if (ds.showPipeRoughness) {
+        const rough = pipe.props.roughness_mm !== undefined ? pipe.props.roughness_mm : 0.046;
+        line2Parts.push(`e:${rough}mm`);
+      }
+      if (ds.showPipeKFactor) {
+        const kTotal = getPipeTotalK(pipe);
+        if (kTotal > 0 || ds.showPipeKFactor) {
+          line2Parts.push(`ΣK:${kTotal.toFixed(2)}`);
+        }
+      }
+
+      const line3Parts = [];
+      const pipeRes = state.lastCalculation?.results?.[pipe.id];
+      if (ds.showFlowRate) {
+        if (pipeRes && pipeRes.flow_m3h !== undefined) {
+          line3Parts.push(`Q:${pipeRes.flow_m3h.toFixed(1)} m³/h →`);
+        } else {
+          const gFlow = parseFloat(document.getElementById('pn-global-flow')?.value);
+          if (!isNaN(gFlow) && gFlow > 0) {
+            line3Parts.push(`Q:${gFlow.toFixed(1)} m³/h →`);
+          }
+        }
+      }
+      if (ds.showHydraulicResults && pipeRes) {
+        if (pipeRes.velocity_ms !== undefined) line3Parts.push(`v:${pipeRes.velocity_ms.toFixed(2)}m/s`);
+        if (pipeRes.hf_total_m !== undefined) line3Parts.push(`hf:${pipeRes.hf_total_m.toFixed(2)}m`);
+      }
+
+      const lines = [];
+      if (line1Parts.length) lines.push(line1Parts.join(' • '));
+      if (line2Parts.length) lines.push(line2Parts.join(' | '));
+      if (line3Parts.length) lines.push(line3Parts.join(' | '));
+
+      if (lines.length > 0) {
+        const baseOffset = state.viewMode === 'industrial' ? (thickness / 2 + 14) : 12;
+        lines.forEach((txt, idx) => {
+          const yPos = mid.y - baseOffset - (lines.length - 1 - idx) * 13;
+          const lbl = mkSVG('text', {
+            x: mid.x, y: yPos,
+            'font-size': idx === 0 ? 10 : 9,
+            fill: idx === 0 ? '#cbd5e1' : (idx === lines.length - 1 && txt.startsWith('Q:') ? '#38bdf8' : '#94a3b8'),
+            'font-family': 'Inter, sans-serif',
+            'font-weight': idx === 0 ? '600' : '400',
+            'text-anchor': 'middle', 'pointer-events': 'none',
+          });
+          lbl.textContent = txt;
+          g.appendChild(lbl);
+        });
+      }
     }
 
     // Hit target (expanded width makes clicking on pipes to insert fittings or select easy)
@@ -1878,6 +2013,25 @@ function getNodeKFactor(node) {
   return unitK * qty;
 }
 
+/**
+ * Return total cumulative minor loss coefficient (ΣK) for a pipe segment.
+ * Sums all inline fittings attached to pipe.props.fittings (scaled by quantity)
+ * and any connected terminal fitting node (valve, elbow, tee).
+ */
+function getPipeTotalK(pipe) {
+  if (!pipe || !pipe.props) return 0;
+  let sumK = (pipe.props.fittings || []).reduce((acc, f) => {
+    const kVal = typeof f.K === 'number' ? f.K : (parseFloat(f.K) || 0);
+    const qty = Math.max(1, parseInt(f.quantity, 10) || 1);
+    return acc + kVal * qty;
+  }, 0);
+  const toNode = findNode(pipe.toNodeId);
+  if (toNode && ['valve', 'elbow', 'tee'].includes(toNode.type)) {
+    sumK += getNodeKFactor(toNode);
+  }
+  return sumK;
+}
+
 function getValveArms(node) {
   // Valve defaults to horizontal axis (arms left & right)
   const orientation = (node.props.orientation || 0) * Math.PI / 180;
@@ -1930,26 +2084,64 @@ function buildNodeSVG(node, isSel, minElev) {
 
   // Label below node (hide for elbow waypoints)
   if (node.type !== 'elbow') {
-    const lbl = mkSVG('text', {
-      x: 0, y: 50,
-      'text-anchor': 'middle', 'font-size': 11,
-      fill: isSel ? '#f59e0b' : '#94a3b8',
-      'font-family': 'Inter, sans-serif',
-      'pointer-events': 'none',
-    });
-    lbl.textContent = node.props.label || node.id;
-    g.appendChild(lbl);
+    const ds = state.displaySettings || DEFAULT_DISPLAY_SETTINGS;
+    let textY = 50;
 
-    const z = node.props.elevation_m || 0;
-    const relZ = z - minElev;
-    const elevLbl = mkSVG('text', {
-      x: 0, y: 64,
-      'text-anchor': 'middle', 'font-size': 9,
-      fill: '#64748b', 'font-family': 'Inter, sans-serif',
-      'pointer-events': 'none',
-    });
-    elevLbl.textContent = `Z: ${z}m (ΔH: +${relZ.toFixed(1)}m)`;
-    g.appendChild(elevLbl);
+    if (ds.showNodeLabels) {
+      const lbl = mkSVG('text', {
+        x: 0, y: textY,
+        'text-anchor': 'middle', 'font-size': 11,
+        fill: isSel ? '#f59e0b' : '#94a3b8',
+        'font-family': 'Inter, sans-serif',
+        'font-weight': '600',
+        'pointer-events': 'none',
+      });
+      lbl.textContent = node.props.label || node.id;
+      g.appendChild(lbl);
+      textY += 14;
+    }
+
+    if (ds.showNodeElevation) {
+      const z = node.props.elevation_m || 0;
+      const relZ = z - minElev;
+      const elevLbl = mkSVG('text', {
+        x: 0, y: textY,
+        'text-anchor': 'middle', 'font-size': 9,
+        fill: '#64748b', 'font-family': 'Inter, sans-serif',
+        'pointer-events': 'none',
+      });
+      elevLbl.textContent = `Z: ${z}m (ΔH: +${relZ.toFixed(1)}m)`;
+      g.appendChild(elevLbl);
+      textY += 13;
+    }
+
+    const nodeRes = Array.isArray(state.lastCalculation?.node_results)
+      ? state.lastCalculation.node_results.find(nr => nr.id === node.id)
+      : (state.lastCalculation?.node_results?.[node.id]);
+
+    if (ds.showNodeHGL && nodeRes && nodeRes.hgl_m !== undefined) {
+      const hglLbl = mkSVG('text', {
+        x: 0, y: textY,
+        'text-anchor': 'middle', 'font-size': 9,
+        fill: '#38bdf8', 'font-family': 'Inter, sans-serif',
+        'font-weight': '600',
+        'pointer-events': 'none',
+      });
+      hglLbl.textContent = `HGL: ${nodeRes.hgl_m.toFixed(2)}m`;
+      g.appendChild(hglLbl);
+      textY += 13;
+    }
+
+    if (ds.showNodePressures && nodeRes && nodeRes.pressure_kpa !== undefined) {
+      const pLbl = mkSVG('text', {
+        x: 0, y: textY,
+        'text-anchor': 'middle', 'font-size': 9,
+        fill: '#a78bfa', 'font-family': 'Inter, sans-serif',
+        'pointer-events': 'none',
+      });
+      pLbl.textContent = `P: ${nodeRes.pressure_kpa.toFixed(1)} kPa`;
+      g.appendChild(pLbl);
+    }
   }
 
   // Selection ring
@@ -4628,8 +4820,22 @@ function onNodeQuantityChange() {
   }
 }
 
-function onGlobalFlowChange() {
-  saveNetworkToStorage();
+function onGlobalFlowChange(e) {
+  const val = parseFloat(document.getElementById('pn-global-flow')?.value);
+  if (!isNaN(val) && val > 0) {
+    state.nodes.forEach(n => {
+      if (n.type === 'pump' && n.props) {
+        n.props.flow_m3h = val;
+      }
+    });
+    saveNetworkToStorage();
+    renderAll();
+    if (typeof window.syncPipeNetworkToPumpSelection === 'function') {
+      window.syncPipeNetworkToPumpSelection();
+    }
+  } else {
+    saveNetworkToStorage();
+  }
 }
 
 /**
@@ -4738,10 +4944,22 @@ async function runCalculation() {
     temperature_c: temperature,
     vapor_pressure_kpa: vaporPressure,
     specific_gravity: specificGravity,
+    // Synchronized Fluid details from Pump Selection
+    liquid: state.liquid || 'water',
+    fluid_type: state.fluid_type || state.liquid || 'water',
+    viscosity_cSt: state.viscosity_cSt !== undefined ? state.viscosity_cSt : 1.0,
+    fluid_ph: state.fluid_ph !== undefined ? state.fluid_ph : 7.0,
+    fluid_concentration: state.fluid_concentration || '',
+    is_hazardous: Boolean(state.is_hazardous),
+    is_flammable: Boolean(state.is_flammable),
+    is_viscous: Boolean(state.is_viscous),
     is_slurry: Boolean(state.is_slurry),
-    slurry_d50_mm: parseFloat(state.slurry_d50_mm || 0.15),
+    slurry_liquid_sg: parseFloat(state.slurry_liquid_sg || 1.0),
     slurry_solids_sg: parseFloat(state.slurry_solids_sg || 2.65),
+    slurry_sg: parseFloat(state.slurry_sg || specificGravity || 1.0),
     slurry_c_weight: parseFloat(state.slurry_c_weight || 25.0),
+    slurry_c_volume: parseFloat(state.slurry_c_volume || 0.20),
+    slurry_d50_mm: parseFloat(state.slurry_d50_mm || 0.15),
     nodes: state.nodes.map(node => ({
       id: node.id,
       type: node.type,
@@ -4889,12 +5107,25 @@ function displayResults(data) {
     const rhoVal = s.density_kg_m3 !== undefined ? s.density_kg_m3 : 998.2;
     const npshaText = s.npsha_m !== undefined ? ` &bull; <strong style="color:${s.cavitation_color || '#2dd4bf'};">NPSHa:</strong> ${s.npsha_m.toFixed(2)} m (${s.cavitation_risk || 'Normal'})` : '';
 
+    let fluidDesc = `<span style="color:#e2e8f0;">Water @ ${tempVal}&deg;C</span> (&rho;: <span style="color:#e2e8f0;">${rhoVal.toFixed(1)} kg/m&sup3;</span>, SG: <span style="color:#e2e8f0;">${(s.specific_gravity || state.specific_gravity || 1.0).toFixed(3)}</span>)`;
+    if (s.is_slurry || state.is_slurry) {
+      const smVal = (s.slurry_mixture_sg || s.specific_gravity || state.slurry_sg || state.specific_gravity || 1.0).toFixed(3);
+      fluidDesc = `<span style="color:#fbbf24;font-weight:600;"><i class="bi bi-layers-fill"></i> Slurry Mixture</span> (&rho;<sub>mix</sub>: <span style="color:#e2e8f0;">${rhoVal.toFixed(1)} kg/m&sup3;</span>, S<sub>m</sub>: <span style="color:#e2e8f0;">${smVal}</span>, d<sub>50</sub>: <span style="color:#e2e8f0;">${s.slurry_d50_mm || state.slurry_d50_mm || 0.15} mm</span>, C<sub>w</sub>: <span style="color:#e2e8f0;">${s.slurry_c_weight || state.slurry_c_weight || 25}%</span>)`;
+    } else if (s.is_viscous || state.is_viscous) {
+      const viscVal = s.viscosity_cSt || state.viscosity_cSt || 50.0;
+      const flags = [
+        (s.is_hazardous || state.is_hazardous) ? '⚠️ Hazardous' : '',
+        (s.is_flammable || state.is_flammable) ? '🔥 Flammable' : ''
+      ].filter(Boolean).join(' | ');
+      fluidDesc = `<span style="color:#c084fc;font-weight:600;"><i class="bi bi-droplet-fill"></i> Viscous Fluid</span> (&nu;: <span style="color:#e2e8f0;">${viscVal} cSt</span>, &rho;: <span style="color:#e2e8f0;">${rhoVal.toFixed(1)} kg/m&sup3;</span>, SG: <span style="color:#e2e8f0;">${(s.specific_gravity || state.specific_gravity || 1.0).toFixed(3)}</span>${flags ? ` &bull; <span style="color:#f87171;">${flags}</span>` : ''})`;
+    }
+
     formulaRef.innerHTML = `
       <div style="margin-bottom:4px;"><strong style="color:#c084fc;">Network Solver:</strong> <span style="color:#f8fafc;">${activeSolverDesc}</span></div>
       <div style="margin-bottom:4px;"><strong style="color:#8b949e;">Friction Formulation:</strong> ${frictionDesc} &mdash;
-      Minor losses: <code style="color:#58a6ff;">hm = K &times; V&sup2;/2g</code> (Crane TP-410) &mdash;
+      Minor losses: <code style="color:#58a6ff;">hm = K &times; V&sup2;/2g</code> (Crane TP-410 / Exact Colebrook-White) &mdash;
       g: <code style="color:#38bdf8;">9.80665 m/s&sup2;</code></div>
-      <div style="font-size:11px;color:#94a3b8;"><strong style="color:#38bdf8;">Site &amp; Fluid:</strong> Altitude: <span style="color:#e2e8f0;">${altVal} m</span> (P<sub>atm</sub>: <span style="color:#e2e8f0;">${patmVal.toFixed(1)} kPa</span>) &bull; Fluid: <span style="color:#e2e8f0;">Water @ ${tempVal}&deg;C</span> (&rho;: <span style="color:#e2e8f0;">${rhoVal.toFixed(1)} kg/m&sup3;</span>, SG: <span style="color:#e2e8f0;">${(s.specific_gravity || state.specific_gravity || 1.0).toFixed(3)}</span>)${npshaText}</div>
+      <div style="font-size:11px;color:#94a3b8;"><strong style="color:#38bdf8;">Site &amp; Fluid:</strong> Altitude: <span style="color:#e2e8f0;">${altVal} m</span> (P<sub>atm</sub>: <span style="color:#e2e8f0;">${patmVal.toFixed(1)} kPa</span>) &bull; Fluid: ${fluidDesc}${npshaText}</div>
     `;
   }
 
@@ -5081,6 +5312,9 @@ function displayResults(data) {
         </tr>`;
     });
   }
+
+  // Refresh diagram canvas annotations (HGL heads, pressures, flow velocity)
+  renderAll();
 }
 
 // ============================================================================
@@ -5220,11 +5454,171 @@ function toggleLegend(forceVisible) {
   }
 }
 
-// Expose on window object so HTML inline event handlers (e.g. close buttons) can invoke them
+// Vapor pressure calculation (Antoine equation: log10(P_mmHg) = A - B / (C + T))
+function calcWaterVaporPressureKPa(tempC) {
+  const t = Math.max(0.1, Math.min(100.0, tempC));
+  const pMmhg = Math.pow(10, 8.07131 - (1730.63 / (233.426 + t)));
+  return parseFloat((pMmhg * 0.133322).toFixed(2));
+}
+
+// ============================================================================
+// DIAGRAM DISPLAY SETTINGS MODAL & TOGGLES
+// ============================================================================
+
+function syncDiagramSettingsModalInputs() {
+  const ds = state.displaySettings || DEFAULT_DISPLAY_SETTINGS;
+  const map = {
+    'ds-pipe-label': ds.showPipeLabels,
+    'ds-pipe-diameter': ds.showPipeDiameter,
+    'ds-pipe-length': ds.showPipeLength,
+    'ds-pipe-material': ds.showPipeMaterial,
+    'ds-pipe-roughness': ds.showPipeRoughness,
+    'ds-pipe-kfactor': ds.showPipeKFactor,
+    'ds-pipe-flow': ds.showFlowRate,
+    'ds-pipe-results': ds.showHydraulicResults,
+    'ds-node-label': ds.showNodeLabels,
+    'ds-node-elevation': ds.showNodeElevation,
+    'ds-node-hgl': ds.showNodeHGL,
+    'ds-node-pressures': ds.showNodePressures,
+  };
+  for (const [id, val] of Object.entries(map)) {
+    const el = document.getElementById(id);
+    if (el) el.checked = Boolean(val);
+  }
+}
+
+/**
+ * toggleDiagramSettingsModal(forceOpen)
+ * Toggles the interactive diagram display settings modal overlay.
+ *
+ * Engineering & DOM Scope Safeguard:
+ * If the modal overlay was rendered inside a hidden tab panel (#tab-panel-pipenet)
+ * or accidentally nested inside another modal overlay (e.g. #manage-modal-overlay),
+ * browsers enforce CSS inheritance where `display: none` on any ancestor hides all descendants.
+ * We automatically hoist the overlay directly into `document.body`, ensuring it is always
+ * visible, correctly centered, and operates independently of parent container visibility.
+ */
+function toggleDiagramSettingsModal(forceOpen) {
+  let modal = document.getElementById('diagram-settings-modal-overlay');
+  if (!modal) {
+    console.warn('[PipeNetwork] #diagram-settings-modal-overlay not found in DOM.');
+    return;
+  }
+  // Structural safeguard: hoist to document.body if nested inside another element
+  if (modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+  modal.style.zIndex = '99999';
+
+  const isHidden = (modal.style.display === 'none' || !modal.style.display || getComputedStyle(modal).display === 'none');
+  const show = forceOpen !== undefined ? Boolean(forceOpen) : isHidden;
+  modal.style.display = show ? 'block' : 'none';
+  if (show) {
+    syncDiagramSettingsModalInputs();
+  }
+}
+window.toggleDiagramSettingsModal = toggleDiagramSettingsModal;
+
+function updateDiagramDisplaySetting(key, val) {
+  if (!state.displaySettings) state.displaySettings = Object.assign({}, DEFAULT_DISPLAY_SETTINGS);
+  state.displaySettings[key] = Boolean(val);
+  try {
+    localStorage.setItem('pmpro_pn_display_settings', JSON.stringify(state.displaySettings));
+  } catch (e) { }
+  renderAll();
+}
+window.updateDiagramDisplaySetting = updateDiagramDisplaySetting;
+
+function setDiagramDisplayPreset(preset) {
+  if (!state.displaySettings) state.displaySettings = Object.assign({}, DEFAULT_DISPLAY_SETTINGS);
+  if (preset === 'all') {
+    Object.keys(state.displaySettings).forEach(k => state.displaySettings[k] = true);
+  } else if (preset === 'minimal') {
+    Object.keys(state.displaySettings).forEach(k => state.displaySettings[k] = false);
+    state.displaySettings.showPipeLabels = true;
+    state.displaySettings.showPipeDiameter = true;
+    state.displaySettings.showNodeLabels = true;
+  } else {
+    state.displaySettings = Object.assign({}, DEFAULT_DISPLAY_SETTINGS);
+  }
+  syncDiagramSettingsModalInputs();
+  try {
+    localStorage.setItem('pmpro_pn_display_settings', JSON.stringify(state.displaySettings));
+  } catch (e) { }
+  renderAll();
+}
+
+// ============================================================================
+// SLURRY & ADVANCED PIPELINE ANALYSIS MODAL
+// ============================================================================
+
+function updateSlurryModalUI() {
+  const isEn = Boolean(state.is_slurry);
+  const badge = document.getElementById('slurry-status-badge');
+  if (badge) {
+    badge.textContent = isEn ? 'Enabled' : 'Disabled';
+    badge.style.background = isEn ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)';
+    badge.style.color = isEn ? '#f59e0b' : '#8b949e';
+  }
+  const btn = document.getElementById('btn-toggle-slurry');
+  if (btn) {
+    btn.classList.toggle('active-tool', isEn);
+  }
+  const cw = parseFloat(document.getElementById('slurry-c-weight')?.value || 25.0) / 100.0;
+  const ss = Math.max(1.01, parseFloat(document.getElementById('slurry-solids-sg')?.value || 2.65));
+  const sl = Math.max(0.5, parseFloat(state.specific_gravity || 1.0));
+  const volS = cw / ss;
+  const volL = (1.0 - cw) / sl;
+  const cv = (volS / (volS + volL)) * 100.0;
+  const cvInput = document.getElementById('slurry-c-volume');
+  if (cvInput) cvInput.value = `${cv.toFixed(1)} %`;
+}
+
+function toggleSlurryModal(forceOpen) {
+  let modal = document.getElementById('slurry-modal-overlay');
+  if (!modal) return;
+  // Structural safeguard: hoist to document.body if nested inside another element
+  if (modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+  modal.style.zIndex = '99999';
+
+  const isHidden = (modal.style.display === 'none' || !modal.style.display || getComputedStyle(modal).display === 'none');
+  const show = forceOpen !== undefined ? Boolean(forceOpen) : isHidden;
+  modal.style.display = show ? 'block' : 'none';
+  if (show) {
+    const slurryToggle = document.getElementById('slurry-enable-toggle');
+    if (slurryToggle) slurryToggle.checked = Boolean(state.is_slurry);
+    setVal('slurry-d50', state.slurry_d50_mm || 0.15);
+    setVal('slurry-solids-sg', state.slurry_solids_sg || 2.65);
+    setVal('slurry-c-weight', state.slurry_c_weight || 25.0);
+    updateSlurryModalUI();
+  }
+}
+
+function applySlurrySettings() {
+  state.is_slurry = Boolean(document.getElementById('slurry-enable-toggle')?.checked);
+  state.slurry_d50_mm = parseFloat(document.getElementById('slurry-d50')?.value || 0.15);
+  state.slurry_solids_sg = parseFloat(document.getElementById('slurry-solids-sg')?.value || 2.65);
+  state.slurry_c_weight = parseFloat(document.getElementById('slurry-c-weight')?.value || 25.0);
+  toggleSlurryModal(false);
+  saveNetworkToStorage();
+  runCalculation();
+  toast(`Slurry calculations ${state.is_slurry ? 'enabled' : 'disabled'}.`, 'info');
+}
+
+// Expose on window object so HTML inline event handlers (e.g. close buttons, toolbar buttons) can invoke them immediately
 window.toggleTheme = toggleTheme;
 window.toggleLegend = toggleLegend;
 window.setViewMode = setViewMode;
 window.renderLegend = renderLegend;
+window.toggleDiagramSettingsModal = toggleDiagramSettingsModal;
+window.updateDiagramDisplaySetting = updateDiagramDisplaySetting;
+window.setDiagramDisplayPreset = setDiagramDisplayPreset;
+window.syncDiagramSettingsModalInputs = syncDiagramSettingsModalInputs;
+window.toggleSlurryModal = toggleSlurryModal;
+window.applySlurrySettings = applySlurrySettings;
+window.updateSlurryModalUI = updateSlurryModalUI;
 
 // ============================================================================
 // INIT
@@ -5574,6 +5968,9 @@ function init() {
         vpInput.value = pv.toFixed(2);
       }
       saveNetworkToStorage();
+      if (typeof window.syncPipeNetworkToPumpSelection === 'function') {
+        window.syncPipeNetworkToPumpSelection();
+      }
     }
   });
   tempInput?.addEventListener('change', () => {
@@ -5586,6 +5983,9 @@ function init() {
         vpInput.value = pv.toFixed(2);
       }
       saveNetworkToStorage();
+      if (typeof window.syncPipeNetworkToPumpSelection === 'function') {
+        window.syncPipeNetworkToPumpSelection();
+      }
     }
   });
 
@@ -5607,35 +6007,15 @@ function init() {
   // Slurry modal & parameter controls
   document.getElementById('btn-toggle-slurry')?.addEventListener('click', () => toggleSlurryModal(true));
 
+  // Diagram display settings modal button
+  document.getElementById('btn-diagram-settings')?.addEventListener('click', () => toggleDiagramSettingsModal(true));
+
   const slurryToggle = document.getElementById('slurry-enable-toggle');
   slurryToggle?.addEventListener('change', () => {
     state.is_slurry = slurryToggle.checked;
     updateSlurryModalUI();
     saveNetworkToStorage();
   });
-
-  function updateSlurryModalUI() {
-    const isEn = Boolean(state.is_slurry);
-    const badge = document.getElementById('slurry-status-badge');
-    if (badge) {
-      badge.textContent = isEn ? 'Enabled' : 'Disabled';
-      badge.style.background = isEn ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)';
-      badge.style.color = isEn ? '#f59e0b' : '#8b949e';
-    }
-    const btn = document.getElementById('btn-toggle-slurry');
-    if (btn) {
-      btn.classList.toggle('active-tool', isEn);
-    }
-    // Update Cv calculation in modal: Cv = (Cw/Ss) / [ (Cw/Ss) + (1-Cw)/Sl ]
-    const cw = parseFloat(document.getElementById('slurry-c-weight')?.value || 25.0) / 100.0;
-    const ss = Math.max(1.01, parseFloat(document.getElementById('slurry-solids-sg')?.value || 2.65));
-    const sl = Math.max(0.5, parseFloat(state.specific_gravity || 1.0));
-    const volS = cw / ss;
-    const volL = (1.0 - cw) / sl;
-    const cv = (volS / (volS + volL)) * 100.0;
-    const cvInput = document.getElementById('slurry-c-volume');
-    if (cvInput) cvInput.value = `${cv.toFixed(1)} %`;
-  }
 
   ['slurry-d50', 'slurry-solids-sg', 'slurry-c-weight'].forEach(id => {
     const el = document.getElementById(id);
@@ -5648,33 +6028,8 @@ function init() {
     });
   });
 
-  window.toggleSlurryModal = function(forceOpen) {
-    const modal = document.getElementById('slurry-modal-overlay');
-    if (!modal) return;
-    const show = forceOpen !== undefined ? forceOpen : modal.style.display === 'none';
-    modal.style.display = show ? 'block' : 'none';
-    if (show) {
-      if (slurryToggle) slurryToggle.checked = Boolean(state.is_slurry);
-      setVal('slurry-d50', state.slurry_d50_mm || 0.15);
-      setVal('slurry-solids-sg', state.slurry_solids_sg || 2.65);
-      setVal('slurry-c-weight', state.slurry_c_weight || 25.0);
-      updateSlurryModalUI();
-    }
-  };
-
-  window.applySlurrySettings = function() {
-    state.is_slurry = Boolean(document.getElementById('slurry-enable-toggle')?.checked);
-    state.slurry_d50_mm = parseFloat(document.getElementById('slurry-d50')?.value || 0.15);
-    state.slurry_solids_sg = parseFloat(document.getElementById('slurry-solids-sg')?.value || 2.65);
-    state.slurry_c_weight = parseFloat(document.getElementById('slurry-c-weight')?.value || 25.0);
-    toggleSlurryModal(false);
-    saveNetworkToStorage();
-    runCalculation();
-    toast(`Slurry calculations ${state.is_slurry ? 'enabled' : 'disabled'}.`, 'info');
-  };
-
   // Shared SG initialization and bidirectional sync
-  window.__pn_set_sg = function(sgVal) {
+  window.__pn_set_sg = function (sgVal) {
     if (typeof sgVal === 'number' && !isNaN(sgVal) && sgVal > 0) {
       state.specific_gravity = sgVal;
       if (sgInput && document.activeElement !== sgInput) {
@@ -5727,7 +6082,202 @@ function init() {
     }
   });
 
-  // Property inputs (handle both input and change events for real-time saving)
+  // ============================================================================
+  // BIDIRECTIONAL FLOW & TEMPERATURE SYNC WITH PUMP SELECTION
+  // ============================================================================
+
+  window.__pn_set_flow = function (flowM3h) {
+    if (typeof flowM3h === 'number' && !isNaN(flowM3h) && flowM3h > 0) {
+      const flowInput = document.getElementById('pn-global-flow');
+      if (flowInput && document.activeElement !== flowInput) {
+        flowInput.value = flowM3h.toFixed(1);
+      }
+      state.nodes.forEach(n => {
+        if (n.type === 'pump' && n.props) {
+          n.props.flow_m3h = flowM3h;
+        }
+      });
+      saveNetworkToStorage();
+      renderAll();
+    }
+  };
+
+  window.__pn_set_temperature = function (tempC) {
+    if (typeof tempC === 'number' && !isNaN(tempC)) {
+      state.temperature_c = tempC;
+      if (tempInput && document.activeElement !== tempInput) {
+        tempInput.value = tempC;
+      }
+      const pv = calcWaterVaporPressureKPa(tempC);
+      state.vapor_pressure_kpa = pv;
+      if (vpInput && document.activeElement !== vpInput) {
+        vpInput.value = pv.toFixed(2);
+      }
+      saveNetworkToStorage();
+    }
+  };
+
+  // ============================================================================
+  // SYNCHRONIZED FLUID DETAILS WITH PUMP SELECTION
+  // ============================================================================
+
+  /**
+   * applyFluidDetails(details)
+   * Synchronizes fluid properties across Pipe Network Designer when modified on the
+   * Pump Selection screen or restored from session / localStorage.
+   * Updates state, toolbar inputs (SG, temp, indicator chip), and slurry modal.
+   *
+   * Engineering Rationale:
+   * When pumping viscous oils or mineral slurries, head loss curves and pump duty points
+   * deviate significantly from clean water. The Pipe Network solver requires exact
+   * kinematic viscosity (cSt), slurry concentration (Cv, Cw), and particle size (d50)
+   * to compute accurate friction factors (via Colebrook-White) and Durand slurry head loss.
+   */
+  function applyFluidDetails(details) {
+    if (!details || typeof details !== 'object') return;
+
+    const fluidType = details.fluid_type || details.liquid || 'water';
+    state.liquid = fluidType;
+    state.fluid_type = fluidType;
+    state.is_viscous = (fluidType === 'viscous') || (details.is_viscous === true);
+    state.is_slurry = (fluidType === 'slurry') || (details.is_slurry === true);
+
+    if (details.sg !== undefined && !isNaN(parseFloat(details.sg))) {
+      const sgVal = parseFloat(details.sg);
+      state.specific_gravity = sgVal;
+      if (sgInput && document.activeElement !== sgInput) {
+        sgInput.value = sgVal.toFixed(2);
+      }
+    }
+
+    if (details.temperature_c !== undefined && !isNaN(parseFloat(details.temperature_c))) {
+      state.temperature_c = parseFloat(details.temperature_c);
+      if (tempInput && document.activeElement !== tempInput) {
+        tempInput.value = state.temperature_c;
+      }
+    }
+
+    if (details.viscosity_cSt !== undefined && !isNaN(parseFloat(details.viscosity_cSt))) {
+      state.viscosity_cSt = parseFloat(details.viscosity_cSt);
+    } else {
+      state.viscosity_cSt = state.is_viscous ? 50.0 : 1.0;
+    }
+
+    state.fluid_ph = details.fluid_ph !== undefined ? parseFloat(details.fluid_ph) : 7.0;
+    state.fluid_concentration = details.fluid_concentration || '';
+    state.is_hazardous = !!details.is_hazardous;
+    state.is_flammable = !!details.is_flammable;
+
+    if (state.is_slurry) {
+      if (details.slurry_liquid_sg !== undefined && !isNaN(parseFloat(details.slurry_liquid_sg))) {
+        state.slurry_liquid_sg = parseFloat(details.slurry_liquid_sg);
+      }
+      if (details.slurry_solid_sg !== undefined && !isNaN(parseFloat(details.slurry_solid_sg))) {
+        state.slurry_solids_sg = parseFloat(details.slurry_solid_sg);
+      }
+      if (details.slurry_sg !== undefined && !isNaN(parseFloat(details.slurry_sg))) {
+        state.slurry_sg = parseFloat(details.slurry_sg);
+      }
+      if (details.slurry_c_weight !== undefined && !isNaN(parseFloat(details.slurry_c_weight))) {
+        state.slurry_c_weight = parseFloat(details.slurry_c_weight);
+      }
+      if (details.slurry_c_volume !== undefined && !isNaN(parseFloat(details.slurry_c_volume))) {
+        state.slurry_c_volume = parseFloat(details.slurry_c_volume);
+      }
+      if (details.slurry_d50_mm !== undefined && !isNaN(parseFloat(details.slurry_d50_mm))) {
+        state.slurry_d50_mm = parseFloat(details.slurry_d50_mm);
+      }
+
+      // Update slurry modal inputs if present
+      const sToggle = document.getElementById('slurry-enable-toggle');
+      if (sToggle) sToggle.checked = true;
+      const sD50 = document.getElementById('slurry-d50');
+      if (sD50 && state.slurry_d50_mm) sD50.value = state.slurry_d50_mm;
+      const sSolidsSg = document.getElementById('slurry-solids-sg');
+      if (sSolidsSg && state.slurry_solids_sg) sSolidsSg.value = state.slurry_solids_sg;
+      const sCw = document.getElementById('slurry-c-weight');
+      if (sCw && state.slurry_c_weight) sCw.value = state.slurry_c_weight;
+      if (typeof updateSlurryModalUI === 'function') {
+        updateSlurryModalUI();
+      }
+    } else {
+      const sToggle = document.getElementById('slurry-enable-toggle');
+      if (sToggle) {
+        sToggle.checked = false;
+        if (typeof updateSlurryModalUI === 'function') {
+          updateSlurryModalUI();
+        }
+      }
+    }
+
+    updateFluidIndicatorUI();
+    saveNetworkToStorage();
+  }
+
+  function updateFluidIndicatorUI() {
+    const ind = document.getElementById('pn-fluid-indicator');
+    const lbl = document.getElementById('pn-fluid-label');
+    if (!ind || !lbl) return;
+
+    if (state.is_slurry) {
+      ind.style.background = 'rgba(245, 158, 11, 0.12)';
+      ind.style.color = '#fbbf24';
+      ind.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+      ind.title = `Slurry: Sm=${(state.slurry_sg || state.specific_gravity).toFixed(2)}, d50=${state.slurry_d50_mm} mm, Cw=${state.slurry_c_weight}%`;
+      lbl.innerHTML = `<i class="bi bi-layers-fill" style="margin-right:2px;"></i> Slurry (${state.slurry_c_weight}% wt)`;
+    } else if (state.is_viscous) {
+      ind.style.background = 'rgba(168, 85, 247, 0.12)';
+      ind.style.color = '#c084fc';
+      ind.style.borderColor = 'rgba(168, 85, 247, 0.3)';
+      const flags = [
+        state.is_hazardous ? '⚠️ Haz' : '',
+        state.is_flammable ? '🔥 Flam' : ''
+      ].filter(Boolean).join(' ');
+      ind.title = `Viscous Fluid: ${state.viscosity_cSt} cSt, SG=${state.specific_gravity.toFixed(2)}${flags ? ` (${flags})` : ''}`;
+      lbl.innerHTML = `<i class="bi bi-droplet-fill" style="margin-right:2px;"></i> Viscous (${state.viscosity_cSt} cSt)`;
+    } else {
+      ind.style.background = 'rgba(56, 189, 248, 0.1)';
+      ind.style.color = '#38bdf8';
+      ind.style.borderColor = 'rgba(56, 189, 248, 0.25)';
+      ind.title = `Clean Water: SG=${state.specific_gravity.toFixed(2)}, T=${state.temperature_c}°C`;
+      lbl.innerHTML = `<i class="bi bi-water" style="margin-right:2px;"></i> Clean Water`;
+    }
+  }
+
+  window.__pn_set_fluid_details = applyFluidDetails;
+
+  // Listen to cross-tab fluid detail changes via storage event
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'pmpro_shared_fluid_details' && e.newValue) {
+      try {
+        const details = JSON.parse(e.newValue);
+        applyFluidDetails(details);
+      } catch (err) {
+        console.warn('Error parsing pmpro_shared_fluid_details from storage event:', err);
+      }
+    }
+  });
+
+  // Initial fluid details synchronization on load
+  let initialFluid = null;
+  if (typeof window.getPumpSelectionFluidDetails === 'function') {
+    initialFluid = window.getPumpSelectionFluidDetails();
+  } else if (window.__PMP_ACTIVE_SELECTION && (window.__PMP_ACTIVE_SELECTION.liquid || window.__PMP_ACTIVE_SELECTION.fluid_type)) {
+    initialFluid = window.__PMP_ACTIVE_SELECTION;
+  } else if (window.__PMP_SELECTION_FORM_DATA && (window.__PMP_SELECTION_FORM_DATA.liquid || window.__PMP_SELECTION_FORM_DATA.fluid_type)) {
+    initialFluid = window.__PMP_SELECTION_FORM_DATA;
+  } else {
+    try {
+      const stored = localStorage.getItem('pmpro_shared_fluid_details');
+      if (stored) initialFluid = JSON.parse(stored);
+    } catch (e) { }
+  }
+
+  if (initialFluid) {
+    applyFluidDetails(initialFluid);
+  } else {
+    updateFluidIndicatorUI();
+  }
   const npLabel = document.getElementById('np-label');
   npLabel?.addEventListener('input', onNodeLabelChange);
   npLabel?.addEventListener('change', onNodeLabelChange);
@@ -5821,7 +6371,7 @@ function init() {
     el?.addEventListener('input', onPipePropChange);
     el?.addEventListener('change', onPipePropChange);
   });
-  
+
   document.getElementById('pp-fittings-list')?.addEventListener('change', (e) => {
     if (e.target.classList.contains('pp-fitting-cb')) {
       const row = e.target.closest('.pp-fitting-row') || e.target.parentElement;
@@ -6638,13 +7188,13 @@ const HYDRAULIC_HELP_TOPICS = {
   }
 };
 
-window.showHydraulicHelp = function(topic = 'hf_major') {
+window.showHydraulicHelp = function (topic = 'hf_major') {
   let modal = document.getElementById('pn-help-modal-overlay');
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'pn-help-modal-overlay';
     modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99999;backdrop-filter:blur(4px);padding:16px;overflow-y:auto;';
-    modal.onclick = function(e) {
+    modal.onclick = function (e) {
       if (e.target === modal) hideHydraulicHelp();
     };
     modal.innerHTML = `
@@ -6699,7 +7249,7 @@ window.showHydraulicHelp = function(topic = 'hf_major') {
     document.body.appendChild(modal);
 
     // Escape key closes modal
-    document.addEventListener('keydown', function(evt) {
+    document.addEventListener('keydown', function (evt) {
       if (evt.key === 'Escape' && modal.style.display !== 'none') {
         hideHydraulicHelp();
       }
@@ -6711,7 +7261,7 @@ window.showHydraulicHelp = function(topic = 'hf_major') {
   switchHydraulicHelpTab(topic);
 };
 
-window.hideHydraulicHelp = function() {
+window.hideHydraulicHelp = function () {
   const modal = document.getElementById('pn-help-modal-overlay');
   if (modal) {
     modal.style.display = 'none';
@@ -6719,7 +7269,7 @@ window.hideHydraulicHelp = function() {
   }
 };
 
-window.switchHydraulicHelpTab = function(topic) {
+window.switchHydraulicHelpTab = function (topic) {
   const container = document.getElementById('pn-help-modal-body');
   if (!container) return;
 
@@ -6759,4 +7309,8 @@ window.switchHydraulicHelpTab = function(topic) {
   `;
 };
 
-document.addEventListener('DOMContentLoaded', init);
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}

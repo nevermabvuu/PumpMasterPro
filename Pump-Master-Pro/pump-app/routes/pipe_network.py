@@ -37,6 +37,7 @@ from services.hydraulic_engine import (
     solve_network, NetworkSolverResult, NodeHydraulicResult,
     fluid_kinematic_viscosity_m2s, fluid_density_kg_m3,
     water_vapor_pressure_kpa, altitude_to_barometric_pressure_kpa,
+    colebrook_white_exact,
     GRAVITY
 )
 
@@ -78,37 +79,32 @@ def get_roughness_map():
 
 def friction_factor(Re, epsilon_mm, diameter_m):
     """
-    Return the Darcy-Weisbach friction factor.
-    
-    Laminar  (Re < 2300):        f = 64 / Re
-    Turbulent (Re >= 4000):      Swamee-Jain approximation
-    Transitional (2300-4000):    linear blend
+    Return the Darcy-Weisbach friction factor f using the exact Colebrook-White equation.
+
+    Numerical & Hydraulic Details:
+    -------------------------------
+    - Laminar regime (Re < 2300):
+        Exact Hagen-Poiseuille law: f = 64 / Re
+    - Critical / Transitional regime (2300 <= Re < 4000):
+        Smooth linear blending between laminar and turbulent values.
+    - Fully turbulent regime (Re >= 4000):
+        Exact implicit Colebrook-White equation solved via Newton-Raphson iteration:
+        1 / sqrt(f) = -2 * log10( (epsilon / 3.7D) + (2.51 / (Re * sqrt(f))) )
+        Eliminates the ~1-3% error inherent to explicit empirical approximations like Swamee-Jain.
     """
-    if Re <= 0:
-        return 0.02  # fallback for zero-flow edge case
-
-    if Re < 2300:
-        return 64.0 / Re  # Hagen-Poiseuille for laminar flow
-
-    # Swamee-Jain for turbulent flow
-    rel_roughness = max(1e-6, min((epsilon_mm / 1000.0) / diameter_m, 0.05))
-    f_turb = 0.25 / (math.log10(rel_roughness / 3.7 + 5.74 / (Re ** 0.9))) ** 2
-
-    if Re < 4000:
-        # Blend laminar and turbulent in the transitional zone
-        f_lam = 64.0 / Re
-        blend = (Re - 2300) / (4000 - 2300)
-        return f_lam * (1 - blend) + f_turb * blend
-
-    return f_turb
+    return colebrook_white_exact(Re, epsilon_mm, diameter_m)
 
 
 def calculate_segment(seg, global_flow_m3h, friction_method='darcy_weisbach',
-                      temperature_c=20.0, specific_gravity=1.0):
+                      temperature_c=20.0, specific_gravity=1.0,
+                      liquid='water', viscosity_cSt=1.0,
+                      is_slurry=False, slurry_d50_mm=0.15,
+                      slurry_solids_sg=2.65, slurry_c_weight=25.0,
+                      slurry_c_volume=None):
     """
     Calculate all hydraulic quantities for one pipe segment using the consolidated
     hydraulic engine pipeline. Accumulates child fittings without splitting the pipe.
-    Incorporates temperature-dependent kinematic viscosity and specific gravity.
+    Incorporates temperature-dependent or viscous kinematic viscosity, density, and slurry transport properties.
     """
     fitting_k = get_fitting_k_map()
     roughness_map = get_roughness_map()
@@ -168,12 +164,22 @@ def calculate_segment(seg, global_flow_m3h, friction_method='darcy_weisbach',
         flow_m3h=flow_m3h,
     )
 
-    nu = fluid_kinematic_viscosity_m2s(temperature_c)
+    is_visc = (liquid == 'viscous' or (viscosity_cSt is not None and float(viscosity_cSt) > 1.05 and not is_slurry))
+    if is_visc and viscosity_cSt > 0:
+        nu = float(viscosity_cSt) * 1e-6
+        rho = float(specific_gravity) * 1000.0 if specific_gravity > 0 else 1000.0
+    else:
+        nu = fluid_kinematic_viscosity_m2s(temperature_c)
+        rho = fluid_density_kg_m3(temperature_c, specific_gravity)
+
     res = calculate_consolidated_pipe(
         pipe_edge, flow_m3h=flow_m3h, friction_method=friction_method,
-        kinematic_viscosity=nu
+        kinematic_viscosity=nu, fluid_density=rho,
+        is_slurry=is_slurry, slurry_d50_mm=slurry_d50_mm,
+        slurry_solids_sg=slurry_solids_sg, slurry_c_weight=slurry_c_weight
     )
     return res.to_dict()
+
 
 
 # ── Page Route ──────────────────────────────────────────────────────────────
@@ -190,9 +196,22 @@ def pipe_network():
     standard_pipes_json = json.dumps([p.to_dict() for p in standard_pipes])
 
     active_sel = session.get('active_selection') or {}
+    sel_form = session.get('selection_form_data') or {}
+
+    # Merge fluid properties from pump selection form into active_sel if missing
+    fluid_keys = [
+        'liquid', 'temperature_c', 'rho', 'viscosity_cSt', 'fluid_ph',
+        'fluid_concentration', 'is_hazardous', 'is_flammable',
+        'sg_l', 'sg_s', 'sg_m', 'slurry_cv', 'slurry_cw', 'slurry_d50', 'unit_d50'
+    ]
+    for k in fluid_keys:
+        if k in sel_form and k not in active_sel:
+            active_sel[k] = sel_form[k]
+
     pipe_net_data = active_sel.get('pipe_network')
     pipe_network_json = json.dumps(pipe_net_data) if pipe_net_data else 'null'
     active_selection_json = json.dumps(active_sel)
+    selection_form_data_json = json.dumps(sel_form)
 
     return render_template('pipe_network.html',
                            fittings_json=fittings_json,
@@ -200,7 +219,10 @@ def pipe_network():
                            standard_pipes_json=standard_pipes_json,
                            pipe_network_json=pipe_network_json,
                            active_selection_json=active_selection_json,
-                           active_selection=active_sel)
+                           selection_form_data_json=selection_form_data_json,
+                           active_selection=active_sel,
+                           selection_form_data=sel_form)
+
 
 
 @pipe_network_bp.route('/api/pipe-network/standard-pipes', methods=['GET'])
@@ -356,10 +378,19 @@ def calculate_network():
     # 4. Vapor pressure override (kPa)
     vapor_pressure_kpa = float(data['vapor_pressure_kpa']) if (data.get('vapor_pressure_kpa') is not None and str(data.get('vapor_pressure_kpa')).strip() != '') else None
 
-    # 5. Slurry transport parameters
-    is_slurry = bool(data.get('is_slurry', False))
+    # 5. Fluid details from Pump Selection page (Water / Viscous / Slurry)
+    fluid_type = (data.get('fluid_type') or data.get('liquid') or 'water').lower().strip()
+    viscosity_cSt = float(data.get('viscosity_cSt', 1.0) or 1.0)
+    fluid_ph = float(data.get('fluid_ph', 7.0)) if data.get('fluid_ph') is not None else None
+    fluid_concentration = str(data.get('fluid_concentration') or '')
+    is_hazardous = bool(data.get('is_hazardous', False))
+    is_flammable = bool(data.get('is_flammable', False))
+
+    # 6. Slurry transport parameters
+    is_slurry = bool(data.get('is_slurry', False) or fluid_type == 'slurry')
     slurry_d50_mm = float(data.get('slurry_d50_mm', 0.15) or 0.15)
     slurry_solids_sg = float(data.get('slurry_solids_sg', 2.65) or 2.65)
+    slurry_liquid_sg = float(data.get('slurry_liquid_sg') or data.get('sg_l') or 1.0)
     slurry_c_weight = float(data.get('slurry_c_weight', 25.0) or 25.0)
     slurry_c_volume = float(data.get('slurry_c_volume')) if data.get('slurry_c_volume') is not None else None
 
@@ -426,8 +457,15 @@ def calculate_network():
                 is_slurry=is_slurry,
                 slurry_d50_mm=slurry_d50_mm,
                 slurry_solids_sg=slurry_solids_sg,
+                slurry_liquid_sg=slurry_liquid_sg,
                 slurry_c_weight=slurry_c_weight,
                 slurry_c_volume=slurry_c_volume,
+                fluid_type=fluid_type,
+                viscosity_cSt=viscosity_cSt,
+                fluid_ph=fluid_ph,
+                fluid_concentration=fluid_concentration,
+                is_hazardous=is_hazardous,
+                is_flammable=is_flammable,
             )
             results = [p.to_dict() for p in solver_res.pipe_results]
             node_results = [n.to_dict() for n in solver_res.node_results]
@@ -442,7 +480,11 @@ def calculate_network():
                 try:
                     res = calculate_segment(
                         seg, global_flow, friction_method=friction_method,
-                        temperature_c=temperature_c, specific_gravity=specific_gravity
+                        temperature_c=temperature_c, specific_gravity=specific_gravity,
+                        liquid=fluid_type, viscosity_cSt=viscosity_cSt,
+                        is_slurry=is_slurry, slurry_d50_mm=slurry_d50_mm,
+                        slurry_solids_sg=slurry_solids_sg, slurry_c_weight=slurry_c_weight,
+                        slurry_c_volume=slurry_c_volume
                     )
                     results.append(res)
                     total_major += res['hf_major_m']
@@ -467,6 +509,10 @@ def calculate_network():
                 'altitude_m': altitude_m,
                 'temperature_c': temperature_c,
                 'specific_gravity': specific_gravity,
+                'fluid_type': fluid_type,
+                'liquid': fluid_type,
+                'viscosity_cSt': viscosity_cSt,
+                'is_slurry': is_slurry,
             }
     else:
         # Fallback for flat pipe list (legacy mode)
@@ -476,7 +522,11 @@ def calculate_network():
             try:
                 res = calculate_segment(
                     seg, global_flow, friction_method=friction_method,
-                    temperature_c=temperature_c, specific_gravity=specific_gravity
+                    temperature_c=temperature_c, specific_gravity=specific_gravity,
+                    liquid=fluid_type, viscosity_cSt=viscosity_cSt,
+                    is_slurry=is_slurry, slurry_d50_mm=slurry_d50_mm,
+                    slurry_solids_sg=slurry_solids_sg, slurry_c_weight=slurry_c_weight,
+                    slurry_c_volume=slurry_c_volume
                 )
                 results.append(res)
                 total_major += res['hf_major_m']
@@ -501,6 +551,10 @@ def calculate_network():
             'altitude_m': altitude_m,
             'temperature_c': temperature_c,
             'specific_gravity': specific_gravity,
+            'fluid_type': fluid_type,
+            'liquid': fluid_type,
+            'viscosity_cSt': viscosity_cSt,
+            'is_slurry': is_slurry,
         }
 
     # Auto-sync calculation results and duty point to session['active_selection']
@@ -516,11 +570,28 @@ def calculate_network():
         pn['globalFlow'] = global_flow
         pn['friction_method'] = friction_method
         pn['solver_method'] = solver_method
+        pn['liquid'] = fluid_type
+        pn['viscosity_cSt'] = viscosity_cSt
+        pn['is_slurry'] = is_slurry
+        pn['slurry_d50_mm'] = slurry_d50_mm
+        pn['slurry_solids_sg'] = slurry_solids_sg
+        pn['slurry_liquid_sg'] = slurry_liquid_sg
+        pn['slurry_c_weight'] = slurry_c_weight
+        pn['slurry_c_volume'] = slurry_c_volume
+
         active_sel['pipe_network'] = pn
         active_sel['q_duty'] = global_flow
         active_sel['disp_q_duty'] = global_flow
         active_sel['h_duty'] = round(total_head, 3)
         active_sel['disp_h_duty'] = round(total_head, 3)
+        active_sel['liquid'] = fluid_type
+        active_sel['viscosity_cSt'] = viscosity_cSt
+        active_sel['is_slurry'] = is_slurry
+        active_sel['slurry_d50_mm'] = slurry_d50_mm
+        active_sel['slurry_solids_sg'] = slurry_solids_sg
+        active_sel['slurry_liquid_sg'] = slurry_liquid_sg
+        active_sel['slurry_c_weight'] = slurry_c_weight
+        active_sel['slurry_c_volume'] = slurry_c_volume
         session['active_selection'] = active_sel
         session.modified = True
     except Exception:

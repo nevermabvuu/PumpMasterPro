@@ -123,18 +123,29 @@ def run_selection_from_form(f, all_pumps=None, current_org=None):
         npsh_avail = convert_unit(raw_npsh_avail, unit_npsh, 'm', 'head') if raw_npsh_avail is not None else None
 
         if liquid == 'slurry':
-            raw_rho_l = _get_float(f, 'rho_l', 1000.0)
-            rho       = convert_unit(raw_rho_l, unit_rho, 'kgm3', 'density')
+            if f.get('sg_l') and str(f.get('sg_l')).strip() != '':
+                raw_sg_l = _get_float(f, 'sg_l', 1.0)
+                rho = raw_sg_l * 1000.0
+            else:
+                raw_rho_l = _get_float(f, 'rho_l', 1000.0)
+                rho       = convert_unit(raw_rho_l, unit_rho, 'kgm3', 'density')
+
+            if f.get('sg_s') and str(f.get('sg_s')).strip() != '':
+                raw_sg_s = _get_float(f, 'sg_s', 2.65)
+                rho_s = raw_sg_s * 1000.0
+            else:
+                raw_rho_s = _get_float(f, 'rho_solid', 2650.0)
+                rho_s     = convert_unit(raw_rho_s, unit_rho, 'kgm3', 'density')
         else:
             raw_rho   = _get_float(f, 'rho', 1000.0)
             rho       = convert_unit(raw_rho, unit_rho, 'kgm3', 'density')
+            raw_rho_s = _get_float(f, 'rho_solid', 2650.0)
+            rho_s     = convert_unit(raw_rho_s, unit_rho, 'kgm3', 'density')
             
         vis          = _get_float(f, 'viscosity_cSt', 1.0)
         cv           = _get_float(f, 'slurry_cv', 0.0)
         raw_d50      = _get_float(f, 'slurry_d50', 0.3)
         d50          = convert_unit(raw_d50, unit_d50, 'mm', 'size')
-        raw_rho_s    = _get_float(f, 'rho_solid', 2650.0)
-        rho_s        = convert_unit(raw_rho_s, unit_rho, 'kgm3', 'density')
 
         filters = {}
         if f.get('filter_manufacturer'): filters['manufacturer'] = f.get('filter_manufacturer')
@@ -296,8 +307,18 @@ def pump_selection():
     motor_filter_options = get_motor_filter_options()
 
     active_sel = session.get('active_selection') or {}
+    for k in ['liquid', 'temperature_c', 'rho', 'viscosity_cSt', 'fluid_ph',
+              'fluid_concentration', 'is_hazardous', 'is_flammable',
+              'sg_l', 'sg_s', 'sg_m', 'slurry_cv', 'slurry_cw', 'slurry_d50', 'unit_d50']:
+        if form_data.get(k) is not None:
+            active_sel[k] = form_data.get(k)
+    session['active_selection'] = active_sel
+    session.modified = True
+
     pipe_net_data = active_sel.get('pipe_network')
     pipe_network_json = json.dumps(pipe_net_data) if pipe_net_data else 'null'
+    active_selection_json = json.dumps(active_sel)
+    selection_form_data_json = json.dumps(form_data)
 
     standard_pipes = StandardPipe.query.filter_by(is_active=True).order_by(StandardPipe.sort_order).all()
     standard_pipes_json = json.dumps([p.to_dict() for p in standard_pipes])
@@ -329,7 +350,12 @@ def pump_selection():
                            standard_pipes_json=standard_pipes_json,
                            fittings_json=fittings_json,
                            materials_json=materials_json,
+                           active_selection_json=active_selection_json,
+                           selection_form_data_json=selection_form_data_json,
+                           active_selection=active_sel,
+                           selection_form_data=form_data,
                            sort_by=form_data.get('sort_by', 'rating'))
+
 
 
 @selection_bp.route('/pump-selection/details/<int:pump_id>', endpoint='pump_selection_details')
@@ -423,6 +449,21 @@ def pump_selection_details(pump_id):
         'dia': active_result.get('optimal_trim_dia_mm') if active_result else None,
         'rpm': active_result.get('optimal_speed_rpm') if active_result else None,
         'operation_mode': f.get('operation_mode', 'fixed'),
+        'liquid': liquid,
+        'temperature_c': f.get('temperature_c', 20.0),
+        'rho': f.get('rho', 1000.0),
+        'viscosity_cSt': f.get('viscosity_cSt', 1.0),
+        'fluid_ph': f.get('fluid_ph', 7.0),
+        'fluid_concentration': f.get('fluid_concentration', ''),
+        'is_hazardous': f.get('is_hazardous', '0'),
+        'is_flammable': f.get('is_flammable', '0'),
+        'sg_l': f.get('sg_l', 1.0),
+        'sg_s': f.get('sg_s', 2.65),
+        'sg_m': f.get('sg_m', 1.33),
+        'slurry_cv': f.get('slurry_cv', 0.20),
+        'slurry_cw': f.get('slurry_cw', 0.40),
+        'slurry_d50': f.get('slurry_d50', 0.3),
+        'unit_d50': f.get('unit_d50', 'mm'),
         'show_hq': '1',
         'show_eta': '1',
         'show_pow': '1',
@@ -520,7 +561,23 @@ def api_select_pumps():
         vsd_speed_min_rpm=_get_float(data, 'vsd_speed_min_rpm') if (data.get('vsd_speed_min_rpm') and str(data.get('vsd_speed_min_rpm')).strip() != '') else None,
         vsd_speed_max_rpm=_get_float(data, 'vsd_speed_max_rpm') if (data.get('vsd_speed_max_rpm') and str(data.get('vsd_speed_max_rpm')).strip() != '') else None
     )
+
+    # Synchronize session state so pipe network and other views reflect live search parameters
+    try:
+        s_form = session.get('selection_form_data') or {}
+        s_act = session.get('active_selection') or {}
+        for k, v in data.items():
+            if v is not None:
+                s_form[k] = v
+                s_act[k] = v
+        session['selection_form_data'] = s_form
+        session['active_selection'] = s_act
+        session.modified = True
+    except Exception:
+        pass
+
     return jsonify(results)
+
 
 
 @selection_bp.route('/papi/motors-by-spec')

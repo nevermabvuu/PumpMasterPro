@@ -243,23 +243,38 @@ def slurry_mixture_properties(
     c_weight_percent: float = 25.0,
     s_solids: float = 2.65,
     s_liquid: float = 1.0,
-    temperature_c: float = 20.0
+    temperature_c: float = 20.0,
+    c_volume_fraction: Optional[float] = None
 ) -> Dict[str, float]:
     """
     Calculates slurry mixture specific gravity, volumetric concentration, and slurry density.
-        Cw = Solids mass fraction
-        Cv = (Cw / Ss) / [ (Cw / Ss) + (1 - Cw) / Sl ]
-        Sm = Sl + Cv * (Ss - Sl)
-        rho_m = Sm * rho_water(T)
+    Supports either solids weight concentration (Cw) or volumetric concentration (Cv).
+    
+    Equations:
+        Cw = Solids mass fraction (dry solids mass / total slurry mass)
+        Cv = Solids volume fraction (dry solids volume / total slurry volume)
+        Interconversion:
+            Cv = (Cw / Ss) / [ (Cw / Ss) + (1 - Cw) / Sl ]
+            Cw = (Cv * Ss) / [ Cv * Ss + (1 - Cv) * Sl ]
+        Slurry Mixture Specific Gravity:
+            Sm = Sl + Cv * (Ss - Sl)
+        Slurry Mixture Density:
+            rho_m = Sm * rho_water(T)  [kg/m^3]
     """
-    cw = max(0.0, min(80.0, float(c_weight_percent))) / 100.0
     ss = max(1.01, float(s_solids))
     sl = max(0.5, float(s_liquid))
 
-    vol_solids = cw / ss
-    vol_liquid = (1.0 - cw) / sl
-    total_vol = vol_solids + vol_liquid
-    cv = vol_solids / total_vol if total_vol > 0 else 0.0
+    if c_volume_fraction is not None and float(c_volume_fraction) > 0:
+        cv = max(0.0, min(0.70, float(c_volume_fraction)))
+        # Convert Cv to Cw
+        denom = cv * ss + (1.0 - cv) * sl
+        cw = (cv * ss) / denom if denom > 0 else 0.0
+    else:
+        cw = max(0.0, min(80.0, float(c_weight_percent))) / 100.0
+        vol_solids = cw / ss
+        vol_liquid = (1.0 - cw) / sl
+        total_vol = vol_solids + vol_liquid
+        cv = vol_solids / total_vol if total_vol > 0 else 0.0
 
     sm = sl + cv * (ss - sl)
     rho_w = fluid_density_kg_m3(temperature_c, 1.0)
@@ -272,6 +287,7 @@ def slurry_mixture_properties(
         'mixture_sg': float(round(sm, 3)),
         'slurry_density_kg_m3': float(round(rho_m, 1)),
     }
+
 
 
 def water_hammer_analysis(
@@ -870,28 +886,82 @@ class NetworkGraph:
 # 3. CONSOLIDATED HYDRAULIC RESISTANCE PIPELINE
 # ============================================================================
 
-def colebrook_swamee_jain(Re: float, epsilon_mm: float, diameter_m: float) -> float:
+def colebrook_white_exact(Re: float, epsilon_mm: float, diameter_m: float, max_iter: int = 30, tol: float = 1e-9) -> float:
     """
-    Darcy-Weisbach friction factor f calculation:
-    - Laminar (Re < 2300): f = 64 / Re
-    - Transitional (2300 <= Re < 4000): Linear blend
-    - Turbulent (Re >= 4000): Swamee-Jain explicit approximation to Colebrook-White
+    Computes the Darcy-Weisbach friction factor f by solving the exact implicit Colebrook-White equation:
+        1 / sqrt(f) = -2.0 * log10( (epsilon / (3.7 * D)) + (2.51 / (Re * sqrt(f))) )
+
+    Engineering Background & Numerical Rationale:
+    ---------------------------------------------
+    1. The Colebrook-White (1939) equation is the universally accepted standard for turbulent pipe flow.
+       However, it is transcendental and implicit in f (f appears on both sides of the equation).
+    2. Swamee-Jain (1976) was devised as an explicit closed-form approximation for quick evaluation
+       in legacy manual or low-compute environments, with an inherent error of ~1-3%.
+    3. To ensure maximum hydraulic accuracy for engineering design and network modeling, we solve
+       the exact implicit Colebrook-White equation directly via Newton-Raphson iteration.
+       Substituting x = 1 / sqrt(f):
+           g(x) = x + 2.0 * log10( A + B * x ) = 0
+       where:
+           A = (epsilon / 1000.0) / (3.7 * diameter_m)   (relative roughness term)
+           B = 2.51 / Re                                  (turbulent viscous term)
+       The analytical derivative with respect to x is:
+           g'(x) = 1.0 + (2.0 / ln(10)) * [ B / (A + B * x) ]
+       Newton-Raphson step:
+           x_{k+1} = x_k - g(x_k) / g'(x_k)
+       Using the Swamee-Jain explicit formula as the initial guess x_0, the iteration achieves
+       extremely fast quadratic convergence to machine precision (< 1e-9 tolerance) in typically 2-3 steps.
+    4. Regimes:
+       - Laminar (Re < 2300): Exact Hagen-Poiseuille law f = 64 / Re.
+       - Transitional (2300 <= Re < 4000): Linear interpolation blending laminar and turbulent values.
+       - Turbulent (Re >= 4000): Exact Colebrook-White solution via Newton-Raphson.
     """
     if Re <= 0:
-        return 0.02
+        return 0.02  # Zero-flow fallback
 
+    # 1. Laminar flow regime (Hagen-Poiseuille)
     if Re < 2300:
         return 64.0 / Re
 
+    # Effective relative roughness epsilon / D
     rel_roughness = max(1e-6, min((epsilon_mm / 1000.0) / diameter_m, 0.05))
-    f_turb = 0.25 / (math.log10(rel_roughness / 3.7 + 5.74 / (Re ** 0.9))) ** 2
 
+    # Initial seed x0 = 1 / sqrt(f_swamee_jain)
+    f_turb_seed = 0.25 / (math.log10(rel_roughness / 3.7 + 5.74 / (Re ** 0.9))) ** 2
+
+    # 2. Critical / Transitional regime: blend laminar and turbulent values
     if Re < 4000:
         f_lam = 64.0 / Re
         blend = (Re - 2300.0) / (4000.0 - 2300.0)
-        return f_lam * (1.0 - blend) + f_turb * blend
+        return f_lam * (1.0 - blend) + f_turb_seed * blend
 
-    return f_turb
+    # 3. Fully turbulent regime: solve implicit Colebrook-White via Newton-Raphson
+    x = 1.0 / math.sqrt(f_turb_seed)
+    A = rel_roughness / 3.7
+    B = 2.51 / Re
+    inv_ln10_x2 = 2.0 / math.log(10.0)  # Constant 2 / ln(10) ~ 0.86858896
+
+    for _ in range(max_iter):
+        arg = A + B * x
+        if arg <= 0:
+            break
+        g = x + 2.0 * math.log10(arg)
+        dg = 1.0 + inv_ln10_x2 * (B / arg)
+        dx = -g / dg
+        x += dx
+        if abs(dx) < tol:
+            break
+
+    return 1.0 / (x * x)
+
+
+def colebrook_swamee_jain(Re: float, epsilon_mm: float, diameter_m: float) -> float:
+    """
+    Darcy-Weisbach friction factor f calculation.
+    Uses exact Colebrook-White via Newton-Raphson iteration for turbulent flow,
+    and Hagen-Poiseuille (64/Re) for laminar flow.
+    """
+    return colebrook_white_exact(Re, epsilon_mm, diameter_m)
+
 
 
 @dataclass
@@ -1167,8 +1237,9 @@ def calculate_consolidated_pipe(
             else:
                 dep_status = 'High Deposition Risk (V < Vc — Sanding Hazard!)'
 
-        # Durand slurry head loss adjustment
+        # Durand slurry head loss adjustment:
         # i_m = i_w * [ 1 + 82 * Cv * (V^2 * sqrt(Cd) / (g * D * (Ss - Sl)))^-1.5 ]
+        # Accounts for the additional hydraulic dissipation caused by carrying suspended solid particles
         iw = hf_major / L_m if L_m > 0 else 0.0
         ss = max(1.01, float(slurry_solids_sg))
         sl = max(0.5, float(fluid_density / 1000.0))
@@ -1179,6 +1250,15 @@ def calculate_consolidated_pipe(
         phi = 82.0 * (psi ** (-1.5)) if psi > 1e-3 else 82.0
         im = iw * (1.0 + phi * cv) * slurry_props['mixture_sg']
         slurry_hf = (im * L_m) + hf_minor
+
+        # Apply slurry head loss to major friction, total friction, and consolidated hydraulic resistance
+        hf_major = (im * L_m)
+        hf_friction = slurry_hf
+        h_total = hf_friction + hf_elev
+        if method == 'darcy_weisbach' and Q_m3s > 0:
+            resistance_R = hf_friction / (Q_m3s ** flow_exponent_n)
+            derivative_dh_dq = flow_exponent_n * resistance_R * (Q_m3s ** (flow_exponent_n - 1.0))
+
 
     return EdgeHydraulicResult(
         pipe_id=pipe.id,
@@ -1603,8 +1683,15 @@ def solve_network(
     is_slurry: bool = False,
     slurry_d50_mm: float = 0.15,
     slurry_solids_sg: float = 2.65,
+    slurry_liquid_sg: float = 1.0,
     slurry_c_weight: float = 25.0,
     slurry_c_volume: Optional[float] = None,
+    fluid_type: str = 'water',
+    viscosity_cSt: float = 1.0,
+    fluid_ph: Optional[float] = None,
+    fluid_concentration: Optional[str] = None,
+    is_hazardous: bool = False,
+    is_flammable: bool = False,
 ) -> NetworkSolverResult:
     """
     Unified entry point executing the chosen network analysis method:
@@ -1617,10 +1704,11 @@ def solve_network(
       1. Hydraulic Grade Line (HGL) and nodal pressures using gravitational constant g = 9.80665 m/s^2.
       2. Major and minor losses across all pipes and consolidated fittings.
       3. Environmental barometric pressure and liquid vapor pressure from site altitude & fluid temperature (or manual input).
-      4. Net Positive Suction Head Available (NPSHa) at the suction of any pump station or network inlet:
+      4. Fluid properties: Clean Water, Viscous Fluid (custom viscosity and density), or Slurry (Durand settling & critical velocity).
+      5. Net Positive Suction Head Available (NPSHa) at the suction of any pump station or network inlet:
              NPSHa = h_atm - h_vp + h_suction_gauge + V_suction^2 / (2 * g)
-      5. Slurry particle settling velocity, Durand critical deposition velocity, and concentration conversions.
-      6. Joukowsky water hammer surge and Barlow hoop stress across all continuous lines.
+      6. Slurry particle settling velocity, Durand critical deposition velocity, and concentration conversions.
+      7. Joukowsky water hammer surge and Barlow hoop stress across all continuous lines.
     """
     method = (solver_method or 'ggm').lower().strip()
     if method not in ('ggm', 'newton_raphson', 'hardy_cross', 'linear_theory'):
@@ -1649,15 +1737,43 @@ def solve_network(
     else:
         p_vapor_kpa = water_vapor_pressure_kpa(temp_c)
 
-    # Slurry fluid properties vs clear liquid
+    # Fluid categorization: Water vs Viscous Liquid vs Slurry Transport
+    # Beginners Note:
+    #   - Water: Standard clean water with temperature-dependent density and kinematic viscosity.
+    #   - Viscous Fluid: Higher kinematic viscosity (cSt) where Reynolds number Re is reduced,
+    #     frequently shifting the flow into the laminar regime (f = 64/Re, Hagen-Poiseuille)
+    #     or transitional regime, with corresponding density / SG adjustments.
+    #   - Slurry: Solid-liquid mixture with median particle size d50, solids SG, and concentration,
+    #     which induces additional carrier friction (Durand correlation) and risk of solids deposition.
+    is_viscous = (fluid_type == 'viscous' or (viscosity_cSt is not None and float(viscosity_cSt) > 1.05 and not is_slurry and fluid_type != 'slurry'))
     slurry_info = None
-    if is_slurry:
-        slurry_info = slurry_mixture_properties(slurry_c_weight, slurry_solids_sg, s_liquid=sg, temperature_c=temp_c)
+
+    if is_slurry or fluid_type == 'slurry':
+        is_slurry = True
+        fluid_type = 'slurry'
+        s_liq = slurry_liquid_sg if (slurry_liquid_sg and float(slurry_liquid_sg) > 0) else sg
+        slurry_info = slurry_mixture_properties(
+            c_weight_percent=slurry_c_weight,
+            s_solids=slurry_solids_sg,
+            s_liquid=s_liq,
+            temperature_c=temp_c,
+            c_volume_fraction=slurry_c_volume
+        )
         fluid_density = slurry_info['slurry_density_kg_m3']
         sg = slurry_info['mixture_sg']
+        fluid_viscosity = fluid_kinematic_viscosity_m2s(temp_c)
+    elif is_viscous:
+        fluid_type = 'viscous'
+        # 1 cSt = 1 mm^2/s = 1e-6 m^2/s
+        v_cst = max(0.01, float(viscosity_cSt if viscosity_cSt is not None else 1.0))
+        fluid_viscosity = v_cst * 1e-6
+        # Fluid density from SG (sg * 1000 kg/m^3)
+        fluid_density = float(sg) * 1000.0 if sg > 0 else 1000.0
     else:
+        fluid_type = 'water'
         fluid_density = fluid_density_kg_m3(temp_c, sg)
-    fluid_viscosity = fluid_kinematic_viscosity_m2s(temp_c)
+        fluid_viscosity = fluid_kinematic_viscosity_m2s(temp_c)
+
 
     loops = find_network_fundamental_loops(graph)
     has_loops = len(loops) > 0
@@ -1685,7 +1801,12 @@ def solve_network(
                         q_cur = flows_m3s.get(pid, 0.0)
                         calc = calculate_consolidated_pipe(
                             p, flow_m3h=q_cur * 3600.0, friction_method=friction_method,
-                            kinematic_viscosity=fluid_viscosity
+                            kinematic_viscosity=fluid_viscosity,
+                            fluid_density=fluid_density,
+                            is_slurry=is_slurry,
+                            slurry_d50_mm=slurry_d50_mm,
+                            slurry_solids_sg=slurry_solids_sg,
+                            slurry_c_weight=slurry_c_weight,
                         )
                         R = calc.resistance_R
                         n = calc.flow_exponent_n
@@ -1722,7 +1843,12 @@ def solve_network(
                         q_cur = flows_m3s.get(pid, 0.0)
                         calc = calculate_consolidated_pipe(
                             p, flow_m3h=q_cur * 3600.0, friction_method=friction_method,
-                            kinematic_viscosity=fluid_viscosity
+                            kinematic_viscosity=fluid_viscosity,
+                            fluid_density=fluid_density,
+                            is_slurry=is_slurry,
+                            slurry_d50_mm=slurry_d50_mm,
+                            slurry_solids_sg=slurry_solids_sg,
+                            slurry_c_weight=slurry_c_weight,
                         )
                         R = calc.resistance_R
                         n = calc.flow_exponent_n
@@ -1759,7 +1885,12 @@ def solve_network(
                         q_cur = flows_m3s.get(pid, 0.0)
                         calc = calculate_consolidated_pipe(
                             p, flow_m3h=q_cur * 3600.0, friction_method=friction_method,
-                            kinematic_viscosity=fluid_viscosity
+                            kinematic_viscosity=fluid_viscosity,
+                            fluid_density=fluid_density,
+                            is_slurry=is_slurry,
+                            slurry_d50_mm=slurry_d50_mm,
+                            slurry_solids_sg=slurry_solids_sg,
+                            slurry_c_weight=slurry_c_weight,
                         )
                         R = calc.resistance_R
                         n = calc.flow_exponent_n
@@ -1796,7 +1927,12 @@ def solve_network(
                         q_cur = flows_m3s.get(pid, 0.0)
                         calc = calculate_consolidated_pipe(
                             p, flow_m3h=q_cur * 3600.0, friction_method=friction_method,
-                            kinematic_viscosity=fluid_viscosity
+                            kinematic_viscosity=fluid_viscosity,
+                            fluid_density=fluid_density,
+                            is_slurry=is_slurry,
+                            slurry_d50_mm=slurry_d50_mm,
+                            slurry_solids_sg=slurry_solids_sg,
+                            slurry_c_weight=slurry_c_weight,
                         )
                         R = calc.resistance_R
                         n = calc.flow_exponent_n
@@ -1988,10 +2124,20 @@ def solve_network(
         'suction_velocity_head_m': round(suction_vel_head_m, 3),
         'cavitation_status': cavitation_status,
         'cavitation_color': cavitation_color,
+        # Environmental and fluid specifics (Water / Viscous / Slurry)
+        'fluid_type': fluid_type,
+        'liquid': fluid_type,
+        'is_viscous': bool(is_viscous),
+        'viscosity_cSt': round(viscosity_cSt, 2) if is_viscous else round(fluid_viscosity * 1e6, 3),
+        'fluid_ph': fluid_ph,
+        'fluid_concentration': fluid_concentration,
+        'is_hazardous': bool(is_hazardous),
+        'is_flammable': bool(is_flammable),
         # Slurry transport metrics
         'is_slurry': bool(is_slurry),
         'slurry_d50_mm': slurry_d50_mm if is_slurry else None,
         'slurry_solids_sg': slurry_solids_sg if is_slurry else None,
+        'slurry_liquid_sg': slurry_liquid_sg if is_slurry else None,
         'slurry_c_weight': slurry_c_weight if is_slurry else None,
         'slurry_c_volume': slurry_info['c_volume_percent'] if slurry_info else None,
         'slurry_settling_velocity_ms': particle_settling_velocity_m_s(slurry_d50_mm, slurry_solids_sg, s_liquid=sg)['settling_velocity_ms'] if is_slurry else None,

@@ -190,6 +190,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Dynamic Slurry Calculator ──────────────────────────────────────────────
   // Beginners Note: Enforces exactly 3 independent parameters from (L, S, M, Cv, Cw)
+  // Physics & Engineering Bounds:
+  //   - Liquid SG (Sl): 0.5 to 2.5 (water = 1.0)
+  //   - Solid SG (Ss): Must be > Sl, typical minerals 2.0 to 7.5 (silica = 2.65, tailings = 2.8, magnetite = 5.0)
+  //   - Slurry SG (Sm): Must be bounded between Sl and Ss (Sm = Sl*(1-Cv) + Ss*Cv)
+  //   - Volumetric concentration (Cv): 0.0 to 0.65 (maximum loose random packing limit)
+  //   - Weight concentration (Cw): 0.0 to 0.90
   const slurryCheckboxes = document.querySelectorAll('.slurry-cb');
   const slurryInputs = document.querySelectorAll('.slurry-input');
   
@@ -203,23 +209,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById(id);
     if (!el) return;
     if (document.activeElement !== el && !isNaN(val) && isFinite(val)) {
-      el.value = (val % 1 !== 0) ? val.toFixed(3) : val;
+      el.value = (val % 1 !== 0) ? parseFloat(val.toFixed(3)) : val;
     }
   };
 
-  // 2-way sync for Liquid & Solid density/SG pairs
-  function syncPairs(e) {
-    if (e.target.id === 'rho_l') setVal('sg_l', getVal('rho_l') / 1000);
-    else if (e.target.id === 'sg_l') setVal('rho_l', getVal('sg_l') * 1000);
-    else if (e.target.id === 'rho_s') setVal('sg_s', getVal('rho_s') / 1000);
-    else if (e.target.id === 'sg_s') setVal('rho_s', getVal('sg_s') * 1000);
-    else if (e.target.id === 'rho_m') setVal('sg_m', getVal('rho_m') / 1000);
-    else if (e.target.id === 'sg_m') setVal('rho_m', getVal('sg_m') * 1000);
+  function onSlurryInputChange() {
     updateSlurryCalculator();
+    syncPumpSelectionSgToStorage();
   }
 
   slurryInputs.forEach(input => {
-    input.addEventListener('input', syncPairs);
+    input.addEventListener('input', onSlurryInputChange);
+    input.addEventListener('change', onSlurryInputChange);
   });
 
   function updateSlurryCalculator() {
@@ -227,67 +228,121 @@ document.addEventListener('DOMContentLoaded', () => {
       // Collect active (checked) parameters
       const active = new Set([...slurryCheckboxes].filter(cb => cb.checked).map(cb => cb.dataset.param));
       
-      // Read raw inputs
-      let L = getVal('sg_l');
-      let S = getVal('sg_s');
-      let M = getVal('sg_m');
-      let Cv = getVal('slurry_cv');
-      let Cw = getVal('slurry_cw');
+      // Read raw inputs and apply minimum baseline sanitization
+      let L = Math.max(0.5, getVal('sg_l') || 1.0);
+      let S = Math.max(1.05, getVal('sg_s') || 2.65);
+      let M = Math.max(0.5, getVal('sg_m') || 1.33);
+      let Cv = Math.max(0.0, Math.min(0.65, getVal('slurry_cv')));
+      let Cw = Math.max(0.0, Math.min(0.90, getVal('slurry_cw')));
 
       if (active.size !== 3) return; // Need exactly 3 knowns
 
-      // Solver logic for combinations
+      // Solver logic for all 10 combinations of 3 variables out of 5 (L, S, M, Cv, Cw)
+      // Every branch guarantees non-negative, physically realistic engineering values.
       if (active.has('L') && active.has('S') && active.has('M')) {
-        Cv = (S - L !== 0) ? (M - L) / (S - L) : 0;
-        Cw = M !== 0 ? (S * Cv) / M : 0;
+        // Enforce S > L
+        if (S <= L) S = L + 0.1;
+        // Clamp M between L and S
+        M = Math.max(L, Math.min(S, M));
+        Cv = (S - L > 0.001) ? (M - L) / (S - L) : 0;
+        Cw = M > 0.001 ? (S * Cv) / M : 0;
       }
       else if (active.has('L') && active.has('S') && active.has('Cv')) {
+        if (S <= L) S = L + 0.1;
         M = L * (1 - Cv) + S * Cv;
-        Cw = M !== 0 ? (S * Cv) / M : 0;
+        Cw = M > 0.001 ? (S * Cv) / M : 0;
       }
       else if (active.has('L') && active.has('S') && active.has('Cw')) {
+        if (S <= L) S = L + 0.1;
         const denom = S - Cw * (S - L);
-        Cv = denom !== 0 ? (Cw * L) / denom : 0;
+        Cv = (denom > 0.001) ? (Cw * L) / denom : 0;
+        Cv = Math.max(0.0, Math.min(0.65, Cv));
         M = L * (1 - Cv) + S * Cv;
       }
       else if (active.has('L') && active.has('M') && active.has('Cv')) {
-        S = Cv !== 0 ? (M - L * (1 - Cv)) / Cv : 0;
-        Cw = M !== 0 ? (S * Cv) / M : 0;
+        // M = L*(1-Cv) + S*Cv  =>  S = (M - L*(1-Cv)) / Cv
+        if (Cv < 0.005) {
+          S = 2.65;
+          M = L;
+        } else {
+          const lPart = L * (1 - Cv);
+          if (M < lPart) M = lPart + 0.01;
+          S = (M - lPart) / Cv;
+          S = Math.max(L + 0.05, Math.min(10.0, S));
+        }
+        Cw = M > 0.001 ? (S * Cv) / M : 0;
       }
       else if (active.has('L') && active.has('M') && active.has('Cw')) {
+        // Cv = (M - L)/(S - L) and S = Cw*M*L / (L + M*(Cw - 1))
         const denom = L + M * (Cw - 1);
-        S = denom !== 0 ? (Cw * M * L) / denom : 0;
-        Cv = (S - L !== 0) ? (M - L) / (S - L) : 0;
+        if (denom > 0.001 && Cw > 0.005) {
+          S = (Cw * M * L) / denom;
+          S = Math.max(L + 0.05, Math.min(10.0, S));
+        } else {
+          S = Math.max(L + 0.1, 2.65);
+        }
+        Cv = (S - L > 0.001) ? Math.max(0.0, (M - L) / (S - L)) : 0;
       }
       else if (active.has('S') && active.has('M') && active.has('Cv')) {
-        L = (1 - Cv !== 0) ? (M - S * Cv) / (1 - Cv) : 0;
-        Cw = M !== 0 ? (S * Cv) / M : 0;
+        // L = (M - S*Cv)/(1 - Cv)
+        if (Cv >= 0.99) Cv = 0.65;
+        const sPart = S * Cv;
+        if (M < sPart) {
+          // If mixture SG is smaller than solid contribution alone, adjust L safely
+          L = 1.0;
+          M = L * (1 - Cv) + S * Cv;
+        } else {
+          L = (M - sPart) / (1 - Cv);
+          L = Math.max(0.5, Math.min(2.5, L));
+        }
+        Cw = M > 0.001 ? (S * Cv) / M : 0;
       }
       else if (active.has('S') && active.has('M') && active.has('Cw')) {
-        Cv = S !== 0 ? (Cw * M) / S : 0;
-        L = (1 - Cv !== 0) ? (M - S * Cv) / (1 - Cv) : 0;
+        // Cv = (Cw * M) / S
+        Cv = (S > 0.001) ? (Cw * M) / S : 0;
+        Cv = Math.max(0.0, Math.min(0.65, Cv));
+        const sPart = S * Cv;
+        L = (Cv < 0.99 && M > sPart) ? (M - sPart) / (1 - Cv) : 1.0;
+        L = Math.max(0.5, Math.min(2.5, L));
       }
       else if (active.has('L') && active.has('Cv') && active.has('Cw')) {
-        S = (Cv / Cw - Cv !== 0) ? L * (1 - Cv) / (Cv / Cw - Cv) : 0;
+        // S = L*(1-Cv) / (Cv/Cw - Cv)
+        if (Cw > 0.001 && Cv > 0.001 && (Cv / Cw - Cv) > 0.001) {
+          S = (L * (1 - Cv)) / (Cv / Cw - Cv);
+          S = Math.max(L + 0.05, Math.min(10.0, S));
+        } else {
+          S = 2.65;
+        }
         M = L * (1 - Cv) + S * Cv;
       }
       else if (active.has('S') && active.has('Cv') && active.has('Cw')) {
-        M = Cw !== 0 ? (S * Cv) / Cw : 0;
-        L = (1 - Cv !== 0) ? (M - S * Cv) / (1 - Cv) : 0;
+        // M = (S * Cv) / Cw
+        M = (Cw > 0.001) ? (S * Cv) / Cw : S;
+        M = Math.max(0.5, Math.min(S, M));
+        const sPart = S * Cv;
+        L = (Cv < 0.99 && M > sPart) ? (M - sPart) / (1 - Cv) : 1.0;
+        L = Math.max(0.5, Math.min(2.5, L));
       }
       else if (active.has('M') && active.has('Cv') && active.has('Cw')) {
-        S = Cv !== 0 ? (Cw * M) / Cv : 0;
-        L = (1 - Cv !== 0) ? (M - S * Cv) / (1 - Cv) : 0;
+        // S = (Cw * M) / Cv
+        S = (Cv > 0.001) ? (Cw * M) / Cv : 2.65;
+        S = Math.max(1.05, Math.min(10.0, S));
+        const sPart = S * Cv;
+        L = (Cv < 0.99 && M > sPart) ? (M - sPart) / (1 - Cv) : 1.0;
+        L = Math.max(0.5, Math.min(2.5, L));
       }
 
-      // Clamp values
-      Cv = Math.max(0, Math.min(Cv, 0.8));
-      Cw = Math.max(0, Math.min(Cw, 0.95));
+      // Final sanitization clamp
+      L = Math.max(0.5, Math.min(2.5, L));
+      S = Math.max(L + 0.05, Math.min(10.0, S));
+      Cv = Math.max(0.0, Math.min(0.65, Cv));
+      Cw = Math.max(0.0, Math.min(0.90, Cw));
+      M = Math.max(L, Math.min(S, M));
 
       // Update the UI for calculated properties
-      if (!active.has('L')) { setVal('sg_l', L); setVal('rho_l', L * 1000); }
-      if (!active.has('S')) { setVal('sg_s', S); setVal('rho_s', S * 1000); }
-      if (!active.has('M')) { setVal('sg_m', M); setVal('rho_m', M * 1000); }
+      if (!active.has('L')) setVal('sg_l', L);
+      if (!active.has('S')) setVal('sg_s', S);
+      if (!active.has('M')) setVal('sg_m', M);
       if (!active.has('Cv')) setVal('slurry_cv', Cv);
       if (!active.has('Cw')) setVal('slurry_cw', Cw);
     } catch (e) {
@@ -316,18 +371,23 @@ document.addEventListener('DOMContentLoaded', () => {
       const active = new Set(checkedOrder.map(c => c.dataset.param));
       
       const elementsToToggle = [
-        ['rho_l', 'L'], ['sg_l', 'L'],
-        ['rho_s', 'S'], ['sg_s', 'S'],
-        ['rho_m', 'M'], ['sg_m', 'M'],
-        ['slurry_cv', 'Cv'], ['slurry_cw', 'Cw']
+        ['sg_l', 'L'],
+        ['sg_s', 'S'],
+        ['sg_m', 'M'],
+        ['slurry_cv', 'Cv'],
+        ['slurry_cw', 'Cw']
       ];
       
       elementsToToggle.forEach(([elemId, param]) => {
         const el = document.getElementById(elemId);
-        if (el) el.readOnly = !active.has(param);
+        if (el) {
+          el.readOnly = !active.has(param);
+          el.style.opacity = active.has(param) ? '1' : '0.75';
+        }
       });
       
       updateSlurryCalculator();
+      syncPumpSelectionSgToStorage();
     });
   });
 
@@ -340,23 +400,177 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ── Bidirectional Specific Gravity (SG) synchronization with Pipe Network ──
+  // ── Bidirectional Units, Flow Rate, Temperature & SG Synchronization with Pipe Network ──
+
+  // Flow unit conversion dictionary to m3/h
+  const FLOW_UNIT_TO_M3H = {
+    'm3h': 1.0,
+    'ls': 3.6,
+    'lpm': 0.06,
+    'usgpm': 0.2271247,
+    'ukgpm': 0.272765,
+    'cfs': 101.9406,
+    'm3s': 3600.0,
+  };
+
+  /**
+   * getPumpSelectionFlowM3h()
+   * Returns current flow rate from Pump Selection converted to standard m3/h
+   */
+  function getPumpSelectionFlowM3h() {
+    const rawQ = parseFloat(document.getElementById('input_q_duty')?.value) || 0;
+    const unitQ = document.getElementById('select_unit_q')?.value || 'm3h';
+    const factor = FLOW_UNIT_TO_M3H[unitQ] || 1.0;
+    return rawQ * factor;
+  }
+
+  /**
+   * setPumpSelectionFlowFromM3h(m3h)
+   * Converts standard m3/h flow into the active Pump Selection unit and updates input
+   */
+  function setPumpSelectionFlowFromM3h(m3h) {
+    if (isNaN(m3h) || m3h <= 0) return;
+    const unitQ = document.getElementById('select_unit_q')?.value || 'm3h';
+    const factor = FLOW_UNIT_TO_M3H[unitQ] || 1.0;
+    const convertedQ = m3h / factor;
+    const qInp = document.getElementById('input_q_duty');
+    if (qInp && document.activeElement !== qInp) {
+      qInp.value = (convertedQ % 1 !== 0) ? parseFloat(convertedQ.toFixed(2)) : convertedQ;
+    }
+  }
+
+  function getPumpSelectionTemperature() {
+    return parseFloat(document.getElementById('input_temperature_c')?.value) || 20.0;
+  }
+
   function getPumpSelectionSg() {
     const liquid = document.getElementById('liquidSel')?.value || 'water';
     if (liquid === 'water') {
       const rho = parseFloat(document.getElementById('input_rho_water')?.value) || 1000;
-      return rho / 1000.0;
+      return Math.max(0.5, Math.min(3.0, rho / 1000.0));
     } else if (liquid === 'viscous') {
       const rho = parseFloat(document.getElementById('input_rho_viscous')?.value || document.querySelector('#viscousParams input[name="rho"]')?.value) || 1000;
-      return rho / 1000.0;
+      return Math.max(0.5, Math.min(3.0, rho / 1000.0));
     } else if (liquid === 'slurry') {
+      const sm = getVal('sg_m');
+      if (sm > 0.1) return Math.max(0.5, Math.min(5.0, sm));
       const sl = parseFloat(document.getElementById('sg_l')?.value || 1.0) || 1.0;
       const ss = parseFloat(document.getElementById('sg_s')?.value || 2.65) || 2.65;
       const cv = parseFloat(document.getElementById('slurry_cv')?.value || 0.20) || 0.20;
-      const sm = sl * (1 - cv) + ss * cv;
-      return sm > 0 ? sm : 1.0;
+      const calcSm = sl * (1 - cv) + ss * cv;
+      return Math.max(0.5, Math.min(5.0, calcSm > 0 ? calcSm : 1.0));
     }
     return 1.0;
+  }
+
+  /**
+   * getPumpSelectionFluidDetails()
+   * Extracts all fluid parameters currently specified on the Pump Selection page.
+   * Handles Clean Water, Viscous fluids (viscosity in cSt, density, pH, concentration, hazard/flammability flags),
+   * and Slurries (liquid SG, solid SG, mixture SG, Cv volume concentration, Cw weight concentration, d50 particle size).
+   *
+   * Engineering Rationale:
+   * When sizing pump systems and their connected piping networks, hydraulic calculations
+   * (friction factor, head loss, slurry settling velocities) must stay strictly consistent
+   * between the pump selection duty point and the network hydraulics solver.
+   */
+  function getPumpSelectionFluidDetails() {
+    let liquid = document.getElementById('liquidSel')?.value || 'water';
+    // Fallback: detect active fluid accordion if container is visible
+    const slurryParamsEl = document.getElementById('slurryParams');
+    const viscousParamsEl = document.getElementById('viscousParams');
+    if (slurryParamsEl && slurryParamsEl.style.display !== 'none') {
+      liquid = 'slurry';
+    } else if (viscousParamsEl && viscousParamsEl.style.display !== 'none') {
+      liquid = 'viscous';
+    }
+
+    const tempC = getPumpSelectionTemperature();
+    const sg = getPumpSelectionSg();
+    
+    const details = {
+      liquid: liquid,
+      fluid_type: liquid,
+      temperature_c: tempC,
+      sg: sg,
+      is_viscous: liquid === 'viscous',
+      is_slurry: liquid === 'slurry',
+    };
+
+    if (liquid === 'water') {
+      const rho = parseFloat(document.getElementById('input_rho_water')?.value) || 1000.0;
+      details.rho = rho;
+      details.viscosity_cSt = 1.0;
+    } else if (liquid === 'viscous') {
+      const rho = parseFloat(document.getElementById('input_rho_viscous')?.value || document.querySelector('#viscousParams input[name="rho"]')?.value) || (sg * 1000.0);
+      const visc = parseFloat(document.querySelector('input[name="viscosity_cSt"]')?.value || document.querySelector('#viscousParams input[name="viscosity"]')?.value) || 1.0;
+      const ph = parseFloat(document.getElementById('input_fluid_ph')?.value || document.querySelector('#viscousParams input[name="fluid_ph"]')?.value) || 7.0;
+      const conc = (document.getElementById('input_fluid_concentration')?.value || document.querySelector('#viscousParams input[name="fluid_concentration"]')?.value || '').trim();
+      const isHaz = !!(document.querySelector('input[name="is_hazardous"]')?.checked);
+      const isFlam = !!(document.querySelector('input[name="is_flammable"]')?.checked);
+
+      details.rho = rho;
+      details.viscosity_cSt = visc;
+      details.fluid_ph = ph;
+      details.fluid_concentration = conc;
+      details.is_hazardous = isHaz;
+      details.is_flammable = isFlam;
+    } else if (liquid === 'slurry') {
+      const sl = parseFloat(document.getElementById('sg_l')?.value) || 1.0;
+      const ss = parseFloat(document.getElementById('sg_s')?.value) || 2.65;
+      const sm = parseFloat(document.getElementById('sg_m')?.value) || sg;
+      const cv = parseFloat(document.getElementById('slurry_cv')?.value) || 0.20;
+      const cw = parseFloat(document.getElementById('slurry_cw')?.value) || 0.40;
+      const d50 = parseFloat(document.getElementById('input_slurry_d50')?.value) || 0.3;
+      const d50Unit = document.getElementById('select_unit_d50')?.value || 'mm';
+      // Normalize d50 to mm for hydraulic engine calculations
+      const d50Mm = d50Unit === 'um' ? d50 / 1000.0 : (d50Unit === 'm' ? d50 * 1000.0 : d50);
+
+      details.slurry_liquid_sg = sl;
+      details.slurry_solid_sg = ss;
+      details.slurry_sg = sm;
+      details.slurry_c_volume = cv;
+      details.slurry_c_weight = cw;
+      details.slurry_d50 = d50;
+      details.slurry_d50_unit = d50Unit;
+      details.slurry_d50_mm = d50Mm;
+      details.rho = sm * 1000.0;
+    }
+
+    return details;
+  }
+
+  /**
+   * syncPumpSelectionToPipeNetwork()
+   * Propagates flow rate (converted to m3/h), temperature (°C), SG, and comprehensive fluid properties
+   * (viscous viscosity/density, slurry mixture properties) into Pipe Network.
+   */
+  function syncPumpSelectionToPipeNetwork() {
+    // 1. Specific Gravity and Fluid Details
+    syncPumpSelectionSgToStorage();
+    syncPumpSelectionFluidDetailsToStorage();
+
+    // 2. Flow Rate
+    const flowM3h = getPumpSelectionFlowM3h();
+    if (flowM3h > 0) {
+      const pnFlow = document.getElementById('pn-global-flow');
+      if (pnFlow && document.activeElement !== pnFlow) {
+        pnFlow.value = (flowM3h % 1 !== 0) ? parseFloat(flowM3h.toFixed(2)) : flowM3h;
+      }
+      if (typeof window.__pn_set_flow === 'function') {
+        window.__pn_set_flow(flowM3h);
+      }
+    }
+
+    // 3. Temperature
+    const tempC = getPumpSelectionTemperature();
+    const pnTemp = document.getElementById('pn-temperature');
+    if (pnTemp && document.activeElement !== pnTemp) {
+      pnTemp.value = tempC;
+    }
+    if (typeof window.__pn_set_temperature === 'function') {
+      window.__pn_set_temperature(tempC);
+    }
   }
 
   function syncPumpSelectionSgToStorage() {
@@ -377,13 +591,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function syncPumpSelectionSgToPipeNetwork() {
-    syncPumpSelectionSgToStorage();
+  /**
+   * syncPumpSelectionFluidDetailsToStorage()
+   * Persists detailed fluid configuration (viscous properties, slurry concentrations and particle sizes)
+   * to localStorage and directly notifies Pipe Network instance if active in memory.
+   */
+  function syncPumpSelectionFluidDetailsToStorage() {
+    const details = getPumpSelectionFluidDetails();
+    try {
+      localStorage.setItem('pmpro_shared_fluid_details', JSON.stringify(details));
+    } catch (e) {
+      console.warn('Could not save fluid details to localStorage:', e);
+    }
+    if (typeof window.__pn_set_fluid_details === 'function') {
+      window.__pn_set_fluid_details(details);
+    }
   }
 
   function applyExternalSgToPumpSelection(newSgVal) {
     if (!newSgVal || isNaN(parseFloat(newSgVal))) return;
-    const sg = parseFloat(newSgVal);
+    const sg = Math.max(0.5, Math.min(5.0, parseFloat(newSgVal)));
     const liquid = document.getElementById('liquidSel')?.value || 'water';
     if (liquid === 'water') {
       const r = document.getElementById('input_rho_water');
@@ -396,23 +623,28 @@ document.addEventListener('DOMContentLoaded', () => {
         r.value = (sg * 1000).toFixed(1);
       }
     } else if (liquid === 'slurry') {
+      const smEl = document.getElementById('sg_m');
+      if (smEl && document.activeElement !== smEl) {
+        smEl.value = sg.toFixed(3);
+      }
       const sl = parseFloat(document.getElementById('sg_l')?.value || 1.0) || 1.0;
       const ss = parseFloat(document.getElementById('sg_s')?.value || 2.65) || 2.65;
       if (ss > sl) {
         let newCv = (sg - sl) / (ss - sl);
-        newCv = Math.max(0, Math.min(0.6, newCv));
+        newCv = Math.max(0.0, Math.min(0.65, newCv));
         const cvEl = document.getElementById('slurry_cv');
         if (cvEl && document.activeElement !== cvEl) {
-          cvEl.value = newCv.toFixed(2);
+          cvEl.value = newCv.toFixed(3);
         }
-        updateSlurryCalculator();
       }
+      updateSlurryCalculator();
     }
     const badge = document.getElementById('ps_calculated_sg_badge');
     if (badge) badge.textContent = sg.toFixed(3);
   }
 
-  function syncPipeNetworkSgToPumpSelection() {
+  function syncPipeNetworkToPumpSelection() {
+    // 1. SG
     const pnSg = document.getElementById('pn-sg');
     if (pnSg) {
       const val = parseFloat(pnSg.value);
@@ -420,25 +652,54 @@ document.addEventListener('DOMContentLoaded', () => {
         applyExternalSgToPumpSelection(val);
       }
     }
+
+    // 2. Flow Rate
+    const pnFlow = document.getElementById('pn-global-flow');
+    if (pnFlow) {
+      const flowM3h = parseFloat(pnFlow.value);
+      if (!isNaN(flowM3h) && flowM3h > 0) {
+        setPumpSelectionFlowFromM3h(flowM3h);
+      }
+    }
+
+    // 3. Temperature
+    const pnTemp = document.getElementById('pn-temperature');
+    if (pnTemp) {
+      const tempC = parseFloat(pnTemp.value);
+      if (!isNaN(tempC)) {
+        const tInp = document.getElementById('input_temperature_c');
+        if (tInp && document.activeElement !== tInp) {
+          tInp.value = tempC;
+        }
+      }
+    }
   }
 
+  // Window exports for cross-component access
+  window.getPumpSelectionFlowM3h = getPumpSelectionFlowM3h;
+  window.setPumpSelectionFlowFromM3h = setPumpSelectionFlowFromM3h;
+  window.getPumpSelectionTemperature = getPumpSelectionTemperature;
   window.getPumpSelectionSg = getPumpSelectionSg;
-  window.syncPumpSelectionSgToPipeNetwork = syncPumpSelectionSgToPipeNetwork;
-  window.syncPipeNetworkSgToPumpSelection = syncPipeNetworkSgToPumpSelection;
+  window.getPumpSelectionFluidDetails = getPumpSelectionFluidDetails;
+  window.syncPumpSelectionToPipeNetwork = syncPumpSelectionToPipeNetwork;
+  window.syncPipeNetworkToPumpSelection = syncPipeNetworkToPumpSelection;
+  window.syncPumpSelectionSgToPipeNetwork = syncPumpSelectionToPipeNetwork;
+  window.syncPumpSelectionFluidDetailsToStorage = syncPumpSelectionFluidDetailsToStorage;
+  window.syncPipeNetworkSgToPumpSelection = syncPipeNetworkToPumpSelection;
 
-  // Attach input listeners for SG sync
-  ['input_rho_water', 'input_temperature_c', 'liquidSel', 'input_rho_viscous', 'sg_l', 'sg_s', 'slurry_cv'].forEach(id => {
+  // Attach input listeners for live Flow, Temp, Units, Fluid Type, and Fluid Properties sync
+  ['input_q_duty', 'select_unit_q', 'input_temperature_c', 'input_rho_water', 'liquidSel', 'input_rho_viscous', 'input_fluid_ph', 'input_fluid_concentration', 'sg_l', 'sg_s', 'sg_m', 'slurry_cv', 'slurry_cw', 'input_slurry_d50', 'select_unit_d50'].forEach(id => {
     const el = document.getElementById(id);
-    el?.addEventListener('input', syncPumpSelectionSgToStorage);
-    el?.addEventListener('change', syncPumpSelectionSgToStorage);
+    el?.addEventListener('input', syncPumpSelectionToPipeNetwork);
+    el?.addEventListener('change', syncPumpSelectionToPipeNetwork);
   });
-  document.querySelectorAll('#viscousParams input').forEach(inp => {
-    inp.addEventListener('input', syncPumpSelectionSgToStorage);
-    inp.addEventListener('change', syncPumpSelectionSgToStorage);
+  document.querySelectorAll('#viscousParams input, #viscousParams select').forEach(inp => {
+    inp.addEventListener('input', syncPumpSelectionToPipeNetwork);
+    inp.addEventListener('change', syncPumpSelectionToPipeNetwork);
   });
   slurryInputs.forEach(inp => {
-    inp.addEventListener('input', syncPumpSelectionSgToStorage);
-    inp.addEventListener('change', syncPumpSelectionSgToStorage);
+    inp.addEventListener('input', syncPumpSelectionToPipeNetwork);
+    inp.addEventListener('change', syncPumpSelectionToPipeNetwork);
   });
 
   window.addEventListener('storage', (e) => {
@@ -448,6 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   syncPumpSelectionSgToStorage();
+  syncPumpSelectionFluidDetailsToStorage();
 
 
   // ── Pump comparison checkbox logic ─────────────────────────────────────────

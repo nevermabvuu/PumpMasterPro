@@ -881,6 +881,141 @@ class NetworkGraph:
 
         return consolidated
 
+    def validate_network_completeness(self) -> Tuple[bool, str, Dict[str, List[str]]]:
+        """
+        Validates that all network members (nodes and pipes) form a continuous, fully-connected,
+        and hydraulically complete network line before performing loss calculations.
+
+        Engineering Rationale:
+        ----------------------
+        1. Steady-state mass and energy conservation: In fluid flow mechanics (Darcy-Weisbach /
+           Colebrook-White or Hazen-Williams), every pipe member requires a continuous boundary-to-
+           boundary path. Isolated members, floating nodes, or dead-end lines without boundary
+           conditions have indeterminate boundary pressures and break conservation equations.
+        2. Numerical matrix stability: Network solvers (Global Gradient Method / Todini-Pilati,
+           Newton-Raphson, and Hardy Cross) construct conductance and loop Jacobian matrices.
+           Disconnected components or dangling nodes create zero-flow rows and singular/ill-conditioned
+           matrices that cause divergence or numerical instability.
+        3. Pumping system completeness: Pumping loss calculations require a defined hydraulic circuit
+           from an intake/suction source (Reservoir or Tank) to a delivery/discharge destination.
+
+        Validation Checks:
+        ------------------
+        Rule 1: Element Minimums — Network must have at least 1 pipe and at least 2 nodes.
+        Rule 2: Pipe Endpoint Integrity — Every pipe's from_node and to_node must exist and from_node != to_node.
+        Rule 3: Orphan / Isolated Nodes — Every node must have degree >= 1 (no floating nodes).
+        Rule 4: Inline Component Continuity — Inline elements (Pump, Valve, Elbow) must connect
+                both upstream and downstream pipe segments (degree >= 2). A pump cannot operate
+                with only suction or only discharge pipework.
+        Rule 5: Dead-End Junctions — Standard junctions with no external demand cannot terminate blindly.
+        Rule 6: Single Connected Component — All nodes and pipes must form a single connected
+                network line (no separate disconnected islands or floating pieces).
+        Rule 7: Hydraulic Circuit Boundaries — Must have at least one fluid source (Reservoir/Tank/inflow)
+                and at least one fluid destination (Discharge/Tank/Reservoir/outflow).
+
+        Returns:
+            Tuple[bool, str, Dict[str, List[str]]]:
+                - is_valid: True if network is fully connected and complete, False otherwise.
+                - reason: Descriptive error message explaining why calculation cannot be performed.
+                - disconnected_members: {'node_ids': [...], 'pipe_ids': [...]}
+        """
+        # Rule 1: Element Minimums
+        if len(self.pipes) == 0:
+            return False, "Cannot perform calculation: Network has no pipe segments. Add at least one connected pipe line.", {
+                'node_ids': list(self.nodes.keys()), 'pipe_ids': []
+            }
+        if len(self.nodes) < 2:
+            return False, "Cannot perform calculation: Network must have at least two connected nodes (source and discharge).", {
+                'node_ids': list(self.nodes.keys()), 'pipe_ids': []
+            }
+
+        # Rule 2: Pipe Endpoint Integrity
+        invalid_pipes = []
+        for pid, p in self.pipes.items():
+            if not p.from_node or not p.to_node or p.from_node not in self.nodes or p.to_node not in self.nodes or p.from_node == p.to_node:
+                invalid_pipes.append(pid)
+        if invalid_pipes:
+            lbl = self.pipes[invalid_pipes[0]].label or invalid_pipes[0]
+            return False, f"Cannot perform calculation: Pipe '{lbl}' has an invalid or disconnected endpoint. All pipe ends must be connected to nodes.", {
+                'node_ids': [], 'pipe_ids': invalid_pipes
+            }
+
+        # Rule 3: Orphan / Isolated Nodes (degree == 0)
+        orphan_nodes = [nid for nid in self.nodes if self.degree(nid) == 0]
+        if orphan_nodes:
+            first_orphan = self.nodes[orphan_nodes[0]]
+            lbl = first_orphan.label or orphan_nodes[0]
+            return False, f"Cannot perform calculation: Node '{lbl}' is not connected to any pipe line. Connect or remove this member before calculating.", {
+                'node_ids': orphan_nodes, 'pipe_ids': []
+            }
+
+        # Rule 4 & 5: Inline Component Continuity & Dead-End Junctions
+        incomplete_nodes = []
+        for nid, node in self.nodes.items():
+            deg = self.degree(nid)
+            ntype = (node.node_type or '').lower().strip()
+            if ntype == 'pump' and deg < 2:
+                incomplete_nodes.append((nid, 'Pump', 'A pump requires both suction (inlet) and discharge (outlet) pipes to form a complete network line.'))
+            elif ntype in ('valve', 'elbow') and deg < 2:
+                incomplete_nodes.append((nid, ntype.capitalize(), f'Inline {ntype} requires both upstream and downstream pipe connections.'))
+            elif ntype == 'tee' and deg < 2:
+                incomplete_nodes.append((nid, 'Tee junction', 'A tee junction must connect at least two pipe branches.'))
+            elif ntype == 'junction' and deg < 2 and abs(node.demand_m3h) < 1e-4:
+                incomplete_nodes.append((nid, 'Junction', 'Dead-end junction has no continuation or discharge connection.'))
+
+        if incomplete_nodes:
+            first_id, elem_type, detail = incomplete_nodes[0]
+            lbl = self.nodes[first_id].label or first_id
+            return False, f"Cannot perform calculation: {elem_type} '{lbl}' is not fully connected. {detail}", {
+                'node_ids': [x[0] for x in incomplete_nodes], 'pipe_ids': []
+            }
+
+        # Rule 6: Graph Connectivity (Single Unified Connected Component)
+        adj: Dict[str, Set[str]] = {nid: set() for nid in self.nodes}
+        for p in self.pipes.values():
+            adj[p.from_node].add(p.to_node)
+            adj[p.to_node].add(p.from_node)
+
+        visited = set()
+        components = []
+        for nid in self.nodes:
+            if nid not in visited:
+                comp = set()
+                queue = [nid]
+                visited.add(nid)
+                while queue:
+                    curr = queue.pop(0)
+                    comp.add(curr)
+                    for neighbor in adj.get(curr, set()):
+                        if neighbor not in visited:
+                            visited.add(neighbor)
+                            queue.append(neighbor)
+                components.append(comp)
+
+        if len(components) > 1:
+            primary_comp = max(components, key=len)
+            disconnected_nodes = [nid for comp in components if comp != primary_comp for nid in comp]
+            disconnected_pipes = [pid for pid, p in self.pipes.items() if p.from_node in disconnected_nodes or p.to_node in disconnected_nodes]
+            disc_lbls = [self.nodes[n].label or n for n in disconnected_nodes[:3]]
+            return False, f"Cannot perform calculation: Network contains disconnected members ({', '.join(disc_lbls)}). All members must be connected into a single unified network line.", {
+                'node_ids': disconnected_nodes, 'pipe_ids': disconnected_pipes
+            }
+
+        # Rule 7: Hydraulic Circuit Boundaries (Source and Sink)
+        has_source = any(n.node_type in ('reservoir', 'tank') or n.demand_m3h < -1e-4 or n.is_boundary for n in self.nodes.values())
+        has_sink = any(n.node_type in ('discharge', 'tank') or n.demand_m3h > 1e-4 for n in self.nodes.values()) or len([n for n in self.nodes.values() if n.node_type == 'reservoir']) >= 2
+
+        if not has_source:
+            return False, "Cannot perform calculation: Network line has no fluid source. Add an upstream Reservoir or Tank to establish the boundary condition.", {
+                'node_ids': [], 'pipe_ids': []
+            }
+        if not has_sink:
+            return False, "Cannot perform calculation: Network line has no outlet/destination. Add a downstream Discharge or Tank to complete the network line.", {
+                'node_ids': [], 'pipe_ids': []
+            }
+
+        return True, "Network line is complete and fully connected.", {'node_ids': [], 'pipe_ids': []}
+
 
 # ============================================================================
 # 3. CONSOLIDATED HYDRAULIC RESISTANCE PIPELINE

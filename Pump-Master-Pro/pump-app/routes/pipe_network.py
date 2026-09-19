@@ -452,6 +452,21 @@ def calculate_network():
 
             graph.add_pipe(p_obj)
 
+        # =====================================================================
+        # TOPOLOGICAL CONNECTIVITY & COMPLETENESS VALIDATION
+        # If any member (node or pipe) is not connected to a complete network line,
+        # refuse to perform the calculation and return HTTP 400 with diagnostic details.
+        # Rationale: Prevents numerical divergence, undefined boundary pressures,
+        # and physical flow law violations in disconnected/orphan piping members.
+        # =====================================================================
+        is_valid, validation_msg, disc_info = graph.validate_network_completeness()
+        if not is_valid:
+            return jsonify({
+                'error': validation_msg,
+                'disconnected_members': disc_info,
+                'status': 'unconnected_network_line'
+            }), 400
+
         # Consolidate collinear edges across degree-2 pseudo-nodes
         consolidated = graph.consolidate()
         consolidated_nodes = [n.to_dict() for n in consolidated.nodes.values()]

@@ -510,6 +510,7 @@ const state = {
   slurry_sg: 1.0,
   slurry_c_weight: 25.0,
   slurry_c_volume: 0.20,
+  disconnectedMembers: null, // Holds { nodeIds: [], pipeIds: [] } when network connectivity validation fails
 };
 
 let svgEl, nodesGroup, pipesGroup, draftPipeLine;
@@ -1794,6 +1795,19 @@ function renderPipes() {
       }));
     }
 
+    // Visual warning halo if this pipe is disconnected or not part of a complete network line
+    if (state.disconnectedMembers?.pipeIds?.includes(pipe.id)) {
+      g.appendChild(mkSVG('path', {
+        d: pathD, fill: 'none',
+        stroke: '#ef4444',
+        'stroke-width': thickness + 8,
+        'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+        'stroke-dasharray': '6 4',
+        opacity: '0.85',
+        style: 'pointer-events:none;'
+      }));
+    }
+
     // Dynamic Annotations: Render multi-line stacked text according to user displaySettings
     const segDistance = Math.hypot(toPt.x - fromPt.x, toPt.y - fromPt.y);
     const ds = state.displaySettings || DEFAULT_DISPLAY_SETTINGS;
@@ -2272,6 +2286,30 @@ function buildNodeSVG(node, isSel, minElev) {
     case 'valve': drawValveNode(g, isSel, node); break;
     case 'elbow': drawElbowNode(g, isSel, node); break;
     case 'tee': drawTeeNode(g, isSel, node); break;
+  }
+
+  // Visual warning ring and alert badge if this node is disconnected or not part of a complete network line
+  if (state.disconnectedMembers?.nodeIds?.includes(node.id)) {
+    const warnRing = mkSVG('circle', {
+      cx: 0, cy: 0, r: 32,
+      fill: 'rgba(239, 68, 68, 0.15)',
+      stroke: '#ef4444',
+      'stroke-width': 2.5,
+      'stroke-dasharray': '5,3',
+      style: 'pointer-events:none;'
+    });
+    g.appendChild(warnRing);
+
+    const warnBadge = mkSVG('text', {
+      x: 18, y: -18,
+      'font-size': '13',
+      'text-anchor': 'middle',
+      fill: '#ef4444',
+      'font-weight': 'bold',
+      style: 'user-select:none;pointer-events:none;'
+    });
+    warnBadge.textContent = '⚠️';
+    g.appendChild(warnBadge);
   }
 
   // Label below node (hide for elbow waypoints)
@@ -5141,13 +5179,280 @@ function onPipePropChange() {
 }
 
 // ============================================================================
+// TOPOLOGICAL CONNECTIVITY & COMPLETENESS VALIDATION
+// ============================================================================
+
+/**
+ * validateNetworkConnectivity()
+ * Validates that all network members (nodes and pipes) form a continuous, fully-connected,
+ * and hydraulically complete network line before performing loss calculations.
+ *
+ * Engineering & Hydraulic Principles:
+ * ------------------------------------
+ * 1. Physical Continuity & Mass Conservation:
+ *    In fluid flow analysis (Darcy-Weisbach / Colebrook-White or Hazen-Williams), every pipe member
+ *    requires a continuous boundary-to-boundary line. If members sit disconnected from the network,
+ *    pressures and flows cannot be determined physically.
+ * 2. Solver Matrix Non-Singularity:
+ *    Network solvers (Global Gradient Method / EPANET, Newton-Raphson, and Hardy Cross) construct
+ *    conductance and loop Jacobian matrices. Disconnected components or dangling nodes create zero-flow
+ *    rows and singular/ill-conditioned matrices that cause divergence or numerical instability.
+ * 3. Hydraulic Completeness:
+ *    A pump system calculation requires a defined hydraulic circuit connecting a fluid intake/source
+ *    (Reservoir or Tank) to a delivery/discharge destination (Discharge, Tank, Reservoir, or Demand node).
+ *
+ * Checks Performed:
+ * - Minimum members (>= 1 pipe, >= 2 nodes).
+ * - Pipe endpoint integrity (every pipe must connect existing, distinct from_node and to_node).
+ * - Orphan/isolated nodes (degree == 0).
+ * - Inline equipment completeness (Pump, Valve, Elbow must connect both upstream and downstream, degree >= 2).
+ * - Dead-end junctions (standard junctions with no external demand cannot terminate blindly, degree >= 2).
+ * - Single connected component (all members must form a single continuous network line without floating islands).
+ * - Hydraulic boundaries (at least one fluid source and at least one fluid destination).
+ *
+ * Returns:
+ * {
+ *   isValid: boolean,
+ *   reason: string,
+ *   disconnectedNodeIds: string[],
+ *   disconnectedPipeIds: string[]
+ * }
+ */
+function validateNetworkConnectivity() {
+  const nodes = state.nodes || [];
+  const pipes = state.pipes || [];
+
+  // Check 1: Minimum elements
+  if (pipes.length === 0) {
+    return {
+      isValid: false,
+      reason: 'Cannot calculate: The network has no pipe segments. Draw at least one connected pipe line before calculating.',
+      disconnectedNodeIds: nodes.map(n => n.id),
+      disconnectedPipeIds: []
+    };
+  }
+  if (nodes.length < 2) {
+    return {
+      isValid: false,
+      reason: 'Cannot calculate: The network must contain at least two connected nodes (source and discharge).',
+      disconnectedNodeIds: nodes.map(n => n.id),
+      disconnectedPipeIds: []
+    };
+  }
+
+  const nodeMap = new Map();
+  nodes.forEach(n => nodeMap.set(n.id, n));
+
+  // Check 2: Pipe endpoint integrity
+  const invalidPipeIds = [];
+  pipes.forEach(p => {
+    if (!p.fromNodeId || !p.toNodeId || !nodeMap.has(p.fromNodeId) || !nodeMap.has(p.toNodeId) || p.fromNodeId === p.toNodeId) {
+      invalidPipeIds.push(p.id);
+    }
+  });
+  if (invalidPipeIds.length > 0) {
+    const firstInvalid = pipes.find(p => p.id === invalidPipeIds[0]);
+    const lbl = firstInvalid?.props?.label || firstInvalid?.id || 'Pipe';
+    return {
+      isValid: false,
+      reason: `Cannot calculate: Pipe '${lbl}' has an unconnected or invalid endpoint. Connect both ends to valid nodes.`,
+      disconnectedNodeIds: [],
+      disconnectedPipeIds: invalidPipeIds
+    };
+  }
+
+  // Calculate incident degree and adjacency for every node
+  const degreeMap = new Map();
+  const adjMap = new Map();
+  nodes.forEach(n => {
+    degreeMap.set(n.id, 0);
+    adjMap.set(n.id, []);
+  });
+
+  pipes.forEach(p => {
+    degreeMap.set(p.fromNodeId, (degreeMap.get(p.fromNodeId) || 0) + 1);
+    degreeMap.set(p.toNodeId, (degreeMap.get(p.toNodeId) || 0) + 1);
+    adjMap.get(p.fromNodeId)?.push(p.toNodeId);
+    adjMap.get(p.toNodeId)?.push(p.fromNodeId);
+  });
+
+  // Check 3: Orphan / Isolated nodes (degree == 0)
+  const orphanNodeIds = [];
+  nodes.forEach(n => {
+    if ((degreeMap.get(n.id) || 0) === 0) {
+      orphanNodeIds.push(n.id);
+    }
+  });
+  if (orphanNodeIds.length > 0) {
+    const firstOrphan = nodeMap.get(orphanNodeIds[0]);
+    const lbl = firstOrphan?.props?.label || firstOrphan?.id || 'Node';
+    return {
+      isValid: false,
+      reason: `Cannot calculate: Node '${lbl}' is not connected to any pipe. All members must be connected to a complete network line.`,
+      disconnectedNodeIds: orphanNodeIds,
+      disconnectedPipeIds: []
+    };
+  }
+
+  // Check 4: Inline component continuity (Pumps, Valves, Elbows) & Dead-end junctions
+  const incompleteInlineNodes = [];
+  nodes.forEach(n => {
+    const deg = degreeMap.get(n.id) || 0;
+    const ntype = (n.type || '').toLowerCase();
+    const lbl = n.props?.label || n.id;
+    const demand = parseFloat(n.props?.demand_m3h) || 0;
+
+    if (ntype === 'pump' && deg < 2) {
+      incompleteInlineNodes.push({
+        id: n.id,
+        lbl,
+        detail: `Pump '${lbl}' is not fully connected. A pump requires both suction (inlet) and discharge (outlet) pipes to form a complete network line.`
+      });
+    } else if ((ntype === 'valve' || ntype === 'elbow') && deg < 2) {
+      incompleteInlineNodes.push({
+        id: n.id,
+        lbl,
+        detail: `Inline ${ntype} '${lbl}' is disconnected at one end. Inline fittings require both upstream and downstream connections.`
+      });
+    } else if (ntype === 'tee' && deg < 2) {
+      incompleteInlineNodes.push({
+        id: n.id,
+        lbl,
+        detail: `Tee junction '${lbl}' must connect to at least two pipe branches.`
+      });
+    } else if (ntype === 'junction' && deg < 2 && Math.abs(demand) < 1e-4) {
+      incompleteInlineNodes.push({
+        id: n.id,
+        lbl,
+        detail: `Junction '${lbl}' is a dead-end with no continuation or discharge connection.`
+      });
+    }
+  });
+
+  if (incompleteInlineNodes.length > 0) {
+    return {
+      isValid: false,
+      reason: `Cannot calculate: ${incompleteInlineNodes[0].detail}`,
+      disconnectedNodeIds: incompleteInlineNodes.map(x => x.id),
+      disconnectedPipeIds: []
+    };
+  }
+
+  // Check 5: Graph Connectivity & Disconnected Components (Single Unified Line)
+  const visited = new Set();
+  const components = [];
+  nodes.forEach(n => {
+    if (!visited.has(n.id)) {
+      const comp = new Set();
+      const queue = [n.id];
+      visited.add(n.id);
+      while (queue.length > 0) {
+        const curr = queue.shift();
+        comp.add(curr);
+        const neighbors = adjMap.get(curr) || [];
+        neighbors.forEach(nbr => {
+          if (!visited.has(nbr)) {
+            visited.add(nbr);
+            queue.push(nbr);
+          }
+        });
+      }
+      components.push(comp);
+    }
+  });
+
+  if (components.length > 1) {
+    // Determine the primary connected component (the largest one)
+    components.sort((a, b) => b.size - a.size);
+    const primaryComp = components[0];
+    const disconnectedNodes = [];
+    for (let i = 1; i < components.length; i++) {
+      components[i].forEach(id => disconnectedNodes.push(id));
+    }
+    const disconnectedPipes = pipes
+      .filter(p => disconnectedNodes.includes(p.fromNodeId) || disconnectedNodes.includes(p.toNodeId))
+      .map(p => p.id);
+
+    const discLabels = disconnectedNodes.slice(0, 3).map(id => nodeMap.get(id)?.props?.label || id);
+    return {
+      isValid: false,
+      reason: `Cannot calculate: The network contains disconnected members (${discLabels.join(', ')}). All members must be connected into a single continuous network line.`,
+      disconnectedNodeIds: disconnectedNodes,
+      disconnectedPipeIds: disconnectedPipes
+    };
+  }
+
+  // Check 6: Hydraulic Source and Sink Boundaries
+  const hasSource = nodes.some(n => {
+    const t = (n.type || '').toLowerCase();
+    const d = parseFloat(n.props?.demand_m3h) || 0;
+    return t === 'reservoir' || t === 'tank' || d < -1e-4 || n.props?.is_boundary;
+  });
+
+  const hasSink = nodes.some(n => {
+    const t = (n.type || '').toLowerCase();
+    const d = parseFloat(n.props?.demand_m3h) || 0;
+    return t === 'discharge' || t === 'tank' || d > 1e-4;
+  }) || (nodes.filter(n => (n.type || '').toLowerCase() === 'reservoir').length >= 2);
+
+  if (!hasSource) {
+    return {
+      isValid: false,
+      reason: 'Cannot calculate: The network line has no fluid source. Add an upstream Reservoir or Tank to complete the network line.',
+      disconnectedNodeIds: [],
+      disconnectedPipeIds: []
+    };
+  }
+
+  if (!hasSink) {
+    return {
+      isValid: false,
+      reason: 'Cannot calculate: The network line has no outlet. Add a downstream Discharge or Tank to complete the network line.',
+      disconnectedNodeIds: [],
+      disconnectedPipeIds: []
+    };
+  }
+
+  return {
+    isValid: true,
+    reason: 'Network line is complete and fully connected.',
+    disconnectedNodeIds: [],
+    disconnectedPipeIds: []
+  };
+}
+
+// ============================================================================
 // API INTEGRATION
 // ============================================================================
 
 async function runCalculation() {
-  if (state.pipes.length === 0) {
-    toast('Add at least one pipe segment before calculating.', 'warn'); return;
+  // TOPOLOGICAL CONNECTIVITY & COMPLETENESS VALIDATION:
+  // If any member (node or pipe) is not connected to a complete network line,
+  // do not perform the calculation.
+  const validation = validateNetworkConnectivity();
+  if (!validation.isValid) {
+    // Set visual warning markers so disconnected members are highlighted on diagram canvas
+    state.disconnectedMembers = {
+      nodeIds: validation.disconnectedNodeIds || [],
+      pipeIds: validation.disconnectedPipeIds || []
+    };
+    renderAll();
+
+    // Select the first offending member so user's attention is immediately directed to it
+    if (validation.disconnectedNodeIds && validation.disconnectedNodeIds.length > 0) {
+      selectItem('node', validation.disconnectedNodeIds[0]);
+    } else if (validation.disconnectedPipeIds && validation.disconnectedPipeIds.length > 0) {
+      selectItem('pipe', validation.disconnectedPipeIds[0]);
+    }
+
+    toast(validation.reason, 'warn', 7000);
+    return; // STOP! Calculation is not performed!
   }
+
+  // Clear any previous warning markers
+  state.disconnectedMembers = null;
+  renderAll();
+
   const rawGlobalFlow = parseFloat(document.getElementById('pn-global-flow').value) || 10;
   // Convert global flow rate from active flow unit to internal base SI m³/h for API calculation
   const globalFlow = toBaseSI(rawGlobalFlow, 'flow', state.units.flow || 'm3h');
@@ -5255,7 +5560,18 @@ async function runCalculation() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    if (!resp.ok) { const e = await resp.json(); toast(`Error: ${e.error}`, 'error'); return; }
+    if (!resp.ok) {
+      const e = await resp.json();
+      if (e.disconnected_members) {
+        state.disconnectedMembers = {
+          nodeIds: e.disconnected_members.node_ids || [],
+          pipeIds: e.disconnected_members.pipe_ids || []
+        };
+        renderAll();
+      }
+      toast(`Error: ${e.error}`, 'error', 7000);
+      return;
+    }
     const data = await resp.json();
     state.lastCalculation = data;
     saveNetworkToStorage();

@@ -1107,6 +1107,7 @@ class Organisation(db.Model):
     access_levels_json = db.Column(db.Text, default='{}')
     logo_url = db.Column(db.String(255), default='')
     contact_email = db.Column(db.String(100), default='')
+    admin_notification_email = db.Column(db.String(150), default='')
     phone = db.Column(db.String(50), default='')
     website = db.Column(db.String(100), default='')
     address = db.Column(db.Text, default='')
@@ -1226,6 +1227,14 @@ class Organisation(db.Model):
         Beginners Note: Returns only defined and enabled pump attribute slots.
         """
         return [attr for attr in self.get_pump_attributes() if attr['name'] and attr['enabled']]
+
+    def get_notification_email(self):
+        """
+        Beginners Note: Returns the email configured to receive access and registration requests for this organisation.
+        Falls back to contact_email or system default if not specifically configured.
+        """
+        from services.email_service import ADMIN_NOTIFICATION_EMAIL
+        return (self.admin_notification_email or '').strip() or (self.contact_email or '').strip() or ADMIN_NOTIFICATION_EMAIL
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -1396,6 +1405,7 @@ class Organisation(db.Model):
             'name': self.name,
             'logo_url': self.logo_url or '',
             'contact_email': self.contact_email or '',
+            'admin_notification_email': getattr(self, 'admin_notification_email', '') or '',
             'phone': self.phone or '',
             'website': self.website or '',
             'address': self.address or '',

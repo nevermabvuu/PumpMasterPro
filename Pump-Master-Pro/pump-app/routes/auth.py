@@ -49,10 +49,27 @@ def get_current_user():
 
 @auth_bp.app_context_processor
 def inject_current_user():
-    """Exposes 'current_user', 'ACCESS_MODULE_INFO', and admin notification email directly to all templates."""
+    """Exposes 'current_user', 'ACCESS_MODULE_INFO', and dynamic organisation admin notification email to all templates."""
+    user = get_current_user()
+    active_org = None
+    if user and user.org_profile:
+        active_org = user.org_profile
+    else:
+        try:
+            from utils import get_current_organisation
+            active_org = get_current_organisation()
+        except Exception:
+            active_org = None
+
+    org_alert_email = ''
+    if active_org:
+        org_alert_email = (getattr(active_org, 'admin_notification_email', '') or '').strip() or (active_org.contact_email or '').strip()
+
+    effective_email = org_alert_email or ADMIN_NOTIFICATION_EMAIL
+
     return {
-        'current_user': get_current_user(),
-        'admin_notification_email': ADMIN_NOTIFICATION_EMAIL,
+        'current_user': user,
+        'admin_notification_email': effective_email,
         'ACCESS_MODULE_INFO': ACCESS_MODULE_INFO
     }
 
@@ -289,14 +306,19 @@ def register():
         
         # Link to organisation if matched by company name
         matched_org = Organisation.query.filter(Organisation.name.ilike(f"%{company}%")).first() if company else None
+        target_email = None
         if matched_org:
             pending_user.organisation_id = matched_org.id
+            if getattr(matched_org, 'admin_notification_email', None) and matched_org.admin_notification_email.strip():
+                target_email = matched_org.admin_notification_email.strip()
+            elif matched_org.contact_email and matched_org.contact_email.strip():
+                target_email = matched_org.contact_email.strip()
         
         db.session.add(pending_user)
         db.session.commit()
 
-        # Send instant notification email to nevermabvuu@gmail.com
-        send_registration_request_notification(reg_req)
+        # Send instant notification email to designated organisation or system administrator
+        send_registration_request_notification(reg_req, target_email=target_email)
 
         return render_template('auth/register_success.html', reg_req=reg_req)
 

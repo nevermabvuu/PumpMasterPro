@@ -114,6 +114,7 @@ def save_profile():
 
     current_org.name = name
     current_org.contact_email = request.form.get('contact_email', '').strip()
+    current_org.admin_notification_email = request.form.get('admin_notification_email', '').strip()
     current_org.phone = request.form.get('phone', '').strip()
     current_org.website = request.form.get('website', '').strip()
     current_org.address = request.form.get('address', '').strip()
@@ -280,6 +281,7 @@ def save_organisation():
 
     org.name = name
     org.contact_email = request.form.get('contact_email', '').strip()
+    org.admin_notification_email = request.form.get('admin_notification_email', '').strip()
     org.phone = request.form.get('phone', '').strip()
     org.website = request.form.get('website', '').strip()
     org.address = request.form.get('address', '').strip()

@@ -278,9 +278,10 @@
           <span>Debug</span>
         </a>
 
-        <!-- Active Organisation Badge: Linked only if user has access to organisation_settings -->
-        {% set can_view_org = current_user.can_access('organisation_settings') if current_user else True %}
-        {% set active_org_name = current_user.org_profile.name if (current_user and current_user.org_profile) else (current_org.name if current_org else 'Lytrose Engineering') %}
+        <!-- Active Organisation Badge: Shown only when user is logged in -->
+        {% if current_user %}
+        {% set can_view_org = current_user.can_access('organisation_settings') %}
+        {% set active_org_name = current_user.org_profile.name if current_user.org_profile else (current_org.name if current_org else 'Lytrose Engineering') %}
 
         {% if can_view_org %}
         <a href="{{ url_for('organisations.settings') }}"
@@ -295,6 +296,7 @@
           <span class="w-2 h-2 rounded-full bg-[#3fb950]/50"></span>
           <span>{{ active_org_name }}</span>
         </div>
+        {% endif %}
         {% endif %}
 
         <!-- User Authentication Widget -->

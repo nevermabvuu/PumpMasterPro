@@ -88,12 +88,14 @@ def send_email(to_email, subject, html_content, text_content=""):
         return False, str(e)
 
 
-def send_registration_request_notification(reg_request):
+def send_registration_request_notification(reg_request, target_email=None):
     """
     Beginners Note:
-    Dispatches a high-priority registration request alert to 'nevermabvuu@gmail.com'
+    Dispatches a high-priority registration request alert to the designated organisation
+    alert email or primary administrator ('nevermabvuu@gmail.com')
     with complete applicant metadata and direct review links.
     """
+    recipient = (target_email or '').strip() or ADMIN_NOTIFICATION_EMAIL
     subject = f"[PumpSelect Pro] New Access Request: {reg_request.full_name} ({reg_request.company or 'Individual'})"
     review_url = f"{APP_BASE_URL}/admin/registration-requests"
 
@@ -171,13 +173,13 @@ PumpSelect Pro Curve Engine Suite
       </div>
     </div>
     <div class="footer">
-      Automated dispatch from PumpSelect Pro Curve Engine v5.0 &bull; Notification sent to {ADMIN_NOTIFICATION_EMAIL}
+      Automated dispatch from PumpSelect Pro Curve Engine v5.0 &bull; Notification sent to {recipient}
     </div>
   </div>
 </body>
 </html>
 """
-    return send_email(ADMIN_NOTIFICATION_EMAIL, subject, html_content, text_content)
+    return send_email(recipient, subject, html_content, text_content)
 
 
 def send_registration_decision_notification(reg_request, approved=True, notes=""):

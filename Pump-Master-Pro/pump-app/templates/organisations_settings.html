@@ -123,25 +123,34 @@
               <input type="text" name="name" required class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" value="{{ current_org.name if current_org else '' }}">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Contact Email</label>
+              <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">General Contact Email</label>
               <input type="email" name="contact_email" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" value="{{ current_org.contact_email if current_org else '' }}" placeholder="engineering@company.com">
             </div>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
+              <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">
+                <i class="bi bi-envelope-check text-[#58a6ff] me-1"></i>Registration &amp; Access Alert Email
+              </label>
+              <input type="email" name="admin_notification_email" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" value="{{ current_org.admin_notification_email if current_org and current_org.admin_notification_email else '' }}" placeholder="admin@company.com">
+              <span class="text-[10px] text-[#8b949e]">Recipient email for new user registration and access requests for this organisation.</span>
+            </div>
+            <div>
               <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Phone</label>
               <input type="text" name="phone" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" value="{{ current_org.phone if current_org else '' }}" placeholder="+27 11 000 0000">
             </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Website</label>
               <input type="text" name="website" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" value="{{ current_org.website if current_org else '' }}" placeholder="www.lytrose.co.za">
             </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Physical / Division Address</label>
-            <textarea name="address" rows="2" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="Engineering facility or office address...">{{ current_org.address if current_org else '' }}</textarea>
+            <div>
+              <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Physical / Division Address</label>
+              <input type="text" name="address" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" value="{{ current_org.address if current_org else '' }}" placeholder="Engineering facility or office address...">
+            </div>
           </div>
 
           <!-- Default Engineering Units for Organisation -->
@@ -789,6 +798,7 @@
           </div>
 
           {% if o.contact_email %}<p class="text-xs text-[#8b949e]"><i class="bi bi-envelope me-1.5"></i>{{ o.contact_email }}</p>{% endif %}
+          {% if o.admin_notification_email %}<p class="text-xs text-[#7ee787]"><i class="bi bi-envelope-check me-1.5"></i>Alerts: {{ o.admin_notification_email }}</p>{% endif %}
           {% if o.phone %}<p class="text-xs text-[#8b949e]"><i class="bi bi-telephone me-1.5"></i>{{ o.phone }}</p>{% endif %}
           {% if o.website %}<p class="text-xs text-[#58a6ff]"><i class="bi bi-globe me-1.5"></i>{{ o.website }}</p>{% endif %}
           {% if o.address %}<p class="text-xs text-[#8b949e] truncate"><i class="bi bi-geo-alt me-1.5"></i>{{ o.address }}</p>{% endif %}
@@ -835,6 +845,11 @@
       <div>
         <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Contact Email</label>
         <input type="email" name="contact_email" id="modal_org_email" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="info@company.com">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Registration Alert Email</label>
+        <input type="email" name="admin_notification_email" id="modal_org_alert_email" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" placeholder="admin@company.com">
+        <span class="text-[10px] text-[#8b949e]">Recipient email for registration requests for this organisation.</span>
       </div>
       <div class="grid grid-cols-2 gap-2">
         <div>
@@ -1020,6 +1035,7 @@
     document.getElementById('modal_org_id').value = '';
     document.getElementById('modal_org_name').value = '';
     document.getElementById('modal_org_email').value = '';
+    document.getElementById('modal_org_alert_email').value = '';
     document.getElementById('modal_org_phone').value = '';
     document.getElementById('modal_org_website').value = '';
     document.getElementById('modal_org_address').value = '';
@@ -1034,6 +1050,7 @@
     document.getElementById('modal_org_id').value = o.id;
     document.getElementById('modal_org_name').value = o.name || '';
     document.getElementById('modal_org_email').value = o.contact_email || '';
+    document.getElementById('modal_org_alert_email').value = o.admin_notification_email || '';
     document.getElementById('modal_org_phone').value = o.phone || '';
     document.getElementById('modal_org_website').value = o.website || '';
     document.getElementById('modal_org_address').value = o.address || '';

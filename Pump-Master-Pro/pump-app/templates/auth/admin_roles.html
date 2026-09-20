@@ -80,7 +80,9 @@
         </div>
         <div>
           <div class="text-sm font-bold text-[#e6edf3]">{{ selected_org.name }}</div>
-          <div class="text-xs text-[#8b949e]">Organisation ID: #{{ selected_org.id }} · {{ roles|length }} Defined Role(s)</div>
+          <div class="text-xs text-[#8b949e]">
+            Organisation ID: #{{ selected_org.id }} &bull; {{ roles|length }} Defined Role(s) &bull; Registration Alerts: <span class="text-[#7ee787] font-mono">{{ selected_org.get_notification_email() }}</span>
+          </div>
         </div>
       </div>
       <div class="flex items-center gap-2">

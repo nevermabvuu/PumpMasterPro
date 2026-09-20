@@ -13,9 +13,15 @@
 Flask==3.1.3
 Werkzeug==3.1.8
 
-# ── Database ORM ───────────────────────────────────────────────────────────────
+# ── Database ORM & Drivers ───────────────────────────────────────────────────
 Flask-SQLAlchemy==3.1.1
 SQLAlchemy==2.0.51
+# pyodbc is the standard Python ODBC bridge used by SQLAlchemy's mssql+pyodbc dialect
+# to connect to Microsoft SQL Server (ODBC Driver 17/18 for SQL Server).
+pyodbc>=5.0.0
+# pymssql is an alternative driver bundling FreeTDS, ideal for Linux/Render deployments
+# without requiring separate system ODBC driver packages:
+pymssql>=2.2.8
 
 # ── Security & Token Signing ───────────────────────────────────────────────────
 # itsdangerous is used for signing pump-ID URL tokens (pump_token.py)

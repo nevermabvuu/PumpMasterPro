@@ -9,6 +9,13 @@ import os
 import sys
 import re
 import json
+import urllib.parse
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from flask import Flask, request, redirect, url_for, jsonify
 from models import db, Organisation, Supplier, ReportConfig, User, RegistrationRequest, Role, PipeFitting, PipeMaterial
 from motor_models import Motor, seed_motors
@@ -18,15 +25,13 @@ from routes.auth import get_current_user
 # Secure URL token helper — used to expose encode_pump_id() to Jinja templates.
 from pump_token import encode_pump_id
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH  = os.path.join(BASE_DIR, 'pumps.db')
+from config import Config
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_PATH}'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = os.environ.get('SESSION_SECRET', 'pump-dev-secret')
+# Load secure configuration from config.py / environment variables
+app.config.from_object(Config)
 
-# Initialize database extension with Flask app
+# Initialize SQLAlchemy database extension with Flask app
 db.init_app(app)
 
 # Expose helper builtins to Jinja templates
@@ -58,26 +63,34 @@ def inject_standard_pipes_context():
     except Exception:
         return {'standard_pipes_json': '[]'}
 
-# ── Database Creation & Auto-Migration ─────────────────────────────────────────
+# ── Database Creation & Dialect-Aware Auto-Migration ───────────────────────────
 with app.app_context():
-    try:
-        from sqlalchemy import text
-        with db.engine.connect() as conn:
-            # 0. Rename suppliers table to organisations if suppliers exists and organisations does not
-            table_res = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()
-            existing_tables = [row[0] for row in table_res]
-            if 'suppliers' in existing_tables and 'organisations' not in existing_tables:
-                conn.execute(text("ALTER TABLE suppliers RENAME TO organisations"))
-    except Exception as e:
-        print("Table rename notice:", e)
+    dialect_name = db.engine.dialect.name
+    print(f"Connecting to database using dialect: [{dialect_name}]")
 
+    # 1. Create any missing model tables (safe and idempotent across all SQL engines)
     db.create_all()
 
-    try:
-        from sqlalchemy import text
-        with db.engine.connect() as conn:
-            # 0b. Organisations table schema migrations
-            org_res = conn.execute(text("PRAGMA table_info(organisations)"))
+    # 2. SQLite-specific legacy migrations:
+    #    PRAGMA table_info is only valid on SQLite engines. Running PRAGMA on MS SQL
+    #    or other engines raises syntax errors. Hence we only run this block on SQLite.
+    if dialect_name == 'sqlite':
+        try:
+            from sqlalchemy import text
+            with db.engine.connect() as conn:
+                # 0. Rename suppliers table to organisations if suppliers exists and organisations does not
+                table_res = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()
+                existing_tables = [row[0] for row in table_res]
+                if 'suppliers' in existing_tables and 'organisations' not in existing_tables:
+                    conn.execute(text("ALTER TABLE suppliers RENAME TO organisations"))
+        except Exception as e:
+            print("Table rename notice:", e)
+
+        try:
+            from sqlalchemy import text
+            with db.engine.connect() as conn:
+                # 0b. Organisations table schema migrations
+                org_res = conn.execute(text("PRAGMA table_info(organisations)"))
             org_cols = [row[1] for row in org_res.fetchall()]
             if 'allowed_view_org_ids' not in org_cols:
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN allowed_view_org_ids VARCHAR(255) DEFAULT ''"))
@@ -301,63 +314,6 @@ with app.app_context():
             except Exception as e:
                 print("Pump data cleanup notice:", e)
 
-            conn.commit()
-
-            # Seed default supplier if table is empty
-            if Supplier.query.count() == 0:
-                def_sup = Supplier(
-                    name="Weir Minerals / Warman",
-                    contact_email="engineering@weirminerals.com",
-                    website="www.global.weir",
-                    phone="+1-800-PUMPS",
-                    address="Global Slurry & Heavy Duty Engineering Division"
-                )
-                db.session.add(def_sup)
-                db.session.commit()
-
-            # Ensure Lytrose Engineering (ID = 2) exists as active working organisation
-            lytrose = Organisation.query.get(2)
-            if not lytrose:
-                lytrose = Organisation(
-                    id=2,
-                    name="Lytrose Engineering",
-                    contact_email="sales@lytrose.co.za",
-                    phone="",
-                    website="",
-                    address="",
-                    allowed_view_org_ids="all",
-                    default_unit_flow="m3h",
-                    default_unit_head="m",
-                    default_unit_power="kw",
-                    default_unit_npsh="m",
-                    primary_color="#1e3a8a"
-                )
-                db.session.add(lytrose)
-                db.session.commit()
-
-            # Seed default report configuration if table is empty
-            if ReportConfig.query.count() == 0:
-                def_org = Organisation.query.get(2) or Organisation.query.first()
-                def_rep = ReportConfig(
-                    organisation_id=def_org.id if def_org else None,
-                    title="Standard Pump Technical Datasheet",
-                    description="Comprehensive engineering datasheet showing duty point, performance curves, construction materials, and operational limits.",
-                    template_name="standard_datasheet.html",
-                    show_head_flow_graph=True,
-                    show_efficiency_graph=True,
-                    show_power_graph=True,
-                    show_npsh_graph=True,
-                    header_text="PUMP MASTER PRO - TECHNICAL DATASHEET",
-                    footer_text="Generated by Pump Master Pro Engineering Suite",
-                    primary_color="#1e3a8a",
-                    show_duty_point=True,
-                    show_materials_table=True,
-                    show_extended_specs=True,
-                    show_notes=True
-                )
-                db.session.add(def_rep)
-                db.session.commit()
-
             # Migration for organisations table: access_levels_json column
             org_res = conn.execute(text("PRAGMA table_info(organisations)"))
             org_cols = [row[1] for row in org_res.fetchall()]
@@ -382,65 +338,127 @@ with app.app_context():
                 conn.execute(text("ALTER TABLE users ADD COLUMN is_super_admin INTEGER DEFAULT 0"))
                 conn.commit()
 
-            # Ensure super administrator account is flagged
-            conn.execute(text("UPDATE users SET is_super_admin = 1 WHERE email = 'nevermabvuu@gmail.com' OR (organisation_id = 2 AND role = 'admin')"))
             conn.commit()
+        except Exception as e:
+            print("SQLite migration notice:", e)
 
-            # Seed default roles for all organisations if missing
-            for org in Organisation.query.all():
-                if Role.query.filter_by(organisation_id=org.id).count() == 0:
-                    default_roles = [
-                        Role(
-                            organisation_id=org.id,
-                            name='Administrator',
-                            code='admin',
-                            description='Full administrative authority over organisation settings, user profiles, and pump catalogue.',
-                            can_select_pumps=True,
-                            can_edit_catalogue=True,
-                            can_export_reports=True,
-                            can_manage_organisation=True,
-                            can_manage_users=True,
-                            is_system_role=True
-                        ),
-                        Role(
-                            organisation_id=org.id,
-                            name='Lead Hydraulic Engineer',
-                            code='lead_engineer',
-                            description='Lead engineering authority with full pump selection and catalogue editing permissions.',
-                            can_select_pumps=True,
-                            can_edit_catalogue=True,
-                            can_export_reports=True,
-                            can_manage_organisation=False,
-                            can_manage_users=False,
-                            is_system_role=True
-                        ),
-                        Role(
-                            organisation_id=org.id,
-                            name='Hydraulic Engineer',
-                            code='engineer',
-                            description='Standard engineering access to pump selection, comparison, and technical datasheet generation.',
-                            can_select_pumps=True,
-                            can_edit_catalogue=False,
-                            can_export_reports=True,
-                            can_manage_organisation=False,
-                            can_manage_users=False,
-                            is_system_role=True
-                        ),
-                        Role(
-                            organisation_id=org.id,
-                            name='Technical Viewer',
-                            code='viewer',
-                            description='Read-only access to browse pump catalogue, perform basic selections, and review reports.',
-                            can_select_pumps=True,
-                            can_edit_catalogue=False,
-                            can_export_reports=True,
-                            can_manage_organisation=False,
-                            can_manage_users=False,
-                            is_system_role=True
-                        )
-                    ]
-                    db.session.add_all(default_roles)
-                    db.session.commit()
+    # 3. Standard ORM Seed & Reference Data (runs across all database engines)
+    try:
+        # Seed default supplier if table is empty
+        if Supplier.query.count() == 0:
+            def_sup = Supplier(
+                name="Weir Minerals / Warman",
+                contact_email="engineering@weirminerals.com",
+                website="www.global.weir",
+                phone="+1-800-PUMPS",
+                address="Global Slurry & Heavy Duty Engineering Division"
+            )
+            db.session.add(def_sup)
+            db.session.commit()
+
+        # Ensure Lytrose Engineering (ID = 2) exists as active working organisation
+        lytrose = Organisation.query.get(2)
+        if not lytrose:
+            lytrose = Organisation(
+                id=2,
+                name="Lytrose Engineering",
+                contact_email="sales@lytrose.co.za",
+                phone="",
+                website="",
+                address="",
+                allowed_view_org_ids="all",
+                default_unit_flow="m3h",
+                default_unit_head="m",
+                default_unit_power="kw",
+                default_unit_npsh="m",
+                primary_color="#1e3a8a"
+            )
+            db.session.add(lytrose)
+            db.session.commit()
+
+        # Seed default report configuration if table is empty
+        if ReportConfig.query.count() == 0:
+            def_org = Organisation.query.get(2) or Organisation.query.first()
+            def_rep = ReportConfig(
+                organisation_id=def_org.id if def_org else None,
+                title="Standard Pump Technical Datasheet",
+                description="Comprehensive engineering datasheet showing duty point, performance curves, construction materials, and operational limits.",
+                template_name="standard_datasheet.html",
+                show_head_flow_graph=True,
+                show_efficiency_graph=True,
+                show_power_graph=True,
+                show_npsh_graph=True,
+                header_text="PUMP MASTER PRO - TECHNICAL DATASHEET",
+                footer_text="Generated by Pump Master Pro Engineering Suite",
+                primary_color="#1e3a8a",
+                show_duty_point=True,
+                show_materials_table=True,
+                show_extended_specs=True,
+                show_notes=True
+            )
+            db.session.add(def_rep)
+            db.session.commit()
+
+        # Ensure super administrator account is flagged
+        with db.engine.begin() as conn:
+            from sqlalchemy import text
+            conn.execute(text("UPDATE users SET is_super_admin = 1 WHERE email = 'nevermabvuu@gmail.com' OR (organisation_id = 2 AND role = 'admin')"))
+
+        # Seed default roles for all organisations if missing
+        for org in Organisation.query.all():
+            if Role.query.filter_by(organisation_id=org.id).count() == 0:
+                default_roles = [
+                    Role(
+                        organisation_id=org.id,
+                        name='Administrator',
+                        code='admin',
+                        description='Full administrative authority over organisation settings, user profiles, and pump catalogue.',
+                        can_select_pumps=True,
+                        can_edit_catalogue=True,
+                        can_export_reports=True,
+                        can_manage_organisation=True,
+                        can_manage_users=True,
+                        is_system_role=True
+                    ),
+                    Role(
+                        organisation_id=org.id,
+                        name='Lead Hydraulic Engineer',
+                        code='lead_engineer',
+                        description='Lead engineering authority with full pump selection and catalogue editing permissions.',
+                        can_select_pumps=True,
+                        can_edit_catalogue=True,
+                        can_export_reports=True,
+                        can_manage_organisation=False,
+                        can_manage_users=False,
+                        is_system_role=True
+                    ),
+                    Role(
+                        organisation_id=org.id,
+                        name='Hydraulic Engineer',
+                        code='engineer',
+                        description='Standard engineering access to pump selection, comparison, and technical datasheet generation.',
+                        can_select_pumps=True,
+                        can_edit_catalogue=False,
+                        can_export_reports=True,
+                        can_manage_organisation=False,
+                        can_manage_users=False,
+                        is_system_role=True
+                    ),
+                    Role(
+                        organisation_id=org.id,
+                        name='Technical Viewer',
+                        code='viewer',
+                        description='Read-only access to browse pump catalogue, perform basic selections, and review reports.',
+                        can_select_pumps=True,
+                        can_edit_catalogue=False,
+                        can_export_reports=True,
+                        can_manage_organisation=False,
+                        can_manage_users=False,
+                        is_system_role=True
+                    )
+                ]
+                db.session.add_all(default_roles)
+                db.session.commit()
 
             # Seed default administrator account if users table is empty
             if User.query.count() == 0:

@@ -27,6 +27,7 @@ Usage (in a route):
     pump_id = decode_pump_id(token)   # raises BadSignature on tampering → 404
 """
 
+from __future__ import annotations
 from itsdangerous import URLSafeSerializer, BadSignature
 
 # ---------------------------------------------------------------------------

@@ -173,11 +173,13 @@ def calculate_segment(seg, global_flow_m3h, friction_method='darcy_weisbach',
         nu = fluid_kinematic_viscosity_m2s(temperature_c)
         rho = fluid_density_kg_m3(temperature_c, specific_gravity)
 
+    slurry_liquid_sg = float(seg.get('slurry_liquid_sg') or 1.0)
     res = calculate_consolidated_pipe(
         pipe_edge, flow_m3h=flow_m3h, friction_method=friction_method,
         kinematic_viscosity=nu, fluid_density=rho,
         is_slurry=is_slurry, slurry_d50_mm=slurry_d50_mm,
-        slurry_solids_sg=slurry_solids_sg, slurry_c_weight=slurry_c_weight
+        slurry_solids_sg=slurry_solids_sg, slurry_c_weight=slurry_c_weight,
+        slurry_liquid_sg=slurry_liquid_sg
     )
     return res.to_dict()
 

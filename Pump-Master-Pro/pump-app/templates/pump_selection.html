@@ -2340,6 +2340,12 @@
       </div>
     </div>
 
+    <!-- Fluid Head & Pressure Computation Notice -->
+    <div class="pn-fluid-head-notice" style="margin-bottom:12px;padding:8px 12px;background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.22);border-radius:6px;font-size:11.5px;color:#cbd5e1;display:flex;align-items:center;gap:8px;">
+      <i class="bi bi-info-circle-fill" style="color:#38bdf8;font-size:14px;flex-shrink:0;"></i>
+      <span>Head is reported in metres of the flowing fluid. Pressure is computed using &rho;<sub>fluid</sub> &middot; g &middot; h<sub>f</sub>.</span>
+    </div>
+
     <!-- Summary stat cards -->
     <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
       <div class="res-card" style="border-color:rgba(168,85,247,0.35);background:rgba(168,85,247,0.04);">
@@ -3008,8 +3014,15 @@
         window.syncPumpSelectionToPipeNetwork();
       }
       // Trigger SVG resize and redraw when tab becomes visible
-      if (typeof applyTransform === 'function') applyTransform();
-      if (typeof renderAll === 'function') renderAll();
+      if (typeof window.applyTransform === 'function') window.applyTransform();
+      else if (typeof applyTransform === 'function') applyTransform();
+      if (typeof window.renderAll === 'function') window.renderAll();
+      else if (typeof renderAll === 'function') renderAll();
+      // If network is empty on tab switch, ensure demo network is loaded
+      if (typeof state !== 'undefined' && (!state.nodes || state.nodes.length === 0)) {
+        if (typeof window.loadDemoNetwork === 'function') window.loadDemoNetwork();
+        else if (typeof loadDemoNetwork === 'function') loadDemoNetwork();
+      }
     }
 
     // Remember the active tab for this browser session

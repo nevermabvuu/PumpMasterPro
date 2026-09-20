@@ -458,6 +458,23 @@ function getUnitLabel(category, unit) {
   return UNITS_CONFIG[category]?.[unit]?.name || unit;
 }
 
+/**
+ * Returns the contextual head loss unit label formatted with actual flowing fluid:
+ * - Water: "m H₂O" (or "ft H₂O")
+ * - Viscous: "m fluid" (or "ft fluid")
+ * - Slurry: "m slurry" (or "ft slurry")
+ */
+function getHeadLossUnitLabel(headUnit, fluidCategory) {
+  const base = (headUnit === 'ft') ? 'ft' : 'm';
+  if (fluidCategory === 'slurry') {
+    return `${base} slurry`;
+  }
+  if (fluidCategory === 'viscous') {
+    return `${base} fluid`;
+  }
+  return base === 'ft' ? 'ft H₂O' : 'm H₂O';
+}
+
 // ============================================================================
 // STATE
 // ============================================================================
@@ -1176,7 +1193,7 @@ function loadNetworkFromStorage() {
 
   // 1. First priority: Server session active_selection
   if (window.__PMP_SESSION_PIPE_NETWORK && typeof window.__PMP_SESSION_PIPE_NETWORK === 'object') {
-    if (Array.isArray(window.__PMP_SESSION_PIPE_NETWORK.nodes) && (window.__PMP_SESSION_PIPE_NETWORK.nodes.length > 0 || window.__PMP_SESSION_PIPE_NETWORK.explicitClear)) {
+    if (Array.isArray(window.__PMP_SESSION_PIPE_NETWORK.nodes) && window.__PMP_SESSION_PIPE_NETWORK.nodes.length > 0) {
       d = window.__PMP_SESSION_PIPE_NETWORK;
     }
   }
@@ -1187,7 +1204,7 @@ function loadNetworkFromStorage() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed.nodes) && (parsed.nodes.length > 0 || parsed.explicitClear)) {
+        if (Array.isArray(parsed.nodes) && parsed.nodes.length > 0) {
           d = parsed;
         }
       } catch (e) {
@@ -1196,19 +1213,16 @@ function loadNetworkFromStorage() {
     }
   }
 
-  // 3. Fallback check for session with empty network
-  if (!d && window.__PMP_SESSION_PIPE_NETWORK && Array.isArray(window.__PMP_SESSION_PIPE_NETWORK.nodes)) {
-    d = window.__PMP_SESSION_PIPE_NETWORK;
-  }
-
-  if (!d || !Array.isArray(d.nodes) || !Array.isArray(d.pipes)) {
+  // If no valid network with nodes and pipes, return false to load default demo network
+  if (!d || !Array.isArray(d.nodes) || !Array.isArray(d.pipes) || d.nodes.length === 0 || d.pipes.length === 0) {
     return false;
   }
 
-  // If stored network is older demo layout with Tee junction, return false to load new simple demo
+  // If stored network is older demo layout with Tee junction or old bottom-aligned y:320, return false to load new centered demo
   const isOldDemo = d.nodes && d.nodes.some(n => n.type === 'junction' && n.props?.label === 'Tee')
     && d.nodes.some(n => n.type === 'tank' && n.props?.label === 'Overhead Tank');
-  if (isOldDemo || (d.nodes.length === 0 && d.pipes.length === 0 && !d.explicitClear)) {
+  const isOldDemoY = d.nodes && d.nodes.some(n => n.id === 'N-1' && n.y === 320);
+  if (isOldDemo || isOldDemoY) {
     return false;
   }
 
@@ -5607,6 +5621,24 @@ function displayResults(data) {
   const uPress = state.units.pressure || 'kpa';
   const uPLbl = getUnitLabel('pressure', uPress);
 
+  // Determine fluid category and head loss unit suffix (e.g. "m H₂O", "m slurry", "m fluid")
+  const isSlurry = Boolean(s.is_slurry || state.is_slurry);
+  const isViscous = Boolean(s.is_viscous || state.is_viscous);
+  const fluidCategory = isSlurry ? 'slurry' : (isViscous ? 'viscous' : 'water');
+  const uHeadFluidLbl = getHeadLossUnitLabel(uH, fluidCategory);
+  const effectiveSg = (isSlurry ? (s.slurry_mixture_sg || state.slurry_sg || state.specific_gravity) : state.specific_gravity) || 1.0;
+
+  // Dynamically update dropdown labels for head units to show fluid suffix
+  document.querySelectorAll('.pn-res-head-unit').forEach(sel => {
+    sel.querySelectorAll('option').forEach(opt => {
+      if (opt.value === 'm') {
+        opt.textContent = fluidCategory === 'slurry' ? 'm slurry' : (fluidCategory === 'viscous' ? 'm fluid' : 'm H₂O');
+      } else if (opt.value === 'ft') {
+        opt.textContent = fluidCategory === 'slurry' ? 'ft slurry' : (fluidCategory === 'viscous' ? 'ft fluid' : 'ft');
+      }
+    });
+  });
+
   // Update Summary Cards with unit conversion
   setVal('res-major', fromBaseSI(s.total_hf_major_m, 'head', uH).toFixed(3));
   setVal('res-minor', fromBaseSI(s.total_hf_minor_m, 'head', uH).toFixed(3));
@@ -5712,10 +5744,10 @@ function displayResults(data) {
           <th style="padding:6px 10px;text-align:center;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Regime / Re</th>
           <th id="th-friction-factor" style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Friction factor f or Hazen-Williams C. Click for help notes." onclick="showHydraulicHelp('exp_n')">${fricTitle} <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
           <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">K<sub>total</sub></th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Major friction head loss in straight pipe (${uHLbl}). Click for help notes." onclick="showHydraulicHelp('hf_major')">hf Major (${uHLbl}) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Minor head loss across fittings, valves, bends, and restrictions (${uHLbl}). Click for help notes." onclick="showHydraulicHelp('hf_minor')">hf Minor (${uHLbl}) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Elev (${uHLbl})</th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">h Total (${uHLbl})</th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Major friction head loss in straight pipe (${uHeadFluidLbl}). Click for help notes." onclick="showHydraulicHelp('hf_major')">hf Major (${uHeadFluidLbl}) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Minor head loss across fittings, valves, bends, and restrictions (${uHeadFluidLbl}). Click for help notes." onclick="showHydraulicHelp('hf_minor')">hf Minor (${uHeadFluidLbl}) <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Elev (${uHeadFluidLbl})</th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">h Total (${uHeadFluidLbl})</th>
           <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Consolidated Hydraulic Resistance R (hf = R * Q^n). Click for formulas and calculation details." onclick="showHydraulicHelp('res_r')">Res. R <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
           <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Flow Exponent n (2.0 for Darcy-Weisbach, 1.852 for Hazen-Williams). Click for formulas and calculation details." onclick="showHydraulicHelp('exp_n')">Exp. n <i class="bi bi-info-circle" style="color:#38bdf8;font-size:10px;margin-left:2px;"></i></th>
           <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Slurry Settling Velocity Vt and Durand Critical Velocity Vc. Click for slurry notes." onclick="showHydraulicHelp('slurry')">Slurry V<sub>t</sub> / V<sub>c</sub> <i class="bi bi-info-circle" style="color:#f59e0b;font-size:10px;margin-left:2px;"></i></th>
@@ -5852,8 +5884,8 @@ function displayResults(data) {
           <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Label</th>
           <th style="padding:6px 10px;text-align:left;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Type</th>
           <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Geometric physical elevation Z above datum (${uLenLbl}). Click for help notes." onclick="showHydraulicHelp('hgl_pressures')">Elevation Z (${uLenLbl}) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Hydraulic Grade Line [HGL = Z + P/(rho*g), g=9.80665 m/s²] (${uHLbl}). Click for help notes & formulas." onclick="showHydraulicHelp('hgl_pressures')">Total Head HGL (${uHLbl}) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
-          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Pressure Head [P/(rho*g) = HGL - Z, g=9.80665 m/s²] (${uHLbl}). Click for help notes & formulas." onclick="showHydraulicHelp('hgl_pressures')">Pressure Head P/(&rho;&middot;g) (${uHLbl}) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Hydraulic Grade Line [HGL = Z + P/(rho*g), g=9.80665 m/s²] (${uHeadFluidLbl}). Click for help notes & formulas." onclick="showHydraulicHelp('hgl_pressures')">Total Head HGL (${uHeadFluidLbl}) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
+          <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Pressure Head [P/(rho*g) = HGL - Z, g=9.80665 m/s²] (${uHeadFluidLbl}). Click for help notes & formulas." onclick="showHydraulicHelp('hgl_pressures')">Pressure Head P/(&rho;&middot;g) (${uHeadFluidLbl}) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
           <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;cursor:pointer;" title="Gauge Pressure in ${uPLbl}. Click for help notes & formulas." onclick="showHydraulicHelp('hgl_pressures')">Pressure (${uPLbl}) <i class="bi bi-info-circle" style="color:#c084fc;font-size:10px;margin-left:2px;"></i></th>
           <th style="padding:6px 10px;text-align:right;color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #30363d;">Demand (${uFlowLbl})</th>
         </tr>
@@ -6634,6 +6666,11 @@ window.applyPnUnitPreset = applyPnUnitPreset;
 window.savePnModalUnits = savePnModalUnits;
 window.setPnUnits = setPnUnits;
 window.__pn_set_units = setPnUnits;
+window.applyTransform = applyTransform;
+window.renderAll = renderAll;
+window.loadDemoNetwork = loadDemoNetwork;
+window.resetToDemo = resetToDemo;
+window.getHeadLossUnitLabel = getHeadLossUnitLabel;
 window.__pn_get_units = () => Object.assign({}, state.units);
 window.__pn_get_flow_m3h = () => {
   const raw = parseFloat(document.getElementById('pn-global-flow')?.value) || 0;
@@ -7532,19 +7569,19 @@ function init() {
 function loadDemoNetwork() {
   state.nodes = [
     {
-      id: 'N-1', type: 'reservoir', x: 120, y: 320,
+      id: 'N-1', type: 'reservoir', x: 140, y: 220,
       props: { label: 'Sump', elevation_m: 0 }
     },
     {
-      id: 'N-2', type: 'pump', x: 340, y: 320,
+      id: 'N-2', type: 'pump', x: 360, y: 220,
       props: { label: 'Pump 1', flow_m3h: 20, elevation_m: 0, pump_config: 'end_suction' }
     },
     {
-      id: 'N-3', type: 'valve', x: 540, y: 320,
+      id: 'N-3', type: 'valve', x: 560, y: 220,
       props: { label: 'Gate Valve', elevation_m: 2, fitting_key: 'gate_valve_open', quantity: 1 }
     },
     {
-      id: 'N-4', type: 'discharge', x: 760, y: 320,
+      id: 'N-4', type: 'discharge', x: 780, y: 220,
       props: { label: 'Discharge', elevation_m: 10 }
     },
   ];

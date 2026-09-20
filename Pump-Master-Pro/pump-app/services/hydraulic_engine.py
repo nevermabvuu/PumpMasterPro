@@ -1237,6 +1237,7 @@ def calculate_consolidated_pipe(
     slurry_d50_mm: float = 0.15,
     slurry_solids_sg: float = 2.65,
     slurry_c_weight: float = 25.0,
+    slurry_liquid_sg: float = 1.0,
     operating_pressure_kpa: Optional[float] = None
 ) -> EdgeHydraulicResult:
     """
@@ -1356,11 +1357,15 @@ def calculate_consolidated_pipe(
     slurry_hf = None
 
     if is_slurry:
-        slurry_props = slurry_mixture_properties(slurry_c_weight, slurry_solids_sg, s_liquid=fluid_density / 1000.0)
-        settle = particle_settling_velocity_m_s(slurry_d50_mm, slurry_solids_sg, s_liquid=fluid_density / 1000.0)
+        # Carrier liquid SG: Settling velocity (Ferguson & Church 2004) and Durand critical deposition velocity
+        # depend strictly on particle buoyancy relative to the CARRIER LIQUID (typically water, Sl ~ 1.0),
+        # NOT the slurry mixture SG (Sm).
+        carrier_sl = max(0.5, float(slurry_liquid_sg if slurry_liquid_sg is not None else 1.0))
+        slurry_props = slurry_mixture_properties(slurry_c_weight, slurry_solids_sg, s_liquid=carrier_sl)
+        settle = particle_settling_velocity_m_s(slurry_d50_mm, slurry_solids_sg, s_liquid=carrier_sl)
         settling_vt = settle['settling_velocity_ms']
 
-        dep = critical_deposition_velocity_m_s(slurry_d50_mm, D_m, slurry_solids_sg, s_liquid=fluid_density / 1000.0, cv_volume_fraction=slurry_props['c_volume_fraction'])
+        dep = critical_deposition_velocity_m_s(slurry_d50_mm, D_m, slurry_solids_sg, s_liquid=carrier_sl, cv_volume_fraction=slurry_props['c_volume_fraction'])
         critical_vc = dep['critical_velocity_ms']
 
         if critical_vc > 0:
@@ -1374,16 +1379,22 @@ def calculate_consolidated_pipe(
 
         # Durand slurry head loss adjustment:
         # i_m = i_w * [ 1 + 82 * Cv * (V^2 * sqrt(Cd) / (g * D * (Ss - Sl)))^-1.5 ]
-        # Accounts for the additional hydraulic dissipation caused by carrying suspended solid particles
+        # Accounts for the additional hydraulic dissipation caused by carrying suspended solid particles.
+        # Head loss is reported in metres of flowing slurry mixture (column height of slurry).
         iw = hf_major / L_m if L_m > 0 else 0.0
         ss = max(1.01, float(slurry_solids_sg))
-        sl = max(0.5, float(fluid_density / 1000.0))
+        sl = carrier_sl
         cv = slurry_props['c_volume_fraction']
         d_m = max(1e-6, float(slurry_d50_mm) / 1000.0)
         cd = (4.0 / 3.0) * (GRAVITY * d_m * (ss - sl)) / (max(0.01, settling_vt) ** 2) if settling_vt else 1.0
         psi = (V_ms ** 2) * math.sqrt(max(0.01, cd)) / max(1e-4, (GRAVITY * D_m * (ss - sl)))
         phi = 82.0 * (psi ** (-1.5)) if psi > 1e-3 else 82.0
-        im = iw * (1.0 + phi * cv) * slurry_props['mixture_sg']
+        # Durand slurry head loss in metres of actual flowing slurry:
+        # Classical Durand & Condolios evaluates head in equivalent metres of water.
+        # Dividing by mixture SG (S_m) gives actual column height of slurry:
+        #   Delta_P = rho_slurry * g * h_slurry == rho_water * g * h_water_eq
+        sm = max(0.5, float(slurry_props.get('mixture_sg', 1.0)))
+        im = (iw * (1.0 + phi * cv)) / sm
         slurry_hf = (im * L_m) + hf_minor
 
         # Apply slurry head loss to major friction, total friction, and consolidated hydraulic resistance
@@ -1882,11 +1893,11 @@ def solve_network(
     #     which induces additional carrier friction (Durand correlation) and risk of solids deposition.
     is_viscous = (fluid_type == 'viscous' or (viscosity_cSt is not None and float(viscosity_cSt) > 1.05 and not is_slurry and fluid_type != 'slurry'))
     slurry_info = None
+    s_liq = float(slurry_liquid_sg) if (slurry_liquid_sg and float(slurry_liquid_sg) > 0) else 1.0
 
     if is_slurry or fluid_type == 'slurry':
         is_slurry = True
         fluid_type = 'slurry'
-        s_liq = slurry_liquid_sg if (slurry_liquid_sg and float(slurry_liquid_sg) > 0) else sg
         slurry_info = slurry_mixture_properties(
             c_weight_percent=slurry_c_weight,
             s_solids=slurry_solids_sg,
@@ -1942,6 +1953,7 @@ def solve_network(
                             slurry_d50_mm=slurry_d50_mm,
                             slurry_solids_sg=slurry_solids_sg,
                             slurry_c_weight=slurry_c_weight,
+                            slurry_liquid_sg=s_liq,
                         )
                         R = calc.resistance_R
                         n = calc.flow_exponent_n
@@ -1984,6 +1996,7 @@ def solve_network(
                             slurry_d50_mm=slurry_d50_mm,
                             slurry_solids_sg=slurry_solids_sg,
                             slurry_c_weight=slurry_c_weight,
+                            slurry_liquid_sg=s_liq,
                         )
                         R = calc.resistance_R
                         n = calc.flow_exponent_n
@@ -2026,6 +2039,7 @@ def solve_network(
                             slurry_d50_mm=slurry_d50_mm,
                             slurry_solids_sg=slurry_solids_sg,
                             slurry_c_weight=slurry_c_weight,
+                            slurry_liquid_sg=s_liq,
                         )
                         R = calc.resistance_R
                         n = calc.flow_exponent_n
@@ -2068,6 +2082,7 @@ def solve_network(
                             slurry_d50_mm=slurry_d50_mm,
                             slurry_solids_sg=slurry_solids_sg,
                             slurry_c_weight=slurry_c_weight,
+                            slurry_liquid_sg=s_liq,
                         )
                         R = calc.resistance_R
                         n = calc.flow_exponent_n
@@ -2113,6 +2128,7 @@ def solve_network(
             slurry_d50_mm=slurry_d50_mm,
             slurry_solids_sg=slurry_solids_sg,
             slurry_c_weight=slurry_c_weight,
+            slurry_liquid_sg=s_liq,
         )
         pipe_results[pid] = res
         total_major += res.hf_major_m
@@ -2275,7 +2291,7 @@ def solve_network(
         'slurry_liquid_sg': slurry_liquid_sg if is_slurry else None,
         'slurry_c_weight': slurry_c_weight if is_slurry else None,
         'slurry_c_volume': slurry_info['c_volume_percent'] if slurry_info else None,
-        'slurry_settling_velocity_ms': particle_settling_velocity_m_s(slurry_d50_mm, slurry_solids_sg, s_liquid=sg)['settling_velocity_ms'] if is_slurry else None,
+        'slurry_settling_velocity_ms': particle_settling_velocity_m_s(slurry_d50_mm, slurry_solids_sg, s_liquid=s_liq)['settling_velocity_ms'] if is_slurry else None,
     }
 
     return NetworkSolverResult(

@@ -45,6 +45,33 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_SQLITE_PATH = os.path.join(BASE_DIR, 'pumps.db')
 
 
+def adapt_mssql_uri(uri: str) -> str:
+    """
+    On Linux containers (such as Render.com) where proprietary Microsoft ODBC
+    Driver 17/18 libraries are not pre-installed in the OS, automatically switch
+    from mssql+pyodbc:// to mssql+pymssql:// (which includes bundled FreeTDS).
+    """
+    if not uri.startswith('mssql+pyodbc://'):
+        return uri
+
+    # Check if a compatible SQL Server ODBC driver is actually registered in the OS
+    has_odbc_driver = False
+    try:
+        import pyodbc
+        drivers = pyodbc.drivers()
+        has_odbc_driver = any('SQL Server' in d for d in drivers)
+    except Exception:
+        has_odbc_driver = False
+
+    # If ODBC driver is missing (e.g. on Render Linux containers), switch to pymssql
+    if not has_odbc_driver:
+        parsed = urllib.parse.urlparse(uri)
+        # Strip ODBC-specific parameters such as ?driver=...
+        return urllib.parse.urlunparse(('mssql+pymssql', parsed.netloc, parsed.path, '', '', ''))
+
+    return uri
+
+
 def build_database_uri() -> str:
     """
     Constructs the SQLAlchemy database URI dynamically from environment variables.
@@ -62,7 +89,7 @@ def build_database_uri() -> str:
         # Normalize 'postgres://' to 'postgresql://' for SQLAlchemy 1.4/2.0
         if direct_uri.startswith('postgres://'):
             direct_uri = direct_uri.replace('postgres://', 'postgresql://', 1)
-        return direct_uri
+        return adapt_mssql_uri(direct_uri)
 
     # 2. Check for discrete environment variables (useful for container / cloud deployment)
     db_server = os.environ.get('DB_SERVER')
@@ -75,10 +102,11 @@ def build_database_uri() -> str:
         encoded_user = urllib.parse.quote_plus(db_user)
         encoded_pass = urllib.parse.quote_plus(db_pass)
         encoded_driver = urllib.parse.quote_plus(db_driver)
-        return (
+        odbc_uri = (
             f"mssql+pyodbc://{encoded_user}:{encoded_pass}@{db_server}/{db_name}"
             f"?driver={encoded_driver}&TrustServerCertificate=yes"
         )
+        return adapt_mssql_uri(odbc_uri)
 
     # 3. Secure offline development fallback (local SQLite)
     return f"sqlite:///{DEFAULT_SQLITE_PATH}"

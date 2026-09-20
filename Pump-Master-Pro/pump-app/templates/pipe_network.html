@@ -759,16 +759,162 @@
     border-radius: 4px;
     font-weight: 700;
   }
+
+  /* ── Simple Pipeline Mode (Dropdowns) Styling ── */
+  #pn-simple-mode-wrap {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 16px 20px 40px 20px;
+    background: #0d1117;
+    gap: 16px;
+  }
+
+  .pn-simple-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 16px 18px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  }
+
+  .pn-topology-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    background: #0d1117;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+  }
+
+  .pn-topology-card:hover {
+    border-color: #58a6ff;
+    background: rgba(56, 189, 248, 0.04);
+  }
+
+  .pn-topology-card.active {
+    border-color: #38bdf8;
+    background: rgba(56, 189, 248, 0.08);
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
+  }
+
+  .pn-topology-card input[type="radio"] {
+    margin-top: 3px;
+    accent-color: #38bdf8;
+    cursor: pointer;
+  }
+
+  .pn-simple-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12px;
+  }
+
+  .pn-simple-table th {
+    background: #0d1117;
+    color: #8b949e;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    padding: 8px 10px;
+    border-bottom: 1px solid #30363d;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .pn-simple-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid #21262d;
+    vertical-align: middle;
+  }
+
+  .pn-simple-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .pn-input-cell {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+    border-radius: 5px;
+    padding: 4px 7px;
+    font-size: 11.5px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  .pn-input-cell:focus {
+    border-color: #58a6ff;
+    box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+  }
+
+  .pn-badge-velocity {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .pn-badge-vel-low {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+  }
+
+  .pn-badge-vel-opt {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+  }
+
+  .pn-badge-vel-high {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+
+  .pn-badge-vel-excess {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div style="margin-bottom:8px;">
-  <h1 style="font-size:1.1rem;font-weight:700;color:#e6edf3;margin:0;display:flex;align-items:center;gap:8px;">
-    <i class="bi bi-diagram-3" style="color:#58a6ff;"></i>
-    Pipe Network System Designer
-    <span style="font-size:11px;color:#64748b;font-weight:400;">— Friction loss calculator for pipe networks</span>
-  </h1>
+<div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;background:#161b22;border:1px solid #30363d;border-radius:10px;padding:12px 18px;">
+  <div>
+    <h1 style="font-size:1.15rem;font-weight:700;color:#e6edf3;margin:0;display:flex;align-items:center;gap:8px;">
+      <i class="bi bi-diagram-3" style="color:#58a6ff;"></i>
+      Pipe Network System Designer
+    </h1>
+    <div style="font-size:11.5px;color:#8b949e;margin-top:2px;">
+      Calculate friction losses, velocities, and total head for piping networks
+    </div>
+  </div>
+
+  <!-- ── PROMINENT TOP DESIGNER MODE SWITCHER ── -->
+  <div style="display:inline-flex;align-items:center;background:#0d1117;border:2px solid #30363d;border-radius:8px;padding:3px;gap:4px;box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+    <span style="font-size:11.5px;color:#8b949e;font-weight:700;padding:0 8px;">Designer Mode:</span>
+    <button id="btn-top-mode-canvas" type="button" class="pn-btn active-tool" style="padding:6px 14px;font-size:12px;font-weight:700;border:none;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;" onclick="setDesignerMode('canvas')">
+      <i class="bi bi-diagram-3-fill" style="color:#38bdf8;"></i> Visual Canvas
+    </button>
+    <button id="btn-top-mode-simple" type="button" class="pn-btn" style="padding:6px 14px;font-size:12px;font-weight:700;border:none;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:#22c55e;" onclick="setDesignerMode('simple')">
+      <i class="bi bi-list-columns-reverse" style="color:#22c55e;"></i> Simple Mode (Dropdowns)
+    </button>
+  </div>
 </div>
 
 <div id="pn-outer">
@@ -778,22 +924,22 @@
        Contains: mode tools | add-node tools | separator | zoom | file ops
        ──────────────────────────────────────────────────────────────────── -->
   <div id="pn-toolbar">
-    <span
-      style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-right:-2px;">View:</span>
-    <button id="btn-view-schematic" class="pn-btn" title="Schematic View">
-      <i class="bi bi-bezier2"></i> Schematic
-    </button>
-    <button id="btn-view-industrial" class="pn-btn active-tool" title="Industrial Installation View">
-      <i class="bi bi-water" style="color:#38bdf8;"></i> Visual
-    </button>
-    <button id="btn-theme-toggle" class="pn-btn" title="Toggle Canvas Theme (Light CAD / Dark)">
-      <i class="bi bi-sun"></i> Theme
-    </button>
-    <button id="btn-toggle-legend" class="pn-btn active-tool" title="Show / Hide Legend">
-      <i class="bi bi-card-list"></i> Legend
-    </button>
-
-    <div class="pn-sep"></div>
+    <span id="pn-canvas-tools-group-1" style="display:inline-flex;align-items:center;gap:6px;">
+      <span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-right:-2px;">View:</span>
+      <button id="btn-view-schematic" class="pn-btn" title="Schematic View">
+        <i class="bi bi-bezier2"></i> Schematic
+      </button>
+      <button id="btn-view-industrial" class="pn-btn active-tool" title="Industrial Installation View">
+        <i class="bi bi-water" style="color:#38bdf8;"></i> Visual
+      </button>
+      <button id="btn-theme-toggle" class="pn-btn" title="Toggle Canvas Theme (Light CAD / Dark)">
+        <i class="bi bi-sun"></i> Theme
+      </button>
+      <button id="btn-toggle-legend" class="pn-btn active-tool" title="Show / Hide Legend">
+        <i class="bi bi-card-list"></i> Legend
+      </button>
+      <span class="pn-sep"></span>
+    </span>
 
     <!-- Zoom controls -->
     <button id="btn-zoom-out" class="pn-btn" title="Zoom out">
@@ -947,7 +1093,7 @@
     </button>
 
     <!-- Calculate button -->
-    <button id="pn-calc-btn" class="pn-btn pn-btn-success" style="margin-left:auto;">
+    <button id="pn-calc-btn" class="pn-btn pn-btn-success" style="margin-left:auto;flex-shrink:0;white-space:nowrap;font-weight:700;box-shadow:0 0 10px rgba(34,197,94,0.3);">
       <i class="bi bi-calculator"></i> Calculate Losses
     </button>
 
@@ -1390,7 +1536,411 @@
 
   </div><!-- end main row -->
 
+  <!-- ─────────────────────────────────────────────────────────────────────────
+       SIMPLE MODE WORKSPACE CONTAINER (Dropdown-driven Network Designer)
+       Active when user switches to "Simple Mode (Dropdowns)" in the top toolbar.
+       Presents a clean, non-drawn pipeline configurator for Series or Parallel networks.
+       ───────────────────────────────────────────────────────────────────────── -->
+  <div id="pn-simple-mode-wrap">
+
+    <!-- Header bar: Mode overview, status and quick sample presets -->
+    <div class="pn-simple-card" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;border-left:4px solid #22c55e;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;border-radius:8px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);display:flex;align-items:center;justify-content:center;color:#22c55e;font-size:1.3rem;">
+          <i class="bi bi-list-columns-reverse"></i>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <h2 style="font-size:1.05rem;font-weight:700;color:#f0f6fc;margin:0;">Simple Pipeline Network (Dropdown Mode)</h2>
+            <span style="background:rgba(34,197,94,0.2);color:#4ade80;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;border:1px solid rgba(34,197,94,0.4);text-transform:uppercase;">Non-Drawn</span>
+          </div>
+          <div style="font-size:11.5px;color:#8b949e;margin-top:2px;">
+            Configure pipeline networks using standard pipe catalogs, materials, fittings, lengths, and elevations. Supports pure <strong>Series</strong> (cumulative head) and <strong>Parallel</strong> (split flow) piping configurations.
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="pn-btn" onclick="simpleController.loadPreset('series')" title="Load a typical 3-segment Series pipeline (Suction + Discharge Main + Vertical Riser)">
+          <i class="bi bi-arrow-right-circle" style="color:#38bdf8;"></i> Load Series Sample
+        </button>
+        <button type="button" class="pn-btn" onclick="simpleController.loadPreset('parallel')" title="Load a balanced 2-branch Parallel pipeline network (Split flow across dual pipes)">
+          <i class="bi bi-distribute-vertical" style="color:#22c55e;"></i> Load Parallel Sample
+        </button>
+        <button type="button" class="pn-btn pn-btn-primary" onclick="simpleController.calculate()" style="background:#2563eb;font-weight:700;">
+          <i class="bi bi-play-circle-fill"></i> Calculate Network
+        </button>
+      </div>
+    </div>
+
+    <!-- ── System Parameters Cards (2 Columns: Topology & Fluids) ── -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));gap:16px;">
+
+      <!-- Card 1: Network Topology & Operating Flow -->
+      <div class="pn-simple-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;border-bottom:1px solid #21262d;padding-bottom:8px;">
+          <i class="bi bi-bezier2" style="color:#38bdf8;font-size:1.1rem;"></i>
+          <h3 style="font-size:0.92rem;font-weight:700;color:#e6edf3;margin:0;">1. Network Topology &amp; Operating Flow</h3>
+        </div>
+
+        <!-- Topology Option Cards: Series vs Parallel -->
+        <div style="display:flex;gap:10px;margin-bottom:14px;">
+          <!-- Series Card -->
+          <div id="topo-card-series" class="pn-topology-card active" onclick="simpleController.setTopology('series')">
+            <input type="radio" name="simple_topology" id="topo-radio-series" value="series" checked>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#38bdf8;display:flex;align-items:center;gap:6px;">
+                <i class="bi bi-arrow-right-circle-fill"></i> Pipes in Series
+              </div>
+              <div style="font-size:10.5px;color:#8b949e;margin-top:3px;line-height:1.4;">
+                Single path: Total flow passes through every pipe (Q<sub>i</sub> = Q<sub>tot</sub>). Friction losses accumulate: H = &sum; H<sub>i</sub>.
+              </div>
+            </div>
+          </div>
+
+          <!-- Parallel Card -->
+          <div id="topo-card-parallel" class="pn-topology-card" onclick="simpleController.setTopology('parallel')">
+            <input type="radio" name="simple_topology" id="topo-radio-parallel" value="parallel">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#22c55e;display:flex;align-items:center;gap:6px;">
+                <i class="bi bi-distribute-vertical"></i> Pipes in Parallel
+              </div>
+              <div style="font-size:10.5px;color:#8b949e;margin-top:3px;line-height:1.4;">
+                Split flow: Branches run between common headers. Head loss balances (H<sub>1</sub> = H<sub>2</sub>) and Q<sub>tot</sub> = &sum; Q<sub>i</sub>.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Flow & Static Head Inputs -->
+        <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:10px;margin-bottom:10px;">
+          <!-- Total System Flow -->
+          <div>
+            <label class="pp-label" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+              <span>Total System Flow (Q)</span>
+              <span style="font-size:9.5px;color:#64748b;">Operating Demand</span>
+            </label>
+            <div style="display:flex;gap:4px;">
+              <input id="simple-flow-rate" type="number" step="0.1" min="0.01" class="pn-input-cell" value="100.0" oninput="simpleController.onInputDebounce()" style="font-weight:700;font-size:13px;color:#38bdf8;">
+              <select id="simple-flow-unit" class="pn-input-cell" style="width:90px;font-weight:600;" onchange="simpleController.onUnitChange()">
+                <option value="m3h">m³/h</option>
+                <option value="ls">L/s</option>
+                <option value="lmin">L/min</option>
+                <option value="gpm">US gpm</option>
+                <option value="ukgpm">UK gpm</option>
+                <option value="cfs">cfs</option>
+                <option value="mgd">MGD</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Total Static Head -->
+          <div>
+            <label class="pp-label" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+              <span>Static Lift &Delta;z</span>
+              <span style="font-size:9.5px;color:#64748b;">Global Lift</span>
+            </label>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <input id="simple-static-head" type="number" step="0.1" class="pn-input-cell" value="10.0" oninput="simpleController.onInputDebounce()" style="font-weight:700;font-size:13px;color:#c084fc;">
+              <span id="simple-head-unit-label" style="font-size:11px;color:#8b949e;font-weight:600;">m</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Parallel Flow Balancing Selector (visible only when Parallel is selected) -->
+        <div id="simple-parallel-mode-wrap" style="display:none;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px 12px;margin-top:10px;">
+          <label class="pp-label" style="margin-bottom:4px;color:#22c55e;">Parallel Flow Balancing Method</label>
+          <div style="display:flex;gap:14px;font-size:11.5px;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e6edf3;">
+              <input type="radio" name="simple_parallel_balancing" value="auto" checked onchange="simpleController.onBalancingChange('auto')" style="accent-color:#22c55e;">
+              <span><strong>Automatic Hydraulic Balancing</strong> (Q<sub>i</sub> &propto; 1/&radic;R<sub>i</sub>)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e6edf3;">
+              <input type="radio" name="simple_parallel_balancing" value="manual" onchange="simpleController.onBalancingChange('manual')" style="accent-color:#22c55e;">
+              <span><strong>Manual % Flow Allocation</strong></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Fluid Properties & Friction Formulation -->
+      <div class="pn-simple-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;border-bottom:1px solid #21262d;padding-bottom:8px;">
+          <i class="bi bi-droplet-half" style="color:#22c55e;font-size:1.1rem;"></i>
+          <h3 style="font-size:0.92rem;font-weight:700;color:#e6edf3;margin:0;">2. Fluid Properties &amp; Friction Method</h3>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+          <!-- Network Solver -->
+          <div>
+            <label class="pp-label" style="margin-bottom:4px;"><i class="bi bi-cpu" style="color:#a78bfa;"></i> Network Solver</label>
+            <select id="simple-solver-method" class="pn-input-cell" onchange="simpleController.onSolverChange()">
+              <option value="ggm" selected>Global Gradient Method (GGM)</option>
+              <option value="newton_raphson">Newton-Raphson (NR)</option>
+              <option value="hardy_cross">Hardy Cross Method</option>
+              <option value="linear_theory">Linear Theory Method</option>
+            </select>
+          </div>
+
+          <!-- Friction Method -->
+          <div>
+            <label class="pp-label" style="margin-bottom:4px;"><i class="bi bi-droplet-half" style="color:#38bdf8;"></i> Friction Equation</label>
+            <select id="simple-friction-method" class="pn-input-cell" onchange="simpleController.calculate()">
+              <option value="darcy_weisbach" selected>Darcy-Weisbach (Colebrook-White)</option>
+              <option value="hazen_williams">Hazen-Williams (Empirical C)</option>
+            </select>
+          </div>
+
+          <!-- Fluid Preset -->
+          <div>
+            <label class="pp-label" style="margin-bottom:4px;">Fluid Type</label>
+            <select id="simple-fluid-type" class="pn-input-cell" onchange="simpleController.onFluidChange()">
+              <option value="water" selected>Water (Clean)</option>
+              <option value="slurry">Slurry / Mineral Suspension</option>
+              <option value="oil">Viscous Oil / Fuel</option>
+              <option value="custom">Custom Fluid</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;">
+          <!-- Temperature -->
+          <div>
+            <label class="pp-label" style="margin-bottom:4px;">Temperature (&deg;C)</label>
+            <input id="simple-fluid-temp" type="number" step="1" class="pn-input-cell" value="20" oninput="simpleController.onInputDebounce()">
+          </div>
+
+          <!-- Specific Gravity -->
+          <div>
+            <label class="pp-label" style="margin-bottom:4px;">Specific Gravity (SG)</label>
+            <input id="simple-fluid-sg" type="number" step="0.01" min="0.5" class="pn-input-cell" value="1.00" oninput="simpleController.onInputDebounce()">
+          </div>
+
+          <!-- Kinematic Viscosity -->
+          <div>
+            <label class="pp-label" style="margin-bottom:4px;">Viscosity &nu; (cSt)</label>
+            <input id="simple-fluid-viscosity" type="number" step="0.01" min="0.1" class="pn-input-cell" value="1.004" oninput="simpleController.onInputDebounce()">
+          </div>
+        </div>
+
+        <div style="font-size:10px;color:#64748b;margin-top:10px;line-height:1.4;">
+          <i class="bi bi-info-circle"></i> Solves network hydraulics using the exact same mathematical engine and methods as Drawing Mode (GGM, NR, Hardy Cross, Linear Theory).
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Pipeline Segments Specification Table Card ── -->
+    <div class="pn-simple-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border-bottom:1px solid #21262d;padding-bottom:10px;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <i class="bi bi-segmented-nav" style="color:#fbbf24;font-size:1.1rem;"></i>
+          <h3 style="font-size:0.95rem;font-weight:700;color:#e6edf3;margin:0;">3. Pipeline Segments Specification</h3>
+          <span id="simple-pipe-count-badge" style="background:#21262d;color:#94a3b8;font-size:11px;padding:2px 8px;border-radius:12px;font-weight:600;">
+            0 Segments
+          </span>
+        </div>
+
+        <!-- Table action buttons -->
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button type="button" class="pn-btn pn-btn-success" onclick="simpleController.addPipe()" style="font-size:11px;padding:4px 12px;">
+            <i class="bi bi-plus-lg"></i> Add Pipeline Segment
+          </button>
+          <button type="button" class="pn-btn" onclick="simpleController.clearPipes()" style="font-size:11px;padding:4px 8px;color:#ef4444;" title="Reset and remove all pipes">
+            <i class="bi bi-trash"></i> Clear All
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrollable Table Wrap -->
+      <div style="overflow-x:auto;border:1px solid #30363d;border-radius:8px;">
+        <table id="simple-pipes-table" class="pn-simple-table">
+          <thead>
+            <tr>
+              <th style="width:36px;text-align:center;">#</th>
+              <th style="min-width:140px;">Segment Tag / Label</th>
+              <th style="min-width:260px;">Standard Pipe Catalog Size</th>
+              <th style="width:110px;">Inner Diam. (mm)</th>
+              <th style="min-width:180px;">Material &amp; Roughness</th>
+              <th style="width:105px;">Length (m)</th>
+              <th style="width:105px;">&Delta;z Elev. (m)</th>
+              <th style="min-width:160px;">Valves &amp; Fittings</th>
+              <th id="th-simple-flow-share" style="width:90px;display:none;">Flow Share %</th>
+              <th style="width:80px;text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="simple-pipes-tbody">
+            <!-- Dynamic rows rendered by simpleController.renderTable() -->
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;font-size:11px;color:#64748b;flex-wrap:wrap;gap:8px;">
+        <div>
+          <i class="bi bi-lightbulb" style="color:#eab308;"></i> Selecting a standard pipe from the catalog automatically sets inner diameter, wall thickness, and default material roughness.
+        </div>
+        <div>
+          <button type="button" class="pn-btn" onclick="simpleController.addPipe()" style="font-size:11px;padding:3px 10px;">
+            <i class="bi bi-plus-circle"></i> Add Another Pipe
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Dynamic Hydraulic Results & Duty Point Dashboard ── -->
+    <div class="pn-simple-card" style="border:1px solid rgba(56,189,248,0.3);background:linear-gradient(180deg, #161b22 0%, #0d1117 100%);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;border-bottom:1px solid #21262d;padding-bottom:10px;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:30px;height:30px;border-radius:6px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);display:flex;align-items:center;justify-content:center;color:#38bdf8;">
+            <i class="bi bi-speedometer2"></i>
+          </div>
+          <div>
+            <h3 style="font-size:0.95rem;font-weight:700;color:#f0f6fc;margin:0;">4. Hydraulic Performance &amp; Duty Point Results</h3>
+            <div style="font-size:11px;color:#8b949e;">Live calculation computed via exact Colebrook-White &amp; Darcy-Weisbach formulations</div>
+          </div>
+        </div>
+
+        <!-- Sync Button -->
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button type="button" class="pn-btn pn-btn-primary" onclick="simpleController.applyToPumpSelection()" style="background:#2563eb;font-weight:700;padding:6px 16px;font-size:12px;box-shadow:0 0 15px rgba(37,99,235,0.3);">
+            <i class="bi bi-box-arrow-up-right"></i> Apply Duty Point to Pump Selection
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards Grid -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin-bottom:16px;">
+        <!-- Total Head TDH -->
+        <div style="background:#0d1117;border:1px solid rgba(251,191,36,0.4);border-radius:8px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;">
+          <div style="font-size:10.5px;color:#d97706;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Total Dynamic Head (TDH)</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#fbbf24;margin:4px 0;" id="simple-res-tdh">— m</div>
+          <div style="font-size:11px;color:#94a3b8;" id="simple-res-tdh-ft">— ft</div>
+        </div>
+
+        <!-- Operating Flow Rate -->
+        <div style="background:#0d1117;border:1px solid rgba(56,189,248,0.4);border-radius:8px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;">
+          <div style="font-size:10.5px;color:#0284c7;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">System Flow Rate (Q)</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#38bdf8;margin:4px 0;" id="simple-res-flow">— m³/h</div>
+          <div style="font-size:11px;color:#94a3b8;" id="simple-res-flow-sub">— L/s</div>
+        </div>
+
+        <!-- Total Friction Loss -->
+        <div style="background:#0d1117;border:1px solid rgba(248,113,113,0.4);border-radius:8px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;">
+          <div style="font-size:10.5px;color:#dc2626;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Total Friction Loss</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#f87171;margin:4px 0;" id="simple-res-friction">— m</div>
+          <div style="font-size:10.5px;color:#94a3b8;" id="simple-res-friction-breakdown">Major: — | Minor: —</div>
+        </div>
+
+        <!-- Total Static Lift -->
+        <div style="background:#0d1117;border:1px solid rgba(192,132,252,0.4);border-radius:8px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;">
+          <div style="font-size:10.5px;color:#9333ea;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Total Static Lift (&Delta;z)</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#c084fc;margin:4px 0;" id="simple-res-static">— m</div>
+          <div style="font-size:11px;color:#94a3b8;">Elevation Difference</div>
+        </div>
+
+        <!-- Hydraulic Power -->
+        <div style="background:#0d1117;border:1px solid rgba(74,222,128,0.4);border-radius:8px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;">
+          <div style="font-size:10.5px;color:#16a34a;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Hydraulic Power (P<sub>hyd</sub>)</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#4ade80;margin:4px 0;" id="simple-res-power">— kW</div>
+          <div style="font-size:11px;color:#94a3b8;" id="simple-res-power-hp">— HP</div>
+        </div>
+
+        <!-- Equivalent System Resistance -->
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;">
+          <div style="font-size:10.5px;color:#8b949e;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">System Resistance (R<sub>sys</sub>)</div>
+          <div style="font-size:1.3rem;font-weight:800;color:#e6edf3;margin:4px 0;" id="simple-res-rsys">—</div>
+          <div style="font-size:10px;color:#64748b;">H<sub>loss</sub> = R &times; Q&sup2;</div>
+        </div>
+      </div>
+
+      <!-- Detailed Breakdown Table -->
+      <div style="overflow-x:auto;border:1px solid #30363d;border-radius:8px;">
+        <table class="pn-simple-table">
+          <thead>
+            <tr>
+              <th>Pipe Segment</th>
+              <th>Nominal &amp; ID</th>
+              <th style="text-align:right;">Flow Q</th>
+              <th style="text-align:center;">Velocity V</th>
+              <th style="text-align:center;">Reynolds (Re)</th>
+              <th style="text-align:center;">Regime</th>
+              <th style="text-align:right;">Friction f</th>
+              <th style="text-align:right;">Major h<sub>f</sub></th>
+              <th style="text-align:right;">Minor h<sub>m</sub> (K)</th>
+              <th style="text-align:right;">Elev. &Delta;z</th>
+              <th style="text-align:right;color:#fbbf24;">Total Head H<sub>i</sub></th>
+              <th style="text-align:right;">Resistance R</th>
+            </tr>
+          </thead>
+          <tbody id="simple-results-tbody">
+            <!-- Populated dynamically by simpleController.renderResults() -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- end pn-simple-mode-wrap -->
+
 </div><!-- end pn-outer -->
+
+<!-- ─────────────────────────────────────────────────────────────────────────
+     SIMPLE MODE: FITTINGS & VALVES SELECTOR MODAL
+     Allows users to choose valves and fittings with specific quantities per pipe.
+     ───────────────────────────────────────────────────────────────────────── -->
+<div id="pn-simple-fittings-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;backdrop-filter:blur(3px);" onclick="if(event.target===this)simpleController.closeFittingsModal()">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(600px, 94vw);max-height:85vh;background:#161b22;border:1px solid #30363d;border-radius:12px;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.6);overflow:hidden;">
+    
+    <!-- Modal Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #21262d;background:#0d1117;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <i class="bi bi-tools" style="color:#fbbf24;font-size:1.1rem;"></i>
+        <div>
+          <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#f0f6fc;">
+            Valves &amp; Fittings for: <span id="modal-pipe-label" style="color:#38bdf8;">Pipe 1</span>
+          </h4>
+          <div style="font-size:11px;color:#8b949e;">Select fittings and specify counts. Minor loss: h<sub>m</sub> = &sum;K &times; V&sup2;/(2g)</div>
+        </div>
+      </div>
+      <button type="button" onclick="simpleController.closeFittingsModal()" style="background:none;border:none;color:#8b949e;cursor:pointer;font-size:1.3rem;" title="Close">&times;</button>
+    </div>
+
+    <!-- Modal Body: Fittings Checklist & Quantities -->
+    <div style="padding:16px 18px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:8px 12px;">
+        <span style="font-size:12px;color:#c9d1d9;font-weight:600;">Accumulated Minor Loss Coefficient:</span>
+        <span style="font-size:14px;font-weight:800;color:#fbbf24;">K<sub>total</sub> = <span id="modal-k-total-display">0.00</span></span>
+      </div>
+
+      <!-- Scrollable list of standard fittings -->
+      <div id="modal-fittings-list" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:4px;">
+        <!-- Populated dynamically from window.__PMP_FITTINGS -->
+      </div>
+
+      <!-- Additive Custom K Input -->
+      <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px;">
+        <label class="pp-label" style="margin-bottom:4px;display:flex;justify-content:space-between;">
+          <span>Additional Custom K Factor (Additive)</span>
+          <span style="font-size:10px;color:#64748b;">Specialist valves / orifices</span>
+        </label>
+        <input id="modal-custom-k" type="number" step="0.05" min="0" class="pn-input-cell" value="0.00" oninput="simpleController.onModalCustomKChange()" placeholder="0.00" style="max-width:140px;">
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid #21262d;background:#0d1117;">
+      <button type="button" class="pn-btn" onclick="simpleController.clearModalFittings()" style="font-size:11px;color:#ef4444;">
+        <i class="bi bi-trash"></i> Clear All Fittings
+      </button>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="pn-btn pn-btn-success" onclick="simpleController.closeFittingsModal()" style="font-size:11px;padding:5px 16px;">
+          <i class="bi bi-check-lg"></i> Done
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <!-- ─────────────────────────────────────────────────────────────────────────
      RESULTS SECTION — shown below the canvas after calculation
@@ -2356,5 +2906,1151 @@
       matSel.appendChild(opt);
     });
   }
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SIMPLE PIPELINE NETWORK DESIGNER CONTROLLER (Non-Drawn / Dropdown Mode)
+  //
+  // Purpose:
+  //   Provides a simplified, form-and-dropdown-driven workflow for users who
+  //   prefer entering pipeline parameters (standard pipe catalog sizes,
+  //   schedules, materials, lengths, fittings, and elevations) directly without
+  //   drawing or routing schematic nodes on the SVG canvas.
+  //
+  // Supported Topologies:
+  //   1. Series Network:
+  //      - Continuous end-to-end piping path.
+  //      - Total flow passes identically through every segment (Q_i = Q_total).
+  //      - Total friction loss accumulates: H_total = sum(h_f,i + h_m,i) + Dz_static.
+  //
+  //   2. Parallel Network:
+  //      - Multi-branch manifold split flow.
+  //      - Head loss balances across all branches (H_1 = H_2 = ...).
+  //      - Total flow is distributed among branches: Q_total = sum(Q_i).
+  //      - Supports automatic hydraulic resistance balancing (Q_i proportional to 1/sqrt(R_i))
+  //        or manual percentage allocation.
+  //
+  // Duty Point Sync:
+  //   Directly computes and applies calculated operating flow (Q) and total head (TDH)
+  //   to session['active_selection'] for immediate pump selection.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  class SimpleNetworkController {
+    constructor() {
+      // Current active network configuration state
+      this.state = {
+        topology: 'series',              // 'series' or 'parallel'
+        parallel_balancing: 'auto',       // 'auto' (hydraulic resistance balance) or 'manual' (% allocation)
+        flow_rate: 100.0,                 // Flow in active unit
+        flow_unit: window.__PMP_UNIT_Q || 'm3h', // e.g. m3h, ls, gpm
+        static_elevation: 10.0,           // Static elevation difference (m)
+        friction_method: 'darcy_weisbach',// 'darcy_weisbach' or 'hazen_williams'
+        fluid: {
+          type: 'water',
+          temp_c: 20,
+          sg: 1.00,
+          viscosity_cst: 1.004
+        },
+        pipes: []                         // Array of pipeline segment models
+      };
+
+      // Modal state for tracking which pipe's fittings are currently being edited
+      this.modalActivePipeIdx = null;
+      this.modalFittingsCopy = {};
+      this.modalCustomK = 0.0;
+
+      // Timer handle for debounced live recalculations
+      this.debounceTimer = null;
+      this.isCalculating = false;
+    }
+
+    /**
+     * Initializes the controller on first activation:
+     * - Restores previous state from session (if any) or loads sample series network
+     * - Populates input fields and bindings
+     */
+    init() {
+      // Check if session has saved simple network data
+      const sess = window.__PMP_SESSION_PIPE_NETWORK;
+      if (sess && sess.mode === 'simple' && Array.isArray(sess.pipes) && sess.pipes.length > 0) {
+        this.state.topology = sess.topology || 'series';
+        this.state.parallel_balancing = sess.parallel_balancing || 'auto';
+        this.state.flow_rate = parseFloat(sess.flow_rate || sess.flow_m3h || 100.0);
+        this.state.flow_unit = sess.flow_unit || window.__PMP_UNIT_Q || 'm3h';
+        this.state.static_elevation = parseFloat(sess.static_elevation_m || sess.static_head || 10.0);
+        this.state.friction_method = sess.friction_method || 'darcy_weisbach';
+        if (sess.fluid) {
+          this.state.fluid = Object.assign({}, this.state.fluid, sess.fluid);
+        }
+        this.state.pipes = sess.pipes.map(p => this.normalizePipeInput(p));
+      } else {
+        // Default starting pipeline: Series network with suction and discharge lines
+        this.loadPresetData('series');
+      }
+
+      // Sync form controls to state
+      this.syncControlsFromState();
+      this.renderTable();
+      this.calculate();
+    }
+
+    /**
+     * Normalizes a pipe object ensuring all required fields are present with correct types.
+     */
+    normalizePipeInput(p) {
+      return {
+        id: p.id || 'pipe_' + Math.random().toString(36).substr(2, 9),
+        label: p.label || 'Pipe Segment',
+        catalog_id: p.catalog_id || '',
+        diameter_mm: parseFloat(p.diameter_mm || p.diameter || 102.3),
+        material: p.material || 'commercial_steel',
+        roughness_mm: parseFloat(p.roughness_mm || p.roughness || 0.046),
+        length_m: parseFloat(p.length_m || p.length || 50.0),
+        elevation_m: parseFloat(p.elevation_m || p.elevation || 0.0),
+        fittings: (typeof p.fittings === 'object' && p.fittings !== null) ? Object.assign({}, p.fittings) : {},
+        custom_k: parseFloat(p.custom_k || 0.0),
+        flow_pct: parseFloat(p.flow_pct || p.flow_share || 0.0)
+      };
+    }
+
+    /**
+     * Sets network topology: 'series' vs 'parallel'
+     */
+    setTopology(topo) {
+      if (topo !== 'series' && topo !== 'parallel') return;
+      this.state.topology = topo;
+
+      // Update UI cards active state
+      const cardSeries = document.getElementById('topo-card-series');
+      const cardParallel = document.getElementById('topo-card-parallel');
+      const radioSeries = document.getElementById('topo-radio-series');
+      const radioParallel = document.getElementById('topo-radio-parallel');
+      const parallelWrap = document.getElementById('simple-parallel-mode-wrap');
+      const thFlowShare = document.getElementById('th-simple-flow-share');
+
+      if (topo === 'series') {
+        cardSeries?.classList.add('active');
+        cardParallel?.classList.remove('active');
+        if (radioSeries) radioSeries.checked = true;
+        if (parallelWrap) parallelWrap.style.display = 'none';
+        if (thFlowShare) thFlowShare.style.display = 'none';
+      } else {
+        cardParallel?.classList.add('active');
+        cardSeries?.classList.remove('active');
+        if (radioParallel) radioParallel.checked = true;
+        if (parallelWrap) parallelWrap.style.display = 'block';
+        if (thFlowShare) {
+          thFlowShare.style.display = (this.state.parallel_balancing === 'manual') ? '' : 'none';
+        }
+      }
+
+      this.renderTable();
+      this.calculate();
+    }
+
+    /**
+     * Toggles parallel balancing method: 'auto' (hydraulic split) vs 'manual' (% allocation)
+     */
+    onBalancingChange(method) {
+      this.state.parallel_balancing = method;
+      const thFlowShare = document.getElementById('th-simple-flow-share');
+      if (thFlowShare) {
+        thFlowShare.style.display = (method === 'manual' && this.state.topology === 'parallel') ? '' : 'none';
+      }
+      this.renderTable();
+      this.calculate();
+    }
+
+    /**
+     * Synchronizes HTML input elements to match internal controller state.
+     */
+    syncControlsFromState() {
+      // Flow rate and unit
+      const flowIn = document.getElementById('simple-flow-rate');
+      if (flowIn) flowIn.value = this.state.flow_rate;
+      const unitSel = document.getElementById('simple-flow-unit');
+      if (unitSel) unitSel.value = this.state.flow_unit;
+
+      // Static head
+      const staticIn = document.getElementById('simple-static-head');
+      if (staticIn) staticIn.value = this.state.static_elevation;
+
+      // Friction method
+      const fMethod = document.getElementById('simple-friction-method');
+      if (fMethod) fMethod.value = this.state.friction_method;
+
+      // Fluid properties
+      const fType = document.getElementById('simple-fluid-type');
+      if (fType) fType.value = this.state.fluid.type;
+      const fTemp = document.getElementById('simple-fluid-temp');
+      if (fTemp) fTemp.value = this.state.fluid.temp_c;
+      const fSg = document.getElementById('simple-fluid-sg');
+      if (fSg) fSg.value = this.state.fluid.sg;
+      const fVisc = document.getElementById('simple-fluid-viscosity');
+      if (fVisc) fVisc.value = this.state.fluid.viscosity_cst;
+
+      // Topology radio cards
+      this.setTopology(this.state.topology);
+    }
+
+    /**
+     * Reads form controls back into internal controller state.
+     */
+    readControlsIntoState() {
+      const flowIn = document.getElementById('simple-flow-rate');
+      if (flowIn) this.state.flow_rate = parseFloat(flowIn.value) || 0.0;
+      const unitSel = document.getElementById('simple-flow-unit');
+      if (unitSel) this.state.flow_unit = unitSel.value;
+      const staticIn = document.getElementById('simple-static-head');
+      if (staticIn) this.state.static_elevation = parseFloat(staticIn.value) || 0.0;
+      const fMethod = document.getElementById('simple-friction-method');
+      if (fMethod) this.state.friction_method = fMethod.value;
+
+      const fType = document.getElementById('simple-fluid-type');
+      if (fType) this.state.fluid.type = fType.value;
+      const fTemp = document.getElementById('simple-fluid-temp');
+      if (fTemp) this.state.fluid.temp_c = parseFloat(fTemp.value) || 20;
+      const fSg = document.getElementById('simple-fluid-sg');
+      if (fSg) this.state.fluid.sg = parseFloat(fSg.value) || 1.0;
+      const fVisc = document.getElementById('simple-fluid-viscosity');
+      if (fVisc) this.state.fluid.viscosity_cst = parseFloat(fVisc.value) || 1.004;
+    }
+
+    /**
+     * Handles fluid dropdown preset selection (sets typical density/viscosity defaults).
+     */
+    onFluidChange() {
+      const fType = document.getElementById('simple-fluid-type')?.value;
+      const fSg = document.getElementById('simple-fluid-sg');
+      const fVisc = document.getElementById('simple-fluid-viscosity');
+      const fTemp = document.getElementById('simple-fluid-temp');
+
+      if (fType === 'water') {
+        if (fSg) fSg.value = '1.00';
+        if (fVisc) fVisc.value = '1.004';
+        if (fTemp) fTemp.value = '20';
+      } else if (fType === 'slurry') {
+        if (fSg) fSg.value = '1.25';
+        if (fVisc) fVisc.value = '2.50';
+      } else if (fType === 'oil') {
+        if (fSg) fSg.value = '0.88';
+        if (fVisc) fVisc.value = '32.0';
+      }
+      this.readControlsIntoState();
+      this.calculate();
+    }
+
+    /**
+     * Handles unit dropdown changes (updates labels and triggers recalculation).
+     */
+    onUnitChange() {
+      this.readControlsIntoState();
+      this.calculate();
+    }
+
+    /**
+     * Debounces live input events so recalculation does not freeze UI while user is typing.
+     */
+    onInputDebounce() {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = setTimeout(() => {
+        this.readControlsIntoState();
+        this.calculate();
+      }, 350);
+    }
+
+    /**
+     * Adds a new pipeline segment to the network.
+     */
+    addPipe() {
+      const idx = this.state.pipes.length + 1;
+      const newPipe = {
+        id: 'pipe_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        label: `Pipe ${idx} - Segment`,
+        catalog_id: '',
+        diameter_mm: 102.3,
+        material: 'commercial_steel',
+        roughness_mm: 0.046,
+        length_m: 50.0,
+        elevation_m: 0.0,
+        fittings: {},
+        custom_k: 0.0,
+        flow_pct: (this.state.topology === 'parallel' && this.state.pipes.length > 0) ? +(100 / (idx)).toFixed(1) : 0
+      };
+
+      this.state.pipes.push(newPipe);
+      this.renderTable();
+      this.calculate();
+    }
+
+    /**
+     * Duplicates an existing pipeline segment.
+     */
+    duplicatePipe(idx) {
+      if (idx < 0 || idx >= this.state.pipes.length) return;
+      const src = this.state.pipes[idx];
+      const copy = Object.assign({}, src, {
+        id: 'pipe_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        label: src.label + ' (Copy)',
+        fittings: Object.assign({}, src.fittings)
+      });
+      this.state.pipes.splice(idx + 1, 0, copy);
+      this.renderTable();
+      this.calculate();
+    }
+
+    /**
+     * Removes a pipeline segment.
+     */
+    removePipe(idx) {
+      if (this.state.pipes.length <= 1) {
+        alert('The network requires at least one pipeline segment.');
+        return;
+      }
+      this.state.pipes.splice(idx, 1);
+      this.renderTable();
+      this.calculate();
+    }
+
+    /**
+     * Clears all pipeline segments and adds a clean starter segment.
+     */
+    clearPipes() {
+      if (!confirm('Clear all pipeline segments and start fresh?')) return;
+      this.state.pipes = [{
+        id: 'pipe_' + Date.now(),
+        label: 'Pipeline Main',
+        catalog_id: '',
+        diameter_mm: 102.3,
+        material: 'commercial_steel',
+        roughness_mm: 0.046,
+        length_m: 50.0,
+        elevation_m: 0.0,
+        fittings: {},
+        custom_k: 0.0,
+        flow_pct: 100.0
+      }];
+      this.renderTable();
+      this.calculate();
+    }
+
+    /**
+     * Loads preconfigured preset networks (Series or Parallel sample).
+     */
+    loadPreset(presetName) {
+      if (this.state.pipes.length > 0) {
+        if (!confirm(`Load ${presetName === 'series' ? 'Series' : 'Parallel'} sample pipeline configuration? Existing segment entries will be replaced.`)) {
+          return;
+        }
+      }
+      this.loadPresetData(presetName);
+      this.syncControlsFromState();
+      this.renderTable();
+      this.calculate();
+    }
+
+    /**
+     * Populates preset data structures.
+     */
+    loadPresetData(presetName) {
+      if (presetName === 'parallel') {
+        // Parallel sample: Dual pumping branches splitting 160 m3/h into Branch A (100mm) and Branch B (80mm)
+        this.state.topology = 'parallel';
+        this.state.parallel_balancing = 'auto';
+        this.state.flow_rate = 160.0;
+        this.state.flow_unit = 'm3h';
+        this.state.static_elevation = 8.0;
+        this.state.friction_method = 'darcy_weisbach';
+        this.state.fluid = { type: 'water', temp_c: 20, sg: 1.0, viscosity_cst: 1.004 };
+        this.state.pipes = [
+          {
+            id: 'branch_1',
+            label: 'Branch 1 - Primary Delivery (100mm)',
+            catalog_id: '',
+            diameter_mm: 102.3,
+            material: 'commercial_steel',
+            roughness_mm: 0.046,
+            length_m: 80.0,
+            elevation_m: 4.0,
+            fittings: { 'elbow_90_standard': 2, 'gate_valve_open': 1, 'swing_check_open': 1 },
+            custom_k: 0.0,
+            flow_pct: 0
+          },
+          {
+            id: 'branch_2',
+            label: 'Branch 2 - Secondary Bypass (80mm)',
+            catalog_id: '',
+            diameter_mm: 77.9,
+            material: 'commercial_steel',
+            roughness_mm: 0.046,
+            length_m: 95.0,
+            elevation_m: 4.0,
+            fittings: { 'elbow_90_standard': 3, 'butterfly_valve_open': 1, 'swing_check_open': 1 },
+            custom_k: 0.0,
+            flow_pct: 0
+          }
+        ];
+      } else {
+        // Series sample: Suction Line + Discharge Main + High Lift Vertical Riser
+        this.state.topology = 'series';
+        this.state.parallel_balancing = 'auto';
+        this.state.flow_rate = 120.0;
+        this.state.flow_unit = 'm3h';
+        this.state.static_elevation = 18.0;
+        this.state.friction_method = 'darcy_weisbach';
+        this.state.fluid = { type: 'water', temp_c: 20, sg: 1.0, viscosity_cst: 1.004 };
+        this.state.pipes = [
+          {
+            id: 'pipe_suction',
+            label: '1. Suction Line (150mm / 6")',
+            catalog_id: '',
+            diameter_mm: 154.1,
+            material: 'commercial_steel',
+            roughness_mm: 0.046,
+            length_m: 12.0,
+            elevation_m: -1.5,
+            fittings: { 'foot_valve_strainer': 1, 'elbow_90_long_radius': 1 },
+            custom_k: 0.0,
+            flow_pct: 0
+          },
+          {
+            id: 'pipe_discharge',
+            label: '2. Discharge Overland Main (100mm / 4")',
+            catalog_id: '',
+            diameter_mm: 102.3,
+            material: 'commercial_steel',
+            roughness_mm: 0.046,
+            length_m: 140.0,
+            elevation_m: 4.5,
+            fittings: { 'swing_check_open': 1, 'gate_valve_open': 1, 'elbow_90_standard': 3 },
+            custom_k: 0.0,
+            flow_pct: 0
+          },
+          {
+            id: 'pipe_riser',
+            label: '3. Vertical Riser to Storage Tank (80mm / 3")',
+            catalog_id: '',
+            diameter_mm: 77.9,
+            material: 'commercial_steel',
+            roughness_mm: 0.046,
+            length_m: 35.0,
+            elevation_m: 15.0,
+            fittings: { 'elbow_90_standard': 2, 'butterfly_valve_open': 1 },
+            custom_k: 0.0,
+            flow_pct: 0
+          }
+        ];
+      }
+    }
+
+    /**
+     * Calculates the total K-factor accumulated on a pipe from selected fittings and custom K.
+     */
+    calculatePipeTotalK(pipe) {
+      let totalK = parseFloat(pipe.custom_k) || 0.0;
+      const fittingsMap = this.getFittingsLookup();
+      if (pipe.fittings && typeof pipe.fittings === 'object') {
+        Object.entries(pipe.fittings).forEach(([key, qty]) => {
+          const count = parseInt(qty) || 0;
+          if (count > 0 && fittingsMap[key]) {
+            totalK += count * (fittingsMap[key].K || 0.0);
+          }
+        });
+      }
+      return +(totalK.toFixed(3));
+    }
+
+    /**
+     * Returns a fast dictionary of all registered fittings {key: {label, K, category}}
+     */
+    getFittingsLookup() {
+      const list = window.__PMP_FITTINGS || (typeof FITTINGS !== 'undefined' ? FITTINGS : []);
+      const dict = {};
+      list.forEach(f => { dict[f.key] = f; });
+      return dict;
+    }
+
+    /**
+     * Returns the array of available standard pipes catalog.
+     */
+    getStandardPipesList() {
+      if (Array.isArray(window.__PMP_STANDARD_PIPES) && window.__PMP_STANDARD_PIPES.length > 0) {
+        return window.__PMP_STANDARD_PIPES;
+      }
+      if (typeof STANDARD_PIPES !== 'undefined' && Array.isArray(STANDARD_PIPES) && STANDARD_PIPES.length > 0) {
+        return STANDARD_PIPES;
+      }
+      return [];
+    }
+
+    /**
+     * Returns the array of available materials.
+     */
+    getMaterialsList() {
+      if (Array.isArray(window.__PMP_MATERIALS) && window.__PMP_MATERIALS.length > 0) {
+        return window.__PMP_MATERIALS;
+      }
+      if (typeof MATERIALS !== 'undefined' && Array.isArray(MATERIALS) && MATERIALS.length > 0) {
+        return MATERIALS;
+      }
+      return [];
+    }
+
+    /**
+     * Renders the interactive table of pipeline segments.
+     */
+    renderTable() {
+      const tbody = document.getElementById('simple-pipes-tbody');
+      const badge = document.getElementById('simple-pipe-count-badge');
+      if (!tbody) return;
+
+      tbody.innerHTML = '';
+      if (badge) {
+        const n = this.state.pipes.length;
+        badge.textContent = `${n} Segment${n === 1 ? '' : 's'}`;
+      }
+
+      const catalog = this.getStandardPipesList();
+      const materials = this.getMaterialsList();
+      const isParallelManual = (this.state.topology === 'parallel' && this.state.parallel_balancing === 'manual');
+
+      this.state.pipes.forEach((p, idx) => {
+        const tr = document.createElement('tr');
+        tr.style.cssText = 'border-bottom:1px solid #21262d;';
+
+        // 1. Pipe index
+        const tdIdx = document.createElement('td');
+        tdIdx.style.cssText = 'text-align:center;font-weight:700;color:#64748b;';
+        tdIdx.textContent = idx + 1;
+        tr.appendChild(tdIdx);
+
+        // 2. Label
+        const tdLabel = document.createElement('td');
+        tdLabel.innerHTML = `<input type="text" class="pn-input-cell" value="${p.label.replace(/"/g, '&quot;')}" onchange="simpleController.updatePipeProp(${idx}, 'label', this.value)" placeholder="Segment name" style="font-weight:600;">`;
+        tr.appendChild(tdLabel);
+
+        // 3. Standard Pipe Catalog Dropdown
+        const tdCat = document.createElement('td');
+        const catSelect = document.createElement('select');
+        catSelect.className = 'pn-input-cell';
+        catSelect.style.cssText = 'font-size:11px;';
+        catSelect.innerHTML = `<option value="">-- Select Standard Pipe Size --</option>`;
+
+        // Add standard pipes grouped or listed
+        catalog.forEach(sp => {
+          const opt = document.createElement('option');
+          opt.value = sp.id;
+          opt.textContent = `${sp.standard} ${sp.schedule_sdr} - ${sp.nb_mm}mm (${sp.nb_inch}) [ID: ${sp.id_mm} mm]`;
+          if (p.catalog_id == sp.id) opt.selected = true;
+          catSelect.appendChild(opt);
+        });
+
+        // Option for custom non-catalog
+        const optCustom = document.createElement('option');
+        optCustom.value = 'custom';
+        optCustom.textContent = 'Custom / Non-Catalog Size';
+        if (p.catalog_id === 'custom') optCustom.selected = true;
+        catSelect.appendChild(optCustom);
+
+        catSelect.onchange = (e) => this.onCatalogSelect(idx, e.target.value);
+        tdCat.appendChild(catSelect);
+        tr.appendChild(tdCat);
+
+        // 4. Inner Diameter (ID mm)
+        const tdDiam = document.createElement('td');
+        tdDiam.innerHTML = `<input type="number" step="0.1" min="1" class="pn-input-cell" value="${p.diameter_mm}" onchange="simpleController.updatePipeProp(${idx}, 'diameter_mm', parseFloat(this.value))" style="text-align:right;font-family:monospace;font-weight:600;color:#38bdf8;">`;
+        tr.appendChild(tdDiam);
+
+        // 5. Material Dropdown
+        const tdMat = document.createElement('td');
+        const matSelect = document.createElement('select');
+        matSelect.className = 'pn-input-cell';
+        matSelect.style.cssText = 'font-size:11px;';
+        materials.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m.key;
+          opt.textContent = `${m.label}`;
+          if (p.material === m.key) opt.selected = true;
+          matSelect.appendChild(opt);
+        });
+        matSelect.onchange = (e) => this.onMaterialSelect(idx, e.target.value);
+        tdMat.appendChild(matSelect);
+        tr.appendChild(tdMat);
+
+        // 6. Length (m)
+        const tdLen = document.createElement('td');
+        tdLen.innerHTML = `<input type="number" step="0.1" min="0.1" class="pn-input-cell" value="${p.length_m}" onchange="simpleController.updatePipeProp(${idx}, 'length_m', parseFloat(this.value))" style="text-align:right;font-family:monospace;">`;
+        tr.appendChild(tdLen);
+
+        // 7. Elevation Change Dz (m)
+        const tdElev = document.createElement('td');
+        tdElev.innerHTML = `<input type="number" step="0.1" class="pn-input-cell" value="${p.elevation_m}" onchange="simpleController.updatePipeProp(${idx}, 'elevation_m', parseFloat(this.value))" style="text-align:right;font-family:monospace;color:#c084fc;">`;
+        tr.appendChild(tdElev);
+
+        // 8. Fittings & Valves Modal Button
+        const tdFit = document.createElement('td');
+        const totalK = this.calculatePipeTotalK(p);
+        let fitCount = 0;
+        if (p.fittings) {
+          Object.values(p.fittings).forEach(v => { fitCount += (parseInt(v) || 0); });
+        }
+        const fitBtnText = (fitCount > 0 || p.custom_k > 0)
+          ? `${fitCount} item${fitCount === 1 ? '' : 's'} (K=${totalK})`
+          : '0 items (K=0.00)';
+        const fitBtnColor = (fitCount > 0 || p.custom_k > 0) ? '#fbbf24' : '#8b949e';
+
+        tdFit.innerHTML = `
+          <button type="button" class="pn-btn" onclick="simpleController.openFittingsModal(${idx})" style="width:100%;font-size:11px;padding:3px 8px;display:flex;align-items:center;justify-content:space-between;border-color:rgba(251,191,36,0.3);color:${fitBtnColor};">
+            <span><i class="bi bi-tools" style="color:#fbbf24;margin-right:4px;"></i> ${fitBtnText}</span>
+            <i class="bi bi-chevron-right" style="font-size:9px;"></i>
+          </button>
+        `;
+        tr.appendChild(tdFit);
+
+        // 9. Flow Share % (visible when parallel manual mode is active)
+        if (isParallelManual) {
+          const tdShare = document.createElement('td');
+          tdShare.innerHTML = `<input type="number" step="1" min="0" max="100" class="pn-input-cell" value="${p.flow_pct || 0}" onchange="simpleController.updatePipeProp(${idx}, 'flow_pct', parseFloat(this.value))" style="text-align:right;color:#22c55e;font-weight:700;">`;
+          tr.appendChild(tdShare);
+        }
+
+        // 10. Actions: Duplicate & Delete
+        const tdActs = document.createElement('td');
+        tdActs.style.cssText = 'text-align:center;white-space:nowrap;';
+        tdActs.innerHTML = `
+          <button type="button" class="pn-btn" onclick="simpleController.duplicatePipe(${idx})" style="padding:3px 6px;font-size:11px;" title="Duplicate segment">
+            <i class="bi bi-copy text-[#38bdf8]"></i>
+          </button>
+          <button type="button" class="pn-btn" onclick="simpleController.removePipe(${idx})" style="padding:3px 6px;font-size:11px;color:#ef4444;" title="Delete segment">
+            <i class="bi bi-trash"></i>
+          </button>
+        `;
+        tr.appendChild(tdActs);
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    /**
+     * Updates a single property on a pipe segment and triggers calculation.
+     */
+    updatePipeProp(idx, prop, value) {
+      if (idx < 0 || idx >= this.state.pipes.length) return;
+      this.state.pipes[idx][prop] = value;
+      this.calculate();
+    }
+
+    /**
+     * Handler when user selects a pipe from the Standard Catalog dropdown.
+     * Automatically sets inner diameter, wall thickness, and default material.
+     */
+    onCatalogSelect(idx, catId) {
+      if (idx < 0 || idx >= this.state.pipes.length) return;
+      const pipe = this.state.pipes[idx];
+      pipe.catalog_id = catId;
+
+      if (catId === 'custom' || !catId) {
+        // Leave diameter as editable
+        this.renderTable();
+        return;
+      }
+
+      const catalog = this.getStandardPipesList();
+      const sp = catalog.find(p => String(p.id) === String(catId));
+      if (sp) {
+        pipe.diameter_mm = parseFloat(sp.id_mm);
+        if (sp.material_key) {
+          pipe.material = sp.material_key;
+          const mats = this.getMaterialsList();
+          const foundMat = mats.find(m => m.key === sp.material_key);
+          if (foundMat && foundMat.roughness_mm) {
+            pipe.roughness_mm = parseFloat(foundMat.roughness_mm);
+          }
+        }
+      }
+
+      this.renderTable();
+      this.calculate();
+    }
+
+    /**
+     * Handler when user changes the material dropdown on a pipe row.
+     */
+    onMaterialSelect(idx, matKey) {
+      if (idx < 0 || idx >= this.state.pipes.length) return;
+      const pipe = this.state.pipes[idx];
+      pipe.material = matKey;
+
+      const mats = this.getMaterialsList();
+      const mObj = mats.find(m => m.key === matKey);
+      if (mObj && mObj.roughness_mm) {
+        pipe.roughness_mm = parseFloat(mObj.roughness_mm);
+      }
+      this.calculate();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // FITTINGS MODAL MANAGEMENT
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Opens the fittings and valves configuration modal for a specific pipe.
+     */
+    openFittingsModal(idx) {
+      if (idx < 0 || idx >= this.state.pipes.length) return;
+      this.modalActivePipeIdx = idx;
+      const pipe = this.state.pipes[idx];
+
+      // Clone existing fittings and custom K for modal editing
+      this.modalFittingsCopy = Object.assign({}, pipe.fittings || {});
+      this.modalCustomK = parseFloat(pipe.custom_k) || 0.0;
+
+      // Update modal header labels
+      const labelEl = document.getElementById('modal-pipe-label');
+      if (labelEl) labelEl.textContent = pipe.label || `Pipe ${idx + 1}`;
+      const customKInput = document.getElementById('modal-custom-k');
+      if (customKInput) customKInput.value = this.modalCustomK;
+
+      // Render fittings checklist with quantity steppers
+      this.renderModalFittingsList();
+      this.updateModalKDisplay();
+
+      // Display the modal overlay
+      const modal = document.getElementById('pn-simple-fittings-modal');
+      if (modal) modal.style.display = 'block';
+    }
+
+    /**
+     * Renders fittings rows inside the modal.
+     */
+    renderModalFittingsList() {
+      const container = document.getElementById('modal-fittings-list');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const list = window.__PMP_FITTINGS || (typeof FITTINGS !== 'undefined' ? FITTINGS : []);
+
+      list.forEach(f => {
+        const qty = parseInt(this.modalFittingsCopy[f.key]) || 0;
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:6px 10px;';
+
+        row.innerHTML = `
+          <div>
+            <div style="font-size:12px;color:#e6edf3;font-weight:600;">${f.label}</div>
+            <div style="font-size:10px;color:#8b949e;">K-factor: <span style="color:#fbbf24;font-weight:600;">${f.K}</span> &bull; ${f.category || 'General'}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button type="button" class="pn-btn" onclick="simpleController.stepModalFittingQty('${f.key}', -1)" style="padding:2px 8px;font-size:12px;line-height:1;">-</button>
+            <input type="number" min="0" step="1" value="${qty}" onchange="simpleController.setModalFittingQty('${f.key}', parseInt(this.value) || 0)" class="pn-input-cell" style="width:48px;text-align:center;padding:2px 4px;font-weight:700;font-size:12px;color:#38bdf8;">
+            <button type="button" class="pn-btn" onclick="simpleController.stepModalFittingQty('${f.key}', 1)" style="padding:2px 8px;font-size:12px;line-height:1;">+</button>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    /**
+     * Increments or decrements a fitting count in the modal.
+     */
+    stepModalFittingQty(key, delta) {
+      const current = parseInt(this.modalFittingsCopy[key]) || 0;
+      const next = Math.max(0, current + delta);
+      if (next === 0) {
+        delete this.modalFittingsCopy[key];
+      } else {
+        this.modalFittingsCopy[key] = next;
+      }
+      this.renderModalFittingsList();
+      this.updateModalKDisplay();
+    }
+
+    /**
+     * Direct input of fitting count in the modal.
+     */
+    setModalFittingQty(key, qty) {
+      const next = Math.max(0, qty);
+      if (next === 0) {
+        delete this.modalFittingsCopy[key];
+      } else {
+        this.modalFittingsCopy[key] = next;
+      }
+      this.renderModalFittingsList();
+      this.updateModalKDisplay();
+    }
+
+    /**
+     * Custom K factor input change inside modal.
+     */
+    onModalCustomKChange() {
+      const val = parseFloat(document.getElementById('modal-custom-k')?.value) || 0.0;
+      this.modalCustomK = Math.max(0, val);
+      this.updateModalKDisplay();
+    }
+
+    /**
+     * Updates the running K-factor sum displayed inside the modal.
+     */
+    updateModalKDisplay() {
+      let totalK = this.modalCustomK;
+      const fittingsMap = this.getFittingsLookup();
+      Object.entries(this.modalFittingsCopy).forEach(([k, qty]) => {
+        const count = parseInt(qty) || 0;
+        if (count > 0 && fittingsMap[k]) {
+          totalK += count * (fittingsMap[k].K || 0.0);
+        }
+      });
+      const displayEl = document.getElementById('modal-k-total-display');
+      if (displayEl) displayEl.textContent = totalK.toFixed(3);
+    }
+
+    /**
+     * Clears all fittings from current pipe inside modal.
+     */
+    clearModalFittings() {
+      this.modalFittingsCopy = {};
+      this.modalCustomK = 0.0;
+      const customKInput = document.getElementById('modal-custom-k');
+      if (customKInput) customKInput.value = '0.00';
+      this.renderModalFittingsList();
+      this.updateModalKDisplay();
+    }
+
+    /**
+     * Closes the fittings modal, saving changes to the active pipe.
+     */
+    closeFittingsModal() {
+      if (this.modalActivePipeIdx !== null && this.state.pipes[this.modalActivePipeIdx]) {
+        const pipe = this.state.pipes[this.modalActivePipeIdx];
+        pipe.fittings = Object.assign({}, this.modalFittingsCopy);
+        pipe.custom_k = this.modalCustomK;
+      }
+      const modal = document.getElementById('pn-simple-fittings-modal');
+      if (modal) modal.style.display = 'none';
+
+      this.modalActivePipeIdx = null;
+      this.renderTable();
+      this.calculate();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // HYDRAULIC CALCULATION & RESULTS RENDERING
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Triggers hydraulic calculations. Calls the dedicated backend calculation endpoint
+     * `/api/pipe-network/simple-calculate` which implements high-precision iterative
+     * Colebrook-White friction factors and parallel flow resistance balancing.
+     */
+    async calculate(applyToSelection = false) {
+      if (this.isCalculating && !applyToSelection) return;
+      this.isCalculating = true;
+
+      const payload = {
+        topology: this.state.topology,
+        parallel_balancing: this.state.parallel_balancing,
+        flow_rate: this.state.flow_rate,
+        flow_unit: this.state.flow_unit,
+        static_elevation_m: this.state.static_elevation,
+        friction_method: this.state.friction_method,
+        fluid: this.state.fluid,
+        pipes: this.state.pipes.map(p => ({
+          id: p.id,
+          label: p.label,
+          catalog_id: p.catalog_id,
+          diameter_mm: p.diameter_mm,
+          material: p.material,
+          roughness_mm: p.roughness_mm,
+          length_m: p.length_m,
+          elevation_m: p.elevation_m,
+          fittings: p.fittings,
+          custom_k: p.custom_k,
+          flow_pct: p.flow_pct
+        }))
+      };
+
+      try {
+        const url = `/api/pipe-network/simple-calculate${applyToSelection ? '?apply_to_selection=true' : ''}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `Server responded with ${res.status}`);
+        }
+
+        const data = await res.json();
+        this.renderResults(data);
+
+        if (applyToSelection && data.applied_to_selection) {
+          const tdh = data.total_system_head_m;
+          const q = data.flow_m3h;
+          const unitQ = data.unit_q || 'm³/h';
+          const unitH = data.unit_h || 'm';
+          
+          if (confirm(`Duty Point successfully saved to session!\n\nFlow Rate: ${data.flow_user_unit} ${unitQ}\nTotal Head (TDH): ${data.total_system_head_user_unit} ${unitH}\n\nWould you like to navigate to the Pump Selection page now to view matching pumps?`)) {
+            window.location.href = '/pump-selection';
+          }
+        }
+      } catch (err) {
+        console.warn('Simple network calculation via API encountered an issue, running client-side fallback:', err);
+        this.calculateClientSideFallback();
+      } finally {
+        this.isCalculating = false;
+      }
+    }
+
+    /**
+     * Renders computed KPI cards and per-pipe hydraulic results table.
+     */
+    renderResults(data) {
+      // 1. KPI Cards
+      const tdhEl = document.getElementById('simple-res-tdh');
+      const tdhFtEl = document.getElementById('simple-res-tdh-ft');
+      const flowEl = document.getElementById('simple-res-flow');
+      const flowSubEl = document.getElementById('simple-res-flow-sub');
+      const fricEl = document.getElementById('simple-res-friction');
+      const fricBreakdownEl = document.getElementById('simple-res-friction-breakdown');
+      const staticEl = document.getElementById('simple-res-static');
+      const powerEl = document.getElementById('simple-res-power');
+      const powerHpEl = document.getElementById('simple-res-power-hp');
+      const rsysEl = document.getElementById('simple-res-rsys');
+
+      if (tdhEl) tdhEl.textContent = `${data.total_system_head_m} m`;
+      if (tdhFtEl) tdhFtEl.textContent = `${data.total_system_head_ft} ft`;
+      if (flowEl) flowEl.textContent = `${data.flow_m3h} m³/h`;
+      if (flowSubEl) flowSubEl.textContent = `${(data.flow_m3h / 3.6).toFixed(2)} L/s (${data.flow_user_unit} ${data.unit_q})`;
+      if (fricEl) fricEl.textContent = `${data.total_friction_loss_m} m`;
+      if (fricBreakdownEl && Array.isArray(data.pipes)) {
+        const totMaj = data.pipes.reduce((acc, p) => acc + (p.hf_major_m || 0), 0);
+        const totMin = data.pipes.reduce((acc, p) => acc + (p.hf_minor_m || 0), 0);
+        fricBreakdownEl.textContent = `Major: ${totMaj.toFixed(2)} m | Minor: ${totMin.toFixed(2)} m`;
+      }
+      if (staticEl) staticEl.textContent = `${data.static_elevation_m} m`;
+      if (powerEl) powerEl.textContent = `${data.hydraulic_power_kw} kW`;
+      if (powerHpEl) powerHpEl.textContent = `${data.hydraulic_power_hp} HP`;
+      if (rsysEl) rsysEl.textContent = data.equivalent_system_R ? data.equivalent_system_R.toExponential(3) : '—';
+
+      // 2. Per-pipe breakdown table
+      const tbody = document.getElementById('simple-results-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      (data.pipes || []).forEach(p => {
+        const tr = document.createElement('tr');
+        tr.style.cssText = 'border-bottom:1px solid #21262d;';
+
+        // Velocity badge color classification
+        let velBadgeClass = 'pn-badge-vel-opt';
+        let velHint = 'Optimal velocity';
+        const v = p.velocity_m_s;
+        if (v < 0.9) {
+          velBadgeClass = 'pn-badge-vel-low';
+          velHint = 'Low velocity (<0.9 m/s) - risk of solid sedimentation in slurries';
+        } else if (v > 3.5) {
+          velBadgeClass = 'pn-badge-vel-excess';
+          velHint = 'Excessive velocity (>3.5 m/s) - high erosion, surge and pipe wear';
+        } else if (v > 2.5) {
+          velBadgeClass = 'pn-badge-vel-high';
+          velHint = 'Elevated velocity (2.5 - 3.5 m/s) - higher friction losses';
+        }
+
+        tr.innerHTML = `
+          <td style="font-weight:600;color:#e6edf3;">${p.label}</td>
+          <td style="font-family:monospace;color:#94a3b8;">${p.diameter_mm} mm</td>
+          <td style="text-align:right;font-family:monospace;font-weight:600;color:#38bdf8;">${p.flow_m3h} m³/h</td>
+          <td style="text-align:center;">
+            <span class="pn-badge-velocity ${velBadgeClass}" title="${velHint}">
+              ${v} m/s
+            </span>
+          </td>
+          <td style="text-align:center;font-family:monospace;color:#cbd5e1;">${Math.round(p.reynolds).toLocaleString()}</td>
+          <td style="text-align:center;font-size:11px;color:#8b949e;">${p.flow_regime}</td>
+          <td style="text-align:right;font-family:monospace;color:#a78bfa;">${p.friction_factor}</td>
+          <td style="text-align:right;font-family:monospace;">${p.hf_major_m} m</td>
+          <td style="text-align:right;font-family:monospace;">${p.hf_minor_m} m <span style="font-size:10px;color:#64748b;">(K=${p.k_total})</span></td>
+          <td style="text-align:right;font-family:monospace;color:#c084fc;">${p.hf_elevation_m} m</td>
+          <td style="text-align:right;font-family:monospace;font-weight:700;color:#fbbf24;">${p.total_segment_head_m} m</td>
+          <td style="text-align:right;font-family:monospace;font-size:11px;color:#64748b;">${p.resistance_R ? p.resistance_R.toExponential(2) : '—'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    /**
+     * Pure client-side calculation fallback in case network API is temporarily unreachable.
+     */
+    calculateClientSideFallback() {
+      const g = 9.80665;
+      const q_m3h = this.state.flow_rate;
+      const q_m3s = q_m3h / 3600.0;
+      const nu = (this.state.fluid.viscosity_cst || 1.004) * 1e-6;
+      const rho = (this.state.fluid.sg || 1.0) * 1000.0;
+
+      let totalMajor = 0.0;
+      let totalMinor = 0.0;
+      const pipesRes = [];
+
+      this.state.pipes.forEach(p => {
+        const d_m = p.diameter_mm / 1000.0;
+        const area = Math.PI * (d_m ** 2) / 4.0;
+        const vel = area > 0 ? (q_m3s / area) : 0.0;
+        const Re = (vel * d_m) / nu;
+        
+        // Swamee-Jain approximation
+        const eps_d = (p.roughness_mm / 1000.0) / d_m;
+        let f = 0.02;
+        if (Re < 2300) {
+          f = 64.0 / (Re || 1);
+        } else {
+          f = 0.25 / Math.pow(Math.log10(eps_d / 3.7 + 5.74 / Math.pow(Re, 0.9)), 2);
+        }
+
+        const hf = f * (p.length_m / d_m) * (vel ** 2) / (2.0 * g);
+        const kTot = this.calculatePipeTotalK(p);
+        const hm = kTot * (vel ** 2) / (2.0 * g);
+        const dz = p.elevation_m;
+
+        totalMajor += hf;
+        totalMinor += hm;
+
+        pipesRes.push({
+          label: p.label,
+          diameter_mm: p.diameter_mm,
+          flow_m3h: +(q_m3h.toFixed(2)),
+          velocity_m_s: +(vel.toFixed(2)),
+          reynolds: Math.round(Re),
+          flow_regime: Re < 2300 ? 'Laminar' : (Re < 4000 ? 'Transitional' : 'Turbulent'),
+          friction_factor: +(f.toFixed(4)),
+          hf_major_m: +(hf.toFixed(2)),
+          hf_minor_m: +(hm.toFixed(2)),
+          hf_elevation_m: +(dz.toFixed(2)),
+          total_segment_head_m: +((hf + hm + dz).toFixed(2)),
+          k_total: kTot,
+          resistance_R: q_m3h > 0 ? +(((hf + hm) / (q_m3h ** 2)).toExponential(3)) : 0
+        });
+      });
+
+      const tdh = totalMajor + totalMinor + this.state.static_elevation;
+      const pKw = (rho * g * q_m3s * tdh) / 1000.0;
+
+      this.renderResults({
+        total_system_head_m: +(tdh.toFixed(2)),
+        total_system_head_ft: +((tdh * 3.28084).toFixed(2)),
+        flow_m3h: +(q_m3h.toFixed(2)),
+        flow_user_unit: +(q_m3h.toFixed(2)),
+        unit_q: this.state.flow_unit,
+        unit_h: 'm',
+        total_friction_loss_m: +((totalMajor + totalMinor).toFixed(2)),
+        static_elevation_m: +(this.state.static_elevation.toFixed(2)),
+        hydraulic_power_kw: +(pKw.toFixed(2)),
+        hydraulic_power_hp: +((pKw * 1.34102).toFixed(2)),
+        equivalent_system_R: q_m3h > 0 ? ((totalMajor + totalMinor) / (q_m3h ** 2)) : 0,
+        pipes: pipesRes
+      });
+    }
+
+    /**
+     * Applies the calculated Duty Point (Flow Q, Total Head H) directly to the
+     * active pump selection session, and notifies the user.
+     */
+    applyToPumpSelection() {
+      this.calculate(true);
+    }
+  }
+
+  // Global singleton controller instance
+  window.simpleController = new SimpleNetworkController();
+
+  /**
+   * Switches the Pipe Network Designer between Interactive Visual Canvas and Simple Dropdown Mode.
+   *
+   * @param {string} mode - 'canvas' for visual SVG designer, 'simple' for non-drawn dropdown mode.
+   */
+  function setDesignerMode(mode) {
+    const canvasBtn = document.getElementById('btn-mode-canvas');
+    const simpleBtn = document.getElementById('btn-mode-simple');
+    const mainRow = document.getElementById('pn-main-row');
+    const simpleWrap = document.getElementById('pn-simple-mode-wrap');
+    const canvasTools1 = document.getElementById('pn-canvas-tools-group-1');
+    const resultsSec = document.getElementById('pn-results-section');
+
+    const topCanvasBtn = document.getElementById('btn-top-mode-canvas');
+    const topSimpleBtn = document.getElementById('btn-top-mode-simple');
+
+    if (mode === 'simple') {
+      // 1. Update toolbar and top header button highlights
+      canvasBtn?.classList.remove('active-tool');
+      simpleBtn?.classList.add('active-tool');
+      topCanvasBtn?.classList.remove('active-tool');
+      topSimpleBtn?.classList.add('active-tool');
+      if (topSimpleBtn) topSimpleBtn.style.background = '#22c55e';
+      if (topSimpleBtn) topSimpleBtn.style.color = '#000';
+      if (topCanvasBtn) topCanvasBtn.style.background = 'transparent';
+      if (topCanvasBtn) topCanvasBtn.style.color = '#8b949e';
+
+      // 2. Hide visual canvas main row and canvas-specific tool buttons
+      if (mainRow) mainRow.style.display = 'none';
+      if (canvasTools1) canvasTools1.style.display = 'none';
+      if (resultsSec) resultsSec.style.display = 'none';
+
+      // 3. Display simple mode container
+      if (simpleWrap) simpleWrap.style.display = 'flex';
+
+      // 4. Initialize simple controller if needed
+      if (!window.simpleController.isInitialized) {
+        window.simpleController.init();
+        window.simpleController.isInitialized = true;
+      } else {
+        window.simpleController.calculate();
+      }
+
+      // 5. Persist mode preference
+      try { localStorage.setItem('pmp_pipe_designer_mode', 'simple'); } catch (e) {}
+
+    } else {
+      // Visual Canvas Mode
+      canvasBtn?.classList.add('active-tool');
+      simpleBtn?.classList.remove('active-tool');
+      topCanvasBtn?.classList.add('active-tool');
+      topSimpleBtn?.classList.remove('active-tool');
+      if (topCanvasBtn) topCanvasBtn.style.background = '#38bdf8';
+      if (topCanvasBtn) topCanvasBtn.style.color = '#000';
+      if (topSimpleBtn) topSimpleBtn.style.background = 'transparent';
+      if (topSimpleBtn) topSimpleBtn.style.color = '#22c55e';
+
+      if (simpleWrap) simpleWrap.style.display = 'none';
+      if (mainRow) mainRow.style.display = 'flex';
+      if (canvasTools1) canvasTools1.style.display = 'inline-flex';
+
+      try { localStorage.setItem('pmp_pipe_designer_mode', 'canvas'); } catch (e) {}
+
+      // Redraw canvas if needed
+      if (typeof scheduleDraw === 'function') scheduleDraw();
+    }
+  }
+
+  // Auto-restore previously preferred designer mode on page load
+  document.addEventListener('DOMContentLoaded', () => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlMode = urlParams.get('mode');
+      const sess = window.__PMP_SESSION_PIPE_NETWORK;
+      const savedMode = (urlMode === 'simple' || urlMode === 'canvas')
+        ? urlMode
+        : ((sess && sess.mode === 'simple')
+          ? 'simple'
+          : (localStorage.getItem('pmp_pipe_designer_mode') || 'canvas'));
+
+      if (savedMode === 'simple') {
+        setDesignerMode('simple');
+      } else {
+        setDesignerMode('canvas');
+      }
+    } catch (e) {
+      console.error('Error during designer mode initialization:', e);
+    }
+  });
 </script>
 {% endblock %}

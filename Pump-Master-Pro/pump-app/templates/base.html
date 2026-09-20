@@ -237,6 +237,13 @@
            onmouseout="if(!this.classList.contains('tw-active')){this.style.color='#8b949e';this.style.background='transparent';}">
           <i class="bi bi-bullseye"></i>Pump Selection
         </a>
+        <a class="nav-link-anim {% if 'pipe_network' in request.endpoint %}tw-active{% endif %}"
+           href="{{ url_for('pipe_network.pipe_network') }}"
+           style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 0.75rem;border-radius:6px;font-size:0.9rem;text-decoration:none;color:{% if 'pipe_network' in request.endpoint %}#58a6ff{% else %}#8b949e{% endif %};"
+           onmouseover="if(!this.classList.contains('tw-active')){this.style.color='#e6edf3';this.style.background='#1c2330';}"
+           onmouseout="if(!this.classList.contains('tw-active')){this.style.color='#8b949e';this.style.background='transparent';}">
+          <i class="bi bi-diagram-3"></i>Pipe Network
+        </a>
         {% endif %}
 
         {% if not current_user or current_user.can_access('comparison') %}
@@ -461,6 +468,9 @@
     <a href="{{ url_for('pump_selection') }}"
        style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;font-size:0.9rem;margin-bottom:2px;color:{% if request.endpoint == 'pump_selection' %}#58a6ff{% else %}#8b949e{% endif %};">
       <i class="bi bi-bullseye"></i>Pump Selection</a>
+    <a href="{{ url_for('pipe_network.pipe_network') }}"
+       style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;font-size:0.9rem;margin-bottom:2px;color:{% if 'pipe_network' in request.endpoint %}#58a6ff{% else %}#8b949e{% endif %};">
+      <i class="bi bi-diagram-3"></i>Pipe Network</a>
     {% endif %}
     {% if not current_user or current_user.can_access('comparison') %}
     <a href="{{ url_for('pump_comparison') }}"

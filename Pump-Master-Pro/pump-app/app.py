@@ -357,7 +357,7 @@ with app.app_context():
             db.session.commit()
 
         # Ensure Lytrose Engineering (ID = 2) exists as active working organisation
-        lytrose = Organisation.query.get(2)
+        lytrose = db.session.get(Organisation, 2)
         if not lytrose:
             lytrose = Organisation(
                 id=2,

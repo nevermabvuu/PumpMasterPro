@@ -1590,31 +1590,36 @@ def find_network_fundamental_loops(graph: NetworkGraph) -> List[List[Tuple[str, 
         path_v = get_path_to_root(v)
 
         nodes_in_v = {curr: i for i, (curr, _, _) in enumerate(path_v)}
+        nodes_in_v[node_keys[0]] = len(path_v)
+        nodes_in_u = {curr: i for i, (curr, _, _) in enumerate(path_u)}
+        nodes_in_u[node_keys[0]] = len(path_u)
+
         lca = None
         u_prefix_len = 0
         v_prefix_len = 0
 
-        for i, (curr, _, _) in enumerate(path_u):
-            if curr in nodes_in_v:
-                lca = curr
-                u_prefix_len = i
-                v_prefix_len = nodes_in_v[curr]
-                break
-
-        if lca is None:
-            if u in nodes_in_v:
-                lca = u
-                v_prefix_len = nodes_in_v[u]
-            elif v in {curr for curr, _, _ in path_u}:
-                lca = v
-                u_prefix_len = [curr for curr, _, _ in path_u].index(v)
+        if u in nodes_in_v:
+            lca = u
+            v_prefix_len = nodes_in_v[u]
+        elif v in nodes_in_u:
+            lca = v
+            u_prefix_len = nodes_in_u[v]
+        else:
+            for i, (curr, _, _) in enumerate(path_u):
+                if curr in nodes_in_v:
+                    lca = curr
+                    u_prefix_len = i
+                    v_prefix_len = nodes_in_v[curr]
+                    break
 
         loop = [(chord_id, 1)]
-        for j in range(u_prefix_len):
-            _, pid, d = path_u[j]
-            loop.append((pid, -d))
-        for j in range(v_prefix_len - 1, -1, -1):
+        # Traverse from v back to LCA (reverse direction along tree branches: -d)
+        for j in range(v_prefix_len):
             _, pid, d = path_v[j]
+            loop.append((pid, -d))
+        # Traverse from LCA forward to u (forward direction along path_u: +d)
+        for j in range(u_prefix_len - 1, -1, -1):
+            _, pid, d = path_u[j]
             loop.append((pid, d))
 
         loops.append(loop)

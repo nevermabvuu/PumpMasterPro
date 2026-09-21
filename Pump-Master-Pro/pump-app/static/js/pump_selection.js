@@ -785,6 +785,199 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  /**
+   * showDutyPointAppliedToast(displayQ, displayH, displayStatic, displayNpsh)
+   * Renders a modern floating confirmation toast when pipe network results are applied.
+   */
+  function showDutyPointAppliedToast(displayQ, displayH, displayStatic, displayNpsh) {
+    const existing = document.getElementById('pmpro-duty-toast');
+    if (existing) existing.remove();
+
+    const toastEl = document.createElement('div');
+    toastEl.id = 'pmpro-duty-toast';
+    toastEl.style.cssText = `
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 10050;
+      background: #161b22;
+      border: 1px solid #22c55e;
+      border-radius: 10px;
+      padding: 14px 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 15px rgba(34,197,94,0.25);
+      color: #f0f6fc;
+      font-size: 12.5px;
+      line-height: 1.5;
+      min-width: 280px;
+      animation: popoverFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    `;
+    toastEl.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;border-bottom:1px solid #30363d;padding-bottom:6px;">
+        <span style="font-weight:700;color:#22c55e;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-check-circle-fill"></i> Duty Point Applied to Selection!
+        </span>
+        <button type="button" onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:#8b949e;cursor:pointer;font-size:16px;line-height:1;padding:0 2px;">&times;</button>
+      </div>
+      <div style="font-family:monospace;font-size:12px;display:flex;flex-direction:column;gap:3px;color:#cbd5e1;">
+        ${displayQ ? `<div>Flow Rate (Q): <strong style="color:#38bdf8;">${displayQ}</strong></div>` : ''}
+        ${displayH ? `<div>Total Head (H): <strong style="color:#fbbf24;">${displayH}</strong></div>` : ''}
+        ${displayStatic ? `<div>Static Head (Hs): <strong style="color:#c084fc;">${displayStatic}</strong></div>` : ''}
+        ${displayNpsh ? `<div>NPSH Available: <strong style="color:#2dd4bf;">${displayNpsh}</strong></div>` : ''}
+      </div>
+    `;
+    document.body.appendChild(toastEl);
+    setTimeout(() => {
+      if (toastEl.parentElement) {
+        toastEl.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+        toastEl.style.opacity = '0';
+        toastEl.style.transform = 'translateY(10px)';
+        setTimeout(() => toastEl.remove(), 400);
+      }
+    }, 5500);
+  }
+
+  /**
+   * applyDutyPointToPumpSelection(data)
+   *
+   * Core bridge transferring calculated pipe network hydraulics into Pump Selection form fields:
+   *  1. Flow Rate (Q)           -> #input_q_duty (converted to active select_unit_q)
+   *  2. Total Dynamic Head (TDH) -> #input_h_duty (converted to active select_unit_h)
+   *  3. Static Elevation (Hs)   -> #input_static_head (converted to active select_unit_static_head)
+   *  4. NPSH Available (NPSHa)  -> #input_npsh_avail (converted to active select_unit_npsh)
+   *  5. Fluid & Site Properties  -> temperature, fluid type, density/SG, viscosity, slurry
+   *
+   * Triggers 'input' and 'change' events across all inputs, switches active tab to 'selection',
+   * pulses the Duty Point card with an emerald highlight, and notifies the user with a summary toast.
+   *
+   * @param {Object} data - Hydraulic calculation summary
+   */
+  function applyDutyPointToPumpSelection(data) {
+    if (!data) return;
+
+    // 1. Flow Rate Q
+    const qInp = document.getElementById('input_q_duty');
+    const unitQSel = document.getElementById('select_unit_q');
+    const unitQ = unitQSel?.value || 'm3h';
+    let displayQ = '';
+    if (data.flow_m3h !== undefined && data.flow_m3h !== null && !isNaN(Number(data.flow_m3h))) {
+      const qVal = convertValue(data.flow_m3h, 'm3h', unitQ, 'flow');
+      if (qInp) {
+        qInp.value = qVal;
+        displayQ = `${qVal} ${unitQSel?.options[unitQSel.selectedIndex]?.text || unitQ}`;
+      }
+    } else if (data.flow_user_unit !== undefined && qInp) {
+      qInp.value = data.flow_user_unit;
+      displayQ = `${data.flow_user_unit} ${unitQ}`;
+    }
+
+    // 2. Total Dynamic Head H (TDH)
+    const hInp = document.getElementById('input_h_duty');
+    const unitHSel = document.getElementById('select_unit_h');
+    const unitH = unitHSel?.value || 'm';
+    let displayH = '';
+    if (data.head_m !== undefined && data.head_m !== null && !isNaN(Number(data.head_m))) {
+      const hVal = convertValue(data.head_m, 'm', unitH, 'head');
+      if (hInp) {
+        hInp.value = hVal;
+        displayH = `${hVal} ${unitHSel?.options[unitHSel.selectedIndex]?.text || unitH}`;
+      }
+    } else if (data.total_system_head_user_unit !== undefined && hInp) {
+      hInp.value = data.total_system_head_user_unit;
+      displayH = `${data.total_system_head_user_unit} ${unitH}`;
+    }
+
+    // 3. Static Elevation Head Hs
+    const staticInp = document.getElementById('input_static_head');
+    const unitStaticSel = document.getElementById('select_unit_static_head');
+    const unitStatic = unitStaticSel?.value || 'm';
+    let displayStatic = '';
+    if (data.static_head_m !== undefined && data.static_head_m !== null && !isNaN(Number(data.static_head_m))) {
+      const staticVal = convertValue(data.static_head_m, 'm', unitStatic, 'head');
+      if (staticInp) {
+        staticInp.value = staticVal;
+        displayStatic = `${staticVal} ${unitStaticSel?.options[unitStaticSel.selectedIndex]?.text || unitStatic}`;
+      }
+    }
+
+    // 4. Net Positive Suction Head Available (NPSHa)
+    const npshInp = document.getElementById('input_npsh_avail');
+    const unitNpshSel = document.getElementById('select_unit_npsh');
+    const unitNpsh = unitNpshSel?.value || 'm';
+    let displayNpsh = '';
+    if (data.npsha_m !== undefined && data.npsha_m !== null && !isNaN(Number(data.npsha_m)) && Number(data.npsha_m) > 0) {
+      const npshVal = convertValue(data.npsha_m, 'm', unitNpsh, 'head');
+      if (npshInp) {
+        npshInp.value = npshVal;
+        displayNpsh = `${npshVal} ${unitNpshSel?.options[unitNpshSel.selectedIndex]?.text || unitNpsh}`;
+      }
+    }
+
+    // 5. Environmental & Fluid Conditions
+    if (data.temperature_c !== undefined && data.temperature_c !== null) {
+      const tInp = document.getElementById('input_temperature_c');
+      if (tInp) tInp.value = data.temperature_c;
+    }
+
+    const fluidType = data.liquid || data.fluid_type || 'water';
+    const liquidSel = document.getElementById('liquidSel');
+    if (liquidSel && liquidSel.value !== fluidType) {
+      liquidSel.value = fluidType;
+      liquidSel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    const sgVal = data.specific_gravity || (data.density_kg_m3 ? data.density_kg_m3 / 1000.0 : null);
+    if (sgVal) {
+      applyExternalSgToPumpSelection(sgVal);
+    }
+
+    if (data.viscosity_cSt !== undefined && data.viscosity_cSt !== null) {
+      const viscInp = document.querySelector('#viscousParams input[name="viscosity_cSt"]');
+      if (viscInp) viscInp.value = data.viscosity_cSt;
+    }
+    if (data.fluid_ph !== undefined && data.fluid_ph !== null) {
+      const phInp = document.getElementById('input_fluid_ph');
+      if (phInp) phInp.value = data.fluid_ph;
+    }
+    if (data.fluid_concentration !== undefined && data.fluid_concentration !== null) {
+      const concInp = document.getElementById('input_fluid_concentration');
+      if (concInp) concInp.value = data.fluid_concentration;
+    }
+
+    // Slurry properties if applicable
+    if (fluidType === 'slurry') {
+      if (data.slurry_liquid_sg) { const el = document.getElementById('sg_l'); if (el) el.value = data.slurry_liquid_sg; }
+      if (data.slurry_solids_sg) { const el = document.getElementById('sg_s'); if (el) el.value = data.slurry_solids_sg; }
+      if (data.slurry_c_weight)  { const el = document.getElementById('slurry_cw'); if (el) el.value = data.slurry_c_weight; }
+      if (data.slurry_d50_mm)    { const el = document.getElementById('input_slurry_d50'); if (el) el.value = data.slurry_d50_mm; }
+    }
+
+    // 6. Trigger reactive input & change events
+    [qInp, hInp, staticInp, npshInp].forEach(el => {
+      if (el) {
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+
+    // 7. Switch active tab to Pump Selection
+    if (typeof window.switchSelectionTab === 'function') {
+      window.switchSelectionTab('selection');
+    }
+
+    // 8. Visual feedback: scroll to Duty Point card and pulse glow
+    const dutyCard = qInp?.closest('.card-dark');
+    if (dutyCard) {
+      dutyCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      dutyCard.classList.remove('duty-applied-pulse');
+      void dutyCard.offsetWidth; // Trigger CSS DOM reflow
+      dutyCard.classList.add('duty-applied-pulse');
+      setTimeout(() => dutyCard.classList.remove('duty-applied-pulse'), 3000);
+    }
+
+    // 9. Display confirmation toast notification
+    showDutyPointAppliedToast(displayQ, displayH, displayStatic, displayNpsh);
+  }
+
   // Window exports for cross-component access
   window.getPumpSelectionFlowM3h = getPumpSelectionFlowM3h;
   window.setPumpSelectionFlowFromM3h = setPumpSelectionFlowFromM3h;
@@ -798,6 +991,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.syncPipeNetworkSgToPumpSelection = syncPipeNetworkToPumpSelection;
   window.syncPumpSelectionUnitsToPipeNetwork = syncPumpSelectionUnitsToPipeNetwork;
   window.applyExternalUnitsToPumpSelection = applyExternalUnitsToPumpSelection;
+  window.applyDutyPointToPumpSelection = applyDutyPointToPumpSelection;
 
   // Attach input listeners for live Flow, Temp, Units, Fluid Type, and Fluid Properties sync
   ['input_q_duty', 'select_unit_q', 'select_unit_h', 'select_unit_npsh', 'select_unit_static_head', 'input_temperature_c', 'input_rho_water', 'liquidSel', 'input_rho_viscous', 'input_fluid_ph', 'input_fluid_concentration', 'sg_l', 'sg_s', 'sg_m', 'slurry_cv', 'slurry_cw', 'input_slurry_d50', 'select_unit_d50'].forEach(id => {

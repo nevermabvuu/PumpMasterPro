@@ -36,13 +36,9 @@
     <i class="bi bi-bullseye"></i> Pump Selection
   </button>
   <button id="tab-btn-pipenet" onclick="switchSelectionTab('pipenet')"
-    style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;font-size:13px;font-weight:600;border:none;background:transparent;cursor:pointer;border-bottom:2px solid transparent;color:#8b949e;transition:all .2s;">
-    <i class="bi bi-diagram-3"></i> Pipe Network (Visual Canvas)
-  </button>
-  <button id="tab-btn-simple-pipenet" onclick="switchSelectionTab('simple_pipenet')"
-    style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;font-size:13px;font-weight:700;border:none;background:rgba(34,197,94,0.08);border-radius:6px 6px 0 0;cursor:pointer;border-bottom:2px solid transparent;color:#22c55e;transition:all .2s;"
-    title="Configure simple pipeline systems in Series or Parallel using dropdown lists without drawing">
-    <i class="bi bi-list-columns-reverse" style="color:#22c55e;"></i> Simple Pipe Network (Dropdowns)
+    style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;font-size:13px;font-weight:600;border:none;background:transparent;cursor:pointer;border-bottom:2px solid transparent;color:#8b949e;transition:all .2s;"
+    title="Open Pipe Network Designer to configure piping systems visually on a canvas or using dropdown lists">
+    <i class="bi bi-diagram-3"></i> Pipe Network Designer
   </button>
 </div>
 
@@ -1797,6 +1793,25 @@
     color: #ef4444;
     border: 1px solid rgba(239, 68, 68, 0.3);
   }
+
+  /* Pulse highlight when duty point parameters are populated from pipe network */
+  @keyframes dutyAppliedPulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      border-color: #22c55e;
+    }
+    40% {
+      box-shadow: 0 0 24px 6px rgba(34, 197, 94, 0.45);
+      border-color: #22c55e;
+    }
+    100% {
+      box-shadow: none;
+      border-color: #30363d;
+    }
+  }
+  .duty-applied-pulse {
+    animation: dutyAppliedPulse 2.4s ease-out;
+  }
 </style>
 
 <div id="tab-panel-pipenet" style="display:none;">
@@ -1988,7 +2003,7 @@
       </div>
 
       <!-- Slurry & Advanced Pipeline Analysis Tool -->
-      <button id="btn-toggle-slurry" type="button" class="pn-btn" title="Slurry Transport & Advanced Pipe Analytics (Settling velocity, Durand critical deposition, Joukowsky surge, Barlow hoop stress)">
+      <button id="btn-toggle-slurry" type="button" class="pn-btn" style="display:none;" title="Slurry Transport & Advanced Pipe Analytics (Settling velocity, Durand critical deposition, Joukowsky surge, Barlow hoop stress)">
         <i class="bi bi-layers-fill" style="color:#f59e0b;"></i> Slurry / Advanced
       </button>
 
@@ -1998,8 +2013,13 @@
       </button>
 
       <!-- Calculate button -->
-      <button id="pn-calc-btn" type="button" class="pn-btn pn-btn-success" style="margin-left:auto;flex-shrink:0;white-space:nowrap;font-weight:700;box-shadow:0 0 10px rgba(34,197,94,0.3);">
+      <button id="pn-calc-btn" type="button" class="pn-btn pn-btn-success" style="margin-left:auto;flex-shrink:0;white-space:nowrap;font-weight:700;box-shadow:0 0 10px rgba(34,197,94,0.3);" title="Calculate hydraulic friction losses, nodal pressures, and system curve across the drawn network">
         <i class="bi bi-calculator"></i> Calculate Losses
+      </button>
+
+      <!-- Apply Duty Point to Selection button (Visual Canvas - listener attached in pipe_network.js) -->
+      <button id="btn-visual-apply-duty" type="button" class="pn-btn pn-btn-primary" style="background:#2563eb;font-weight:700;padding:6px 14px;font-size:12px;box-shadow:0 0 14px rgba(37,99,235,0.35);flex-shrink:0;white-space:nowrap;" title="Apply calculated Head, Static Head, NPSHa, and Flow directly into Pump Selection duty fields">
+        <i class="bi bi-box-arrow-up-right"></i> Apply Duty Point to Selection
       </button>
 
     </div><!-- end toolbar -->
@@ -2463,6 +2483,9 @@
           <button type="button" class="pn-btn pn-btn-primary" onclick="simpleController.calculate()" style="background:#2563eb;font-weight:700;">
             <i class="bi bi-play-circle-fill"></i> Calculate Network
           </button>
+          <button id="btn-simple-top-apply-duty" type="button" class="pn-btn pn-btn-primary" onclick="simpleController.applyToPumpSelection()" style="background:#2563eb;font-weight:700;padding:6px 14px;box-shadow:0 0 14px rgba(37,99,235,0.35);display:inline-flex;align-items:center;gap:6px;" title="Apply calculated Head, Static Head, and Flow to Pump Selection">
+            <i class="bi bi-box-arrow-up-right"></i> Apply Duty Point to Selection
+          </button>
         </div>
       </div>
 
@@ -2628,7 +2651,7 @@
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border-bottom:1px solid #21262d;padding-bottom:10px;flex-wrap:wrap;gap:8px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <i class="bi bi-segmented-nav" style="color:#fbbf24;font-size:1.1rem;"></i>
-            <h3 style="font-size:0.95rem;font-weight:700;color:#e6edf3;margin:0;">3. Pipeline Segments Specification</h3>
+            <h3 id="simple-spec-title" style="font-size:0.95rem;font-weight:700;color:#e6edf3;margin:0;">3. Pipeline Segments Specification</h3>
             <span id="simple-pipe-count-badge" style="background:#21262d;color:#94a3b8;font-size:11px;padding:2px 8px;border-radius:12px;font-weight:600;">
               0 Segments
             </span>
@@ -2636,48 +2659,69 @@
 
           <!-- Table action buttons -->
           <div style="display:flex;align-items:center;gap:8px;">
-            <button type="button" class="pn-btn pn-btn-success" onclick="simpleController.addPipe()" style="font-size:11px;padding:4px 12px;">
+            <button id="btn-simple-add-pipe" type="button" class="pn-btn pn-btn-success" onclick="simpleController.addPipe()" style="font-size:11px;padding:4px 12px;">
               <i class="bi bi-plus-lg"></i> Add Pipeline Segment
             </button>
-            <button type="button" class="pn-btn" onclick="simpleController.clearPipes()" style="font-size:11px;padding:4px 8px;color:#ef4444;" title="Reset and remove all pipes">
-              <i class="bi bi-trash"></i> Clear All
+            <button type="button" class="pn-btn pn-btn-primary" onclick="simpleController.calculate()" style="font-size:11px;padding:4px 12px;background:#2563eb;font-weight:700;" title="Calculate hydraulic losses and operating point">
+              <i class="bi bi-calculator"></i> Calculate Losses
+            </button>
+            <button type="button" class="pn-btn" onclick="simpleController.clearPipes()" style="font-size:11px;padding:4px 8px;color:#ef4444;" title="Reset configuration">
+              <i class="bi bi-trash"></i> Reset All
             </button>
           </div>
         </div>
 
-        <!-- Scrollable Table Wrap -->
-        <div style="overflow-x:auto;border:1px solid #30363d;border-radius:8px;">
-          <table id="simple-pipes-table" class="pn-simple-table">
-            <thead>
-              <tr>
-                <th style="width:36px;text-align:center;">#</th>
-                <th style="min-width:140px;">Segment Tag / Label</th>
-                <th style="min-width:260px;">Standard Pipe Catalog Size</th>
-                <th style="width:110px;">Inner Diam. (mm)</th>
-                <th style="min-width:180px;">Material &amp; Roughness</th>
-                <th style="width:105px;">Length (m)</th>
-                <th style="width:105px;">&Delta;z Elev. (m)</th>
-                <th style="min-width:160px;">Valves &amp; Fittings</th>
-                <th id="th-simple-flow-share" style="width:90px;display:none;">Flow Share %</th>
-                <th style="width:80px;text-align:center;">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="simple-pipes-tbody">
-              <!-- Dynamic rows rendered by simpleController.renderTable() -->
-            </tbody>
-          </table>
+        <!-- ── View 1: Series Pipeline Container ── -->
+        <div id="simple-series-container">
+          <div style="overflow-x:auto;border:1px solid #30363d;border-radius:8px;">
+            <table id="simple-pipes-table" class="pn-simple-table">
+              <thead>
+                <tr>
+                  <th style="width:36px;text-align:center;">#</th>
+                  <th style="min-width:140px;">Segment Tag / Label</th>
+                  <th style="min-width:240px;">Standard Pipe &amp; SDR</th>
+                  <th style="width:110px;">Inner Diam. (mm)</th>
+                  <th style="min-width:160px;">Material &amp; Roughness</th>
+                  <th style="width:100px;">Length (m)</th>
+                  <th style="width:100px;">&Delta;z Elev. (m)</th>
+                  <th style="min-width:150px;">Valves &amp; Fittings</th>
+                  <th style="width:80px;text-align:center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="simple-pipes-tbody">
+                <!-- Dynamic rows rendered by simpleController.renderSeriesTable() -->
+              </tbody>
+            </table>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;font-size:11px;color:#64748b;flex-wrap:wrap;gap:8px;">
+            <div>
+              <i class="bi bi-lightbulb" style="color:#eab308;"></i> Click <strong style="color:#38bdf8;">Configure</strong> on any segment to filter standard catalogs by Standard, Material, and SDR.
+            </div>
+            <div>
+              <button type="button" class="pn-btn" onclick="simpleController.addPipe()" style="font-size:11px;padding:3px 10px;">
+                <i class="bi bi-plus-circle"></i> Add Another Segment
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;font-size:11px;color:#64748b;flex-wrap:wrap;gap:8px;">
-          <div>
-            <i class="bi bi-lightbulb" style="color:#eab308;"></i> Selecting a standard pipe from the catalog automatically sets inner diameter, wall thickness, and default material roughness.
+        <!-- ── View 2: Compound Parallel Pipeline Container (Up to 5 Pipes in Series Each) ── -->
+        <div id="simple-parallel-container" style="display:none;">
+          <div id="simple-parallel-branches-list">
+            <!-- Dynamic parallel branch cards rendered by simpleController.renderParallelBranches() -->
           </div>
-          <div>
-            <button type="button" class="pn-btn" onclick="simpleController.addPipe()" style="font-size:11px;padding:3px 10px;">
-              <i class="bi bi-plus-circle"></i> Add Another Pipe
+
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;font-size:11px;color:#64748b;flex-wrap:wrap;gap:8px;">
+            <div>
+              <i class="bi bi-info-circle" style="color:#38bdf8;"></i> Each parallel pipeline can have its own discharge height (&Delta;z<sub>out</sub>) and up to 5 pipes in series.
+            </div>
+            <button type="button" class="pn-btn pn-btn-success" onclick="simpleController.addParallelBranch()" style="font-size:11px;padding:4px 12px;">
+              <i class="bi bi-plus-lg"></i> Add Another Parallel Pipeline
             </button>
           </div>
         </div>
+
       </div>
 
       <!-- ── Dynamic Hydraulic Results & Duty Point Dashboard ── -->
@@ -2726,9 +2770,9 @@
 
           <!-- Total Static Lift -->
           <div style="background:#0d1117;border:1px solid rgba(192,132,252,0.4);border-radius:8px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;">
-            <div style="font-size:10.5px;color:#9333ea;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Total Static Lift (&Delta;z)</div>
+            <div style="font-size:10.5px;color:#9333ea;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Static Elevation (&Delta;z)</div>
             <div style="font-size:1.5rem;font-weight:800;color:#c084fc;margin:4px 0;" id="simple-res-static">— m</div>
-            <div style="font-size:11px;color:#94a3b8;">Elevation Difference</div>
+            <div style="font-size:11px;color:#94a3b8;">Elevation Lift</div>
           </div>
 
           <!-- Hydraulic Power -->
@@ -2738,6 +2782,13 @@
             <div style="font-size:11px;color:#94a3b8;" id="simple-res-power-hp">— HP</div>
           </div>
 
+          <!-- NPSH Available (NPSHa) -->
+          <div style="background:#0d1117;border:1px solid rgba(14,165,233,0.4);border-radius:8px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;">
+            <div style="font-size:10.5px;color:#0ea5e9;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">NPSH Available (NPSHa)</div>
+            <div style="font-size:1.5rem;font-weight:800;color:#38bdf8;margin:4px 0;" id="simple-res-npsha">— m</div>
+            <div style="font-size:11px;color:#94a3b8;" id="simple-res-npsha-sub">— ft</div>
+          </div>
+
           <!-- Equivalent System Resistance -->
           <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;">
             <div style="font-size:10.5px;color:#8b949e;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">System Resistance (R<sub>sys</sub>)</div>
@@ -2745,6 +2796,17 @@
             <div style="font-size:10px;color:#64748b;">H<sub>loss</sub> = R &times; Q&sup2;</div>
           </div>
         </div>
+
+        <!-- Parallel Branch Summaries Section (Visible in Parallel Mode) -->
+        <div id="simple-branch-summary-section" style="display:none;margin-bottom:14px;">
+          <div style="font-size:11.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">
+            <i class="bi bi-diagram-3" style="color:#22c55e;"></i> Parallel Branches Flow &amp; Head Breakdown
+          </div>
+          <div id="simple-branch-summary-cards" style="display:flex;gap:10px;flex-wrap:wrap;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
 
         <!-- Detailed Breakdown Table -->
         <div style="overflow-x:auto;border:1px solid #30363d;border-radius:8px;">
@@ -2780,8 +2842,8 @@
        SIMPLE MODE: FITTINGS & VALVES SELECTOR MODAL
        Allows users to choose valves and fittings with specific quantities per pipe.
        ───────────────────────────────────────────────────────────────────────── -->
-  <div id="pn-simple-fittings-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;backdrop-filter:blur(3px);" onclick="if(event.target===this)simpleController.closeFittingsModal()">
-    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(600px, 94vw);max-height:85vh;background:#161b22;border:1px solid #30363d;border-radius:12px;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.6);overflow:hidden;">
+  <div id="pn-simple-fittings-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);z-index:999999;backdrop-filter:blur(5px);align-items:center;justify-content:center;padding:16px;box-sizing:border-box;" onclick="if(event.target===this)simpleController.closeFittingsModal()">
+    <div style="position:relative;width:min(600px, 94vw);max-height:85vh;margin:auto;background:#161b22;border:1px solid #30363d;border-radius:12px;display:flex;flex-direction:column;box-shadow:0 25px 70px rgba(0,0,0,0.8);overflow:hidden;">
       
       <!-- Modal Header -->
       <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #21262d;background:#0d1117;">
@@ -2834,11 +2896,133 @@
     </div>
   </div>
 
+  <!-- ─────────────────────────────────────────────────────────────────────────
+       SIMPLE MODE: PIPE CONFIGURATION & STANDARD CATALOG / SDR FILTER MODAL
+       Provides cascading selection: Standard -> Material -> Schedule/SDR -> Nominal Size
+       ───────────────────────────────────────────────────────────────────────── -->
+  <div id="pn-simple-pipe-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);z-index:999999;backdrop-filter:blur(5px);align-items:center;justify-content:center;padding:16px;box-sizing:border-box;" onclick="if(event.target===this)simpleController.closePipeConfigModal()">
+    <div style="position:relative;width:min(720px, 95vw);max-height:90vh;margin:auto;background:#161b22;border:1px solid #30363d;border-radius:12px;display:flex;flex-direction:column;box-shadow:0 25px 70px rgba(0,0,0,0.8);overflow:hidden;">
+      
+      <!-- Modal Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #21262d;background:#0d1117;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;border-radius:6px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);display:flex;align-items:center;justify-content:center;color:#38bdf8;">
+            <i class="bi bi-funnel-fill"></i>
+          </div>
+          <div>
+            <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#f0f6fc;">
+              Configure Pipe: <span id="modal-pipe-cfg-title" style="color:#38bdf8;">Pipeline Segment</span>
+            </h4>
+            <div style="font-size:11px;color:#8b949e;">Select standard catalog dimensions with SDR filtering, or customize physical properties.</div>
+          </div>
+        </div>
+        <button type="button" onclick="simpleController.closePipeConfigModal()" style="background:none;border:none;color:#8b949e;cursor:pointer;font-size:1.3rem;" title="Close">&times;</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div style="padding:16px 18px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px;">
+        
+        <!-- SECTION 1: Standard Pipe Catalog & SDR Filter -->
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px;">
+          <div style="font-size:11px;font-weight:700;color:#38bdf8;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+            <i class="bi bi-journal-bookmark"></i> Standard Pipe Catalog &amp; SDR Filter
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;margin-bottom:10px;">
+            <!-- Filter 1: Standard -->
+            <div>
+              <label class="pp-label" style="margin-bottom:3px;font-size:10.5px;">Pipe Standard</label>
+              <select id="modal-cfg-filter-standard" class="pn-input-cell" onchange="simpleController.onModalStandardChange(this.value)" style="font-size:11.5px;">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+
+            <!-- Filter 2: Material -->
+            <div>
+              <label class="pp-label" style="margin-bottom:3px;font-size:10.5px;">Pipe Material</label>
+              <select id="modal-cfg-filter-material" class="pn-input-cell" onchange="simpleController.onModalMaterialChange(this.value)" style="font-size:11.5px;">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+
+            <!-- Filter 3: Schedule / SDR -->
+            <div>
+              <label class="pp-label" style="margin-bottom:3px;font-size:10.5px;">Schedule / SDR Rating</label>
+              <select id="modal-cfg-filter-schedule" class="pn-input-cell" onchange="simpleController.onModalScheduleChange(this.value)" style="font-size:11.5px;color:#facc15;font-weight:600;">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+          </div>
+
+          <!-- Filtered Catalog Pipe Items -->
+          <div>
+            <label class="pp-label" style="margin-bottom:3px;font-size:10.5px;">Available Standard Sizes (Filtered)</label>
+            <select id="modal-cfg-filter-pipe" class="pn-input-cell" onchange="simpleController.onModalPipeSelect(this.value)" style="font-size:12px;font-family:monospace;font-weight:600;color:#38bdf8;">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+
+          <!-- Live Specification Preview Card -->
+          <div id="modal-pipe-preview-card" style="margin-top:10px;background:rgba(255,255,255,0.02);border:1px solid #21262d;border-radius:6px;padding:10px;">
+            <!-- Populated dynamically by updateModalPipePreview -->
+          </div>
+        </div>
+
+        <!-- SECTION 2: Direct Segment Physical Parameters -->
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px;">
+          <div style="font-size:11px;font-weight:700;color:#c084fc;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+            <i class="bi bi-rulers"></i> Segment Geometry &amp; Physical Parameters
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;margin-bottom:10px;">
+            <div>
+              <label class="pp-label" style="margin-bottom:3px;font-size:10.5px;">Segment Label / Tag</label>
+              <input id="modal-cfg-pipe-label" type="text" class="pn-input-cell" placeholder="Segment Name" style="font-weight:600;">
+            </div>
+            <div>
+              <label class="pp-label" style="margin-bottom:3px;font-size:10.5px;">Inside Diameter (ID mm)</label>
+              <input id="modal-cfg-pipe-diameter" type="number" step="0.1" min="1" class="pn-input-cell" style="text-align:right;font-family:monospace;font-weight:700;color:#38bdf8;">
+            </div>
+            <div>
+              <label class="pp-label" style="margin-bottom:3px;font-size:10.5px;">Material</label>
+              <select id="modal-cfg-pipe-material" class="pn-input-cell" style="font-size:11.5px;">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:10px;">
+            <div>
+              <label class="pp-label" style="margin-bottom:3px;font-size:10.5px;">Length L (m)</label>
+              <input id="modal-cfg-pipe-length" type="number" step="0.1" min="0.1" class="pn-input-cell" style="text-align:right;font-family:monospace;">
+            </div>
+            <div>
+              <label class="pp-label" style="margin-bottom:3px;font-size:10.5px;">Elevation Lift &Delta;z (m)</label>
+              <input id="modal-cfg-pipe-elevation" type="number" step="0.1" class="pn-input-cell" style="text-align:right;font-family:monospace;color:#c084fc;">
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid #21262d;background:#0d1117;">
+        <button type="button" class="pn-btn" onclick="simpleController.closePipeConfigModal()" style="font-size:11.5px;padding:5px 14px;">
+          Cancel
+        </button>
+        <button type="button" class="pn-btn pn-btn-success" onclick="simpleController.applyModalPipeConfig()" style="font-size:11.5px;padding:5px 20px;font-weight:700;">
+          <i class="bi bi-check2-circle"></i> Apply to Segment
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- RESULTS SECTION -->
   <div id="pn-results-section" style="display:none;margin-top:16px;">
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
-      <div style="display:flex;align-items:center;gap:12px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <h2 style="font-size:1rem;font-weight:700;color:#e6edf3;margin:0;display:flex;align-items:center;gap:8px;">
           <i class="bi bi-bar-chart-line" style="color:#22c55e;"></i>
           Friction Loss Results
@@ -2846,6 +3030,11 @@
         <span style="font-size:11px;color:#64748b;">
           <span id="res-count">0</span> pipe segments analysed
         </span>
+
+        <!-- Apply Duty Point from Results (listener attached in pipe_network.js) -->
+        <button id="btn-results-apply-duty" type="button" class="pn-btn pn-btn-primary" style="background:#2563eb;font-weight:700;padding:5px 14px;font-size:12px;box-shadow:0 0 12px rgba(37,99,235,0.35);display:inline-flex;align-items:center;gap:6px;" title="Apply calculated Head, Static Head, NPSHa, and Flow to Pump Selection">
+          <i class="bi bi-box-arrow-up-right"></i> Apply Duty Point to Selection
+        </button>
       </div>
 
       <!-- Direct Results Units Selector Bar: Change units directly on displayed results -->
@@ -3551,76 +3740,74 @@
 <script>
   /**
    * switchSelectionTab(tab)
-   * Shows the requested tab panel:
-   *   - 'selection': Main Pump Selection 3-panel tool
-   *   - 'pipenet': Pipe Network Designer in Interactive Visual Canvas Mode
-   *   - 'simple_pipenet': Pipe Network Designer in Simplified Dropdown/List Mode
+   * Shows the requested primary tab panel:
+   *   - 'selection': Main Pump Selection 3-panel sizing and duty point tool
+   *   - 'pipenet': Consolidated Pipe Network Designer (with Visual Canvas or Simple Dropdown mode)
    */
   function switchSelectionTab(tab) {
     const selPanel = document.getElementById('tab-panel-selection');
     const pnPanel  = document.getElementById('tab-panel-pipenet');
     const selBtn   = document.getElementById('tab-btn-selection');
     const pnBtn    = document.getElementById('tab-btn-pipenet');
-    const simpleBtn = document.getElementById('tab-btn-simple-pipenet');
 
     if (tab === 'selection') {
       if (selPanel) selPanel.style.display = '';
       if (pnPanel)  pnPanel.style.display  = 'none';
 
-      // Update active button highlights
+      // Highlight active Selection tab button
       if (selBtn) { selBtn.style.borderBottom = '2px solid #58a6ff'; selBtn.style.color = '#58a6ff'; }
       if (pnBtn)  { pnBtn.style.borderBottom  = '2px solid transparent'; pnBtn.style.color  = '#8b949e'; }
-      if (simpleBtn) { simpleBtn.style.borderBottom = '2px solid transparent'; simpleBtn.style.color = '#22c55e'; }
 
-      // When switching back to selection tab, sync flow, temp, and SG back to selection inputs
+      // Synchronize flow, temp, and SG back to selection inputs
       if (typeof window.syncPipeNetworkToPumpSelection === 'function') {
         window.syncPipeNetworkToPumpSelection();
       }
-    } else if (tab === 'simple_pipenet') {
-      // Simple Mode (Dropdown lists, Series or Parallel pipelines)
-      if (selPanel) selPanel.style.display = 'none';
-      if (pnPanel)  pnPanel.style.display  = '';
-
-      if (selBtn) { selBtn.style.borderBottom = '2px solid transparent'; selBtn.style.color = '#8b949e'; }
-      if (pnBtn)  { pnBtn.style.borderBottom  = '2px solid transparent'; pnBtn.style.color  = '#8b949e'; }
-      if (simpleBtn) { simpleBtn.style.borderBottom = '2px solid #22c55e'; simpleBtn.style.color = '#22c55e'; }
-
-      // Activate simple mode within the designer
-      if (typeof setDesignerMode === 'function') {
-        setDesignerMode('simple');
-      }
+      sessionStorage.setItem('pmpro_active_tab', 'selection');
     } else {
-      // Visual Canvas Mode
+      // Pipe Network Designer Tab
       if (selPanel) selPanel.style.display = 'none';
       if (pnPanel)  pnPanel.style.display  = '';
 
+      // Highlight active Pipe Network tab button
       if (selBtn) { selBtn.style.borderBottom = '2px solid transparent'; selBtn.style.color = '#8b949e'; }
-      if (pnBtn)  { pnBtn.style.borderBottom  = '2px solid #38bdf8'; pnBtn.style.color  = '#38bdf8'; }
-      if (simpleBtn) { simpleBtn.style.borderBottom = '2px solid transparent'; simpleBtn.style.color = '#22c55e'; }
+      if (pnBtn)  { pnBtn.style.borderBottom  = '2px solid #58a6ff'; pnBtn.style.color  = '#58a6ff'; }
 
-      // Activate canvas mode within the designer
+      // Determine active designer mode (Visual Canvas vs. Simple Dropdown)
+      let mode = 'canvas';
+      if (tab === 'simple_pipenet') {
+        mode = 'simple';
+      } else {
+        try {
+          mode = localStorage.getItem('pmp_pipe_designer_mode') || 'canvas';
+        } catch (e) {
+          mode = 'canvas';
+        }
+      }
+
+      // Activate the designated mode within the Pipe Network Designer
       if (typeof setDesignerMode === 'function') {
-        setDesignerMode('canvas');
+        setDesignerMode(mode);
       }
 
-      // When switching to pipe network canvas, ensure flow, temp, and SG match pump selection
-      if (typeof window.syncPumpSelectionToPipeNetwork === 'function') {
-        window.syncPumpSelectionToPipeNetwork();
+      if (mode === 'canvas') {
+        // Sync fluid and flow parameters from pump selection into canvas
+        if (typeof window.syncPumpSelectionToPipeNetwork === 'function') {
+          window.syncPumpSelectionToPipeNetwork();
+        }
+        // Trigger canvas redraw & transform
+        if (typeof window.applyTransform === 'function') window.applyTransform();
+        else if (typeof applyTransform === 'function') applyTransform();
+        if (typeof window.renderAll === 'function') window.renderAll();
+        else if (typeof renderAll === 'function') renderAll();
+        // Load demo network if empty on first view
+        if (typeof state !== 'undefined' && (!state.nodes || state.nodes.length === 0)) {
+          if (typeof window.loadDemoNetwork === 'function') window.loadDemoNetwork();
+          else if (typeof loadDemoNetwork === 'function') loadDemoNetwork();
+        }
       }
-      // Trigger SVG resize and redraw when tab becomes visible
-      if (typeof window.applyTransform === 'function') window.applyTransform();
-      else if (typeof applyTransform === 'function') applyTransform();
-      if (typeof window.renderAll === 'function') window.renderAll();
-      else if (typeof renderAll === 'function') renderAll();
-      // If network is empty on tab switch, ensure demo network is loaded
-      if (typeof state !== 'undefined' && (!state.nodes || state.nodes.length === 0)) {
-        if (typeof window.loadDemoNetwork === 'function') window.loadDemoNetwork();
-        else if (typeof loadDemoNetwork === 'function') loadDemoNetwork();
-      }
+
+      sessionStorage.setItem('pmpro_active_tab', 'pipenet');
     }
-
-    // Remember the active tab for this browser session
-    sessionStorage.setItem('pmpro_active_tab', tab);
   }
 
   // Restore the last active tab or URL query param on page load
@@ -3632,8 +3819,10 @@
       let initialTab = 'selection';
 
       if (urlTab === 'simple_pipenet' || urlMode === 'simple') {
-        initialTab = 'simple_pipenet';
+        try { localStorage.setItem('pmp_pipe_designer_mode', 'simple'); } catch(e) {}
+        initialTab = 'pipenet';
       } else if (urlTab === 'pipenet' || urlMode === 'canvas') {
+        try { localStorage.setItem('pmp_pipe_designer_mode', 'canvas'); } catch(e) {}
         initialTab = 'pipenet';
       } else {
         initialTab = sessionStorage.getItem('pmpro_active_tab') || 'selection';

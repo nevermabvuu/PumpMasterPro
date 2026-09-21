@@ -1316,7 +1316,10 @@ function loadNetworkFromStorage() {
       badge.style.color = state.is_slurry ? '#f59e0b' : '#8b949e';
     }
     const btn = document.getElementById('btn-toggle-slurry');
-    if (btn) btn.classList.toggle('active-tool', state.is_slurry);
+    if (btn) {
+      btn.style.display = state.is_slurry ? 'inline-flex' : 'none';
+      btn.classList.toggle('active-tool', state.is_slurry);
+    }
   }
   if (d.specific_gravity !== undefined) {
     state.specific_gravity = parseFloat(d.specific_gravity) || 1.0;
@@ -5440,6 +5443,61 @@ function validateNetworkConnectivity() {
 // ============================================================================
 
 async function runCalculation() {
+  // ── SIMPLE DESIGNER MODE DELEGATION ──
+  // If user is working in Simple Mode (Dropdowns / Parallel Pipelines Specification),
+  // delegate calculation to simpleController and hide the visual canvas results table!
+  const simpleWrap = document.getElementById('pn-simple-mode-wrap');
+  const isSimpleMode = simpleWrap && simpleWrap.style.display !== 'none';
+  if (isSimpleMode && window.simpleController) {
+    const resSec = document.getElementById('pn-results-section');
+    if (resSec) resSec.style.display = 'none';
+
+    // Synchronize top toolbar flow rate if user modified it in toolbar
+    const globalFlowEl = document.getElementById('pn-global-flow');
+    const globalFlowUnitEl = document.getElementById('pn-flow-unit');
+    if (globalFlowEl && window.simpleController.state) {
+      const qVal = parseFloat(globalFlowEl.value);
+      if (!isNaN(qVal) && qVal > 0) {
+        window.simpleController.state.flow_rate = qVal;
+        const simpleFlowEl = document.getElementById('simple-flow-rate');
+        if (simpleFlowEl) simpleFlowEl.value = qVal;
+      }
+      if (globalFlowUnitEl && globalFlowUnitEl.value) {
+        window.simpleController.state.flow_unit = globalFlowUnitEl.value;
+        const simpleUnitEl = document.getElementById('simple-flow-unit');
+        if (simpleUnitEl) simpleUnitEl.value = globalFlowUnitEl.value;
+      }
+    }
+
+    const btn = document.getElementById('pn-calc-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Calculating Network...';
+    }
+
+    try {
+      await window.simpleController.calculate();
+      // Smoothly scroll directly to Simple Mode Results (Section 4)
+      const simpleResCard = document.getElementById('simple-res-tdh')?.closest('.pn-simple-card');
+      if (simpleResCard) {
+        simpleResCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      if (typeof toast === 'function') {
+        toast('Parallel pipelines calculation complete!', 'success');
+      }
+    } catch (err) {
+      if (typeof toast === 'function') {
+        toast(`Calculation error: ${err.message}`, 'error');
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-calculator"></i> Calculate Losses';
+      }
+    }
+    return true; // STOP! Canvas calculation is not performed in Simple Mode!
+  }
+
   // TOPOLOGICAL CONNECTIVITY & COMPLETENESS VALIDATION:
   // If any member (node or pipe) is not connected to a complete network line,
   // do not perform the calculation.
@@ -5460,7 +5518,7 @@ async function runCalculation() {
     }
 
     toast(validation.reason, 'warn', 7000);
-    return; // STOP! Calculation is not performed!
+    return false; // STOP! Calculation is not performed!
   }
 
   // Clear any previous warning markers
@@ -5584,7 +5642,7 @@ async function runCalculation() {
         renderAll();
       }
       toast(`Error: ${e.error}`, 'error', 7000);
-      return;
+      return false;
     }
     const data = await resp.json();
     state.lastCalculation = data;
@@ -5592,8 +5650,10 @@ async function runCalculation() {
     displayResults(data);
     document.getElementById('pn-results-section')?.scrollIntoView({ behavior: 'smooth' });
     toast('Calculation complete!', 'success');
+    return true;
   } catch (err) {
     toast(`Network error: ${err.message}`, 'error');
+    return false;
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -5601,6 +5661,125 @@ async function runCalculation() {
     }
   }
 }
+
+// Re-entrancy guard to prevent concurrent execution on multiple rapid clicks
+let isApplyingVisualDuty = false;
+
+/**
+ * applyVisualDutyPointToSelection()
+ * 
+ * Transfers calculated hydraulic results from the Visual Canvas pipe network solver
+ * (Total Dynamic Head, Static Elevation Head, NPSHa, Operating Flow, and fluid properties)
+ * directly into the respective inputs on the Pump Selection form.
+ *
+ * If Simple Mode is active, delegates to simpleController.applyToPumpSelection().
+ * If calculation has not yet been executed, automatically calculates the network first.
+ * If running on the standalone /pipe-network route, persists the state to session and
+ * prompts the user to navigate to /pump-selection.
+ */
+async function applyVisualDutyPointToSelection() {
+  if (isApplyingVisualDuty) return;
+  isApplyingVisualDuty = true;
+
+  // 0. If currently in Simple Mode, delegate directly to simpleController
+  const simpleWrap = document.getElementById('pn-simple-mode-wrap');
+  const isSimpleMode = simpleWrap && simpleWrap.style.display !== 'none';
+  if (isSimpleMode && window.simpleController) {
+    try {
+      window.simpleController.applyToPumpSelection();
+    } finally {
+      isApplyingVisualDuty = false;
+    }
+    return;
+  }
+
+  const btn = document.getElementById('btn-visual-apply-duty');
+  const resBtn = document.getElementById('btn-results-apply-duty');
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Calculating & Applying...';
+  }
+  if (resBtn) {
+    resBtn.disabled = true;
+    resBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Applying...';
+  }
+
+  try {
+    // 1. If calculation hasn't been executed or is missing, compute it now
+    if (!state.lastCalculation || !state.lastCalculation.summary) {
+      const calcOk = await runCalculation();
+      if (!calcOk || !state.lastCalculation || !state.lastCalculation.summary) {
+        toast('Please verify network connectivity and run calculation before applying.', 'warn');
+        return;
+      }
+    }
+
+    const s = state.lastCalculation.summary;
+
+    // 2. Resolve operating flow rate in m3/h
+    let flowM3h = s.global_flow_m3h;
+    if (flowM3h === undefined || flowM3h === null || isNaN(flowM3h)) {
+      const pnFlow = parseFloat(document.getElementById('pn-global-flow')?.value) || 10.0;
+      const pnUnit = document.getElementById('pn-flow-unit')?.value || 'm3h';
+      const flowFactors = { m3h: 1.0, ls: 3.6, lmin: 0.06, gpm: 0.227124707, ukgpm: 0.2727654, cfs: 101.9406, mgd: 157.7255 };
+      flowM3h = pnFlow * (flowFactors[pnUnit] || 1.0);
+    }
+
+    // 3. Resolve Head parameters (TDH and Static elevation in meters)
+    const headM = s.total_system_head_m !== undefined ? s.total_system_head_m : (s.pump_tdh_required_m || 0.0);
+    const staticHeadM = s.total_elevation_m !== undefined ? s.total_elevation_m : 0.0;
+    const npshaM = s.npsha_m !== undefined ? s.npsha_m : null;
+
+    // 4. Resolve fluid & slurry properties
+    const dutyPayload = {
+      flow_m3h: flowM3h,
+      head_m: headM,
+      static_head_m: staticHeadM,
+      npsha_m: npshaM,
+      temperature_c: s.temperature_c !== undefined ? s.temperature_c : state.temperature_c,
+      liquid: s.fluid_type || s.liquid || state.liquid || 'water',
+      fluid_type: s.fluid_type || s.liquid || state.liquid || 'water',
+      specific_gravity: s.specific_gravity !== undefined ? s.specific_gravity : state.specific_gravity,
+      viscosity_cSt: s.viscosity_cSt !== undefined ? s.viscosity_cSt : state.viscosity_cSt,
+      fluid_ph: s.fluid_ph !== undefined ? s.fluid_ph : state.fluid_ph,
+      fluid_concentration: s.fluid_concentration || state.fluid_concentration || '',
+      slurry_liquid_sg: s.slurry_liquid_sg || state.slurry_liquid_sg,
+      slurry_solids_sg: s.slurry_solids_sg || state.slurry_solids_sg,
+      slurry_c_weight: s.slurry_c_weight || state.slurry_c_weight,
+      slurry_d50_mm: s.slurry_d50_mm || state.slurry_d50_mm,
+    };
+
+    // 5. In-page transfer if inside the Pump Selection view
+    if (typeof window.applyDutyPointToPumpSelection === 'function' && document.getElementById('input_q_duty')) {
+      window.applyDutyPointToPumpSelection(dutyPayload);
+      toast('Duty Point successfully applied to Pump Selection!', 'success');
+      return;
+    }
+
+    // 6. Standalone page behavior: ensure saved to session and offer redirect
+    await saveNetwork();
+    if (confirm('✅ Duty Point successfully saved to session!\n\nNavigate to Pump Selection now to view matching pumps?')) {
+      window.location.href = '/pump-selection';
+    }
+  } catch (err) {
+    console.error('Error applying visual duty point to selection:', err);
+    toast(`Failed to apply duty point: ${err.message}`, 'error');
+  } finally {
+    isApplyingVisualDuty = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-box-arrow-up-right"></i> Apply Duty Point to Selection';
+    }
+    if (resBtn) {
+      resBtn.disabled = false;
+      resBtn.innerHTML = '<i class="bi bi-box-arrow-up-right"></i> Apply Duty Point to Selection';
+    }
+  }
+}
+
+// Global export for visual duty point application
+window.applyVisualDutyPointToSelection = applyVisualDutyPointToSelection;
 
 function displayResults(data) {
   const sec = document.getElementById('pn-results-section');
@@ -6010,6 +6189,7 @@ function toast(msg, type = 'info') {
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 3000);
 }
+window.toast = toast;
 
 // ============================================================================
 // THEME & LEGEND CONTROLS
@@ -6185,14 +6365,15 @@ function updateSlurryModalUI() {
   }
   const btn = document.getElementById('btn-toggle-slurry');
   if (btn) {
+    btn.style.display = isEn ? 'inline-flex' : 'none';
     btn.classList.toggle('active-tool', isEn);
   }
   const cw = parseFloat(document.getElementById('slurry-c-weight')?.value || 25.0) / 100.0;
   const ss = Math.max(1.01, parseFloat(document.getElementById('slurry-solids-sg')?.value || 2.65));
-  const sl = Math.max(0.5, parseFloat(state.specific_gravity || 1.0));
+  const sl = Math.max(0.5, parseFloat(state.slurry_liquid_sg || state.specific_gravity || 1.0));
   const volS = cw / ss;
   const volL = (1.0 - cw) / sl;
-  const cv = (volS / (volS + volL)) * 100.0;
+  const cv = (volS + volL > 0) ? (volS / (volS + volL)) * 100.0 : 0.0;
   const cvInput = document.getElementById('slurry-c-volume');
   if (cvInput) cvInput.value = `${cv.toFixed(1)} %`;
 }
@@ -6220,14 +6401,112 @@ function toggleSlurryModal(forceOpen) {
 }
 
 function applySlurrySettings() {
-  state.is_slurry = Boolean(document.getElementById('slurry-enable-toggle')?.checked);
-  state.slurry_d50_mm = parseFloat(document.getElementById('slurry-d50')?.value || 0.15);
-  state.slurry_solids_sg = parseFloat(document.getElementById('slurry-solids-sg')?.value || 2.65);
-  state.slurry_c_weight = parseFloat(document.getElementById('slurry-c-weight')?.value || 25.0);
+  const isEn = Boolean(document.getElementById('slurry-enable-toggle')?.checked);
+  state.is_slurry = isEn;
+  state.liquid = isEn ? 'slurry' : 'water';
+  state.fluid_type = isEn ? 'slurry' : 'water';
+
+  const d50 = parseFloat(document.getElementById('slurry-d50')?.value || 0.15);
+  const solidsSg = parseFloat(document.getElementById('slurry-solids-sg')?.value || 2.65);
+  const cWeightPct = parseFloat(document.getElementById('slurry-c-weight')?.value || 25.0);
+
+  state.slurry_d50_mm = d50;
+  state.slurry_solids_sg = solidsSg;
+  state.slurry_c_weight = cWeightPct;
+
+  // Calculate mixture specific gravity (Sm) and volumetric concentration (Cv)
+  const cwFrac = cWeightPct / 100.0;
+  const ss = Math.max(1.01, solidsSg);
+  const sl = Math.max(0.5, parseFloat(state.slurry_liquid_sg || 1.0));
+  state.slurry_liquid_sg = sl;
+
+  const volS = cwFrac / ss;
+  const volL = (1.0 - cwFrac) / sl;
+  const cvFrac = (volS + volL > 0) ? (volS / (volS + volL)) : 0.0;
+  const sm = (volS + volL > 0) ? 1.0 / (volS + volL) : sl;
+
+  state.slurry_c_volume = parseFloat((cvFrac * 100.0).toFixed(2));
+  state.slurry_sg = sm;
+  if (isEn) {
+    state.specific_gravity = sm;
+    const sgInput = document.getElementById('pn-sg');
+    if (sgInput) sgInput.value = sm.toFixed(2);
+  } else {
+    state.specific_gravity = 1.0;
+    const sgInput = document.getElementById('pn-sg');
+    if (sgInput) sgInput.value = '1.00';
+  }
+
+  // Slurry modal button visibility
+  const btn = document.getElementById('btn-toggle-slurry');
+  if (btn) {
+    btn.style.display = isEn ? 'inline-flex' : 'none';
+    btn.classList.toggle('active-tool', isEn);
+  }
+
+  // Update fluid indicator label in toolbar
+  if (typeof window.__pn_update_fluid_indicator === 'function') {
+    window.__pn_update_fluid_indicator();
+  }
+
+  // Synchronize back to Pump Selection page inputs if present
+  const liquidSel = document.getElementById('liquidSel');
+  if (liquidSel) {
+    liquidSel.value = isEn ? 'slurry' : 'water';
+    liquidSel.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  const d50El = document.getElementById('input_slurry_d50');
+  if (d50El) {
+    d50El.value = d50;
+    d50El.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  const ssEl = document.getElementById('sg_s');
+  if (ssEl) {
+    ssEl.value = solidsSg.toFixed(2);
+    ssEl.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  const cwEl = document.getElementById('slurry_cw');
+  if (cwEl) {
+    cwEl.value = cwFrac.toFixed(3);
+    cwEl.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  const cvEl = document.getElementById('slurry_cv');
+  if (cvEl) {
+    cvEl.value = cvFrac.toFixed(3);
+    cvEl.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  const smEl = document.getElementById('sg_m');
+  if (smEl) {
+    smEl.value = sm.toFixed(2);
+    smEl.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  // Broadcast via localStorage so other tabs or Pump Selection listeners pick it up immediately
+  const fluidPayload = {
+    liquid: isEn ? 'slurry' : 'water',
+    fluid_type: isEn ? 'slurry' : 'water',
+    is_slurry: isEn,
+    sg: isEn ? sm : 1.0,
+    temperature_c: state.temperature_c || 20.0,
+    slurry_liquid_sg: sl,
+    slurry_solid_sg: solidsSg,
+    slurry_sg: sm,
+    slurry_c_weight: cwFrac,
+    slurry_c_volume: cvFrac,
+    slurry_d50: d50,
+    slurry_d50_mm: d50,
+    slurry_d50_unit: 'mm'
+  };
+  try {
+    localStorage.setItem('pmpro_shared_fluid_details', JSON.stringify(fluidPayload));
+  } catch (e) {
+    console.warn('Could not write pmpro_shared_fluid_details to localStorage', e);
+  }
+
   toggleSlurryModal(false);
   saveNetworkToStorage();
   runCalculation();
-  toast(`Slurry calculations ${state.is_slurry ? 'enabled' : 'disabled'}.`, 'info');
+  toast(`Slurry calculations ${state.is_slurry ? 'enabled' : 'disabled'} and parameters synchronized.`, 'info');
 }
 
 // ============================================================================
@@ -6923,6 +7202,8 @@ function init() {
   });
 
   document.getElementById('pn-calc-btn')?.addEventListener('click', runCalculation);
+  document.getElementById('btn-visual-apply-duty')?.addEventListener('click', applyVisualDutyPointToSelection);
+  document.getElementById('btn-results-apply-duty')?.addEventListener('click', applyVisualDutyPointToSelection);
 
   // Network Analysis / Solver Method selection
   const solverSelect = document.getElementById('pn-solver-method');
@@ -7236,24 +7517,30 @@ function init() {
         state.slurry_sg = parseFloat(details.slurry_sg);
       }
       if (details.slurry_c_weight !== undefined && !isNaN(parseFloat(details.slurry_c_weight))) {
-        state.slurry_c_weight = parseFloat(details.slurry_c_weight);
+        let cwVal = parseFloat(details.slurry_c_weight);
+        if (cwVal > 0 && cwVal <= 1.0) cwVal = cwVal * 100.0;
+        state.slurry_c_weight = cwVal;
       }
       if (details.slurry_c_volume !== undefined && !isNaN(parseFloat(details.slurry_c_volume))) {
-        state.slurry_c_volume = parseFloat(details.slurry_c_volume);
+        let cvVal = parseFloat(details.slurry_c_volume);
+        if (cvVal > 0 && cvVal <= 1.0) cvVal = cvVal * 100.0;
+        state.slurry_c_volume = cvVal;
       }
       if (details.slurry_d50_mm !== undefined && !isNaN(parseFloat(details.slurry_d50_mm))) {
         state.slurry_d50_mm = parseFloat(details.slurry_d50_mm);
+      } else if (details.slurry_d50 !== undefined && !isNaN(parseFloat(details.slurry_d50))) {
+        state.slurry_d50_mm = parseFloat(details.slurry_d50);
       }
 
       // Update slurry modal inputs if present
       const sToggle = document.getElementById('slurry-enable-toggle');
       if (sToggle) sToggle.checked = true;
       const sD50 = document.getElementById('slurry-d50');
-      if (sD50 && state.slurry_d50_mm) sD50.value = state.slurry_d50_mm;
+      if (sD50 && state.slurry_d50_mm !== undefined) sD50.value = state.slurry_d50_mm;
       const sSolidsSg = document.getElementById('slurry-solids-sg');
-      if (sSolidsSg && state.slurry_solids_sg) sSolidsSg.value = state.slurry_solids_sg;
+      if (sSolidsSg && state.slurry_solids_sg !== undefined) sSolidsSg.value = state.slurry_solids_sg;
       const sCw = document.getElementById('slurry-c-weight');
-      if (sCw && state.slurry_c_weight) sCw.value = state.slurry_c_weight;
+      if (sCw && state.slurry_c_weight !== undefined) sCw.value = state.slurry_c_weight;
       if (typeof updateSlurryModalUI === 'function') {
         updateSlurryModalUI();
       }
@@ -7274,6 +7561,13 @@ function init() {
   function updateFluidIndicatorUI() {
     const ind = document.getElementById('pn-fluid-indicator');
     const lbl = document.getElementById('pn-fluid-label');
+    const slurryBtn = document.getElementById('btn-toggle-slurry');
+
+    if (slurryBtn) {
+      slurryBtn.style.display = state.is_slurry ? 'inline-flex' : 'none';
+      slurryBtn.classList.toggle('active-tool', Boolean(state.is_slurry));
+    }
+
     if (!ind || !lbl) return;
 
     if (state.is_slurry) {
@@ -7301,6 +7595,7 @@ function init() {
     }
   }
 
+  window.__pn_update_fluid_indicator = updateFluidIndicatorUI;
   window.__pn_set_fluid_details = applyFluidDetails;
 
   // Listen to cross-tab fluid detail changes via storage event

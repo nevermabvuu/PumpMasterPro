@@ -618,6 +618,15 @@ def calculate_network():
         active_sel['disp_q_duty'] = global_flow
         active_sel['h_duty'] = round(total_head, 3)
         active_sel['disp_h_duty'] = round(total_head, 3)
+        # Synchronize static elevation head and NPSHa metrics into active duty point
+        static_elev = round(float(calc_summary.get('total_elevation_m', 0.0) or 0.0), 3)
+        active_sel['static_head'] = static_elev
+        active_sel['disp_static_head'] = static_elev
+        if calc_summary.get('npsha_m') is not None:
+            npsh_val = round(float(calc_summary['npsha_m']), 2)
+            active_sel['npsh_avail'] = npsh_val
+            active_sel['disp_npsh_avail'] = npsh_val
+
         active_sel['liquid'] = fluid_type
         active_sel['viscosity_cSt'] = viscosity_cSt
         active_sel['is_slurry'] = is_slurry
@@ -627,6 +636,15 @@ def calculate_network():
         active_sel['slurry_c_weight'] = slurry_c_weight
         active_sel['slurry_c_volume'] = slurry_c_volume
         session['active_selection'] = active_sel
+
+        # Also synchronize selection_form_data for immediate server-side form pre-fill
+        sel_form = session.get('selection_form_data') or {}
+        sel_form['q_duty'] = global_flow
+        sel_form['h_duty'] = round(total_head, 3)
+        sel_form['static_head'] = static_elev
+        if calc_summary.get('npsha_m') is not None:
+            sel_form['npsh_avail'] = round(float(calc_summary['npsha_m']), 2)
+        session['selection_form_data'] = sel_form
         session.modified = True
     except Exception:
         pass
@@ -907,23 +925,26 @@ def simple_calculate():
         rho = fluid_density_kg_m3(temperature_c, specific_gravity)
 
     raw_pipes = data.get('pipes') or []
-    if not raw_pipes:
-        return jsonify({'error': 'No pipe segments provided'}), 400
+    raw_parallel_branches = data.get('parallel_branches') or []
 
     fitting_k_map = get_fitting_k_map()
     roughness_map = get_roughness_map()
 
-    # Pre-parse pipe definitions and resolve child fittings & standard catalog attributes
-    parsed_pipes = []
-    for idx, p in enumerate(raw_pipes):
-        pipe_id = p.get('id') or f'pipe_{idx + 1}'
-        label = p.get('label') or f'Pipe {idx + 1}'
+    def parse_single_pipe(p, default_idx=1, default_prefix='Pipe'):
+        """
+        Parses a single pipeline segment dictionary:
+        - Resolves geometry (diameter, length, roughness, elevation)
+        - Resolves valves & fittings and accumulates their K-factors
+        - Converts child fittings into Fitting dataclass objects for the hydraulic engine
+        """
+        pipe_id = p.get('id') or f'pipe_{default_idx}_{int(time.time() * 1000) % 10000}'
+        label = p.get('label') or f'{default_prefix} {default_idx}'
         length_m = max(0.001, float(p.get('length_m') or 10.0))
         diameter_mm = max(1.0, float(p.get('diameter_mm') or 100.0))
         material = p.get('material') or 'commercial_steel'
         roughness_mm = float(p.get('roughness_mm') or roughness_map.get(material, 0.046))
         elevation_m = float(p.get('elevation_m') or 0.0)
-        custom_k = float(p.get('custom_k') or 0.0)
+        custom_k = max(0.0, float(p.get('custom_k') or 0.0))
         flow_pct = float(p.get('flow_pct') or p.get('flow_share_pct') or 0.0)
 
         # Parse child fittings (supports dict {key: qty}, list of dicts, or list of strings)
@@ -987,7 +1008,7 @@ def simple_calculate():
                     count=count
                 ))
 
-        parsed_pipes.append({
+        return {
             'id': pipe_id,
             'label': label,
             'length_m': length_m,
@@ -1000,32 +1021,292 @@ def simple_calculate():
             'flow_pct': flow_pct,
             'fittings_objs': fittings_objs,
             'fittings_details': fittings_details
-        })
+        }
 
-    num_pipes = len(parsed_pipes)
     results = []
+    branch_summaries = []
+    solver_name = "Unified Hydraulic Solver"
+    converged = True
 
     # =========================================================================
-    # UNIFIED NETWORK SOLVER EXECUTION
-    # Construct NetworkGraph and invoke solve_network() (same as Drawing Mode)
+    # CASE 1: COMPOUND PARALLEL NETWORK (UP TO 5 SERIES PIPES PER BRANCH)
     # =========================================================================
-    has_manual_parallel = (topology == 'parallel' and parallel_balancing == 'manual' and any(p['flow_pct'] > 0 for p in parsed_pipes))
+    if topology == 'parallel':
+        # Parse parallel branches: if raw_parallel_branches is provided, use it;
+        # otherwise wrap raw_pipes for backward compatibility.
+        parsed_branches = []
+        if raw_parallel_branches:
+            for b_idx, b in enumerate(raw_parallel_branches):
+                b_id = b.get('id') or f'branch_{b_idx + 1}'
+                b_label = b.get('label') or f'Branch {b_idx + 1}'
+                b_dis_elev = float(b.get('discharge_elevation_m') if b.get('discharge_elevation_m') is not None else (b.get('elevation_m') or static_elevation_m))
+                b_flow_pct = float(b.get('flow_pct') or 0.0)
+                sub_pipes_raw = b.get('pipes') or b.get('sub_pipes') or []
+                # Enforce up to 5 series pipes per branch
+                sub_pipes = [parse_single_pipe(sp, default_idx=p_i + 1, default_prefix=f'{b_idx + 1}.') for p_i, sp in enumerate(sub_pipes_raw[:5])]
+                if not sub_pipes:
+                    sub_pipes = [parse_single_pipe({}, default_idx=1, default_prefix=f'{b_idx + 1}.')]
+                parsed_branches.append({
+                    'id': b_id,
+                    'label': b_label,
+                    'discharge_elevation_m': b_dis_elev,
+                    'flow_pct': b_flow_pct,
+                    'pipes': sub_pipes
+                })
+        else:
+            # Flat pipes fallback: treat each pipe as a single-pipe parallel branch
+            for b_idx, p in enumerate(raw_pipes):
+                sp = parse_single_pipe(p, default_idx=b_idx + 1, default_prefix='Branch Pipe')
+                parsed_branches.append({
+                    'id': f'branch_{b_idx + 1}',
+                    'label': sp['label'],
+                    'discharge_elevation_m': float(p.get('elevation_m') or static_elevation_m),
+                    'flow_pct': sp['flow_pct'],
+                    'pipes': [sp]
+                })
 
-    if has_manual_parallel:
-        # Manual % flow split in Parallel Mode:
-        # Calculate branch flows explicitly based on user percentage allocation
-        pct_sum = sum(p['flow_pct'] for p in parsed_pipes)
-        norm_factor = (100.0 / pct_sum) if pct_sum > 0 else (1.0 / num_pipes)
-        branch_flows = [global_flow_m3h * (p['flow_pct'] * norm_factor / 100.0) for p in parsed_pipes]
+        num_branches = len(parsed_branches)
 
-        branch_head_losses = []
-        branch_resistances = []
-        for idx, p in enumerate(parsed_pipes):
-            q_branch = branch_flows[idx]
+        # Helper to compute branch friction loss and dH/dQ for a trial flow Q (m3/h)
+        def eval_branch_hydraulics(branch_obj, q_flow_m3h):
+            tot_major = 0.0
+            tot_minor = 0.0
+            tot_dh_dq = 0.0
+            pipe_res_list = []
+            for sp in branch_obj['pipes']:
+                edge = PipeEdge(
+                    id=sp['id'],
+                    from_node='a',
+                    to_node='b',
+                    length_m=sp['length_m'],
+                    diameter_mm=sp['diameter_mm'],
+                    material=sp['material'],
+                    roughness_mm=sp['roughness_mm'],
+                    fittings=sp['fittings_objs'],
+                    custom_k=sp['custom_k'],
+                    elev_change_m=sp['elevation_m'],
+                    label=sp['label']
+                )
+                calc_res = calculate_consolidated_pipe(
+                    edge,
+                    flow_m3h=q_flow_m3h,
+                    friction_method=friction_method,
+                    kinematic_viscosity=nu,
+                    fluid_density=rho,
+                    is_slurry=(fluid_type == 'slurry')
+                )
+                tot_major += calc_res.hf_major_m
+                tot_minor += calc_res.hf_minor_m
+                tot_dh_dq += calc_res.derivative_dh_dq
+                pipe_res_list.append(calc_res)
+            
+            tot_fric = tot_major + tot_minor
+            total_branch_head = branch_obj['discharge_elevation_m'] + tot_fric
+            return total_branch_head, tot_fric, tot_dh_dq, pipe_res_list
+
+        is_manual = (parallel_balancing == 'manual' and any(b['flow_pct'] > 0 for b in parsed_branches))
+
+        if is_manual:
+            # 1. Manual Flow Allocation: Flow divides per user specified percentage
+            solver_name = "Manual Percentage Flow Allocation"
+            pct_sum = sum(b['flow_pct'] for b in parsed_branches)
+            norm_factor = (100.0 / pct_sum) if pct_sum > 0 else (1.0 / num_branches)
+            branch_flows = [global_flow_m3h * (b['flow_pct'] * norm_factor / 100.0) for b in parsed_branches]
+
+            branch_heads = []
+            for b_idx, b in enumerate(parsed_branches):
+                q_b = branch_flows[b_idx]
+                h_b, fric_b, _, sub_calcs = eval_branch_hydraulics(b, q_b)
+                branch_heads.append(h_b)
+
+                branch_summaries.append({
+                    'id': b['id'],
+                    'label': b['label'],
+                    'flow_m3h': round(q_b, 3),
+                    'flow_share_pct': round((q_b / global_flow_m3h * 100.0) if global_flow_m3h > 0 else 0.0, 1),
+                    'discharge_elevation_m': round(b['discharge_elevation_m'], 2),
+                    'total_branch_head_m': round(h_b, 3),
+                    'friction_loss_m': round(fric_b, 3),
+                    'friction_head_m': round(fric_b, 3),
+                    'sub_pipe_count': len(b['pipes']),
+                    'num_sub_pipes': len(b['pipes'])
+                })
+
+                for sp, c_res in zip(b['pipes'], sub_calcs):
+                    results.append({
+                        'id': sp['id'],
+                        'label': sp['label'],
+                        'branch_id': b['id'],
+                        'branch_label': b['label'],
+                        'length_m': round(sp['length_m'], 2),
+                        'diameter_mm': round(sp['diameter_mm'], 2),
+                        'material': sp['material'],
+                        'roughness_mm': round(sp['roughness_mm'], 4),
+                        'flow_m3h': round(c_res.flow_m3h, 3),
+                        'flow_ls': round(c_res.flow_m3h / 3.6, 3),
+                        'flow_share_pct': round((c_res.flow_m3h / global_flow_m3h * 100.0) if global_flow_m3h > 0 else 0.0, 1),
+                        'velocity_m_s': round(c_res.velocity_ms, 3),
+                        'velocity_ms': round(c_res.velocity_ms, 3),
+                        'reynolds': c_res.reynolds,
+                        'flow_regime': c_res.regime,
+                        'regime': c_res.regime,
+                        'friction_factor': round(c_res.friction_factor, 5),
+                        'k_total': round(c_res.K_total, 3),
+                        'K_total': round(c_res.K_total, 3),
+                        'hf_major_m': round(c_res.hf_major_m, 3),
+                        'hf_minor_m': round(c_res.hf_minor_m, 3),
+                        'hf_elevation_m': round(sp['elevation_m'], 3),
+                        'head_loss_m': round(c_res.hf_friction_m, 3),
+                        'total_segment_head_m': round(c_res.h_total_m, 3),
+                        'resistance_R': round(c_res.resistance_R, 6),
+                        'fittings_details': sp['fittings_details']
+                    })
+
+            total_system_head_m = max(branch_heads) if branch_heads else 0.0
+            equiv_system_R = (total_system_head_m / (global_flow_m3h ** 2)) if global_flow_m3h > 0 else 0.0
+
+        else:
+            # 2. Auto Hydraulic Balancing with Differential Discharge Elevations
+            # Solves for manifold head H such that: Z_j + sum(h_f,j(Q_j)) = H for all branches, and sum(Q_j) = Q_total
+            solver_name = f"Auto Hydraulic Balancing ({solver_method.upper()})"
+
+            # Guaranteed Monotonic Bisection Solver for Differential Discharge Elevations:
+            # Piezometric head H is strictly monotonic with total flow sum(Q_j(H)).
+            # Solves for manifold head H such that: Z_j + sum(h_f,j(Q_j)) = H for all branches, and sum(Q_j) = Q_total
+            h_low = min(b['discharge_elevation_m'] for b in parsed_branches)
+            h_high = max(b['discharge_elevation_m'] for b in parsed_branches) + 50.0
+
+            # Function to compute flow Q_b in branch b for a given manifold head H
+            def get_branch_flow_for_head(branch, head_target):
+                z_dis = branch['discharge_elevation_m']
+                if head_target <= z_dis:
+                    return 0.0
+                target_fric = head_target - z_dis
+                # Bisect on Q in [0, max(global_flow_m3h * 2.0, 10.0)]
+                q_lo, q_hi = 0.0, max(global_flow_m3h * 2.0, 10.0)
+                for _ in range(25):
+                    q_m = 0.5 * (q_lo + q_hi)
+                    _, fric_loss, _, _ = eval_branch_hydraulics(branch, q_m)
+                    if fric_loss < target_fric:
+                        q_lo = q_m
+                    else:
+                        q_hi = q_m
+                return 0.5 * (q_lo + q_hi)
+
+            # Ensure h_high is high enough so sum(Q) >= global_flow_m3h
+            for _ in range(10):
+                q_sum_hi = sum(get_branch_flow_for_head(b, h_high) for b in parsed_branches)
+                if q_sum_hi >= global_flow_m3h:
+                    break
+                h_high += 50.0
+
+            # Outer bisection on manifold Head H to match total system flow
+            for it in range(35):
+                h_mid = 0.5 * (h_low + h_high)
+                q_sum = sum(get_branch_flow_for_head(b, h_mid) for b in parsed_branches)
+                if q_sum < global_flow_m3h:
+                    h_low = h_mid
+                else:
+                    h_high = h_mid
+                if abs(q_sum - global_flow_m3h) < 1e-4:
+                    break
+
+            total_system_head_m = 0.5 * (h_low + h_high)
+            q_branches = [get_branch_flow_for_head(b, total_system_head_m) for b in parsed_branches]
+
+            # Re-normalize slightly so sum of flows strictly equals global_flow_m3h (zero residual)
+            tot_q_actual = sum(q_branches)
+            if tot_q_actual > 0:
+                q_branches = [q * (global_flow_m3h / tot_q_actual) for q in q_branches]
+            converged = True
+
+            # Evaluate final results per branch and sub-pipe
+            for b_idx, b in enumerate(parsed_branches):
+                q_b = q_branches[b_idx] if b_idx < len(q_branches) else (global_flow_m3h / num_branches)
+                h_b, fric_b, _, sub_calcs = eval_branch_hydraulics(b, q_b)
+
+                branch_summaries.append({
+                    'id': b['id'],
+                    'label': b['label'],
+                    'flow_m3h': round(q_b, 3),
+                    'flow_share_pct': round((q_b / global_flow_m3h * 100.0) if global_flow_m3h > 0 else 0.0, 1),
+                    'discharge_elevation_m': round(b['discharge_elevation_m'], 2),
+                    'total_branch_head_m': round(h_b, 3),
+                    'friction_loss_m': round(fric_b, 3),
+                    'friction_head_m': round(fric_b, 3),
+                    'sub_pipe_count': len(b['pipes']),
+                    'num_sub_pipes': len(b['pipes'])
+                })
+
+                for sp, c_res in zip(b['pipes'], sub_calcs):
+                    results.append({
+                        'id': sp['id'],
+                        'label': sp['label'],
+                        'branch_id': b['id'],
+                        'branch_label': b['label'],
+                        'length_m': round(sp['length_m'], 2),
+                        'diameter_mm': round(sp['diameter_mm'], 2),
+                        'material': sp['material'],
+                        'roughness_mm': round(sp['roughness_mm'], 4),
+                        'flow_m3h': round(c_res.flow_m3h, 3),
+                        'flow_ls': round(c_res.flow_m3h / 3.6, 3),
+                        'flow_share_pct': round((c_res.flow_m3h / global_flow_m3h * 100.0) if global_flow_m3h > 0 else 0.0, 1),
+                        'velocity_m_s': round(c_res.velocity_ms, 3),
+                        'velocity_ms': round(c_res.velocity_ms, 3),
+                        'reynolds': c_res.reynolds,
+                        'flow_regime': c_res.regime,
+                        'regime': c_res.regime,
+                        'friction_factor': round(c_res.friction_factor, 5),
+                        'k_total': round(c_res.K_total, 3),
+                        'K_total': round(c_res.K_total, 3),
+                        'hf_major_m': round(c_res.hf_major_m, 3),
+                        'hf_minor_m': round(c_res.hf_minor_m, 3),
+                        'hf_elevation_m': round(sp['elevation_m'], 3),
+                        'head_loss_m': round(c_res.hf_friction_m, 3),
+                        'total_segment_head_m': round(c_res.h_total_m, 3),
+                        'resistance_R': round(c_res.resistance_R, 6),
+                        'fittings_details': sp['fittings_details']
+                    })
+
+            equiv_system_R = (total_system_head_m / (global_flow_m3h ** 2)) if global_flow_m3h > 0 else 0.0
+
+    # =========================================================================
+    # CASE 2: SERIES PIPELINE NETWORK (SEQUENTIAL END-TO-END)
+    # =========================================================================
+    else:
+        parsed_pipes = [parse_single_pipe(p, default_idx=idx + 1) for idx, p in enumerate(raw_pipes)]
+        num_pipes = len(parsed_pipes)
+
+        # Standard NetworkGraph construction & solve_network() execution
+        graph = NetworkGraph()
+        n0 = Node(id='n_inlet', label='Inlet Source', node_type='reservoir', elevation_m=0.0, head_m=0.0)
+        graph.add_node(n0)
+        cum_z = 0.0
+        for i, p in enumerate(parsed_pipes):
+            cum_z += p['elevation_m']
+            from_n = 'n_inlet' if i == 0 else f'n_junc_{i}'
+            to_n = 'n_outlet' if i == num_pipes - 1 else f'n_junc_{i + 1}'
+
+            if i < num_pipes - 1:
+                graph.add_node(Node(
+                    id=to_n,
+                    label=f'Junction {i + 1}',
+                    node_type='junction',
+                    elevation_m=round(cum_z, 3)
+                ))
+            else:
+                graph.add_node(Node(
+                    id='n_outlet',
+                    label='System Discharge',
+                    node_type='discharge',
+                    elevation_m=round(cum_z + static_elevation_m, 3),
+                    demand_m3h=global_flow_m3h
+                ))
+
             edge = PipeEdge(
                 id=p['id'],
-                from_node='n_inlet',
-                to_node='n_outlet',
+                from_node=from_n,
+                to_node=to_n,
                 length_m=p['length_m'],
                 diameter_mm=p['diameter_mm'],
                 material=p['material'],
@@ -1035,117 +1316,7 @@ def simple_calculate():
                 elev_change_m=p['elevation_m'],
                 label=p['label']
             )
-            calc_res = calculate_consolidated_pipe(
-                edge,
-                flow_m3h=q_branch,
-                friction_method=friction_method,
-                kinematic_viscosity=nu,
-                fluid_density=rho,
-                is_slurry=(fluid_type == 'slurry')
-            )
-            branch_head_losses.append(calc_res.hf_friction_m)
-            branch_resistances.append(calc_res.resistance_R)
-            results.append({
-                'id': p['id'],
-                'label': p['label'],
-                'length_m': round(p['length_m'], 2),
-                'diameter_mm': round(p['diameter_mm'], 2),
-                'material': p['material'],
-                'roughness_mm': round(calc_res.roughness, 4),
-                'flow_m3h': round(calc_res.flow_m3h, 3),
-                'flow_ls': round(calc_res.flow_m3h / 3.6, 3),
-                'flow_share_pct': round((calc_res.flow_m3h / global_flow_m3h * 100.0) if global_flow_m3h > 0 else 0.0, 1),
-                'velocity_m_s': round(calc_res.velocity_ms, 3),
-                'velocity_ms': round(calc_res.velocity_ms, 3),
-                'reynolds': calc_res.reynolds,
-                'flow_regime': calc_res.regime,
-                'regime': calc_res.regime,
-                'friction_factor': round(calc_res.friction_factor, 5),
-                'k_total': round(calc_res.K_total, 3),
-                'K_total': round(calc_res.K_total, 3),
-                'hf_major_m': round(calc_res.hf_major_m, 3),
-                'hf_minor_m': round(calc_res.hf_minor_m, 3),
-                'hf_elevation_m': round(calc_res.hf_elevation_m, 3),
-                'head_loss_m': round(calc_res.hf_friction_m, 3),
-                'total_segment_head_m': round(calc_res.h_total_m, 3),
-                'resistance_R': round(calc_res.resistance_R, 6),
-                'fittings_details': p['fittings_details']
-            })
-
-        common_parallel_loss = sum(branch_head_losses) / len(branch_head_losses) if branch_head_losses else 0.0
-        avg_branch_elev = sum(p['elevation_m'] for p in parsed_pipes) / num_pipes if num_pipes > 0 else 0.0
-        total_system_head_m = common_parallel_loss + avg_branch_elev + static_elevation_m
-        inv_sqrt_sum = sum(1.0 / math.sqrt(r) for r in branch_resistances if r > 0)
-        equiv_system_R = (1.0 / (inv_sqrt_sum ** 2)) if inv_sqrt_sum > 0 else 0.0
-        solver_name = "Manual Allocation"
-        converged = True
-    else:
-        # Standard NetworkGraph construction & solve_network() execution
-        graph = NetworkGraph()
-
-        if topology == 'series':
-            # Series: Sequential pipeline Node_0 -> Node_1 -> ... -> Node_k
-            n0 = Node(id='n_inlet', label='Inlet Source', node_type='reservoir', elevation_m=0.0, head_m=0.0)
-            graph.add_node(n0)
-            cum_z = 0.0
-            for i, p in enumerate(parsed_pipes):
-                cum_z += p['elevation_m']
-                from_n = 'n_inlet' if i == 0 else f'n_junc_{i}'
-                to_n = 'n_outlet' if i == num_pipes - 1 else f'n_junc_{i + 1}'
-
-                if i < num_pipes - 1:
-                    graph.add_node(Node(
-                        id=to_n,
-                        label=f'Junction {i + 1}',
-                        node_type='junction',
-                        elevation_m=round(cum_z, 3)
-                    ))
-                else:
-                    graph.add_node(Node(
-                        id='n_outlet',
-                        label='System Discharge',
-                        node_type='discharge',
-                        elevation_m=round(cum_z + static_elevation_m, 3),
-                        demand_m3h=global_flow_m3h
-                    ))
-
-                edge = PipeEdge(
-                    id=p['id'],
-                    from_node=from_n,
-                    to_node=to_n,
-                    length_m=p['length_m'],
-                    diameter_mm=p['diameter_mm'],
-                    material=p['material'],
-                    roughness_mm=p['roughness_mm'],
-                    fittings=p['fittings_objs'],
-                    custom_k=p['custom_k'],
-                    elev_change_m=p['elevation_m'],
-                    label=p['label']
-                )
-                graph.add_pipe(edge)
-
-        else:
-            # Parallel: Common inlet manifold to common discharge header
-            n_in = Node(id='n_inlet', label='Inlet Manifold', node_type='reservoir', elevation_m=0.0, head_m=0.0)
-            n_out = Node(id='n_outlet', label='Discharge Header', node_type='discharge', elevation_m=static_elevation_m, demand_m3h=global_flow_m3h)
-            graph.add_node(n_in)
-            graph.add_node(n_out)
-
-            for p in parsed_pipes:
-                edge = PipeEdge(
-                    id=p['id'],
-                    from_node='n_inlet',
-                    to_node='n_outlet',
-                    length_m=p['length_m'],
-                    diameter_mm=p['diameter_mm'],
-                    material=p['material'],
-                    roughness_mm=p['roughness_mm'],
-                    fittings=p['fittings_objs'],
-                    custom_k=p['custom_k'],
-                    elev_change_m=p['elevation_m'],
-                    label=p['label']
-                )
-                graph.add_pipe(edge)
+            graph.add_pipe(edge)
 
         # Execute unified network solver
         solver_res = solve_network(
@@ -1202,6 +1373,37 @@ def simple_calculate():
     hydraulic_power_kw = (rho * G_ACCEL * q_m3s_total * total_system_head_m) / 1000.0 if total_system_head_m > 0 else 0.0
     total_fric_loss = sum(r['hf_major_m'] + r['hf_minor_m'] for r in results) if topology == 'series' else (total_system_head_m - static_elevation_m)
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # Net Positive Suction Head Available (NPSHa) Calculation for Simple Mode
+    # Formula: NPSHa = h_atm - h_vp + h_suction_static - h_suction_friction + h_v_suction
+    # ─────────────────────────────────────────────────────────────────────────
+    p_atm_kpa = 101.325
+    t_c = max(0.1, min(100.0, temperature_c))
+    # Antoine equation: water saturation vapor pressure in kPa
+    p_vapor_kpa = (10.0 ** (8.07131 - (1730.63 / (233.426 + t_c)))) * 0.133322
+    h_atm_m = (p_atm_kpa * 1000.0) / (rho * G_ACCEL)
+    h_vapor_m = (p_vapor_kpa * 1000.0) / (rho * G_ACCEL)
+
+    # Suction segment friction & elevation evaluation
+    suction_fric_m = 0.0
+    suction_elev_m = 0.0
+    suction_vel_head_m = 0.0
+
+    if results and len(results) > 0:
+        first_p = results[0]
+        lbl = str(first_p.get('label', '')).lower()
+        is_suction = 'suction' in lbl or len(results) > 1
+        if is_suction:
+            suction_fric_m = float(first_p.get('hf_major_m', 0.0) or 0.0) + float(first_p.get('hf_minor_m', 0.0) or 0.0)
+            suction_elev_m = float(first_p.get('hf_elevation_m', 0.0) or 0.0)
+            v_ms = float(first_p.get('velocity_m_s', 0.0) or first_p.get('velocity_ms', 0.0) or 0.0)
+            suction_vel_head_m = (v_ms ** 2) / (2.0 * G_ACCEL)
+
+    npsha_m = max(0.0, h_atm_m - h_vapor_m + suction_elev_m - suction_fric_m + suction_vel_head_m)
+
+    npsha_m = round(npsha_m, 2)
+    npsha_ft = round(npsha_m * 3.28084, 2)
+
     summary = {
         'topology': topology,
         'solver_method': solver_method,
@@ -1216,6 +1418,8 @@ def simple_calculate():
         'total_system_head_m': round(total_system_head_m, 3),
         'total_system_head_ft': round(total_system_head_m * 3.28084, 2),
         'total_system_R': round(equiv_system_R, 6),
+        'npsha_m': npsha_m,
+        'npsha_ft': npsha_ft,
         'pipe_count': len(results),
         'friction_method': friction_method,
         'temperature_c': temperature_c,
@@ -1232,8 +1436,12 @@ def simple_calculate():
         active_sel = session.get('active_selection') or {}
         active_sel['q_duty'] = round(global_flow_m3h, 3)
         active_sel['h_duty'] = round(total_system_head_m, 3)
+        active_sel['static_head'] = round(static_elevation_m, 3)
+        active_sel['npsh_avail'] = npsha_m
         active_sel['disp_q_duty'] = round(flow_rate, 3)
         active_sel['disp_h_duty'] = round(total_system_head_m, 3)
+        active_sel['disp_static_head'] = round(static_elevation_m, 3)
+        active_sel['disp_npsh_avail'] = npsha_m
         active_sel['pipe_network'] = {
             'mode': 'simple',
             'topology': topology,
@@ -1251,6 +1459,15 @@ def simple_calculate():
             }
         }
         session['active_selection'] = active_sel
+
+        # Synchronize selection_form_data
+        sel_form = session.get('selection_form_data') or {}
+        sel_form['q_duty'] = round(flow_rate, 3)
+        sel_form['unit_q'] = flow_unit
+        sel_form['h_duty'] = round(total_system_head_m, 3)
+        sel_form['static_head'] = round(static_elevation_m, 3)
+        sel_form['npsh_avail'] = npsha_m
+        session['selection_form_data'] = sel_form
         session.modified = True
     except Exception:
         pass
@@ -1265,6 +1482,8 @@ def simple_calculate():
         'total_system_head_ft': round(total_system_head_m * 3.28084, 2),
         'total_friction_loss_m': round(total_fric_loss, 3),
         'static_elevation_m': round(static_elevation_m, 3),
+        'npsha_m': npsha_m,
+        'npsha_ft': npsha_ft,
         'flow_m3h': round(global_flow_m3h, 3),
         'flow_user_unit': round(flow_rate, 3),
         'unit_q': flow_unit,
@@ -1272,8 +1491,9 @@ def simple_calculate():
         'hydraulic_power_kw': round(hydraulic_power_kw, 2),
         'hydraulic_power_hp': round(hydraulic_power_kw * 1.34102, 2),
         'equivalent_system_R': round(equiv_system_R, 6),
-        'applied_to_selection': bool(request.args.get('apply_to_selection')),
+        'applied_to_selection': bool(data.get('apply_to_selection') or request.args.get('apply_to_selection')),
         'total_system_head_user_unit': round(total_system_head_m, 3),
+        'branch_summaries': branch_summaries,
         'pipes': results,
         'results': results,
         'summary': summary

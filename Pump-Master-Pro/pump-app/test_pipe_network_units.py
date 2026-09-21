@@ -91,5 +91,67 @@ class TestPipeNetworkUnits(unittest.TestCase):
         # Total system head > 10m (elevation + friction)
         self.assertGreater(data['summary']['total_system_head_m'], 10.0)
 
+    def test_simple_calculate_npsha(self):
+        """Verify /api/pipe-network/simple-calculate computes NPSHa and syncs to session."""
+        payload = {
+            "flow": 50.0,
+            "unit_flow": "m3h",
+            "unit_head": "m",
+            "unit_system": "metric",
+            "fluid_type": "water",
+            "temp_c": 20.0,
+            "sg": 1.0,
+            "viscosity_cst": 1.0,
+            "topology": "series",
+            "apply_to_selection": True,
+            "pipes": [
+                {
+                    "id": "pipe-suct",
+                    "label": "Suction Line",
+                    "length_m": 10.0,
+                    "diameter_mm": 100.0,
+                    "roughness_mm": 0.045,
+                    "elevation_m": -1.5, # 1.5m suction lift
+                    "fittings": []
+                },
+                {
+                    "id": "pipe-disch",
+                    "label": "Discharge Line",
+                    "length_m": 40.0,
+                    "diameter_mm": 80.0,
+                    "roughness_mm": 0.045,
+                    "elevation_m": 15.0,
+                    "fittings": []
+                }
+            ]
+        }
+
+        resp = self.client.post('/api/pipe-network/simple-calculate',
+                                data=json.dumps(payload),
+                                content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+
+        # Check NPSHa exists in response
+        self.assertIn('npsha_m', data)
+        self.assertIn('npsha_ft', data)
+        self.assertIsNotNone(data['npsha_m'])
+        self.assertGreater(data['npsha_m'], 0.0)
+        self.assertIn('summary', data)
+        self.assertIn('npsha_m', data['summary'])
+        self.assertEqual(data['npsha_m'], data['summary']['npsha_m'])
+
+        # For 20°C water at sea level (~10.33m atm, ~0.24m vp) with -1.5m lift and small friction,
+        # NPSHa should be around 8.0 - 8.6 m
+        self.assertTrue(7.0 <= data['npsha_m'] <= 9.0, f"Expected NPSHa between 7 and 9 m, got {data['npsha_m']}")
+
+        # Verify applied_to_selection is true and session has npsh_avail
+        self.assertTrue(data.get('applied_to_selection'))
+        with self.client.session_transaction() as sess:
+            active_sel = sess.get('active_selection', {})
+            self.assertEqual(active_sel.get('npsh_avail'), data['npsha_m'])
+            sel_form = sess.get('selection_form_data', {})
+            self.assertEqual(sel_form.get('npsh_avail'), data['npsha_m'])
+
 if __name__ == '__main__':
     unittest.main()

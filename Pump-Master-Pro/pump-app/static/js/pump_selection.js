@@ -218,7 +218,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById(id);
     if (!el) return;
     if (document.activeElement !== el && !isNaN(val) && isFinite(val)) {
-      el.value = (val % 1 !== 0) ? parseFloat(val.toFixed(3)) : val;
+      if (id === 'sg_l' || id === 'sg_s' || id === 'sg_m') {
+        el.value = Number(val).toFixed(2);
+      } else if (id === 'slurry_cv' || id === 'slurry_cw') {
+        el.value = Number(val).toFixed(3);
+      } else {
+        el.value = (val % 1 !== 0) ? parseFloat(val.toFixed(3)) : val;
+      }
     }
   };
 
@@ -348,12 +354,12 @@ document.addEventListener('DOMContentLoaded', () => {
       Cw = Math.max(0.0, Math.min(0.90, Cw));
       M = Math.max(L, Math.min(S, M));
 
-      // Update the UI for calculated properties
-      if (!active.has('L')) setVal('sg_l', L);
-      if (!active.has('S')) setVal('sg_s', S);
-      if (!active.has('M')) setVal('sg_m', M);
-      if (!active.has('Cv')) setVal('slurry_cv', Cv);
-      if (!active.has('Cw')) setVal('slurry_cw', Cw);
+      // Update the UI for calculated properties with clean decimal precision
+      if (!active.has('L')) setVal('sg_l', parseFloat(L.toFixed(2)));
+      if (!active.has('S')) setVal('sg_s', parseFloat(S.toFixed(2)));
+      if (!active.has('M')) setVal('sg_m', parseFloat(M.toFixed(2)));
+      if (!active.has('Cv')) setVal('slurry_cv', parseFloat(Cv.toFixed(3)));
+      if (!active.has('Cw')) setVal('slurry_cw', parseFloat(Cw.toFixed(3)));
     } catch (e) {
       console.warn('Slurry calculation error:', e);
     }
@@ -632,10 +638,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function syncPumpSelectionSgToStorage() {
     const sg = getPumpSelectionSg();
     if (!isNaN(sg) && sg > 0) {
-      localStorage.setItem('pmpro_shared_fluid_sg', sg.toFixed(3));
+      localStorage.setItem('pmpro_shared_fluid_sg', sg.toFixed(2));
       // Update badge in Pump Selection panel
       const badge = document.getElementById('ps_calculated_sg_badge');
-      if (badge) badge.textContent = sg.toFixed(3);
+      if (badge) badge.textContent = sg.toFixed(2);
       // Sync into Pipe Network SG input and state if present on page
       const pnSg = document.getElementById('pn-sg');
       if (pnSg && document.activeElement !== pnSg) {
@@ -681,7 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (liquid === 'slurry') {
       const smEl = document.getElementById('sg_m');
       if (smEl && document.activeElement !== smEl) {
-        smEl.value = sg.toFixed(3);
+        smEl.value = sg.toFixed(2);
       }
       const sl = parseFloat(document.getElementById('sg_l')?.value || 1.0) || 1.0;
       const ss = parseFloat(document.getElementById('sg_s')?.value || 2.65) || 2.65;
@@ -696,7 +702,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateSlurryCalculator();
     }
     const badge = document.getElementById('ps_calculated_sg_badge');
-    if (badge) badge.textContent = sg.toFixed(3);
+    if (badge) badge.textContent = sg.toFixed(2);
   }
 
   /**

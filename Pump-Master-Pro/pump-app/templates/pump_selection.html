@@ -1843,7 +1843,7 @@
 
     <!-- TOP TOOLBAR -->
     <div id="pn-toolbar">
-      <span id="pn-canvas-tools-group-1" style="display:inline-flex;align-items:center;gap:6px;">
+      <span class="pn-canvas-only" style="display:inline-flex;align-items:center;gap:6px;">
         <span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-right:-2px;">View:</span>
         <button id="btn-view-schematic" type="button" class="pn-btn" title="Schematic View">
           <i class="bi bi-bezier2"></i> Schematic
@@ -1854,25 +1854,25 @@
         <button id="btn-theme-toggle" type="button" class="pn-btn" title="Toggle Canvas Theme (Light CAD / Dark)">
           <i class="bi bi-sun"></i> Theme
         </button>
-        <button id="btn-toggle-legend" type="button" class="pn-btn active-tool" title="Show / Hide Legend">
-          <i class="bi bi-card-list"></i> Legend
-        </button>
       </span>
-
-      <div class="pn-sep"></div>
-
-      <!-- Zoom controls -->
-      <button id="btn-zoom-out" type="button" class="pn-btn" title="Zoom out">
-        <i class="bi bi-zoom-out"></i>
-      </button>
-      <button id="btn-zoom-reset" type="button" class="pn-btn" title="Reset zoom and pan">
-        <i class="bi bi-fullscreen-exit"></i>
-      </button>
-      <button id="btn-zoom-in" type="button" class="pn-btn" title="Zoom in">
-        <i class="bi bi-zoom-in"></i>
+      <button id="btn-toggle-legend" type="button" class="pn-btn active-tool" title="Show / Hide Legend">
+        <i class="bi bi-card-list"></i> Legend
       </button>
 
-      <div class="pn-sep"></div>
+      <!-- Zoom controls (Canvas only) -->
+      <span class="pn-canvas-only" style="display:inline-flex;align-items:center;gap:4px;">
+        <span class="pn-sep"></span>
+        <button id="btn-zoom-out" type="button" class="pn-btn" title="Zoom out">
+          <i class="bi bi-zoom-out"></i>
+        </button>
+        <button id="btn-zoom-reset" type="button" class="pn-btn" title="Reset zoom and pan">
+          <i class="bi bi-fullscreen-exit"></i>
+        </button>
+        <button id="btn-zoom-in" type="button" class="pn-btn" title="Zoom in">
+          <i class="bi bi-zoom-in"></i>
+        </button>
+        <div class="pn-sep"></div>
+      </span>
 
       <!-- File operations -->
       <button id="btn-save" type="button" class="pn-btn pn-btn-success" title="Save current network (auto-saves on change)">
@@ -2007,8 +2007,8 @@
         <i class="bi bi-layers-fill" style="color:#f59e0b;"></i> Slurry / Advanced
       </button>
 
-      <!-- Diagram Display Settings Tool -->
-      <button id="btn-diagram-settings" type="button" class="pn-btn" onclick="toggleDiagramSettingsModal(true)" title="Diagram Display Settings (Labels, Material, K-factor, Roughness, Diameters, Flow, etc.)">
+      <!-- Diagram Display Settings Tool (Canvas only) -->
+      <button id="btn-diagram-settings" type="button" class="pn-btn pn-canvas-only" onclick="toggleDiagramSettingsModal(true)" title="Diagram Display Settings (Labels, Material, K-factor, Roughness, Diameters, Flow, etc.)">
         <i class="bi bi-sliders" style="color:#38bdf8;"></i> Display Settings
       </button>
 
@@ -2455,195 +2455,68 @@
          ───────────────────────────────────────────────────────────────────────── -->
     <div id="pn-simple-mode-wrap">
 
-      <!-- Header bar: Mode overview, status and quick sample presets -->
-      <div class="pn-simple-card" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;border-left:4px solid #22c55e;">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div style="width:40px;height:40px;border-radius:8px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);display:flex;align-items:center;justify-content:center;color:#22c55e;font-size:1.3rem;">
-            <i class="bi bi-list-columns-reverse"></i>
-          </div>
-          <div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <h3 style="font-size:1.05rem;font-weight:700;color:#f0f6fc;margin:0;">Simple Pipeline Network (Dropdown Mode)</h3>
-              <span style="background:rgba(34,197,94,0.2);color:#4ade80;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;border:1px solid rgba(34,197,94,0.4);text-transform:uppercase;">Non-Drawn</span>
-            </div>
-            <div style="font-size:11.5px;color:#8b949e;margin-top:2px;">
-              Configure pipeline networks using standard pipe catalogs, materials, fittings, lengths, and elevations. Supports pure <strong>Series</strong> (cumulative head) and <strong>Parallel</strong> (split flow) piping configurations.
-            </div>
-          </div>
+      <!-- Card 1: Network Topology & Static Elevation -->
+      <div class="pn-simple-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;border-bottom:1px solid #21262d;padding-bottom:8px;">
+          <i class="bi bi-bezier2" style="color:#38bdf8;font-size:1.1rem;"></i>
+          <h3 style="font-size:0.92rem;font-weight:700;color:#e6edf3;margin:0;">1. Network Topology &amp; Static Elevation</h3>
         </div>
 
-        <!-- Quick Actions -->
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <button type="button" class="pn-btn" onclick="simpleController.loadPreset('series')" title="Load a typical 3-segment Series pipeline (Suction + Discharge Main + Vertical Riser)">
-            <i class="bi bi-arrow-right-circle" style="color:#38bdf8;"></i> Load Series Sample
-          </button>
-          <button type="button" class="pn-btn" onclick="simpleController.loadPreset('parallel')" title="Load a balanced 2-branch Parallel pipeline network (Split flow across dual pipes)">
-            <i class="bi bi-distribute-vertical" style="color:#22c55e;"></i> Load Parallel Sample
-          </button>
-          <button type="button" class="pn-btn pn-btn-primary" onclick="simpleController.calculate()" style="background:#2563eb;font-weight:700;">
-            <i class="bi bi-play-circle-fill"></i> Calculate Network
-          </button>
-          <button id="btn-simple-top-apply-duty" type="button" class="pn-btn pn-btn-primary" onclick="simpleController.applyToPumpSelection()" style="background:#2563eb;font-weight:700;padding:6px 14px;box-shadow:0 0 14px rgba(37,99,235,0.35);display:inline-flex;align-items:center;gap:6px;" title="Apply calculated Head, Static Head, and Flow to Pump Selection">
-            <i class="bi bi-box-arrow-up-right"></i> Apply Duty Point to Selection
-          </button>
-        </div>
-      </div>
-
-      <!-- ── System Parameters Cards (2 Columns: Topology & Fluids) ── -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));gap:16px;">
-
-        <!-- Card 1: Network Topology & Operating Flow -->
-        <div class="pn-simple-card">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;border-bottom:1px solid #21262d;padding-bottom:8px;">
-            <i class="bi bi-bezier2" style="color:#38bdf8;font-size:1.1rem;"></i>
-            <h3 style="font-size:0.92rem;font-weight:700;color:#e6edf3;margin:0;">1. Network Topology &amp; Operating Flow</h3>
-          </div>
-
-          <!-- Topology Option Cards: Series vs Parallel -->
-          <div style="display:flex;gap:10px;margin-bottom:14px;">
-            <!-- Series Card -->
-            <div id="topo-card-series" class="pn-topology-card active" onclick="simpleController.setTopology('series')">
-              <input type="radio" name="simple_topology" id="topo-radio-series" value="series" checked>
-              <div>
-                <div style="font-size:12px;font-weight:700;color:#38bdf8;display:flex;align-items:center;gap:6px;">
-                  <i class="bi bi-arrow-right-circle-fill"></i> Pipes in Series
-                </div>
-                <div style="font-size:10.5px;color:#8b949e;margin-top:3px;line-height:1.4;">
-                  Single path: Total flow passes through every pipe (Q<sub>i</sub> = Q<sub>tot</sub>). Friction losses accumulate: H = &sum; H<sub>i</sub>.
-                </div>
+        <!-- Topology Option Cards: Series vs Parallel -->
+        <div style="display:flex;gap:10px;margin-bottom:14px;">
+          <!-- Series Card -->
+          <div id="topo-card-series" class="pn-topology-card active" onclick="simpleController.setTopology('series')">
+            <input type="radio" name="simple_topology" id="topo-radio-series" value="series" checked>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#38bdf8;display:flex;align-items:center;gap:6px;">
+                <i class="bi bi-arrow-right-circle-fill"></i> Pipes in Series
               </div>
-            </div>
-
-            <!-- Parallel Card -->
-            <div id="topo-card-parallel" class="pn-topology-card" onclick="simpleController.setTopology('parallel')">
-              <input type="radio" name="simple_topology" id="topo-radio-parallel" value="parallel">
-              <div>
-                <div style="font-size:12px;font-weight:700;color:#22c55e;display:flex;align-items:center;gap:6px;">
-                  <i class="bi bi-distribute-vertical"></i> Pipes in Parallel
-                </div>
-                <div style="font-size:10.5px;color:#8b949e;margin-top:3px;line-height:1.4;">
-                  Split flow: Branches run between common headers. Head loss balances (H<sub>1</sub> = H<sub>2</sub>) and Q<sub>tot</sub> = &sum; Q<sub>i</sub>.
-                </div>
+              <div style="font-size:10.5px;color:#8b949e;margin-top:3px;line-height:1.4;">
+                Single path: Total flow passes through every pipe (Q<sub>i</sub> = Q<sub>tot</sub>). Friction losses accumulate: H = &sum; H<sub>i</sub>.
               </div>
             </div>
           </div>
 
-          <!-- Flow & Static Head Inputs -->
-          <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:10px;margin-bottom:10px;">
-            <!-- Total System Flow -->
+          <!-- Parallel Card -->
+          <div id="topo-card-parallel" class="pn-topology-card" onclick="simpleController.setTopology('parallel')">
+            <input type="radio" name="simple_topology" id="topo-radio-parallel" value="parallel">
             <div>
-              <label class="pp-label" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-                <span>Total System Flow (Q)</span>
-                <span style="font-size:9.5px;color:#64748b;">Operating Demand</span>
-              </label>
-              <div style="display:flex;gap:4px;">
-                <input id="simple-flow-rate" type="number" step="0.1" min="0.01" class="pn-input-cell" value="100.0" oninput="simpleController.onInputDebounce()" style="font-weight:700;font-size:13px;color:#38bdf8;">
-                <select id="simple-flow-unit" class="pn-input-cell" style="width:90px;font-weight:600;" onchange="simpleController.onUnitChange()">
-                  <option value="m3h">m³/h</option>
-                  <option value="ls">L/s</option>
-                  <option value="lmin">L/min</option>
-                  <option value="gpm">US gpm</option>
-                  <option value="ukgpm">UK gpm</option>
-                  <option value="cfs">cfs</option>
-                  <option value="mgd">MGD</option>
-                </select>
+              <div style="font-size:12px;font-weight:700;color:#22c55e;display:flex;align-items:center;gap:6px;">
+                <i class="bi bi-distribute-vertical"></i> Pipes in Parallel
               </div>
-            </div>
-
-            <!-- Total Static Head -->
-            <div>
-              <label class="pp-label" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-                <span>Static Lift &Delta;z</span>
-                <span style="font-size:9.5px;color:#64748b;">Global Lift</span>
-              </label>
-              <div style="display:flex;align-items:center;gap:4px;">
-                <input id="simple-static-head" type="number" step="0.1" class="pn-input-cell" value="10.0" oninput="simpleController.onInputDebounce()" style="font-weight:700;font-size:13px;color:#c084fc;">
-                <span id="simple-head-unit-label" style="font-size:11px;color:#8b949e;font-weight:600;">m</span>
+              <div style="font-size:10.5px;color:#8b949e;margin-top:3px;line-height:1.4;">
+                Split flow: Branches run between common headers. Head loss balances (H<sub>1</sub> = H<sub>2</sub>) and Q<sub>tot</sub> = &sum; Q<sub>i</sub>.
               </div>
-            </div>
-          </div>
-
-          <!-- Parallel Flow Balancing Selector (visible only when Parallel is selected) -->
-          <div id="simple-parallel-mode-wrap" style="display:none;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px 12px;margin-top:10px;">
-            <label class="pp-label" style="margin-bottom:4px;color:#22c55e;">Parallel Flow Balancing Method</label>
-            <div style="display:flex;gap:14px;font-size:11.5px;">
-              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e6edf3;">
-                <input type="radio" name="simple_parallel_balancing" value="auto" checked onchange="simpleController.onBalancingChange('auto')" style="accent-color:#22c55e;">
-                <span><strong>Automatic Hydraulic Balancing</strong> (Q<sub>i</sub> &propto; 1/&radic;R<sub>i</sub>)</span>
-              </label>
-              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e6edf3;">
-                <input type="radio" name="simple_parallel_balancing" value="manual" onchange="simpleController.onBalancingChange('manual')" style="accent-color:#22c55e;">
-                <span><strong>Manual % Flow Allocation</strong></span>
-              </label>
             </div>
           </div>
         </div>
 
-        <!-- Card 2: Fluid Properties & Friction Formulation -->
-        <div class="pn-simple-card">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;border-bottom:1px solid #21262d;padding-bottom:8px;">
-            <i class="bi bi-droplet-half" style="color:#22c55e;font-size:1.1rem;"></i>
-            <h3 style="font-size:0.92rem;font-weight:700;color:#e6edf3;margin:0;">2. Fluid Properties &amp; Friction Method</h3>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
-            <!-- Network Solver -->
-            <div>
-              <label class="pp-label" style="margin-bottom:4px;"><i class="bi bi-cpu" style="color:#a78bfa;"></i> Network Solver</label>
-              <select id="simple-solver-method" class="pn-input-cell" onchange="simpleController.onSolverChange()">
-                <option value="ggm" selected>Global Gradient Method (GGM)</option>
-                <option value="newton_raphson">Newton-Raphson (NR)</option>
-                <option value="hardy_cross">Hardy Cross Method</option>
-                <option value="linear_theory">Linear Theory Method</option>
-              </select>
-            </div>
-
-            <!-- Friction Method -->
-            <div>
-              <label class="pp-label" style="margin-bottom:4px;"><i class="bi bi-droplet-half" style="color:#38bdf8;"></i> Friction Equation</label>
-              <select id="simple-friction-method" class="pn-input-cell" onchange="simpleController.calculate()">
-                <option value="darcy_weisbach" selected>Darcy-Weisbach (Colebrook-White)</option>
-                <option value="hazen_williams">Hazen-Williams (Empirical C)</option>
-              </select>
-            </div>
-
-            <!-- Fluid Preset -->
-            <div>
-              <label class="pp-label" style="margin-bottom:4px;">Fluid Type</label>
-              <select id="simple-fluid-type" class="pn-input-cell" onchange="simpleController.onFluidChange()">
-                <option value="water" selected>Water (Clean)</option>
-                <option value="slurry">Slurry / Mineral Suspension</option>
-                <option value="oil">Viscous Oil / Fuel</option>
-                <option value="custom">Custom Fluid</option>
-              </select>
-            </div>
-          </div>
-
-          <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;">
-            <!-- Temperature -->
-            <div>
-              <label class="pp-label" style="margin-bottom:4px;">Temperature (&deg;C)</label>
-              <input id="simple-fluid-temp" type="number" step="1" class="pn-input-cell" value="20" oninput="simpleController.onInputDebounce()">
-            </div>
-
-            <!-- Specific Gravity -->
-            <div>
-              <label class="pp-label" style="margin-bottom:4px;">Specific Gravity (SG)</label>
-              <input id="simple-fluid-sg" type="number" step="0.01" min="0.5" class="pn-input-cell" value="1.00" oninput="simpleController.onInputDebounce()">
-            </div>
-
-            <!-- Kinematic Viscosity -->
-            <div>
-              <label class="pp-label" style="margin-bottom:4px;">Viscosity &nu; (cSt)</label>
-              <input id="simple-fluid-viscosity" type="number" step="0.01" min="0.1" class="pn-input-cell" value="1.004" oninput="simpleController.onInputDebounce()">
-            </div>
-          </div>
-
-          <div style="font-size:10px;color:#64748b;margin-top:10px;line-height:1.4;">
-            <i class="bi bi-info-circle"></i> Solves network hydraulics using the exact same mathematical engine and methods as Drawing Mode (GGM, NR, Hardy Cross, Linear Theory).
+        <!-- Static Lift Input for Series Mode -->
+        <div id="simple-static-head-wrap" style="max-width:280px;margin-bottom:10px;">
+          <label class="pp-label" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <span>Static Lift &Delta;z</span>
+            <span style="font-size:9.5px;color:#64748b;">Global Lift Difference</span>
+          </label>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input id="simple-static-head" type="number" step="0.1" class="pn-input-cell" value="10.0" oninput="simpleController.onInputDebounce()" style="font-weight:700;font-size:13px;color:#c084fc;">
+            <span id="simple-head-unit-label" style="font-size:11px;color:#8b949e;font-weight:600;">m</span>
           </div>
         </div>
 
+        <!-- Parallel Flow Balancing Selector (visible only when Parallel is selected) -->
+        <div id="simple-parallel-mode-wrap" style="display:none;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px 12px;margin-top:10px;">
+          <label class="pp-label" style="margin-bottom:4px;color:#22c55e;">Parallel Flow Balancing Method</label>
+          <div style="display:flex;gap:14px;font-size:11.5px;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e6edf3;">
+              <input type="radio" name="simple_parallel_balancing" value="auto" checked onchange="simpleController.onBalancingChange('auto')" style="accent-color:#22c55e;">
+              <span><strong>Automatic Hydraulic Balancing</strong> (Q<sub>i</sub> &propto; 1/&radic;R<sub>i</sub>)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e6edf3;">
+              <input type="radio" name="simple_parallel_balancing" value="manual" onchange="simpleController.onBalancingChange('manual')" style="accent-color:#22c55e;">
+              <span><strong>Manual % Flow Allocation</strong></span>
+            </label>
+          </div>
+        </div>
       </div>
 
       <!-- ── Pipeline Segments Specification Table Card ── -->
@@ -2651,7 +2524,7 @@
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border-bottom:1px solid #21262d;padding-bottom:10px;flex-wrap:wrap;gap:8px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <i class="bi bi-segmented-nav" style="color:#fbbf24;font-size:1.1rem;"></i>
-            <h3 id="simple-spec-title" style="font-size:0.95rem;font-weight:700;color:#e6edf3;margin:0;">3. Pipeline Segments Specification</h3>
+            <h3 id="simple-spec-title" style="font-size:0.95rem;font-weight:700;color:#e6edf3;margin:0;">2. Pipeline Segments Specification</h3>
             <span id="simple-pipe-count-badge" style="background:#21262d;color:#94a3b8;font-size:11px;padding:2px 8px;border-radius:12px;font-weight:600;">
               0 Segments
             </span>

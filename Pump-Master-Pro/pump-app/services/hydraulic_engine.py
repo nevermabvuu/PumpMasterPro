@@ -281,10 +281,10 @@ def slurry_mixture_properties(
     rho_m = sm * rho_w
 
     return {
-        'c_weight_percent': float(round(cw * 100.0, 2)),
-        'c_volume_percent': float(round(cv * 100.0, 2)),
-        'c_volume_fraction': float(round(cv, 4)),
-        'mixture_sg': float(round(sm, 3)),
+        'c_weight_percent': float(round(cw * 100.0, 1)),
+        'c_volume_percent': float(round(cv * 100.0, 1)),
+        'c_volume_fraction': float(round(cv, 3)),
+        'mixture_sg': float(round(sm, 2)),
         'slurry_density_kg_m3': float(round(rho_m, 1)),
     }
 
@@ -2294,8 +2294,8 @@ def solve_network(
         'slurry_d50_mm': slurry_d50_mm if is_slurry else None,
         'slurry_solids_sg': slurry_solids_sg if is_slurry else None,
         'slurry_liquid_sg': slurry_liquid_sg if is_slurry else None,
-        'slurry_c_weight': slurry_c_weight if is_slurry else None,
-        'slurry_c_volume': slurry_info['c_volume_percent'] if slurry_info else None,
+        'slurry_c_weight': round(float(slurry_c_weight), 1) if (is_slurry and slurry_c_weight is not None) else None,
+        'slurry_c_volume': round(float(slurry_info['c_volume_percent']), 1) if (slurry_info and 'c_volume_percent' in slurry_info) else None,
         'slurry_settling_velocity_ms': particle_settling_velocity_m_s(slurry_d50_mm, slurry_solids_sg, s_liquid=s_liq)['settling_velocity_ms'] if is_slurry else None,
     }
 

@@ -607,11 +607,11 @@ def calculate_network():
         pn['liquid'] = fluid_type
         pn['viscosity_cSt'] = viscosity_cSt
         pn['is_slurry'] = is_slurry
-        pn['slurry_d50_mm'] = slurry_d50_mm
-        pn['slurry_solids_sg'] = slurry_solids_sg
-        pn['slurry_liquid_sg'] = slurry_liquid_sg
-        pn['slurry_c_weight'] = slurry_c_weight
-        pn['slurry_c_volume'] = slurry_c_volume
+        pn['slurry_d50_mm'] = round(slurry_d50_mm, 2)
+        pn['slurry_solids_sg'] = round(slurry_solids_sg, 2)
+        pn['slurry_liquid_sg'] = round(slurry_liquid_sg, 2)
+        pn['slurry_c_weight'] = round(slurry_c_weight, 1)
+        pn['slurry_c_volume'] = round(slurry_c_volume, 1) if slurry_c_volume is not None else None
 
         active_sel['pipe_network'] = pn
         active_sel['q_duty'] = global_flow
@@ -630,11 +630,11 @@ def calculate_network():
         active_sel['liquid'] = fluid_type
         active_sel['viscosity_cSt'] = viscosity_cSt
         active_sel['is_slurry'] = is_slurry
-        active_sel['slurry_d50_mm'] = slurry_d50_mm
-        active_sel['slurry_solids_sg'] = slurry_solids_sg
-        active_sel['slurry_liquid_sg'] = slurry_liquid_sg
-        active_sel['slurry_c_weight'] = slurry_c_weight
-        active_sel['slurry_c_volume'] = slurry_c_volume
+        active_sel['slurry_d50_mm'] = round(slurry_d50_mm, 2)
+        active_sel['slurry_solids_sg'] = round(slurry_solids_sg, 2)
+        active_sel['slurry_liquid_sg'] = round(slurry_liquid_sg, 2)
+        active_sel['slurry_c_weight'] = round(slurry_c_weight, 1)
+        active_sel['slurry_c_volume'] = round(slurry_c_volume, 1) if slurry_c_volume is not None else None
         session['active_selection'] = active_sel
 
         # Also synchronize selection_form_data for immediate server-side form pre-fill

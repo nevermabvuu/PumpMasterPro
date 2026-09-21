@@ -5883,17 +5883,20 @@ function displayResults(data) {
     const dispNpshaFormula = s.npsha_m !== undefined ? fromBaseSI(s.npsha_m, 'head', uH).toFixed(2) : '';
     const npshaText = s.npsha_m !== undefined ? ` &bull; <strong style="color:${s.cavitation_color || '#2dd4bf'};">NPSHa:</strong> ${dispNpshaFormula} ${uHLbl} (${s.cavitation_risk || 'Normal'})` : '';
 
-    let fluidDesc = `<span style="color:#e2e8f0;">Water @ ${tempVal}&deg;C</span> (&rho;: <span style="color:#e2e8f0;">${rhoVal.toFixed(1)} kg/m&sup3;</span>, SG: <span style="color:#e2e8f0;">${(s.specific_gravity || state.specific_gravity || 1.0).toFixed(3)}</span>)`;
+    let fluidDesc = `<span style="color:#e2e8f0;">Water @ ${tempVal}&deg;C</span> (&rho;: <span style="color:#e2e8f0;">${rhoVal.toFixed(1)} kg/m&sup3;</span>, SG: <span style="color:#e2e8f0;">${(s.specific_gravity || state.specific_gravity || 1.0).toFixed(2)}</span>)`;
     if (s.is_slurry || state.is_slurry) {
-      const smVal = (s.slurry_mixture_sg || s.specific_gravity || state.slurry_sg || state.specific_gravity || 1.0).toFixed(3);
-      fluidDesc = `<span style="color:#fbbf24;font-weight:600;"><i class="bi bi-layers-fill"></i> Slurry Mixture</span> (&rho;<sub>mix</sub>: <span style="color:#e2e8f0;">${rhoVal.toFixed(1)} kg/m&sup3;</span>, S<sub>m</sub>: <span style="color:#e2e8f0;">${smVal}</span>, d<sub>50</sub>: <span style="color:#e2e8f0;">${s.slurry_d50_mm || state.slurry_d50_mm || 0.15} mm</span>, C<sub>w</sub>: <span style="color:#e2e8f0;">${s.slurry_c_weight || state.slurry_c_weight || 25}%</span>)`;
+      const smVal = (s.slurry_mixture_sg || s.specific_gravity || state.slurry_sg || state.specific_gravity || 1.0);
+      const smStr = parseFloat(smVal).toFixed(2);
+      const d50Str = parseFloat(s.slurry_d50_mm || state.slurry_d50_mm || 0.15).toFixed(2);
+      const cwStr = parseFloat(s.slurry_c_weight || state.slurry_c_weight || 25.0).toFixed(1);
+      fluidDesc = `<span style="color:#fbbf24;font-weight:600;"><i class="bi bi-layers-fill"></i> Slurry Mixture</span> (&rho;<sub>mix</sub>: <span style="color:#e2e8f0;">${rhoVal.toFixed(1)} kg/m&sup3;</span>, S<sub>m</sub>: <span style="color:#e2e8f0;">${smStr}</span>, d<sub>50</sub>: <span style="color:#e2e8f0;">${d50Str} mm</span>, C<sub>w</sub>: <span style="color:#e2e8f0;">${cwStr}%</span>)`;
     } else if (s.is_viscous || state.is_viscous) {
       const viscVal = s.viscosity_cSt || state.viscosity_cSt || 50.0;
       const flags = [
         (s.is_hazardous || state.is_hazardous) ? '⚠️ Hazardous' : '',
         (s.is_flammable || state.is_flammable) ? '🔥 Flammable' : ''
       ].filter(Boolean).join(' | ');
-      fluidDesc = `<span style="color:#c084fc;font-weight:600;"><i class="bi bi-droplet-fill"></i> Viscous Fluid</span> (&nu;: <span style="color:#e2e8f0;">${viscVal} cSt</span>, &rho;: <span style="color:#e2e8f0;">${rhoVal.toFixed(1)} kg/m&sup3;</span>, SG: <span style="color:#e2e8f0;">${(s.specific_gravity || state.specific_gravity || 1.0).toFixed(3)}</span>${flags ? ` &bull; <span style="color:#f87171;">${flags}</span>` : ''})`;
+      fluidDesc = `<span style="color:#c084fc;font-weight:600;"><i class="bi bi-droplet-fill"></i> Viscous Fluid</span> (&nu;: <span style="color:#e2e8f0;">${viscVal} cSt</span>, &rho;: <span style="color:#e2e8f0;">${rhoVal.toFixed(1)} kg/m&sup3;</span>, SG: <span style="color:#e2e8f0;">${(s.specific_gravity || state.specific_gravity || 1.0).toFixed(2)}</span>${flags ? ` &bull; <span style="color:#f87171;">${flags}</span>` : ''})`;
     }
 
     formulaRef.innerHTML = `
@@ -6406,18 +6409,18 @@ function applySlurrySettings() {
   state.liquid = isEn ? 'slurry' : 'water';
   state.fluid_type = isEn ? 'slurry' : 'water';
 
-  const d50 = parseFloat(document.getElementById('slurry-d50')?.value || 0.15);
-  const solidsSg = parseFloat(document.getElementById('slurry-solids-sg')?.value || 2.65);
-  const cWeightPct = parseFloat(document.getElementById('slurry-c-weight')?.value || 25.0);
+  const d50 = parseFloat(parseFloat(document.getElementById('slurry-d50')?.value || 0.15).toFixed(3));
+  const solidsSg = parseFloat(parseFloat(document.getElementById('slurry-solids-sg')?.value || 2.65).toFixed(2));
+  const cWeightPct = parseFloat(parseFloat(document.getElementById('slurry-c-weight')?.value || 25.0).toFixed(1));
 
   state.slurry_d50_mm = d50;
   state.slurry_solids_sg = solidsSg;
   state.slurry_c_weight = cWeightPct;
 
   // Calculate mixture specific gravity (Sm) and volumetric concentration (Cv)
-  const cwFrac = cWeightPct / 100.0;
+  const cwFrac = parseFloat((cWeightPct / 100.0).toFixed(3));
   const ss = Math.max(1.01, solidsSg);
-  const sl = Math.max(0.5, parseFloat(state.slurry_liquid_sg || 1.0));
+  const sl = parseFloat(Math.max(0.5, parseFloat(state.slurry_liquid_sg || 1.0)).toFixed(2));
   state.slurry_liquid_sg = sl;
 
   const volS = cwFrac / ss;
@@ -6425,10 +6428,10 @@ function applySlurrySettings() {
   const cvFrac = (volS + volL > 0) ? (volS / (volS + volL)) : 0.0;
   const sm = (volS + volL > 0) ? 1.0 / (volS + volL) : sl;
 
-  state.slurry_c_volume = parseFloat((cvFrac * 100.0).toFixed(2));
-  state.slurry_sg = sm;
+  state.slurry_c_volume = parseFloat((cvFrac * 100.0).toFixed(1));
+  state.slurry_sg = parseFloat(sm.toFixed(2));
   if (isEn) {
-    state.specific_gravity = sm;
+    state.specific_gravity = parseFloat(sm.toFixed(2));
     const sgInput = document.getElementById('pn-sg');
     if (sgInput) sgInput.value = sm.toFixed(2);
   } else {
@@ -7154,9 +7157,36 @@ function init() {
   document.getElementById('btn-add-valve')?.addEventListener('click', () => setMode('add-valve'));
   document.getElementById('btn-add-elbow')?.addEventListener('click', () => setMode('add-elbow'));
   document.getElementById('btn-delete')?.addEventListener('click', deleteSelected);
-  document.getElementById('btn-save')?.addEventListener('click', saveNetwork);
-  document.getElementById('btn-load-demo')?.addEventListener('click', resetToDemo);
-  document.getElementById('btn-clear')?.addEventListener('click', clearCanvas);
+  document.getElementById('btn-save')?.addEventListener('click', () => {
+    const isSimpleMode = document.getElementById('pn-simple-mode-wrap')?.style.display !== 'none';
+    if (isSimpleMode && window.simpleController) {
+      if (typeof window.simpleController.saveStateToStorage === 'function') {
+        window.simpleController.saveStateToStorage();
+      }
+      toast('Simple pipeline network saved.', 'success');
+    } else {
+      saveNetwork();
+    }
+  });
+
+  document.getElementById('btn-load-demo')?.addEventListener('click', () => {
+    const isSimpleMode = document.getElementById('pn-simple-mode-wrap')?.style.display !== 'none';
+    if (isSimpleMode && window.simpleController) {
+      window.simpleController.loadPreset('series');
+    } else {
+      resetToDemo();
+    }
+  });
+
+  document.getElementById('btn-clear')?.addEventListener('click', () => {
+    const isSimpleMode = document.getElementById('pn-simple-mode-wrap')?.style.display !== 'none';
+    if (isSimpleMode && window.simpleController) {
+      window.simpleController.clearPipes();
+    } else {
+      clearCanvas();
+    }
+  });
+
   document.getElementById('btn-export')?.addEventListener('click', exportNetwork);
 
   // View mode toggle (Industrial/Visual vs. Schematic)
@@ -7201,9 +7231,32 @@ function init() {
     state.zoom = 1; state.pan = { x: 0, y: 0 }; applyTransform(); saveNetworkToStorage();
   });
 
-  document.getElementById('pn-calc-btn')?.addEventListener('click', runCalculation);
-  document.getElementById('btn-visual-apply-duty')?.addEventListener('click', applyVisualDutyPointToSelection);
-  document.getElementById('btn-results-apply-duty')?.addEventListener('click', applyVisualDutyPointToSelection);
+  document.getElementById('pn-calc-btn')?.addEventListener('click', () => {
+    const isSimpleMode = document.getElementById('pn-simple-mode-wrap')?.style.display !== 'none';
+    if (isSimpleMode && window.simpleController) {
+      window.simpleController.calculate();
+    } else {
+      runCalculation();
+    }
+  });
+
+  document.getElementById('btn-visual-apply-duty')?.addEventListener('click', () => {
+    const isSimpleMode = document.getElementById('pn-simple-mode-wrap')?.style.display !== 'none';
+    if (isSimpleMode && window.simpleController) {
+      window.simpleController.applyToPumpSelection();
+    } else {
+      applyVisualDutyPointToSelection();
+    }
+  });
+
+  document.getElementById('btn-results-apply-duty')?.addEventListener('click', () => {
+    const isSimpleMode = document.getElementById('pn-simple-mode-wrap')?.style.display !== 'none';
+    if (isSimpleMode && window.simpleController) {
+      window.simpleController.applyToPumpSelection();
+    } else {
+      applyVisualDutyPointToSelection();
+    }
+  });
 
   // Network Analysis / Solver Method selection
   const solverSelect = document.getElementById('pn-solver-method');
@@ -7514,22 +7567,22 @@ function init() {
         state.slurry_solids_sg = parseFloat(details.slurry_solid_sg);
       }
       if (details.slurry_sg !== undefined && !isNaN(parseFloat(details.slurry_sg))) {
-        state.slurry_sg = parseFloat(details.slurry_sg);
+        state.slurry_sg = parseFloat(parseFloat(details.slurry_sg).toFixed(2));
       }
       if (details.slurry_c_weight !== undefined && !isNaN(parseFloat(details.slurry_c_weight))) {
         let cwVal = parseFloat(details.slurry_c_weight);
         if (cwVal > 0 && cwVal <= 1.0) cwVal = cwVal * 100.0;
-        state.slurry_c_weight = cwVal;
+        state.slurry_c_weight = parseFloat(cwVal.toFixed(1));
       }
       if (details.slurry_c_volume !== undefined && !isNaN(parseFloat(details.slurry_c_volume))) {
         let cvVal = parseFloat(details.slurry_c_volume);
         if (cvVal > 0 && cvVal <= 1.0) cvVal = cvVal * 100.0;
-        state.slurry_c_volume = cvVal;
+        state.slurry_c_volume = parseFloat(cvVal.toFixed(1));
       }
       if (details.slurry_d50_mm !== undefined && !isNaN(parseFloat(details.slurry_d50_mm))) {
-        state.slurry_d50_mm = parseFloat(details.slurry_d50_mm);
+        state.slurry_d50_mm = parseFloat(parseFloat(details.slurry_d50_mm).toFixed(3));
       } else if (details.slurry_d50 !== undefined && !isNaN(parseFloat(details.slurry_d50))) {
-        state.slurry_d50_mm = parseFloat(details.slurry_d50);
+        state.slurry_d50_mm = parseFloat(parseFloat(details.slurry_d50).toFixed(3));
       }
 
       // Update slurry modal inputs if present
@@ -7574,8 +7627,11 @@ function init() {
       ind.style.background = 'rgba(245, 158, 11, 0.12)';
       ind.style.color = '#fbbf24';
       ind.style.borderColor = 'rgba(245, 158, 11, 0.3)';
-      ind.title = `Slurry: Sm=${(state.slurry_sg || state.specific_gravity).toFixed(2)}, d50=${state.slurry_d50_mm} mm, Cw=${state.slurry_c_weight}%`;
-      lbl.innerHTML = `<i class="bi bi-layers-fill" style="margin-right:2px;"></i> Slurry (${state.slurry_c_weight}% wt)`;
+      const smFormatted = parseFloat(state.slurry_sg || state.specific_gravity || 1.0).toFixed(2);
+      const d50Formatted = parseFloat(state.slurry_d50_mm || 0.15).toFixed(2);
+      const cwFormatted = parseFloat(state.slurry_c_weight || 25.0).toFixed(1);
+      ind.title = `Slurry: Sm=${smFormatted}, d50=${d50Formatted} mm, Cw=${cwFormatted}%`;
+      lbl.innerHTML = `<i class="bi bi-layers-fill" style="margin-right:2px;"></i> Slurry (${cwFormatted}% wt)`;
     } else if (state.is_viscous) {
       ind.style.background = 'rgba(168, 85, 247, 0.12)';
       ind.style.color = '#c084fc';

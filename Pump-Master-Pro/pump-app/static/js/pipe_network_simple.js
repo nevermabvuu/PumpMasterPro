@@ -135,15 +135,19 @@ class SimpleNetworkController {
     const globalUnit = document.getElementById('pn-flow-unit');
     if (globalFlow && !this._globalFlowBound) {
       this._globalFlowBound = true;
-      globalFlow.addEventListener('input', () => {
+      const onFlowChange = () => {
         const val = parseFloat(globalFlow.value);
         if (!isNaN(val) && val > 0) {
           this.state.flow_rate = val;
           const sFlow = document.getElementById('simple-flow-rate');
           if (sFlow) sFlow.value = val;
-          this.onInputDebounce();
+          if (document.getElementById('pn-simple-mode-wrap')?.style.display !== 'none') {
+            this.onInputDebounce();
+          }
         }
-      });
+      };
+      globalFlow.addEventListener('input', onFlowChange);
+      globalFlow.addEventListener('change', onFlowChange);
     }
     if (globalUnit && !this._globalUnitBound) {
       this._globalUnitBound = true;
@@ -151,7 +155,63 @@ class SimpleNetworkController {
         this.state.flow_unit = globalUnit.value;
         const sUnit = document.getElementById('simple-flow-unit');
         if (sUnit) sUnit.value = globalUnit.value;
-        this.calculate();
+        if (document.getElementById('pn-simple-mode-wrap')?.style.display !== 'none') {
+          this.calculate();
+        }
+      });
+    }
+
+    // Bidirectional sync with top toolbar solver and friction selectors
+    const globalSolver = document.getElementById('pn-solver-method');
+    if (globalSolver && !this._globalSolverBound) {
+      this._globalSolverBound = true;
+      globalSolver.addEventListener('change', () => {
+        this.state.solver_method = globalSolver.value;
+        if (document.getElementById('pn-simple-mode-wrap')?.style.display !== 'none') {
+          this.calculate();
+        }
+      });
+    }
+
+    const globalFriction = document.getElementById('pn-friction-method');
+    if (globalFriction && !this._globalFricBound) {
+      this._globalFricBound = true;
+      globalFriction.addEventListener('change', () => {
+        this.state.friction_method = globalFriction.value;
+        if (document.getElementById('pn-simple-mode-wrap')?.style.display !== 'none') {
+          this.calculate();
+        }
+      });
+    }
+
+    // Bidirectional sync with temperature & SG inputs
+    const globalTemp = document.getElementById('pn-temperature');
+    if (globalTemp && !this._globalTempBound) {
+      this._globalTempBound = true;
+      globalTemp.addEventListener('input', () => {
+        const t = parseFloat(globalTemp.value);
+        if (!isNaN(t)) {
+          if (!this.state.fluid) this.state.fluid = {};
+          this.state.fluid.temp_c = t;
+          if (document.getElementById('pn-simple-mode-wrap')?.style.display !== 'none') {
+            this.onInputDebounce();
+          }
+        }
+      });
+    }
+
+    const globalSg = document.getElementById('pn-sg');
+    if (globalSg && !this._globalSgBound) {
+      this._globalSgBound = true;
+      globalSg.addEventListener('input', () => {
+        const s = parseFloat(globalSg.value);
+        if (!isNaN(s) && s > 0) {
+          if (!this.state.fluid) this.state.fluid = {};
+          this.state.fluid.sg = parseFloat(s.toFixed(2));
+          if (document.getElementById('pn-simple-mode-wrap')?.style.display !== 'none') {
+            this.onInputDebounce();
+          }
+        }
       });
     }
 
@@ -243,6 +303,11 @@ class SimpleNetworkController {
    * Synchronizes HTML form controls to match internal state.
    */
   syncControlsFromState() {
+    const globalFlow = document.getElementById('pn-global-flow');
+    if (globalFlow && this.state.flow_rate !== undefined) globalFlow.value = this.state.flow_rate;
+    const globalUnit = document.getElementById('pn-flow-unit');
+    if (globalUnit && this.state.flow_unit) globalUnit.value = this.state.flow_unit;
+
     const flowIn = document.getElementById('simple-flow-rate');
     if (flowIn) flowIn.value = this.state.flow_rate;
     const unitSel = document.getElementById('simple-flow-unit');
@@ -251,20 +316,30 @@ class SimpleNetworkController {
     const staticIn = document.getElementById('simple-static-head');
     if (staticIn) staticIn.value = this.state.static_elevation;
 
+    const globalSolver = document.getElementById('pn-solver-method');
+    if (globalSolver && this.state.solver_method) globalSolver.value = this.state.solver_method;
     const solverSel = document.getElementById('simple-solver-method');
     if (solverSel) solverSel.value = this.state.solver_method || 'ggm';
 
+    const globalFriction = document.getElementById('pn-friction-method');
+    if (globalFriction && this.state.friction_method) globalFriction.value = this.state.friction_method;
     const fMethod = document.getElementById('simple-friction-method');
     if (fMethod) fMethod.value = this.state.friction_method;
 
-    const fType = document.getElementById('simple-fluid-type');
-    if (fType) fType.value = this.state.fluid.type;
+    const globalTemp = document.getElementById('pn-temperature');
+    if (globalTemp && this.state.fluid?.temp_c !== undefined) globalTemp.value = this.state.fluid.temp_c;
     const fTemp = document.getElementById('simple-fluid-temp');
-    if (fTemp) fTemp.value = this.state.fluid.temp_c;
+    if (fTemp && this.state.fluid?.temp_c !== undefined) fTemp.value = this.state.fluid.temp_c;
+
+    const globalSg = document.getElementById('pn-sg');
+    if (globalSg && this.state.fluid?.sg !== undefined) globalSg.value = Number(this.state.fluid.sg).toFixed(2);
     const fSg = document.getElementById('simple-fluid-sg');
-    if (fSg) fSg.value = this.state.fluid.sg;
+    if (fSg && this.state.fluid?.sg !== undefined) fSg.value = Number(this.state.fluid.sg).toFixed(2);
+
+    const fType = document.getElementById('simple-fluid-type');
+    if (fType && this.state.fluid?.type) fType.value = this.state.fluid.type;
     const fVisc = document.getElementById('simple-fluid-viscosity');
-    if (fVisc) fVisc.value = this.state.fluid.viscosity_cst;
+    if (fVisc && this.state.fluid?.viscosity_cst) fVisc.value = this.state.fluid.viscosity_cst;
 
     const balAuto = document.getElementById('radio-balancing-auto');
     const balMan = document.getElementById('radio-balancing-manual');
@@ -278,37 +353,57 @@ class SimpleNetworkController {
    * Reads HTML form inputs back into internal state.
    */
   readControlsIntoState() {
-    const flowIn = document.getElementById('simple-flow-rate');
     const globalFlowIn = document.getElementById('pn-global-flow');
-    if (flowIn && flowIn.value !== '') {
-      this.state.flow_rate = Math.max(0.001, parseFloat(flowIn.value) || 0.0);
-    } else if (globalFlowIn && globalFlowIn.value !== '') {
+    const flowIn = document.getElementById('simple-flow-rate');
+    if (globalFlowIn && globalFlowIn.value !== '') {
       this.state.flow_rate = Math.max(0.001, parseFloat(globalFlowIn.value) || 0.0);
+    } else if (flowIn && flowIn.value !== '') {
+      this.state.flow_rate = Math.max(0.001, parseFloat(flowIn.value) || 0.0);
     }
 
-    const unitSel = document.getElementById('simple-flow-unit');
     const globalUnitSel = document.getElementById('pn-flow-unit');
-    if (unitSel && unitSel.value) {
-      this.state.flow_unit = unitSel.value;
-    } else if (globalUnitSel && globalUnitSel.value) {
+    const unitSel = document.getElementById('simple-flow-unit');
+    if (globalUnitSel && globalUnitSel.value) {
       this.state.flow_unit = globalUnitSel.value;
+    } else if (unitSel && unitSel.value) {
+      this.state.flow_unit = unitSel.value;
     }
 
     const staticIn = document.getElementById('simple-static-head');
     if (staticIn) this.state.static_elevation = parseFloat(staticIn.value) || 0.0;
+
+    const globalSolver = document.getElementById('pn-solver-method');
     const solverSel = document.getElementById('simple-solver-method');
-    if (solverSel) this.state.solver_method = solverSel.value;
+    if (globalSolver && globalSolver.value) this.state.solver_method = globalSolver.value;
+    else if (solverSel && solverSel.value) this.state.solver_method = solverSel.value;
+
+    const globalFriction = document.getElementById('pn-friction-method');
     const fMethod = document.getElementById('simple-friction-method');
-    if (fMethod) this.state.friction_method = fMethod.value;
+    if (globalFriction && globalFriction.value) this.state.friction_method = globalFriction.value;
+    else if (fMethod && fMethod.value) this.state.friction_method = fMethod.value;
+
+    const globalTemp = document.getElementById('pn-temperature');
+    const fTemp = document.getElementById('simple-fluid-temp');
+    if (globalTemp && globalTemp.value !== '') this.state.fluid.temp_c = parseFloat(globalTemp.value) || 20;
+    else if (fTemp && fTemp.value !== '') this.state.fluid.temp_c = parseFloat(fTemp.value) || 20;
+
+    const globalSg = document.getElementById('pn-sg');
+    const fSg = document.getElementById('simple-fluid-sg');
+    if (globalSg && globalSg.value !== '') this.state.fluid.sg = parseFloat(parseFloat(globalSg.value).toFixed(2)) || 1.0;
+    else if (fSg && fSg.value !== '') this.state.fluid.sg = parseFloat(parseFloat(fSg.value).toFixed(2)) || 1.0;
 
     const fType = document.getElementById('simple-fluid-type');
     if (fType) this.state.fluid.type = fType.value;
-    const fTemp = document.getElementById('simple-fluid-temp');
-    if (fTemp) this.state.fluid.temp_c = parseFloat(fTemp.value) || 20;
-    const fSg = document.getElementById('simple-fluid-sg');
-    if (fSg) this.state.fluid.sg = parseFloat(fSg.value) || 1.0;
     const fVisc = document.getElementById('simple-fluid-viscosity');
     if (fVisc) this.state.fluid.viscosity_cst = parseFloat(fVisc.value) || 1.004;
+  }
+
+  saveStateToStorage() {
+    try {
+      localStorage.setItem('pmp_pipe_simple_state', JSON.stringify(this.state));
+    } catch (e) {
+      console.warn('Could not save simple state to localStorage:', e);
+    }
   }
 
   onSolverChange() {
@@ -2123,12 +2218,12 @@ function setDesignerMode(mode) {
   const toolbar = document.getElementById('pn-toolbar');
   const mainRow = document.getElementById('pn-main-row');
   const simpleWrap = document.getElementById('pn-simple-mode-wrap');
-  const canvasTools1 = document.getElementById('pn-canvas-tools-group-1');
   const resultsSec = document.getElementById('pn-results-section');
   const pnOuter = document.getElementById('pn-outer');
 
   const topCanvasBtn = document.getElementById('btn-top-mode-canvas');
   const topSimpleBtn = document.getElementById('btn-top-mode-simple');
+  const canvasOnlyEls = document.querySelectorAll('.pn-canvas-only');
 
   if (mode === 'simple') {
     canvasBtn?.classList.remove('active-tool');
@@ -2138,19 +2233,21 @@ function setDesignerMode(mode) {
     if (topSimpleBtn) { topSimpleBtn.style.background = '#22c55e'; topSimpleBtn.style.color = '#000'; }
     if (topCanvasBtn) { topCanvasBtn.style.background = 'transparent'; topCanvasBtn.style.color = '#8b949e'; }
 
-    // In Simple Mode: Hide visual toolbar, main row and visual results
-    if (toolbar) toolbar.style.display = 'none';
+    // In Simple Mode: Keep toolbar visible, hide only canvas-specific tools
+    if (toolbar) toolbar.style.display = 'flex';
+    canvasOnlyEls.forEach(el => el.style.display = 'none');
+
     if (mainRow) mainRow.style.display = 'none';
-    if (canvasTools1) canvasTools1.style.display = 'none';
     if (resultsSec) resultsSec.style.display = 'none';
 
     if (simpleWrap) simpleWrap.style.display = 'flex';
     if (pnOuter) pnOuter.style.height = 'auto'; // allow natural height for form mode
 
-    if (!window.simpleController.isInitialized) {
-      window.simpleController.init();
+    if (!window.simpleController?.isInitialized) {
+      window.simpleController?.init();
     } else {
-      window.simpleController.calculate();
+      window.simpleController?.syncControlsFromState();
+      window.simpleController?.calculate();
     }
 
     try { localStorage.setItem('pmp_pipe_designer_mode', 'simple'); } catch (e) {}
@@ -2165,9 +2262,10 @@ function setDesignerMode(mode) {
 
     // In Canvas Mode: Show visual toolbar, main row and restore CAD height
     if (toolbar) toolbar.style.display = 'flex';
+    canvasOnlyEls.forEach(el => el.style.display = '');
+
     if (simpleWrap) simpleWrap.style.display = 'none';
     if (mainRow) mainRow.style.display = 'flex';
-    if (canvasTools1) canvasTools1.style.display = 'inline-flex';
     if (pnOuter) pnOuter.style.height = '680px'; // fixed CAD height for canvas
 
     // If results were previously calculated in visual mode, re-show results section

@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>{{ report.title if report else 'Pump Technical Datasheet' }} — {{ pump.name }}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}" />
+  <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" />
 
   <!-- ──────────────────────────────────────────────────────────────────────────
        SELF-CONTAINED INLINE STYLES (0 EXTERNAL NETWORK DEPENDENCIES)

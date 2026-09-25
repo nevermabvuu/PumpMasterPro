@@ -108,6 +108,32 @@ def run_selection_from_form(f, all_pumps=None, current_org=None):
     h_duty = 0.0
     liquid = f.get('liquid', 'water')
 
+    # Rule: Fluid selection must strictly respect module access level and feature flags.
+    # If the user's fluid module access level is 0 (No Access), liquid defaults to 'water'.
+    # If fluid module level >= 1, the selected liquid must be permitted in the effective feature flags.
+    try:
+        from routes.auth import get_current_user as _get_current_user
+        _u = _get_current_user()
+    except Exception:
+        _u = None
+    _is_super = bool(_u and getattr(_u, 'is_super_admin_user', False))
+    if _u and not _is_super:
+        if not _u.can_access('fluid', 1):
+            liquid = 'water'
+        elif liquid == 'slurry' and not _u.has_feature('fluid', 'slurry'):
+            liquid = 'water' if _u.has_feature('fluid', 'water') else ('viscous' if _u.has_feature('fluid', 'viscous') else 'water')
+        elif liquid == 'viscous' and not _u.has_feature('fluid', 'viscous'):
+            liquid = 'water' if _u.has_feature('fluid', 'water') else ('slurry' if _u.has_feature('fluid', 'slurry') else 'water')
+        elif liquid == 'water' and not _u.has_feature('fluid', 'water'):
+            if _u.has_feature('fluid', 'slurry'):
+                liquid = 'slurry'
+            elif _u.has_feature('fluid', 'viscous'):
+                liquid = 'viscous'
+            else:
+                liquid = 'water'
+    # Synchronize resolved liquid back to form dictionary for downstream templates and calculations
+    f['liquid'] = liquid
+
     q_duty_str = f.get('q_duty')
     h_duty_str = f.get('h_duty')
     
@@ -292,11 +318,65 @@ def pump_selection():
     unit_d50         = ctx['unit_d50']
     unit_pow         = ctx['unit_pow']
     units_tables     = ctx['units_tables']
+    # ── Pre-compute feature flags (avoids calling methods on Flask-Login proxy in Jinja2) ────
+    # current_user in templates is a plain User ORM instance injected by inject_current_user().
+    # Resolving flags here in Python avoids Jinja2 UndefinedError on method calls.
+    from routes.auth import get_current_user as _get_current_user
+    _u = _get_current_user()
+    _is_super = bool(_u and getattr(_u, 'is_super_admin_user', False))
+
+    def _hf(category, option=None, sub_option=None):
+        """Safe has_feature wrapper — SuperAdmin always has full access (True)."""
+        if _u is None or _is_super:
+            return True
+        try:
+            return _u.has_feature(category, option, sub_option)
+        except Exception:
+            return True
+
+    def _al(module_key):
+        """Safe get_access_level wrapper — SuperAdmin always has full access (Level 2)."""
+        if _u is None or _is_super:
+            return 2
+        try:
+            return _u.get_access_level(module_key)
+        except Exception:
+            return 2
+
+    # Sanitize selected liquid to permitted options for current user/role
+    allowed_liquids = []
+    if _hf('fluid', 'water'):
+        allowed_liquids.append('water')
+    if _hf('fluid', 'viscous'):
+        allowed_liquids.append('viscous')
+    if _hf('fluid', 'slurry'):
+        allowed_liquids.append('slurry')
+    if not allowed_liquids:
+        allowed_liquids = ['water']
+
+    cur_liquid = form_data.get('liquid')
+    if not cur_liquid or cur_liquid not in allowed_liquids:
+        form_data['liquid'] = allowed_liquids[0]
 
     # ── Available Motors & Filter Options for Selection ─────────────────────
     from motor_models import get_available_motors, get_motor_filter_options
+
+    # Rule: Motor drive filter options must strictly respect role & organisation feature permissions
+    eff_flags = _u.get_effective_feature_flags() if (_u and not _is_super) else {}
+    md_flags = eff_flags.get('motor_drive', {}) if eff_flags else {}
+
+    allowed_motor_poles = [str(x) for x in md_flags.get('poles', ['2', '4', '6', '8'])] if (md_flags and 'poles' in md_flags) else ['2', '4', '6', '8']
+    allowed_motor_eff = [str(x).lower() for x in md_flags.get('eff_ratings', ['ie1', 'ie2', 'ie3', 'ie4'])] if (md_flags and 'eff_ratings' in md_flags) else ['ie1', 'ie2', 'ie3', 'ie4']
+    allowed_motor_suppliers = md_flags.get('suppliers') if (md_flags and 'suppliers' in md_flags) else ['Standard IEC', 'WEG', 'ABB', 'Siemens', 'Baldor-Reliance']
+
     active_motor_freq = int(form_data.get('motor_freq_hz', 50))
-    active_motor_poles = int(form_data.get('motor_poles', 4))
+    raw_poles = form_data.get('motor_poles')
+    if raw_poles and str(raw_poles) in allowed_motor_poles:
+        active_motor_poles = int(raw_poles)
+    else:
+        active_motor_poles = int(allowed_motor_poles[0]) if allowed_motor_poles else 4
+        form_data['motor_poles'] = str(active_motor_poles)
+
     available_motors = get_available_motors(
         frequency_hz=active_motor_freq,
         poles=active_motor_poles,
@@ -328,6 +408,44 @@ def pump_selection():
     fittings_json = json.dumps([f.to_dict() for f in fittings])
     materials_json = json.dumps([m.to_dict() for m in materials])
 
+    feat_flags = {
+        # Access levels (0=none, 1=read-only, 2=full)
+        'liquid_lvl':              _al('fluid'),
+        'fluid_lvl':               _al('fluid'),
+        'motor_lvl':               _al('motor_drive'),
+        'motor_drive_lvl':         _al('motor_drive'),
+        'filter_lvl':              _al('selection_advanced_filters'),
+        'pipe_network_lvl':        _al('pipe_network'),
+        # Fluid feature flags
+        'feat_fluid':              _hf('fluid'),
+        'feat_fluid_water':        _hf('fluid', 'water'),
+        'feat_fluid_viscous':      _hf('fluid', 'viscous'),
+        'feat_fluid_slurry':       _hf('fluid', 'slurry'),
+        'allowed_liquids':         allowed_liquids,
+        # Operation mode flags
+        'feat_op_fixed':           _hf('operation_mode', 'fixed_speed'),
+        'feat_op_vsd':             _hf('operation_mode', 'vsd'),
+        'feat_op_auto':            _hf('operation_mode', 'fixed_auto'),
+        'feat_op_manual':          _hf('operation_mode', 'fixed_manual'),
+        # Motor/drive flags
+        'feat_motor_drive':        _hf('motor_drive'),
+        'feat_motor_iec':          _hf('motor_drive', 'iec'),
+        'feat_motor_nema':         _hf('motor_drive', 'nema'),
+        'feat_motor_50hz':         _hf('motor_drive', '50hz'),
+        'feat_motor_60hz':         _hf('motor_drive', '60hz'),
+        'allowed_motor_poles':     allowed_motor_poles,
+        'allowed_motor_eff':       allowed_motor_eff,
+        'allowed_motor_suppliers': allowed_motor_suppliers,
+        # Pipe network flags
+        'feat_pipe_network':       _hf('pipe_network'),
+        'feat_pipe_canvas':        _hf('pipe_network', 'canvas'),
+        'feat_pipe_simple':        _hf('pipe_network', 'simple'),
+        'feat_pipe_schematic':     _hf('pipe_network', 'canvas_schematic'),
+        'feat_pipe_visual':        _hf('pipe_network', 'canvas_visual'),
+        'feat_pipe_series':        _hf('pipe_network', 'simple_series'),
+        'feat_pipe_parallel':      _hf('pipe_network', 'simple_parallel'),
+    }
+
     # ── Render template with results and filter options ─────────────────────
     return render_template('pump_selection.html',
                            results=results,
@@ -354,7 +472,8 @@ def pump_selection():
                            selection_form_data_json=selection_form_data_json,
                            active_selection=active_sel,
                            selection_form_data=form_data,
-                           sort_by=form_data.get('sort_by', 'rating'))
+                           sort_by=form_data.get('sort_by', 'rating'),
+                           **feat_flags)
 
 
 

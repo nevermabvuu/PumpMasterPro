@@ -15,7 +15,7 @@ from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, session, g, current_app, jsonify
 )
-from models import db, User, RegistrationRequest, Organisation, Role, ACCESS_MODULE_INFO
+from models import db, User, RegistrationRequest, Organisation, Role, ACCESS_MODULE_INFO, DEFAULT_FEATURE_FLAGS, clamp_feature_flags, normalize_feature_flags
 from services.email_service import (
     send_registration_request_notification,
     send_registration_decision_notification,
@@ -438,9 +438,20 @@ def admin_roles():
 
     roles = []
     org_access_levels = {}
+    org_feature_flags = DEFAULT_FEATURE_FLAGS
+    motor_suppliers = ['Standard IEC', 'WEG', 'ABB', 'Siemens', 'Baldor-Reliance']
     if selected_org:
         roles = Role.query.filter_by(organisation_id=selected_org.id).order_by(Role.is_system_role.desc(), Role.name.asc()).all()
         org_access_levels = selected_org.get_all_access_levels()
+        org_feature_flags = selected_org.get_feature_flags()
+        try:
+            from motor_models import Motor
+            db_mfg = [m.manufacturer for m in Motor.query.with_entities(Motor.manufacturer).distinct().all() if m.manufacturer]
+            for m in db_mfg:
+                if m and m not in motor_suppliers:
+                    motor_suppliers.append(m)
+        except Exception:
+            pass
 
     return render_template(
         'auth/admin_roles.html',
@@ -448,6 +459,8 @@ def admin_roles():
         selected_org=selected_org,
         roles=roles,
         org_access_levels=org_access_levels,
+        org_feature_flags=org_feature_flags,
+        motor_suppliers=motor_suppliers,
         is_super_admin=is_super
     )
 
@@ -455,9 +468,12 @@ def admin_roles():
 @auth_bp.route('/api/organisations/<int:org_id>/access-levels', endpoint='api_org_access_levels')
 @login_required
 def api_org_access_levels(org_id):
-    """Returns the organisation's supreme access level ceilings."""
+    """Returns the organisation's supreme access level ceilings and feature flags."""
     org = Organisation.query.get_or_404(org_id)
-    return jsonify(org.get_all_access_levels())
+    return jsonify({
+        'access_levels': org.get_all_access_levels(),
+        'feature_flags': org.get_feature_flags()
+    })
 
 
 @auth_bp.route('/admin/roles/create', methods=['POST'], endpoint='admin_role_create')
@@ -509,11 +525,43 @@ def admin_role_create():
             lvl = 0
         lvl = max(0, min(2, lvl))
 
-        # Enforce Supreme Organisation Cap: role level cannot exceed org level
+        # Enforce Rule: A module can only be available to a role with access level <= organisation access level
         org_cap = org_caps.get(mod_key, 2)
-        if lvl > org_cap and not is_super:
+        if lvl > org_cap:
             lvl = org_cap
         access_levels[mod_key] = lvl
+
+    # Process Role Feature Flags with Supreme Ceiling clamping
+    has_feat_form = any(k.startswith('feat_') for k in request.form.keys())
+    role_flags = {
+        'fluid': {
+            'water': 'feat_fluid_water' in request.form if has_feat_form else True,
+            'slurry': 'feat_fluid_slurry' in request.form if has_feat_form else True,
+            'viscous': 'feat_fluid_viscous' in request.form if has_feat_form else True,
+        },
+        'operation_mode': {
+            'fixed_speed': 'feat_op_fixed' in request.form if has_feat_form else True,
+            'vsd': 'feat_op_vsd' in request.form if has_feat_form else True,
+            'fixed_auto': 'feat_op_fixed_auto' in request.form if has_feat_form else True,
+            'fixed_manual': 'feat_op_fixed_manual' in request.form if has_feat_form else True,
+        },
+        'motor_drive': {
+            'standards': request.form.getlist('feat_motor_standards') if has_feat_form else ['iec', 'nema'],
+            'eff_ratings': request.form.getlist('feat_motor_eff_ratings') if has_feat_form else ['ie1', 'ie2', 'ie3', 'ie4'],
+            'suppliers': request.form.getlist('feat_motor_suppliers') if has_feat_form else ['Standard IEC', 'WEG', 'ABB', 'Siemens', 'Baldor-Reliance'],
+            'frequencies': request.form.getlist('feat_motor_frequencies') if has_feat_form else ['50hz', '60hz'],
+            'poles': request.form.getlist('feat_motor_poles') if has_feat_form else ['2', '4', '6', '8'],
+        },
+        'pipe_network': {
+            'canvas_mode': 'feat_pn_canvas' in request.form if has_feat_form else True,
+            'canvas_schematic': 'feat_pn_canvas_schematic' in request.form if has_feat_form else True,
+            'canvas_visual': 'feat_pn_canvas_visual' in request.form if has_feat_form else True,
+            'simple_mode': 'feat_pn_simple' in request.form if has_feat_form else True,
+            'simple_series': 'feat_pn_simple_series' in request.form if has_feat_form else True,
+            'simple_parallel': 'feat_pn_simple_parallel' in request.form if has_feat_form else True,
+        }
+    }
+    org_flags = target_org.get_feature_flags() if target_org else DEFAULT_FEATURE_FLAGS
 
     new_role = Role(
         organisation_id=int(org_id),
@@ -523,6 +571,7 @@ def admin_role_create():
         is_system_role=False
     )
     new_role.set_all_access_levels(access_levels)
+    new_role.set_feature_flags(clamp_feature_flags(role_flags, org_flags))
     db.session.add(new_role)
     db.session.commit()
     flash(f"Role '{name}' successfully created with configured access matrix.", "success")
@@ -565,13 +614,48 @@ def admin_role_edit(role_id):
             lvl = 0
         lvl = max(0, min(2, lvl))
 
-        # Supreme rule: role level cannot exceed org cap
+        # Enforce Rule: A module can only be available to a role with access level <= organisation access level
         org_cap = org_caps.get(mod_key, 2)
-        if lvl > org_cap and not is_super:
+        if lvl > org_cap:
             lvl = org_cap
         access_levels[mod_key] = lvl
 
     role.set_all_access_levels(access_levels)
+
+    # Process Role Feature Flags with Supreme Ceiling clamping
+    has_feat_form = any(k.startswith('feat_') for k in request.form.keys())
+    if has_feat_form:
+        role_flags = {
+            'fluid': {
+                'water': 'feat_fluid_water' in request.form,
+                'slurry': 'feat_fluid_slurry' in request.form,
+                'viscous': 'feat_fluid_viscous' in request.form,
+            },
+            'operation_mode': {
+                'fixed_speed': 'feat_op_fixed' in request.form,
+                'vsd': 'feat_op_vsd' in request.form,
+                'fixed_auto': 'feat_op_fixed_auto' in request.form,
+                'fixed_manual': 'feat_op_fixed_manual' in request.form,
+            },
+            'motor_drive': {
+                'standards': request.form.getlist('feat_motor_standards'),
+                'eff_ratings': request.form.getlist('feat_motor_eff_ratings'),
+                'suppliers': request.form.getlist('feat_motor_suppliers'),
+                'frequencies': request.form.getlist('feat_motor_frequencies'),
+                'poles': request.form.getlist('feat_motor_poles'),
+            },
+            'pipe_network': {
+                'canvas_mode': 'feat_pn_canvas' in request.form,
+                'canvas_schematic': 'feat_pn_canvas_schematic' in request.form,
+                'canvas_visual': 'feat_pn_canvas_visual' in request.form,
+                'simple_mode': 'feat_pn_simple' in request.form,
+                'simple_series': 'feat_pn_simple_series' in request.form,
+                'simple_parallel': 'feat_pn_simple_parallel' in request.form,
+            }
+        }
+        org_flags = target_org.get_feature_flags() if target_org else DEFAULT_FEATURE_FLAGS
+        role.set_feature_flags(clamp_feature_flags(role_flags, org_flags))
+
     db.session.commit()
     flash(f"Role '{role.name}' updated successfully.", "success")
     return redirect(url_for('auth.admin_roles', org_id=role.organisation_id))

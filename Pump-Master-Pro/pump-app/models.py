@@ -964,8 +964,8 @@ ACCESS_MODULE_INFO = {
         'description': 'Manage engineering authority levels and custom access permissions within the organisation.',
         'icon': 'bi-shield-lock'
     },
-    'selection_liquid': {
-        'key': 'selection_liquid',
+    'fluid': {
+        'key': 'fluid',
         'label': 'Selection: Fluid Properties',
         'description': 'Configure fluid specific gravity (SG), viscosity, and solid-liquid slurry derating models.',
         'icon': 'bi-droplet'
@@ -976,8 +976,8 @@ ACCESS_MODULE_INFO = {
         'description': 'Apply manufacturer filters, pump types, sizes, and custom organisation attributes 1-30.',
         'icon': 'bi-funnel'
     },
-    'selection_motors': {
-        'key': 'selection_motors',
+    'motor_drive': {
+        'key': 'motor_drive',
         'label': 'Selection: Motor & Drive Specs',
         'description': 'Configure motor standards (IEC/NEMA), efficiency classes, poles, frequency, and drive types.',
         'icon': 'bi-cpu'
@@ -987,7 +987,19 @@ ACCESS_MODULE_INFO = {
         'label': 'Pump Catalogue & Dashboard',
         'description': 'Browse registered pump catalogue, search pumps, and inspect manufacturer datasheets.',
         'icon': 'bi-grid'
+    },
+    'pipe_network': {
+        'key': 'pipe_network',
+        'label': 'Pipe Network Designer',
+        'description': 'Interactive visual canvas and simple mode for piping system head loss calculations.',
+        'icon': 'bi-diagram-3'
     }
+}
+
+# Backward compatibility alias map for legacy module keys
+MODULE_KEY_ALIASES = {
+    'selection_liquid': 'fluid',
+    'selection_motors': 'motor_drive',
 }
 
 
@@ -1094,6 +1106,130 @@ class StandardPipe(db.Model):
         }
 
 
+# ── Feature & Module Permission Flags ───────────────────────────────────────
+# Beginners Note: These structures define granular feature availability
+# across Fluid Properties, Operation Modes, Motor & Drive Specs, and Pipe Network.
+# Rule: A Role's permitted options cannot exceed its parent Organisation's ceiling.
+
+DEFAULT_FEATURE_FLAGS = {
+    # 1. Fluid Properties (availability controlled by 'fluid' module access level)
+    'fluid': {
+        'water': True,
+        'slurry': True,
+        'viscous': True
+    },
+    # 2. Operation Mode
+    'operation_mode': {
+        'fixed_speed': True,
+        'vsd': True,
+        'fixed_auto': True,      # Automatic calculation
+        'fixed_manual': True     # Manual speed (RPM)
+    },
+    # 3. Motor and Drive Specs (availability controlled by 'motor_drive' module access level)
+    'motor_drive': {
+        'standards': ['iec', 'nema'],
+        'eff_ratings': ['ie1', 'ie2', 'ie3', 'ie4'],
+        'suppliers': ['Standard IEC', 'WEG', 'ABB', 'Siemens', 'Baldor-Reliance'],
+        'frequencies': ['50hz', '60hz'],
+        'poles': ['2', '4', '6', '8']
+    },
+    # 4. Pipe Network Module (availability controlled by 'pipe_network' module access level)
+    'pipe_network': {
+        'canvas_mode': True,
+        'canvas_schematic': True,
+        'canvas_visual': True,
+        'simple_mode': True,
+        'simple_series': True,
+        'simple_parallel': True
+    }
+}
+
+
+def normalize_feature_flags(flags_dict):
+    """
+    Ensures all expected keys and subkeys exist with valid boolean or list values,
+    falling back to DEFAULT_FEATURE_FLAGS.
+    """
+    import copy
+    result = copy.deepcopy(DEFAULT_FEATURE_FLAGS)
+    if not isinstance(flags_dict, dict):
+        return result
+
+    # 1. Fluid
+    f_in = flags_dict.get('fluid')
+    if isinstance(f_in, dict):
+        result['fluid']['water'] = bool(f_in.get('water', True))
+        result['fluid']['slurry'] = bool(f_in.get('slurry', True))
+        result['fluid']['viscous'] = bool(f_in.get('viscous', True))
+
+    # 2. Operation Mode
+    om_in = flags_dict.get('operation_mode')
+    if isinstance(om_in, dict):
+        result['operation_mode']['fixed_speed'] = bool(om_in.get('fixed_speed', True))
+        result['operation_mode']['vsd'] = bool(om_in.get('vsd', True))
+        result['operation_mode']['fixed_auto'] = bool(om_in.get('fixed_auto', True))
+        result['operation_mode']['fixed_manual'] = bool(om_in.get('fixed_manual', True))
+
+    # 3. Motor and Drive Specs
+    md_in = flags_dict.get('motor_drive')
+    if isinstance(md_in, dict):
+        for k in ['standards', 'eff_ratings', 'suppliers', 'frequencies', 'poles']:
+            val = md_in.get(k)
+            if isinstance(val, list):
+                result['motor_drive'][k] = [str(x) for x in val]
+
+    # 4. Pipe Network
+    pn_in = flags_dict.get('pipe_network')
+    if isinstance(pn_in, dict):
+        result['pipe_network']['canvas_mode'] = bool(pn_in.get('canvas_mode', True))
+        result['pipe_network']['canvas_schematic'] = bool(pn_in.get('canvas_schematic', True))
+        result['pipe_network']['canvas_visual'] = bool(pn_in.get('canvas_visual', True))
+        result['pipe_network']['simple_mode'] = bool(pn_in.get('simple_mode', True))
+        result['pipe_network']['simple_series'] = bool(pn_in.get('simple_series', True))
+        result['pipe_network']['simple_parallel'] = bool(pn_in.get('simple_parallel', True))
+
+    return result
+
+
+def clamp_feature_flags(child_flags, parent_flags):
+    """
+    Enforces the Supreme Ceiling Rule:
+    A child (Role) can NEVER have a feature or option enabled that is disabled
+    at the parent (Organisation) level.
+    """
+    child = normalize_feature_flags(child_flags)
+    parent = normalize_feature_flags(parent_flags)
+
+    clamped = normalize_feature_flags({})
+
+    # 1. Fluid
+    for sub in ['water', 'slurry', 'viscous']:
+        clamped['fluid'][sub] = bool(parent['fluid'][sub] and child['fluid'][sub])
+
+    # 2. Operation Mode
+    clamped['operation_mode']['fixed_speed'] = bool(parent['operation_mode']['fixed_speed'] and child['operation_mode']['fixed_speed'])
+    clamped['operation_mode']['vsd'] = bool(parent['operation_mode']['vsd'] and child['operation_mode']['vsd'])
+    clamped['operation_mode']['fixed_auto'] = bool(parent['operation_mode']['fixed_auto'] and child['operation_mode']['fixed_auto']) if clamped['operation_mode']['fixed_speed'] else False
+    clamped['operation_mode']['fixed_manual'] = bool(parent['operation_mode']['fixed_manual'] and child['operation_mode']['fixed_manual']) if clamped['operation_mode']['fixed_speed'] else False
+
+    # 3. Motor & Drive
+    for k in ['standards', 'eff_ratings', 'suppliers', 'frequencies', 'poles']:
+        p_set = set(parent['motor_drive'].get(k, []))
+        c_list = child['motor_drive'].get(k, [])
+        clamped['motor_drive'][k] = [x for x in c_list if x in p_set]
+
+    # 4. Pipe Network
+    clamped['pipe_network']['canvas_mode'] = bool(parent['pipe_network']['canvas_mode'] and child['pipe_network']['canvas_mode'])
+    clamped['pipe_network']['canvas_schematic'] = bool(parent['pipe_network']['canvas_schematic'] and child['pipe_network']['canvas_schematic']) if clamped['pipe_network']['canvas_mode'] else False
+    clamped['pipe_network']['canvas_visual'] = bool(parent['pipe_network']['canvas_visual'] and child['pipe_network']['canvas_visual']) if clamped['pipe_network']['canvas_mode'] else False
+
+    clamped['pipe_network']['simple_mode'] = bool(parent['pipe_network']['simple_mode'] and child['pipe_network']['simple_mode'])
+    clamped['pipe_network']['simple_series'] = bool(parent['pipe_network']['simple_series'] and child['pipe_network']['simple_series']) if clamped['pipe_network']['simple_mode'] else False
+    clamped['pipe_network']['simple_parallel'] = bool(parent['pipe_network']['simple_parallel'] and child['pipe_network']['simple_parallel']) if clamped['pipe_network']['simple_mode'] else False
+
+    return clamped
+
+
 class Organisation(db.Model):
     """
     Beginners Note: Organisation Model ('organisations' table)
@@ -1105,6 +1241,7 @@ class Organisation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
     access_levels_json = db.Column(db.Text, default='{}')
+    feature_flags_json = db.Column(db.Text, default='{}')
     logo_url = db.Column(db.String(255), default='')
     contact_email = db.Column(db.String(100), default='')
     admin_notification_email = db.Column(db.String(150), default='')
@@ -1354,6 +1491,7 @@ class Organisation(db.Model):
         Beginners Note: Returns the organisation-level access ceiling {module_key: int (0, 1, 2)}.
         0 = No Access, 1 = Read Only, 2 = Full Access.
         Defaults to 2 (Full Access) across all modules if unset.
+        Consolidated: Reads from access_levels_json['modules'] with fallback to flat access_levels_json.
         """
         import json
         levels = {k: 2 for k in ACCESS_MODULE_INFO.keys()}
@@ -1362,10 +1500,16 @@ class Organisation(db.Model):
             try:
                 parsed = json.loads(raw)
                 if isinstance(parsed, dict):
+                    mods = parsed.get('modules') if isinstance(parsed.get('modules'), dict) else parsed
+                    # Handle legacy aliases in stored JSON
+                    if 'selection_liquid' in mods and 'fluid' not in mods:
+                        mods['fluid'] = mods['selection_liquid']
+                    if 'selection_motors' in mods and 'motor_drive' not in mods:
+                        mods['motor_drive'] = mods['selection_motors']
                     for k in levels.keys():
-                        if k in parsed:
+                        if k in mods:
                             try:
-                                levels[k] = max(0, min(2, int(parsed[k])))
+                                levels[k] = max(0, min(2, int(mods[k])))
                             except (ValueError, TypeError):
                                 pass
             except Exception:
@@ -1374,30 +1518,84 @@ class Organisation(db.Model):
 
     def get_access_level(self, module_key):
         """Returns integer access level (0, 1, 2) for a specific module in this organisation."""
+        module_key = MODULE_KEY_ALIASES.get(module_key, module_key)
         return self.get_all_access_levels().get(module_key, 2)
 
     def set_access_level(self, module_key, level):
         """Sets access level for a single module in this organisation."""
+        module_key = MODULE_KEY_ALIASES.get(module_key, module_key)
         cur = self.get_all_access_levels()
         cur[module_key] = max(0, min(2, int(level)))
         self.set_all_access_levels(cur)
 
     def set_all_access_levels(self, levels_dict):
         """
-        Beginners Note: Configures supreme organisation access ceilings.
+        Beginners Note: Configures supreme organisation access ceilings into consolidated access_levels_json.
         Exclusively callable by the Lytrose Super Administrator.
+        Consolidated schema: {"modules": {...}, "features": {...}}
         """
         import json
         clean = {}
+        # Normalize input keys if legacy aliases are supplied
+        norm_dict = {MODULE_KEY_ALIASES.get(k, k): v for k, v in (levels_dict or {}).items()}
         for k in ACCESS_MODULE_INFO.keys():
-            if k in levels_dict:
+            if k in norm_dict:
                 try:
-                    clean[k] = max(0, min(2, int(levels_dict[k])))
+                    clean[k] = max(0, min(2, int(norm_dict[k])))
                 except (ValueError, TypeError):
                     clean[k] = 2
             else:
                 clean[k] = self.get_access_level(k)
-        self.access_levels_json = json.dumps(clean)
+        current_features = self.get_feature_flags()
+        payload = {
+            'modules': clean,
+            'features': current_features
+        }
+        self.access_levels_json = json.dumps(payload)
+        self.feature_flags_json = json.dumps(current_features)
+
+    def get_feature_flags(self):
+        """
+        Beginners Note: Returns normalised dictionary of feature permissions for this Organisation.
+        Controls availability of Fluid Properties, Operation Modes, Motor/Drive Specs, and PipeNetwork modes.
+        Consolidated: Reads from access_levels_json['features'], falling back to feature_flags_json.
+        """
+        import json
+        raw = getattr(self, 'access_levels_json', None)
+        if raw and str(raw).strip():
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, dict) and isinstance(parsed.get('features'), dict):
+                    return normalize_feature_flags(parsed['features'])
+            except Exception:
+                pass
+
+        raw_feat = getattr(self, 'feature_flags_json', None)
+        if raw_feat and str(raw_feat).strip():
+            try:
+                parsed_feat = json.loads(raw_feat)
+                if isinstance(parsed_feat, dict):
+                    return normalize_feature_flags(parsed_feat)
+            except Exception:
+                pass
+
+        return normalize_feature_flags({})
+
+    def set_feature_flags(self, flags_dict):
+        """
+        Beginners Note: Saves normalised feature permissions JSON into consolidated access_levels_json['features'].
+        Enforces clean data types and structure matching DEFAULT_FEATURE_FLAGS.
+        Consolidated schema: {"modules": {...}, "features": {...}}
+        """
+        import json
+        norm = normalize_feature_flags(flags_dict)
+        current_modules = self.get_all_access_levels()
+        payload = {
+            'modules': current_modules,
+            'features': norm
+        }
+        self.access_levels_json = json.dumps(payload)
+        self.feature_flags_json = json.dumps(norm)
 
     def to_dict(self):
         return {
@@ -1424,6 +1622,8 @@ class Organisation(db.Model):
             'graph_styles_json': getattr(self, 'graph_styles_json', '') or '{}',
             'access_levels': self.get_all_access_levels(),
             'access_levels_json': getattr(self, 'access_levels_json', '') or '{}',
+            'feature_flags': self.get_feature_flags(),
+            'feature_flags_json': getattr(self, 'feature_flags_json', '') or '{}',
         }
 
 
@@ -1702,6 +1902,7 @@ class Role(db.Model):
     code = db.Column(db.String(50), nullable=False)
     description = db.Column(db.String(255), default='')
     access_levels_json = db.Column(db.Text, default='{}')
+    feature_flags_json = db.Column(db.Text, default='{}')
 
     # Granular functional permissions (maintained for legacy compatibility)
     can_select_pumps = db.Column(db.Boolean, default=True)
@@ -1721,20 +1922,28 @@ class Role(db.Model):
         Beginners Note: Returns configured access levels {module_key: int (0, 1, 2)} for this Role.
         0 = No Access, 1 = Read Only, 2 = Full Access.
         Falls back smoothly to role code defaults or legacy booleans if unset.
+        Consolidated: Reads from access_levels_json['modules'] with fallback to flat access_levels_json.
         """
         import json
         raw = getattr(self, 'access_levels_json', None)
         if raw and raw.strip():
             try:
                 parsed = json.loads(raw)
-                if isinstance(parsed, dict) and any(k in parsed for k in ACCESS_MODULE_INFO.keys()):
-                    levels = {}
-                    for k in ACCESS_MODULE_INFO.keys():
-                        try:
-                            levels[k] = max(0, min(2, int(parsed.get(k, 0))))
-                        except (ValueError, TypeError):
-                            levels[k] = 0
-                    return levels
+                if isinstance(parsed, dict):
+                    mods = parsed.get('modules') if isinstance(parsed.get('modules'), dict) else parsed
+                    # Handle legacy aliases in stored JSON
+                    if 'selection_liquid' in mods and 'fluid' not in mods:
+                        mods['fluid'] = mods['selection_liquid']
+                    if 'selection_motors' in mods and 'motor_drive' not in mods:
+                        mods['motor_drive'] = mods['selection_motors']
+                    if any(k in mods for k in ACCESS_MODULE_INFO.keys()):
+                        levels = {}
+                        for k in ACCESS_MODULE_INFO.keys():
+                            try:
+                                levels[k] = max(0, min(2, int(mods.get(k, 0))))
+                            except (ValueError, TypeError):
+                                levels[k] = 0
+                        return levels
             except Exception:
                 pass
 
@@ -1750,10 +1959,11 @@ class Role(db.Model):
                 'report_settings': 1,
                 'users_settings': 0,
                 'roles': 0,
-                'selection_liquid': 1,
+                'fluid': 1,
                 'selection_advanced_filters': 1,
-                'selection_motors': 1,
-                'pump_catalogue': 1
+                'motor_drive': 1,
+                'pump_catalogue': 1,
+                'pipe_network': 1
             }
         else: # engineer or custom role
             can_sel = 2 if getattr(self, 'can_select_pumps', True) else 0
@@ -1768,37 +1978,111 @@ class Role(db.Model):
                 'report_settings': can_exp,
                 'users_settings': can_usr,
                 'roles': can_usr,
-                'selection_liquid': can_sel,
+                'fluid': can_sel,
                 'selection_advanced_filters': can_sel,
-                'selection_motors': can_sel,
-                'pump_catalogue': can_edit_cat
+                'motor_drive': can_sel,
+                'pump_catalogue': can_edit_cat,
+                'pipe_network': can_sel
             }
 
-    def get_access_level(self, module_key):
-        """Returns integer access level (0, 1, 2) configured on this role."""
-        return self.get_all_access_levels().get(module_key, 0)
+    def get_all_access_levels(self, raw=False):
+        """
+        Returns dictionary of all module access levels (0=No Access, 1=Read Only, 2=Full Access).
+        
+        Beginners Note: Supreme Organisation Ceiling Rule
+        A module can only be available to a role with access level <= organisation access level.
+        Unless raw=True is explicitly requested, every module level is clamped against the parent
+        organisation's level:
+          Effective Role Level = min(Role Level, Organisation Level)
+        """
+        import json
+        levels = {}
+        if self.access_levels_json:
+            try:
+                data = json.loads(self.access_levels_json)
+                if isinstance(data, dict):
+                    # Check consolidated structure: {'modules': {...}, 'features': {...}}
+                    if 'modules' in data and isinstance(data['modules'], dict):
+                        levels = data['modules']
+                    else:
+                        # Legacy format: flat dictionary of module keys
+                        levels = {k: v for k, v in data.items() if k != 'features'}
+            except Exception:
+                levels = {}
+
+        # Resolve any legacy aliases in keys
+        clean = {}
+        for k in ACCESS_MODULE_INFO.keys():
+            clean[k] = max(0, min(2, int(levels.get(k, 0))))
+
+        # Enforce Rule: Role access level <= Organisation access level
+        if not raw and self.organisation:
+            org_levels = self.organisation.get_all_access_levels()
+            for k in clean.keys():
+                org_cap = org_levels.get(k, 2)
+                clean[k] = min(clean[k], org_cap)
+
+        return clean
+
+    def get_access_level(self, module_key, raw=False):
+        """
+        Returns integer access level (0, 1, 2) configured on this role.
+        Rule: A module can only be available to a role with access level <= organisation access level.
+        Effective Role Level = min(Role Level, Organisation Level).
+        """
+        module_key = MODULE_KEY_ALIASES.get(module_key, module_key)
+        return self.get_all_access_levels(raw=raw).get(module_key, 0)
 
     def set_access_level(self, module_key, level):
-        """Sets access level for a single module in this role."""
-        cur = self.get_all_access_levels()
-        cur[module_key] = max(0, min(2, int(level)))
+        """
+        Sets access level for a single module in this role.
+        Rule: Role level cannot exceed parent organisation level.
+        """
+        module_key = MODULE_KEY_ALIASES.get(module_key, module_key)
+        cur = self.get_all_access_levels(raw=True)
+        int_lvl = max(0, min(2, int(level)))
+        if self.organisation:
+            org_cap = self.organisation.get_access_level(module_key)
+            int_lvl = min(int_lvl, org_cap)
+        cur[module_key] = int_lvl
         self.set_all_access_levels(cur)
 
     def set_all_access_levels(self, levels_dict):
-        """Sets access levels dictionary for this role and syncs legacy booleans."""
+        """
+        Sets access levels dictionary for this role into consolidated access_levels_json.
+        Rule: Role level <= Organisation access level for each module.
+        """
         import json
         clean = {}
+        norm_dict = {MODULE_KEY_ALIASES.get(k, k): v for k, v in (levels_dict or {}).items()}
+        org_levels = self.organisation.get_all_access_levels() if self.organisation else {}
+
         for k in ACCESS_MODULE_INFO.keys():
-            if k in levels_dict:
+            if k in norm_dict:
                 try:
-                    clean[k] = max(0, min(2, int(levels_dict[k])))
+                    lvl = max(0, min(2, int(norm_dict[k])))
                 except (ValueError, TypeError):
-                    clean[k] = 0
+                    lvl = 0
             else:
-                clean[k] = self.get_access_level(k)
-        self.access_levels_json = json.dumps(clean)
+                lvl = self.get_access_level(k, raw=True)
+
+            # Rule: Role level <= Organisation level
+            if self.organisation:
+                org_cap = org_levels.get(k, 2)
+                lvl = min(lvl, org_cap)
+
+            clean[k] = lvl
+
+        current_features = self.get_feature_flags()
+        payload = {
+            'modules': clean,
+            'features': current_features
+        }
+        self.access_levels_json = json.dumps(payload)
+        self.feature_flags_json = json.dumps(current_features)
+
         # Keep legacy boolean columns in sync
-        self.can_select_pumps = (clean.get('comparison', 0) > 0) or (clean.get('selection_liquid', 0) > 0)
+        self.can_select_pumps = (clean.get('comparison', 0) > 0) or (clean.get('fluid', 0) > 0)
         self.can_edit_catalogue = (clean.get('pump_data', 0) >= 2) and (clean.get('pump_catalogue', 0) >= 2)
         self.can_export_reports = (clean.get('report_settings', 0) > 0)
         self.can_manage_organisation = (clean.get('organisation_settings', 0) >= 2)
@@ -1820,6 +2104,83 @@ class Role(db.Model):
             o_lvl = levels.get('organisation_settings', 0)
             return f"Pump: Lvl {p_lvl} • Reports: Lvl {r_lvl} • Org: Lvl {o_lvl}"
 
+    def get_feature_flags(self):
+        """
+        Beginners Note: Returns configured feature flags dictionary for this role.
+        Consolidated: Reads from access_levels_json['features'], falling back to feature_flags_json.
+        """
+        import json
+        raw = getattr(self, 'access_levels_json', None)
+        if raw and str(raw).strip():
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, dict) and isinstance(parsed.get('features'), dict):
+                    return normalize_feature_flags(parsed['features'])
+            except Exception:
+                pass
+
+        raw_feat = getattr(self, 'feature_flags_json', None)
+        if raw_feat and str(raw_feat).strip():
+            try:
+                parsed = json.loads(raw_feat)
+                if isinstance(parsed, dict):
+                    return normalize_feature_flags(parsed)
+            except Exception:
+                pass
+        return normalize_feature_flags({})
+
+    def set_feature_flags(self, flags_dict):
+        """
+        Saves normalised feature permissions JSON into consolidated access_levels_json['features'].
+        """
+        import json
+        norm = normalize_feature_flags(flags_dict)
+        current_modules = self.get_all_access_levels()
+        payload = {
+            'modules': current_modules,
+            'features': norm
+        }
+        self.access_levels_json = json.dumps(payload)
+        self.feature_flags_json = json.dumps(norm)
+
+    def get_effective_feature_flags(self):
+        """
+        Supreme Ceiling Rule: Clamps this role's feature flags against parent organisation's flags.
+        Rule: A feature can only be available if its governing module access level >= 1.
+        If a module's access level is 0 (No Access), all its corresponding feature options are disabled.
+        SuperAdmin system role has all feature flags unrestricted.
+        """
+        if (self.code or '').lower() in ('super_admin', 'superadmin', 'super_engineer') or (self.name or '').lower() in ('superadmin', 'super admin', 'super engineer'):
+            return normalize_feature_flags(DEFAULT_FEATURE_FLAGS)
+        org_flags = self.organisation.get_feature_flags() if self.organisation else DEFAULT_FEATURE_FLAGS
+        effective = clamp_feature_flags(self.get_feature_flags(), org_flags)
+
+        # Rule: Features respect module access levels (Level 0 disables feature set)
+        # 1. Fluid module
+        if self.get_access_level('fluid') == 0:
+            effective['fluid']['water'] = False
+            effective['fluid']['slurry'] = False
+            effective['fluid']['viscous'] = False
+
+        # 2. Motor & drive / Operation mode module
+        if self.get_access_level('motor_drive') == 0:
+            effective['operation_mode']['fixed_speed'] = False
+            effective['operation_mode']['vsd'] = False
+            effective['operation_mode']['fixed_auto'] = False
+            effective['operation_mode']['fixed_manual'] = False
+            effective['motor_drive']['standards'] = []
+            effective['motor_drive']['eff_ratings'] = []
+            effective['motor_drive']['suppliers'] = []
+            effective['motor_drive']['frequencies'] = []
+            effective['motor_drive']['poles'] = []
+
+        # 3. Pipe network module
+        if self.get_access_level('pipe_network') == 0:
+            for k in effective['pipe_network'].keys():
+                effective['pipe_network'][k] = False
+
+        return effective
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -1836,6 +2197,9 @@ class Role(db.Model):
             'access_levels': self.get_all_access_levels(),
             'access_summary': self.access_summary,
             'access_levels_json': getattr(self, 'access_levels_json', '') or '{}',
+            'feature_flags': self.get_effective_feature_flags(),
+            'configured_feature_flags': self.get_feature_flags(),
+            'feature_flags_json': getattr(self, 'feature_flags_json', '') or '{}',
             'created_at': self.created_at.isoformat() if self.created_at else ''
         }
 
@@ -1911,6 +2275,12 @@ class User(db.Model):
             return True
         if (self.email or '').lower() == 'nevermabvuu@gmail.com':
             return True
+        if (self.role or '').lower() in ('super_admin', 'superadmin'):
+            return True
+        if self.role_rel and (self.role_rel.code or '').lower() in ('super_admin', 'superadmin') and not self.organisation_id:
+            return True
+        if self.role_rel and (self.role_rel.name or '').lower() in ('superadmin', 'super admin') and not self.organisation_id:
+            return True
         return False
 
     def get_access_level(self, module_key):
@@ -1919,13 +2289,17 @@ class User(db.Model):
         A user role CANNOT have a higher access level than its organisation.
         Effective Level = min(Organisation Level, Role Level)
         0 = No Access, 1 = Read Only, 2 = Full Access
-        Lytrose SuperAdmin always has level 2 (unlimited).
+        SuperAdmin always has Level 2 (Full Access) on every module.
         """
         if self.is_super_admin_user:
             return 2
 
+        module_key = MODULE_KEY_ALIASES.get(module_key, module_key)
+
         if not self.organisation_id:
-            return 0
+            if self.role_rel:
+                return self.role_rel.get_access_level(module_key)
+            return 2 if self.role == 'admin' else (1 if self.role == 'viewer' else 0)
 
         org = self.organisation_ref or Organisation.query.get(self.organisation_id)
         org_cap = org.get_access_level(module_key) if org else 2
@@ -1939,15 +2313,176 @@ class User(db.Model):
 
     def can_access(self, module_key, min_level=1):
         """Returns True if user has at least min_level access (1=read-only, 2=full access)."""
+        module_key = MODULE_KEY_ALIASES.get(module_key, module_key)
         return self.get_access_level(module_key) >= min_level
 
     def can_edit(self, module_key):
         """Returns True if user has full access (read/edit/delete, level 2)."""
+        module_key = MODULE_KEY_ALIASES.get(module_key, module_key)
         return self.get_access_level(module_key) >= 2
 
     def can_view(self, module_key):
         """Returns True if user has view/read access (level >= 1)."""
+        module_key = MODULE_KEY_ALIASES.get(module_key, module_key)
         return self.get_access_level(module_key) >= 1
+
+    def get_effective_feature_flags(self):
+        """
+        Beginners Note: Supreme Organisation Ceiling for Features
+        Returns the effective feature flags for this user:
+        - SuperAdmin: Unrestricted access to all features (DEFAULT_FEATURE_FLAGS)
+        - Regular User: Clamped intersection of Role flags and parent Organisation ceiling.
+        """
+        if self.is_super_admin_user:
+            return normalize_feature_flags(DEFAULT_FEATURE_FLAGS)
+
+        org = self.org_profile
+        org_flags = org.get_feature_flags() if org else DEFAULT_FEATURE_FLAGS
+
+        if self.role_rel:
+            role_flags = self.role_rel.get_feature_flags()
+            effective = clamp_feature_flags(role_flags, org_flags)
+        else:
+            import copy
+            effective = copy.deepcopy(org_flags)
+
+        # Rule: Features strictly respect module access levels (Level 0 disables feature set)
+        # 1. Fluid module
+        if not self.can_access('fluid', 1):
+            effective['fluid']['water'] = False
+            effective['fluid']['slurry'] = False
+            effective['fluid']['viscous'] = False
+
+        # 2. Motor drive & Operation mode module
+        if not self.can_access('motor_drive', 1):
+            effective['operation_mode']['fixed_speed'] = False
+            effective['operation_mode']['vsd'] = False
+            effective['operation_mode']['fixed_auto'] = False
+            effective['operation_mode']['fixed_manual'] = False
+            effective['motor_drive']['standards'] = []
+            effective['motor_drive']['eff_ratings'] = []
+            effective['motor_drive']['suppliers'] = []
+            effective['motor_drive']['frequencies'] = []
+            effective['motor_drive']['poles'] = []
+
+        # 3. Pipe network module
+        if not self.can_access('pipe_network', 1):
+            for k in effective['pipe_network'].keys():
+                effective['pipe_network'][k] = False
+
+        return effective
+
+    def has_feature(self, category, option=None, sub_option=None):
+        """
+        Beginners Note: Feature and Option Permissions Checker
+        Convenience helper to check if the user is permitted to use a feature or sub-option.
+        Usage:
+          user.has_feature('fluid') -> checks if fluid properties module/feature is enabled
+          user.has_feature('fluid', 'slurry') -> checks if slurry fluid is enabled
+          user.has_feature('operation_mode', 'fixed_speed') -> checks if fixed speed is enabled
+          user.has_feature('operation_mode', 'fixed_manual') -> checks if manual speed is enabled
+          user.has_feature('motor_drive') -> checks if motor & drive specs are enabled
+          user.has_feature('motor_drive', 'iec') -> checks if IEC standard is permitted
+          user.has_feature('pipe_network') -> checks if pipe network module is enabled
+          user.has_feature('pipe_network', 'canvas') -> checks if canvas mode is permitted
+          user.has_feature('pipe_network', 'canvas_visual') -> checks if visual view is permitted
+          user.has_feature('pipe_network', 'simple_parallel') -> checks if parallel topology is permitted
+        """
+        if self.is_super_admin_user:
+            return True
+
+        # Rule: Features strictly respect their governing module access level
+        # If the governing module is level 0 (No Access), all options within it return False.
+        # Level >= 1 allows access to the permitted feature options.
+        if category == 'fluid':
+            if not self.can_access('fluid', 1):
+                return False
+            if option is None:
+                return True
+
+        elif category in ('motor_drive', 'operation_mode'):
+            if not self.can_access('motor_drive', 1):
+                return False
+            if option is None:
+                return True
+
+        elif category == 'pipe_network':
+            if not self.can_access('pipe_network', 1):
+                return False
+            if option is None:
+                return True
+
+        elif category == 'selection_advanced_filters':
+            if not self.can_access('selection_advanced_filters', 1):
+                return False
+            if option is None:
+                return True
+
+        flags = self.get_effective_feature_flags()
+        cat_data = flags.get(category)
+        if cat_data is None:
+            return True
+
+        if option is None:
+            if isinstance(cat_data, dict):
+                return bool(cat_data.get('enabled', True))
+            return bool(cat_data)
+
+        if not isinstance(cat_data, dict):
+            return True
+
+        # Master category enabled check: if category has an 'enabled' flag and it's False, all sub-options are False
+        if 'enabled' in cat_data and not cat_data['enabled']:
+            return False
+
+        # Support sub_option if provided (e.g. ('motor_drive', 'standards', 'iec') or ('pipe_network', 'canvas', 'schematic'))
+        if sub_option is not None:
+            sub_dict = cat_data.get(option)
+            if isinstance(sub_dict, dict):
+                if not sub_dict.get('enabled', True) and sub_option != 'enabled':
+                    return False
+                return bool(sub_dict.get(sub_option, False))
+            elif isinstance(sub_dict, list):
+                return str(sub_option).lower() in [str(x).lower() for x in sub_dict]
+
+        # Handle Pipe Network flattened aliases
+        # The normalized feature flags use flat keys (canvas_mode, canvas_schematic, etc.)
+        # This block maps common alias names used in templates to the correct flat keys.
+        if category == 'pipe_network':
+            if option in ('canvas', 'canvas_mode'):
+                return bool(cat_data.get('canvas_mode', True))
+            if option in ('canvas_schematic', 'schematic'):
+                return bool(cat_data.get('canvas_mode', True)) and bool(cat_data.get('canvas_schematic', True))
+            if option in ('canvas_visual', 'visual'):
+                return bool(cat_data.get('canvas_mode', True)) and bool(cat_data.get('canvas_visual', True))
+            if option in ('simple', 'simple_mode'):
+                return bool(cat_data.get('simple_mode', True))
+            if option in ('simple_series', 'series'):
+                return bool(cat_data.get('simple_mode', True)) and bool(cat_data.get('simple_series', True))
+            if option in ('simple_parallel', 'parallel'):
+                return bool(cat_data.get('simple_mode', True)) and bool(cat_data.get('simple_parallel', True))
+
+        # Direct boolean subkey or dict subkey
+        if option in cat_data:
+            val = cat_data[option]
+            if isinstance(val, dict):
+                return bool(val.get('enabled', True))
+            return bool(val)
+
+        # List memberships (standards, eff_ratings, frequencies, poles, suppliers)
+        opt_str = str(option).lower()
+        for list_key in ['standards', 'eff_ratings', 'frequencies', 'poles']:
+            if list_key in cat_data:
+                allowed_items = [str(x).lower() for x in cat_data[list_key]]
+                if opt_str in allowed_items:
+                    return True
+
+        if 'suppliers' in cat_data:
+            allowed_suppliers = [str(x).strip().lower() for x in cat_data['suppliers']]
+            if opt_str in allowed_suppliers:
+                return True
+
+        return False
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -1995,7 +2530,7 @@ class User(db.Model):
     def can_select_pumps(self):
         if self.is_super_admin_user:
             return True
-        return self.can_access('comparison', 1) or self.can_access('selection_liquid', 1) or self.can_access('selection_advanced_filters', 1)
+        return self.can_access('comparison', 1) or self.can_access('fluid', 1) or self.can_access('selection_advanced_filters', 1)
 
     def can_edit_catalogue(self):
         if self.is_super_admin_user:

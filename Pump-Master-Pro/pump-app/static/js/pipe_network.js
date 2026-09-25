@@ -6455,7 +6455,14 @@ function applySlurrySettings() {
   // Synchronize back to Pump Selection page inputs if present
   const liquidSel = document.getElementById('liquidSel');
   if (liquidSel) {
-    liquidSel.value = isEn ? 'slurry' : 'water';
+    const targetVal = isEn ? 'slurry' : 'water';
+    // Validate that the target liquid exists in options to prevent select from becoming blank
+    const hasOpt = Array.from(liquidSel.options).some(o => o.value === targetVal);
+    if (hasOpt) {
+      liquidSel.value = targetVal;
+    } else if (liquidSel.options.length > 0) {
+      liquidSel.selectedIndex = 0;
+    }
     liquidSel.dispatchEvent(new Event('change', { bubbles: true }));
   }
   const d50El = document.getElementById('input_slurry_d50');

@@ -908,12 +908,16 @@
   <!-- ── PROMINENT TOP DESIGNER MODE SWITCHER ── -->
   <div style="display:inline-flex;align-items:center;background:#0d1117;border:2px solid #30363d;border-radius:8px;padding:3px;gap:4px;box-shadow:0 2px 8px rgba(0,0,0,0.3);">
     <span style="font-size:11.5px;color:#8b949e;font-weight:700;padding:0 8px;">Designer Mode:</span>
+    {% if not current_user or current_user.has_feature('pipe_network', 'canvas') or (current_user and current_user.is_super_admin_user) %}
     <button id="btn-top-mode-canvas" type="button" class="pn-btn active-tool" style="padding:6px 14px;font-size:12px;font-weight:700;border:none;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;" onclick="setDesignerMode('canvas')">
       <i class="bi bi-diagram-3-fill" style="color:#38bdf8;"></i> Visual Canvas
     </button>
-    <button id="btn-top-mode-simple" type="button" class="pn-btn" style="padding:6px 14px;font-size:12px;font-weight:700;border:none;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:#22c55e;" onclick="setDesignerMode('simple')">
+    {% endif %}
+    {% if not current_user or current_user.has_feature('pipe_network', 'simple') or (current_user and current_user.is_super_admin_user) %}
+    <button id="btn-top-mode-simple" type="button" class="pn-btn {{ 'active-tool' if current_user and not current_user.has_feature('pipe_network', 'canvas') and not current_user.is_super_admin_user else '' }}" style="padding:6px 14px;font-size:12px;font-weight:700;border:none;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:#22c55e;" onclick="setDesignerMode('simple')">
       <i class="bi bi-list-columns-reverse" style="color:#22c55e;"></i> Simple Mode (Dropdowns)
     </button>
+    {% endif %}
   </div>
 </div>
 
@@ -926,12 +930,16 @@
   <div id="pn-toolbar">
     <span class="pn-canvas-only" style="display:inline-flex;align-items:center;gap:6px;">
       <span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-right:-2px;">View:</span>
+      {% if not current_user or current_user.has_feature('pipe_network', 'canvas_schematic') or (current_user and current_user.is_super_admin_user) %}
       <button id="btn-view-schematic" class="pn-btn" title="Schematic View">
         <i class="bi bi-bezier2"></i> Schematic
       </button>
+      {% endif %}
+      {% if not current_user or current_user.has_feature('pipe_network', 'canvas_visual') or (current_user and current_user.is_super_admin_user) %}
       <button id="btn-view-industrial" class="pn-btn active-tool" title="Industrial Installation View">
         <i class="bi bi-water" style="color:#38bdf8;"></i> Visual
       </button>
+      {% endif %}
       <button id="btn-theme-toggle" class="pn-btn" title="Toggle Canvas Theme (Light CAD / Dark)">
         <i class="bi bi-sun"></i> Theme
       </button>
@@ -1084,9 +1092,11 @@
     </div>
 
     <!-- Slurry & Advanced Pipeline Analysis Tool -->
+    {% if not current_user or current_user.has_feature('fluid', 'slurry') %}
     <button id="btn-toggle-slurry" type="button" class="pn-btn" style="display:none;" title="Slurry Transport & Advanced Pipe Analytics (Settling velocity, Durand critical deposition, Joukowsky surge, Barlow hoop stress)">
       <i class="bi bi-layers-fill" style="color:#f59e0b;"></i> Slurry / Advanced
     </button>
+    {% endif %}
 
     <!-- Diagram Display Settings Tool (Canvas only) -->
     <button id="btn-diagram-settings" type="button" class="pn-btn pn-canvas-only" onclick="toggleDiagramSettingsModal(true)" title="Customize information and annotations shown on the pipe diagram">
@@ -1559,6 +1569,7 @@
       <!-- Topology Option Cards: Series vs Parallel -->
       <div style="display:flex;gap:10px;margin-bottom:14px;">
         <!-- Series Card -->
+        {% if not current_user or current_user.has_feature('pipe_network', 'simple_series') or (current_user and current_user.is_super_admin_user) %}
         <div id="topo-card-series" class="pn-topology-card active" onclick="simpleController.setTopology('series')">
           <input type="radio" name="simple_topology" id="topo-radio-series" value="series" checked>
           <div>
@@ -1570,10 +1581,12 @@
             </div>
           </div>
         </div>
+        {% endif %}
 
         <!-- Parallel Card -->
-        <div id="topo-card-parallel" class="pn-topology-card" onclick="simpleController.setTopology('parallel')">
-          <input type="radio" name="simple_topology" id="topo-radio-parallel" value="parallel">
+        {% if not current_user or current_user.has_feature('pipe_network', 'simple_parallel') or (current_user and current_user.is_super_admin_user) %}
+        <div id="topo-card-parallel" class="pn-topology-card {{ 'active' if current_user and not current_user.has_feature('pipe_network', 'simple_series') else '' }}" onclick="simpleController.setTopology('parallel')">
+          <input type="radio" name="simple_topology" id="topo-radio-parallel" value="parallel" {{ 'checked' if current_user and not current_user.has_feature('pipe_network', 'simple_series') else '' }}>
           <div>
             <div style="font-size:12px;font-weight:700;color:#22c55e;display:flex;align-items:center;gap:6px;">
               <i class="bi bi-distribute-vertical"></i> Pipes in Parallel
@@ -1583,6 +1596,7 @@
             </div>
           </div>
         </div>
+        {% endif %}
       </div>
 
       <!-- Static Lift Input for Series Mode -->
@@ -3038,20 +3052,26 @@
   // Auto-restore previously preferred designer mode on page load
   document.addEventListener('DOMContentLoaded', () => {
     try {
+      const hasCanvas = {{ 'true' if not current_user or current_user.has_feature('pipe_network', 'canvas') else 'false' }};
+      const hasSimple = {{ 'true' if not current_user or current_user.has_feature('pipe_network', 'simple') else 'false' }};
       const urlParams = new URLSearchParams(window.location.search);
       const urlMode = urlParams.get('mode');
       const sess = window.__PMP_SESSION_PIPE_NETWORK;
-      const savedMode = (urlMode === 'simple' || urlMode === 'canvas')
-        ? urlMode
-        : ((sess && sess.mode === 'simple')
-          ? 'simple'
-          : (localStorage.getItem('pmp_pipe_designer_mode') || 'canvas'));
-
-      if (savedMode === 'simple') {
-        setDesignerMode('simple');
+      let targetMode = 'canvas';
+      if (!hasCanvas && hasSimple) {
+        targetMode = 'simple';
+      } else if (hasCanvas && !hasSimple) {
+        targetMode = 'canvas';
       } else {
-        setDesignerMode('canvas');
+        targetMode = (urlMode === 'simple' || urlMode === 'canvas')
+          ? urlMode
+          : ((sess && sess.mode === 'simple')
+            ? 'simple'
+            : (localStorage.getItem('pmp_pipe_designer_mode') || 'canvas'));
+        if (targetMode === 'canvas' && !hasCanvas) targetMode = 'simple';
+        if (targetMode === 'simple' && !hasSimple) targetMode = 'canvas';
       }
+      setDesignerMode(targetMode);
     } catch (e) {
       console.error('Error during designer mode initialization:', e);
     }

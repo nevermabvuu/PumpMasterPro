@@ -526,23 +526,19 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                 grid_lines.append(f'<line x1="{padding_left}" y1="{py:.1f}" x2="{VIEW_W - padding_right}" y2="{py:.1f}" stroke="{min_grid_col}" stroke-width="{min_grid_w}" {min_grid_dash} />')
             curr_m += y_minor
 
-    # X Major Grid Lines & Labels
+    # X Major Grid Lines
     for val in x_ticks:
         if x_min - 1e-5 <= val <= x_max + 1e-5:
             px = padding_left + ((val - x_min) / (x_max - x_min)) * plot_w
             if maj_grid_style != 'none':
                 grid_lines.append(f'<line x1="{px:.1f}" y1="{padding_top}" x2="{px:.1f}" y2="{padding_top + plot_h}" stroke="{maj_grid_col}" {maj_grid_dash} stroke-width="{maj_grid_w}" />')
-            val_str = f"{val:.0f}" if abs(val - round(val)) < 1e-5 else f"{val:.1f}"
-            labels.append(f'<text x="{px:.1f}" y="{padding_top + plot_h + 13}" font-size="{9.5 * f_scale:.1f}" font-weight="{f_weight}" font-family="{font_family}" fill="#475569" text-anchor="middle">{val_str}</text>')
 
-    # Y Major Grid Lines & Labels
+    # Y Major Grid Lines
     for val in y_ticks:
         if y_min - 1e-5 <= val <= y_max + 1e-5:
             py = padding_top + plot_h - ((val - y_min) / (y_max - y_min)) * plot_h
             if maj_grid_style != 'none':
                 grid_lines.append(f'<line x1="{padding_left}" y1="{py:.1f}" x2="{VIEW_W - padding_right}" y2="{py:.1f}" stroke="{maj_grid_col}" {maj_grid_dash} stroke-width="{maj_grid_w}" />')
-            val_str = f"{val:.0f}" if abs(val - round(val)) < 1e-5 else f"{val:.1f}"
-            labels.append(f'<text x="{padding_left - 6}" y="{py + 3.5:.1f}" font-size="{9.5 * f_scale:.1f}" font-weight="{f_weight}" font-family="{font_family}" fill="#475569" text-anchor="end">{val_str}</text>')
 
     paths_svg = []
     legend_items = []
@@ -952,16 +948,18 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
   <!-- X-Axis Ticks & Values -->
 '''
     for val in x_ticks:
-        px = padding_left + ((val - x_min) / (x_max - x_min)) * plot_w
-        svg_code += f'  <line x1="{px:.1f}" y1="{padding_top + plot_h}" x2="{px:.1f}" y2="{padding_top + plot_h + 4}" stroke="{axis_col}" stroke-width="1.0" />\n'
-        val_fmt = f"{int(round(val))}" if abs(val - round(val)) < 1e-4 else f"{val:.1f}"
-        svg_code += f'  <text x="{px:.1f}" y="{padding_top + plot_h + 15}" font-size="{9 * f_scale:.1f}" font-family="{font_family}" font-weight="{f_weight}" fill="#475569" text-anchor="middle">{val_fmt}</text>\n'
+        if x_min - 1e-5 <= val <= x_max + 1e-5:
+            px = padding_left + ((val - x_min) / (x_max - x_min)) * plot_w
+            svg_code += f'  <line x1="{px:.1f}" y1="{padding_top + plot_h}" x2="{px:.1f}" y2="{padding_top + plot_h + 4}" stroke="{axis_col}" stroke-width="1.0" />\n'
+            val_fmt = f"{int(round(val))}" if abs(val - round(val)) < 1e-4 else f"{val:.1f}"
+            svg_code += f'  <text x="{px:.1f}" y="{padding_top + plot_h + 14}" font-size="{9.5 * f_scale:.1f}" font-family="{font_family}" font-weight="{f_weight}" fill="#475569" text-anchor="middle">{val_fmt}</text>\n'
 
     for val in y_ticks:
-        py = padding_top + plot_h - ((val - y_min) / (y_max - y_min)) * plot_h
-        svg_code += f'  <line x1="{padding_left - 4}" y1="{py:.1f}" x2="{padding_left}" y2="{py:.1f}" stroke="{axis_col}" stroke-width="1.0" />\n'
-        val_fmt = f"{int(round(val))}" if abs(val - round(val)) < 1e-4 else f"{val:.1f}"
-        svg_code += f'  <text x="{padding_left - 6}" y="{py + 3:.1f}" font-size="{9 * f_scale:.1f}" font-family="{font_family}" font-weight="{f_weight}" fill="#475569" text-anchor="end">{val_fmt}</text>\n'
+        if y_min - 1e-5 <= val <= y_max + 1e-5:
+            py = padding_top + plot_h - ((val - y_min) / (y_max - y_min)) * plot_h
+            svg_code += f'  <line x1="{padding_left - 4}" y1="{py:.1f}" x2="{padding_left}" y2="{py:.1f}" stroke="{axis_col}" stroke-width="1.0" />\n'
+            val_fmt = f"{int(round(val))}" if abs(val - round(val)) < 1e-4 else f"{val:.1f}"
+            svg_code += f'  <text x="{padding_left - 6}" y="{py + 3.5:.1f}" font-size="{9.5 * f_scale:.1f}" font-family="{font_family}" font-weight="{f_weight}" fill="#475569" text-anchor="end">{val_fmt}</text>\n'
 
     # Axis Labels
     svg_code += f'  <text x="{padding_left + plot_w / 2:.1f}" y="{VIEW_H - 4}" font-size="{10 * f_scale:.1f}" font-weight="700" font-family="{font_family}" fill="#1e293b" text-anchor="middle">{x_label}</text>\n'

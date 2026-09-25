@@ -29,8 +29,8 @@ Friction Loss Models Used
 import json
 import math
 import re
-from flask import Blueprint, render_template, request, jsonify, g, session
-from models import db, PipeFitting, PipeMaterial, StandardPipe
+from flask import Blueprint, render_template, request, jsonify, g, session, redirect, url_for, flash
+from models import db, PipeFitting, PipeMaterial, StandardPipe, DEFAULT_FEATURE_FLAGS
 from utils import UNITS_FLOW, UNITS_HEAD, UNITS_POWER, UNITS_DENSITY, UNITS_SIZE
 from services.hydraulic_engine import (
     Fitting, Node, PipeEdge, NetworkGraph,
@@ -190,6 +190,12 @@ def calculate_segment(seg, global_flow_m3h, friction_method='darcy_weisbach',
 @pipe_network_bp.route('/pipe-network')
 def pipe_network():
     """Render the interactive pipe-network visual designer page with DB-injected reference data and active session state."""
+    from routes.auth import get_current_user
+    user = get_current_user()
+    if user and not user.has_feature('pipe_network') and not getattr(user, 'is_super_admin_user', False):
+        flash("Your organisation or role does not have access to the Pipe Network Engineering module.", "warning")
+        return redirect(url_for('main.index'))
+
     fittings = PipeFitting.query.filter_by(is_active=True).order_by(PipeFitting.sort_order).all()
     materials = PipeMaterial.query.filter_by(is_active=True).order_by(PipeMaterial.sort_order).all()
     standard_pipes = StandardPipe.query.filter_by(is_active=True).order_by(StandardPipe.sort_order).all()
@@ -228,6 +234,8 @@ def pipe_network():
     unit_q = sel_form.get('unit_q') or active_sel.get('unit_q') or session.get('unit_q') or 'm3h'
     unit_h = sel_form.get('unit_h') or active_sel.get('unit_h') or session.get('unit_h') or 'm'
 
+    user_feature_flags = user.get_effective_feature_flags() if user else DEFAULT_FEATURE_FLAGS
+
     return render_template('pipe_network.html',
                            fittings_json=fittings_json,
                            materials_json=materials_json,
@@ -240,7 +248,8 @@ def pipe_network():
                            units_tables=units_tables,
                            unit_system=unit_system,
                            unit_q=unit_q,
-                           unit_h=unit_h)
+                           unit_h=unit_h,
+                           user_feature_flags=user_feature_flags)
 
 
 

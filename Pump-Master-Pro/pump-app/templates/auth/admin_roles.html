@@ -131,7 +131,7 @@
             <div class="space-y-1.5 pt-2 border-t border-[#30363d]/60 mb-3">
               <div class="flex items-center justify-between text-[10px] font-semibold text-[#8b949e] uppercase tracking-wider">
                 <span>Access Matrix:</span>
-                <span class="font-mono text-[#58a6ff]">10 Modules</span>
+                <span class="font-mono text-[#58a6ff]">{{ ACCESS_MODULE_INFO|length }} Modules</span>
               </div>
               <div class="grid grid-cols-2 gap-1 max-h-36 overflow-y-auto pe-1 custom-scrollbar">
                 {% for mod_key, mod_info in ACCESS_MODULE_INFO.items() %}
@@ -152,6 +152,40 @@
                     {% endif %}
                   </div>
                 {% endfor %}
+              </div>
+            </div>
+
+            <!-- Features & Modules Availability Summary -->
+            {% set r_feats = r.get_effective_feature_flags() %}
+            <div class="space-y-1.5 pt-2 border-t border-[#30363d]/60 mb-3">
+              <div class="flex items-center justify-between text-[10px] font-semibold text-[#8b949e] uppercase tracking-wider">
+                <span>Features Availability:</span>
+                <span class="font-mono text-[#38bdf8]">Role Effective</span>
+              </div>
+              <div class="flex flex-wrap gap-1 text-[10px]">
+                {% if r_levels.get('fluid', 0) > 0 %}
+                  {% if r_feats.fluid.water %}<span class="px-1.5 py-0.5 rounded bg-[#38bdf8]/10 text-[#38bdf8] border border-[#38bdf8]/30">Water</span>{% endif %}
+                  {% if r_feats.fluid.slurry %}<span class="px-1.5 py-0.5 rounded bg-[#f0883e]/10 text-[#f0883e] border border-[#f0883e]/30">Slurry</span>{% endif %}
+                  {% if r_feats.fluid.viscous %}<span class="px-1.5 py-0.5 rounded bg-[#d2a8ff]/10 text-[#d2a8ff] border border-[#d2a8ff]/30">Viscous</span>{% endif %}
+                {% else %}
+                  <span class="px-1.5 py-0.5 rounded bg-[#21262d] text-[#8b949e] border border-[#30363d]">Fluids Off</span>
+                {% endif %}
+
+                {% if r_feats.operation_mode.fixed_speed %}<span class="px-1.5 py-0.5 rounded bg-[#238636]/10 text-[#3fb950] border border-[#238636]/30">Fixed Spd</span>{% endif %}
+                {% if r_feats.operation_mode.vsd %}<span class="px-1.5 py-0.5 rounded bg-[#a371f7]/10 text-[#d2a8ff] border border-[#a371f7]/30">VSD</span>{% endif %}
+
+                {% if r_levels.get('motor_drive', 0) > 0 %}
+                  <span class="px-1.5 py-0.5 rounded bg-[#58a6ff]/10 text-[#58a6ff] border border-[#58a6ff]/30">Motor Specs</span>
+                {% else %}
+                  <span class="px-1.5 py-0.5 rounded bg-[#21262d] text-[#8b949e] border border-[#30363d]">Motor Off</span>
+                {% endif %}
+
+                {% if r_levels.get('pipe_network', 0) > 0 %}
+                  {% if r_feats.pipe_network.canvas_mode %}<span class="px-1.5 py-0.5 rounded bg-[#58a6ff]/10 text-[#79c0ff] border border-[#58a6ff]/30">PN Canvas</span>{% endif %}
+                  {% if r_feats.pipe_network.simple_mode %}<span class="px-1.5 py-0.5 rounded bg-[#7ee787]/10 text-[#7ee787] border border-[#7ee787]/30">PN Simple</span>{% endif %}
+                {% else %}
+                  <span class="px-1.5 py-0.5 rounded bg-[#21262d] text-[#8b949e] border border-[#30363d]">PN Off</span>
+                {% endif %}
               </div>
             </div>
 
@@ -222,6 +256,7 @@
 
 {% block modals %}
 <!-- Beginners Note: Modals placed in block modals directly under <body> to prevent CSS transform traps -->
+
 <!-- ADD ROLE MODAL -->
 <div id="addRoleModal" class="hidden fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
   <div class="bg-[#161b22] border border-[#30363d] rounded-2xl w-full max-w-2xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-fade-up">
@@ -257,10 +292,22 @@
                   class="form-control-dark w-full px-3 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-white text-xs focus:border-[#58a6ff]"></textarea>
       </div>
 
-      <!-- 3-Level Access Matrix Grid (10 Modules) -->
-      <div class="pt-3 border-t border-[#30363d] space-y-3">
+      <!-- Navigation Tabs: Matrix vs Feature Availability -->
+      <div class="flex border-b border-[#30363d] gap-2 pt-1">
+        <button type="button" id="tab_btn_add_matrix" onclick="switchRoleTab('add', 'matrix')"
+                class="px-3 py-1.5 text-xs font-semibold border-b-2 border-[#58a6ff] text-white flex items-center gap-1.5 cursor-pointer">
+          <i class="bi bi-shield-check text-[#58a6ff]"></i> 1. Access Matrix
+        </button>
+        <button type="button" id="tab_btn_add_features" onclick="switchRoleTab('add', 'features')"
+                class="px-3 py-1.5 text-xs font-semibold border-b-2 border-transparent text-[#8b949e] hover:text-[#c9d1d9] flex items-center gap-1.5 cursor-pointer">
+          <i class="bi bi-toggles text-[#38bdf8]"></i> 2. Feature &amp; Module Availability
+        </button>
+      </div>
+
+      <!-- TAB 1: 3-Level Access Matrix Grid (10 Modules) -->
+      <div id="tab_content_add_matrix" class="space-y-3">
         <div class="flex items-center justify-between">
-          <label class="block text-xs font-bold text-white">Module Access Matrix (Supreme Ceilings Enforced)</label>
+          <span class="text-xs font-bold text-white">Module Access Matrix (Supreme Ceilings Enforced)</span>
           <span class="text-[11px] text-[#8b949e] font-mono">10 Configurable Modules</span>
         </div>
         <p class="text-[11px] text-[#8b949e]">
@@ -268,10 +315,10 @@
           Options exceeding the parent organisation ceiling are automatically disabled.
         </p>
 
-        <div class="space-y-2.5">
+        <div class="space-y-2.5 max-h-[280px] overflow-y-auto pe-1 custom-scrollbar">
           {% for mod_key, mod_info in ACCESS_MODULE_INFO.items() %}
             {% set cap = org_access_levels.get(mod_key, 2) %}
-            <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+            <div class="p-2.5 bg-[#0d1117] border border-[#30363d] rounded-lg">
               <div class="flex flex-wrap items-center justify-between gap-1 mb-1">
                 <div class="flex items-center gap-2">
                   <i class="bi {{ mod_info.icon }} text-[#58a6ff]"></i>
@@ -301,6 +348,236 @@
               </div>
             </div>
           {% endfor %}
+        </div>
+      </div>
+
+      <!-- TAB 2: Feature & Module Permissions (Supreme Ceiling Enforced) -->
+      {% set o_feat = org_feature_flags %}
+      <div id="tab_content_add_features" class="hidden space-y-3.5 max-h-[360px] overflow-y-auto pe-1 custom-scrollbar">
+        <div class="p-2.5 rounded-lg bg-[#38bdf8]/10 border border-[#38bdf8]/30 text-xs text-[#79c0ff]">
+          <i class="bi bi-info-circle me-1"></i>
+          <strong>Organisation Ceiling Rule:</strong> Options disabled by <span class="text-white">{{ selected_org.name if selected_org else 'Organisation' }}</span> cannot be enabled for this role.
+        </div>
+
+        <!-- 1. FLUID PROPERTIES -->
+        {% set org_fluid_en = org_access_levels.get('fluid', 2) > 0 %}
+        <div class="p-3 rounded-lg border border-[#30363d] bg-[#0d1117]">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+              <i class="bi bi-droplet-fill text-[#58a6ff]"></i> Fluid Properties
+            </span>
+            {% if not org_fluid_en %}
+              <span class="text-[10px] text-[#f85149] font-mono">Org Cap: None (0)</span>
+            {% endif %}
+          </div>
+          <div class="ms-5 grid grid-cols-3 gap-2 pt-1 border-t border-[#30363d]/60 {{ 'opacity-40 pointer-events-none' if not org_fluid_en else '' }}">
+            <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] {{ 'opacity-40 cursor-not-allowed' if not (org_fluid_en and o_feat.fluid.water) else 'cursor-pointer' }}">
+              <input type="checkbox" name="feat_fluid_water" value="1" class="accent-[#58a6ff] rounded"
+                     {{ 'checked' if (org_fluid_en and o_feat.fluid.water) else 'disabled' }}>
+              <span>Clean Water</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] {{ 'opacity-40 cursor-not-allowed' if not (org_fluid_en and o_feat.fluid.slurry) else 'cursor-pointer' }}">
+              <input type="checkbox" name="feat_fluid_slurry" value="1" class="accent-[#58a6ff] rounded"
+                     {{ 'checked' if (org_fluid_en and o_feat.fluid.slurry) else 'disabled' }}>
+              <span>Slurry</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] {{ 'opacity-40 cursor-not-allowed' if not (org_fluid_en and o_feat.fluid.viscous) else 'cursor-pointer' }}">
+              <input type="checkbox" name="feat_fluid_viscous" value="1" class="accent-[#58a6ff] rounded"
+                     {{ 'checked' if (org_fluid_en and o_feat.fluid.viscous) else 'disabled' }}>
+              <span>Viscous</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 2. OPERATION MODES -->
+        <div class="p-3 rounded-lg border border-[#30363d] bg-[#0d1117] space-y-2">
+          <span class="text-xs font-bold text-white flex items-center gap-1.5">
+            <i class="bi bi-speedometer2 text-[#a371f7]"></i> Operation Modes
+          </span>
+          <div class="space-y-2 pt-1 border-t border-[#30363d]/60">
+            <div>
+              <label class="flex items-center gap-2 text-xs font-semibold text-[#e6edf3] {{ 'opacity-40 cursor-not-allowed' if not o_feat.operation_mode.fixed_speed else 'cursor-pointer' }}">
+                <input type="checkbox" name="feat_op_fixed" id="add_feat_op_fixed" value="1"
+                       class="accent-[#58a6ff] rounded"
+                       {{ 'checked' if o_feat.operation_mode.fixed_speed else 'disabled' }}
+                       onchange="toggleFeatSubGroupRole('add_feat_op_fixed', 'add_feat_op_fixed_sub')">
+                <span>Fixed Speed Operation</span>
+              </label>
+              <div id="add_feat_op_fixed_sub" class="ms-5 grid grid-cols-2 gap-2 pt-1 {{ 'opacity-40 pointer-events-none' if not o_feat.operation_mode.fixed_speed else '' }}">
+                <label class="flex items-center gap-1.5 text-xs text-[#8b949e] {{ 'opacity-40 cursor-not-allowed' if not (o_feat.operation_mode.fixed_speed and o_feat.operation_mode.fixed_auto) else 'cursor-pointer' }}">
+                  <input type="checkbox" name="feat_op_fixed_auto" value="1" class="accent-[#58a6ff] rounded"
+                         {{ 'checked' if (o_feat.operation_mode.fixed_speed and o_feat.operation_mode.fixed_auto) else 'disabled' }}>
+                  <span>Auto Speed</span>
+                </label>
+                <label class="flex items-center gap-1.5 text-xs text-[#8b949e] {{ 'opacity-40 cursor-not-allowed' if not (o_feat.operation_mode.fixed_speed and o_feat.operation_mode.fixed_manual) else 'cursor-pointer' }}">
+                  <input type="checkbox" name="feat_op_fixed_manual" value="1" class="accent-[#58a6ff] rounded"
+                         {{ 'checked' if (o_feat.operation_mode.fixed_speed and o_feat.operation_mode.fixed_manual) else 'disabled' }}>
+                  <span>Manual Speed</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="pt-1">
+              <label class="flex items-center gap-2 text-xs font-semibold text-[#e6edf3] {{ 'opacity-40 cursor-not-allowed' if not o_feat.operation_mode.vsd else 'cursor-pointer' }}">
+                <input type="checkbox" name="feat_op_vsd" value="1" class="accent-[#58a6ff] rounded"
+                       {{ 'checked' if o_feat.operation_mode.vsd else 'disabled' }}>
+                <span>Variable Speed Drive (VSD)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. MOTOR & DRIVE SPECS -->
+        {% set org_motor_en = org_access_levels.get('motor_drive', 2) > 0 %}
+        <div class="p-3 rounded-lg border border-[#30363d] bg-[#0d1117] space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+              <i class="bi bi-cpu text-[#f0883e]"></i> Motor &amp; Drive Specifications
+            </span>
+            {% if not org_motor_en %}
+              <span class="text-[10px] text-[#f85149] font-mono">Org Cap: None (0)</span>
+            {% endif %}
+          </div>
+
+          <div class="ms-5 space-y-2 pt-1 border-t border-[#30363d]/60 {{ 'opacity-40 pointer-events-none' if not org_motor_en else '' }}">
+            <!-- Standards & Eff -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <span class="text-[10px] font-semibold text-[#8b949e] block mb-1">Standards:</span>
+                <div class="flex items-center gap-2.5">
+                  <label class="flex items-center gap-1 text-xs text-[#c9d1d9] {{ 'opacity-40 cursor-not-allowed' if 'iec' not in o_feat.motor_drive.standards else 'cursor-pointer' }}">
+                    <input type="checkbox" name="feat_motor_standards" value="iec" class="accent-[#58a6ff] rounded"
+                           {{ 'checked' if 'iec' in o_feat.motor_drive.standards else 'disabled' }}>
+                    <span>IEC</span>
+                  </label>
+                  <label class="flex items-center gap-1 text-xs text-[#c9d1d9] {{ 'opacity-40 cursor-not-allowed' if 'nema' not in o_feat.motor_drive.standards else 'cursor-pointer' }}">
+                    <input type="checkbox" name="feat_motor_standards" value="nema" class="accent-[#58a6ff] rounded"
+                           {{ 'checked' if 'nema' in o_feat.motor_drive.standards else 'disabled' }}>
+                    <span>NEMA</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <span class="text-[10px] font-semibold text-[#8b949e] block mb-1">Efficiency:</span>
+                <div class="flex flex-wrap items-center gap-2">
+                  {% for er in ['ie1', 'ie2', 'ie3', 'ie4'] %}
+                    <label class="flex items-center gap-1 text-xs text-[#c9d1d9] {{ 'opacity-40 cursor-not-allowed' if er not in o_feat.motor_drive.eff_ratings else 'cursor-pointer' }}">
+                      <input type="checkbox" name="feat_motor_eff_ratings" value="{{ er }}" class="accent-[#58a6ff] rounded"
+                             {{ 'checked' if er in o_feat.motor_drive.eff_ratings else 'disabled' }}>
+                      <span>{{ er|upper }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Frequencies & Poles -->
+            <div class="grid grid-cols-2 gap-2 pt-1 border-t border-[#30363d]/40">
+              <div>
+                <span class="text-[10px] font-semibold text-[#8b949e] block mb-1">Grid Frequencies:</span>
+                <div class="flex items-center gap-2.5">
+                  <label class="flex items-center gap-1 text-xs text-[#c9d1d9] {{ 'opacity-40 cursor-not-allowed' if '50hz' not in o_feat.motor_drive.frequencies else 'cursor-pointer' }}">
+                    <input type="checkbox" name="feat_motor_frequencies" value="50hz" class="accent-[#58a6ff] rounded"
+                           {{ 'checked' if '50hz' in o_feat.motor_drive.frequencies else 'disabled' }}>
+                    <span>50 Hz</span>
+                  </label>
+                  <label class="flex items-center gap-1 text-xs text-[#c9d1d9] {{ 'opacity-40 cursor-not-allowed' if '60hz' not in o_feat.motor_drive.frequencies else 'cursor-pointer' }}">
+                    <input type="checkbox" name="feat_motor_frequencies" value="60hz" class="accent-[#58a6ff] rounded"
+                           {{ 'checked' if '60hz' in o_feat.motor_drive.frequencies else 'disabled' }}>
+                    <span>60 Hz</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <span class="text-[10px] font-semibold text-[#8b949e] block mb-1">Poles:</span>
+                <div class="flex flex-wrap items-center gap-2">
+                  {% for p in ['2', '4', '6', '8'] %}
+                    <label class="flex items-center gap-1 text-xs text-[#c9d1d9] {{ 'opacity-40 cursor-not-allowed' if p not in o_feat.motor_drive.poles else 'cursor-pointer' }}">
+                      <input type="checkbox" name="feat_motor_poles" value="{{ p }}" class="accent-[#58a6ff] rounded"
+                             {{ 'checked' if p in o_feat.motor_drive.poles else 'disabled' }}>
+                      <span>{{ p }}P</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Suppliers -->
+            <div class="pt-1 border-t border-[#30363d]/40">
+              <span class="text-[10px] font-semibold text-[#8b949e] block mb-1">Permitted Suppliers:</span>
+              <div class="flex flex-wrap gap-2 max-h-24 overflow-y-auto custom-scrollbar">
+                {% for sup in motor_suppliers %}
+                  <label class="flex items-center gap-1 text-xs text-[#c9d1d9] {{ 'opacity-40 cursor-not-allowed' if sup not in o_feat.motor_drive.suppliers else 'cursor-pointer' }}">
+                    <input type="checkbox" name="feat_motor_suppliers" value="{{ sup }}" class="accent-[#58a6ff] rounded"
+                           {{ 'checked' if sup in o_feat.motor_drive.suppliers else 'disabled' }}>
+                    <span>{{ sup }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. PIPENETWORK MODULE -->
+        {% set org_pn_en = org_access_levels.get('pipe_network', 2) > 0 %}
+        <div class="p-3 rounded-lg border border-[#30363d] bg-[#0d1117] space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+              <i class="bi bi-diagram-3-fill text-[#7ee787]"></i> Pipe Network Designer
+            </span>
+            {% if not org_pn_en %}
+              <span class="text-[10px] text-[#f85149] font-mono">Org Cap: None (0)</span>
+            {% endif %}
+          </div>
+
+          <div class="ms-5 space-y-2 pt-1 border-t border-[#30363d]/60 {{ 'opacity-40 pointer-events-none' if not org_pn_en else '' }}">
+            <!-- Canvas Mode -->
+            <div>
+              <label class="flex items-center gap-2 text-xs font-semibold text-[#e6edf3] {{ 'opacity-40 cursor-not-allowed' if not (o_feat.pipe_network.enabled and o_feat.pipe_network.canvas_mode) else 'cursor-pointer' }}">
+                <input type="checkbox" name="feat_pn_canvas" id="add_feat_pn_canvas" value="1" class="accent-[#58a6ff] rounded"
+                       {{ 'checked' if (o_feat.pipe_network.enabled and o_feat.pipe_network.canvas_mode) else 'disabled' }}
+                       onchange="toggleFeatSubGroupRole('add_feat_pn_canvas', 'add_feat_pn_canvas_sub')">
+                <span>Interactive Visual Canvas Mode</span>
+              </label>
+              <div id="add_feat_pn_canvas_sub" class="ms-5 flex items-center gap-4 pt-1 {{ 'opacity-40 pointer-events-none' if not (o_feat.pipe_network.enabled and o_feat.pipe_network.canvas_mode) else '' }}">
+                <label class="flex items-center gap-1.5 text-xs text-[#8b949e] {{ 'opacity-40 cursor-not-allowed' if not (o_feat.pipe_network.enabled and o_feat.pipe_network.canvas_schematic) else 'cursor-pointer' }}">
+                  <input type="checkbox" name="feat_pn_canvas_schematic" value="1" class="accent-[#58a6ff] rounded"
+                         {{ 'checked' if (o_feat.pipe_network.enabled and o_feat.pipe_network.canvas_schematic) else 'disabled' }}>
+                  <span>Schematic View</span>
+                </label>
+                <label class="flex items-center gap-1.5 text-xs text-[#8b949e] {{ 'opacity-40 cursor-not-allowed' if not (o_feat.pipe_network.enabled and o_feat.pipe_network.canvas_visual) else 'cursor-pointer' }}">
+                  <input type="checkbox" name="feat_pn_canvas_visual" value="1" class="accent-[#58a6ff] rounded"
+                         {{ 'checked' if (o_feat.pipe_network.enabled and o_feat.pipe_network.canvas_visual) else 'disabled' }}>
+                  <span>Visual / Industrial 3D View</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Simple Mode -->
+            <div class="pt-1 border-t border-[#30363d]/40">
+              <label class="flex items-center gap-2 text-xs font-semibold text-[#e6edf3] {{ 'opacity-40 cursor-not-allowed' if not (o_feat.pipe_network.enabled and o_feat.pipe_network.simple_mode) else 'cursor-pointer' }}">
+                <input type="checkbox" name="feat_pn_simple" id="add_feat_pn_simple" value="1" class="accent-[#58a6ff] rounded"
+                       {{ 'checked' if (o_feat.pipe_network.enabled and o_feat.pipe_network.simple_mode) else 'disabled' }}
+                       onchange="toggleFeatSubGroupRole('add_feat_pn_simple', 'add_feat_pn_simple_sub')">
+                <span>Simple Topology Mode</span>
+              </label>
+              <div id="add_feat_pn_simple_sub" class="ms-5 flex items-center gap-4 pt-1 {{ 'opacity-40 pointer-events-none' if not (o_feat.pipe_network.enabled and o_feat.pipe_network.simple_mode) else '' }}">
+                <label class="flex items-center gap-1.5 text-xs text-[#8b949e] {{ 'opacity-40 cursor-not-allowed' if not (o_feat.pipe_network.enabled and o_feat.pipe_network.simple_series) else 'cursor-pointer' }}">
+                  <input type="checkbox" name="feat_pn_simple_series" value="1" class="accent-[#58a6ff] rounded"
+                         {{ 'checked' if (o_feat.pipe_network.enabled and o_feat.pipe_network.simple_series) else 'disabled' }}>
+                  <span>Series Connection</span>
+                </label>
+                <label class="flex items-center gap-1.5 text-xs text-[#8b949e] {{ 'opacity-40 cursor-not-allowed' if not (o_feat.pipe_network.enabled and o_feat.pipe_network.simple_parallel) else 'cursor-pointer' }}">
+                  <input type="checkbox" name="feat_pn_simple_parallel" value="1" class="accent-[#58a6ff] rounded"
+                         {{ 'checked' if (o_feat.pipe_network.enabled and o_feat.pipe_network.simple_parallel) else 'disabled' }}>
+                  <span>Parallel Connection</span>
+                </label>
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
 
@@ -344,13 +621,25 @@
                   class="form-control-dark w-full px-3 py-1.5 rounded-lg border border-[#30363d] bg-[#0d1117] text-white text-xs focus:border-[#58a6ff]"></textarea>
       </div>
 
-      <!-- 3-Level Access Matrix -->
-      <div>
+      <!-- Navigation Tabs: Matrix vs Feature Availability -->
+      <div class="flex border-b border-[#30363d] gap-2 pt-1">
+        <button type="button" id="tab_btn_edit_matrix" onclick="switchRoleTab('edit', 'matrix')"
+                class="px-3 py-1.5 text-xs font-semibold border-b-2 border-[#58a6ff] text-white flex items-center gap-1.5 cursor-pointer">
+          <i class="bi bi-shield-check text-[#58a6ff]"></i> 1. Access Matrix
+        </button>
+        <button type="button" id="tab_btn_edit_features" onclick="switchRoleTab('edit', 'features')"
+                class="px-3 py-1.5 text-xs font-semibold border-b-2 border-transparent text-[#8b949e] hover:text-[#c9d1d9] flex items-center gap-1.5 cursor-pointer">
+          <i class="bi bi-toggles text-[#38bdf8]"></i> 2. Feature &amp; Module Availability
+        </button>
+      </div>
+
+      <!-- TAB 1: 3-Level Access Matrix -->
+      <div id="tab_content_edit_matrix">
         <div class="flex items-center justify-between mb-2">
           <label class="block text-xs font-bold text-white">Module Access Matrix (Supreme Ceilings Enforced)</label>
           <span class="text-[10px] text-[#f0883e]">Ceilings set by organisation cap</span>
         </div>
-        <div class="space-y-2 max-h-[220px] overflow-y-auto pe-1 custom-scrollbar">
+        <div class="space-y-2 max-h-[260px] overflow-y-auto pe-1 custom-scrollbar">
           {% for mod_key, mod_info in ACCESS_MODULE_INFO.items() %}
             {% set org_cap = org_access_levels.get(mod_key, 2) %}
             <div class="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d]">
@@ -384,6 +673,206 @@
         </div>
       </div>
 
+      <!-- TAB 2: Feature & Module Permissions (Supreme Ceiling Enforced) -->
+      <div id="tab_content_edit_features" class="hidden space-y-3.5 max-h-[360px] overflow-y-auto pe-1 custom-scrollbar">
+        <div class="p-2.5 rounded-lg bg-[#38bdf8]/10 border border-[#38bdf8]/30 text-xs text-[#79c0ff]">
+          <i class="bi bi-info-circle me-1"></i>
+          <strong>Organisation Ceiling Rule:</strong> Options disabled by <span class="text-white">{{ selected_org.name if selected_org else 'Organisation' }}</span> cannot be enabled for this role.
+        </div>
+
+        <!-- 1. FLUID PROPERTIES -->
+        <div class="p-3 rounded-lg border border-[#30363d] bg-[#0d1117]">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+              <i class="bi bi-droplet-fill text-[#58a6ff]"></i> Fluid Properties
+            </span>
+            <span id="org_cap_fluid_notice" class="hidden text-[10px] text-[#f85149] font-mono">Disabled by Org (Level 0)</span>
+          </div>
+          <div id="edit_feat_fluid_sub" class="ms-5 grid grid-cols-3 gap-2 pt-1 border-t border-[#30363d]/60">
+            <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] cursor-pointer" id="lbl_edit_feat_fluid_water">
+              <input type="checkbox" name="feat_fluid_water" id="edit_feat_fluid_water" value="1" class="accent-[#58a6ff] rounded">
+              <span>Clean Water</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] cursor-pointer" id="lbl_edit_feat_fluid_slurry">
+              <input type="checkbox" name="feat_fluid_slurry" id="edit_feat_fluid_slurry" value="1" class="accent-[#58a6ff] rounded">
+              <span>Slurry</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] cursor-pointer" id="lbl_edit_feat_fluid_viscous">
+              <input type="checkbox" name="feat_fluid_viscous" id="edit_feat_fluid_viscous" value="1" class="accent-[#58a6ff] rounded">
+              <span>Viscous</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 2. OPERATION MODES -->
+        <div class="p-3 rounded-lg border border-[#30363d] bg-[#0d1117] space-y-2">
+          <span class="text-xs font-bold text-white flex items-center gap-1.5">
+            <i class="bi bi-speedometer2 text-[#a371f7]"></i> Operation Modes
+          </span>
+          <div class="space-y-2 pt-1 border-t border-[#30363d]/60">
+            <div>
+              <label class="flex items-center gap-2 text-xs font-semibold text-[#e6edf3] cursor-pointer" id="lbl_edit_feat_op_fixed">
+                <input type="checkbox" name="feat_op_fixed" id="edit_feat_op_fixed" value="1"
+                       class="accent-[#58a6ff] rounded cursor-pointer"
+                       onchange="toggleFeatSubGroupRole('edit_feat_op_fixed', 'edit_feat_op_fixed_sub')">
+                <span>Fixed Speed Operation</span>
+              </label>
+              <div id="edit_feat_op_fixed_sub" class="ms-5 grid grid-cols-2 gap-2 pt-1">
+                <label class="flex items-center gap-1.5 text-xs text-[#8b949e] cursor-pointer" id="lbl_edit_feat_op_fixed_auto">
+                  <input type="checkbox" name="feat_op_fixed_auto" id="edit_feat_op_fixed_auto" value="1" class="accent-[#58a6ff] rounded">
+                  <span>Auto Speed</span>
+                </label>
+                <label class="flex items-center gap-1.5 text-xs text-[#8b949e] cursor-pointer" id="lbl_edit_feat_op_fixed_manual">
+                  <input type="checkbox" name="feat_op_fixed_manual" id="edit_feat_op_fixed_manual" value="1" class="accent-[#58a6ff] rounded">
+                  <span>Manual Speed</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="pt-1">
+              <label class="flex items-center gap-2 text-xs font-semibold text-[#e6edf3] cursor-pointer" id="lbl_edit_feat_op_vsd">
+                <input type="checkbox" name="feat_op_vsd" id="edit_feat_op_vsd" value="1" class="accent-[#58a6ff] rounded cursor-pointer">
+                <span>Variable Speed Drive (VSD)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. MOTOR & DRIVE SPECS -->
+        <div class="p-3 rounded-lg border border-[#30363d] bg-[#0d1117] space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+              <i class="bi bi-cpu text-[#f0883e]"></i> Motor &amp; Drive Specifications
+            </span>
+            <span id="org_cap_motor_notice" class="hidden text-[10px] text-[#f85149] font-mono">Disabled by Org (Level 0)</span>
+          </div>
+
+          <div id="edit_feat_motor_sub" class="ms-5 space-y-2 pt-1 border-t border-[#30363d]/60">
+            <!-- Standards & Eff -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <span class="text-[10px] font-semibold text-[#8b949e] block mb-1">Standards:</span>
+                <div class="flex items-center gap-2.5">
+                  <label class="flex items-center gap-1 text-xs text-[#c9d1d9] cursor-pointer" id="lbl_edit_feat_motor_std_iec">
+                    <input type="checkbox" name="feat_motor_standards" id="edit_feat_motor_std_iec" value="iec" class="accent-[#58a6ff] rounded">
+                    <span>IEC</span>
+                  </label>
+                  <label class="flex items-center gap-1 text-xs text-[#c9d1d9] cursor-pointer" id="lbl_edit_feat_motor_std_nema">
+                    <input type="checkbox" name="feat_motor_standards" id="edit_feat_motor_std_nema" value="nema" class="accent-[#58a6ff] rounded">
+                    <span>NEMA</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <span class="text-[10px] font-semibold text-[#8b949e] block mb-1">Efficiency:</span>
+                <div class="flex flex-wrap items-center gap-2">
+                  {% for er in ['ie1', 'ie2', 'ie3', 'ie4'] %}
+                    <label class="flex items-center gap-1 text-xs text-[#c9d1d9] cursor-pointer" id="lbl_edit_feat_motor_eff_{{ er }}">
+                      <input type="checkbox" name="feat_motor_eff_ratings" id="edit_feat_motor_eff_{{ er }}" value="{{ er }}" class="accent-[#58a6ff] rounded">
+                      <span>{{ er|upper }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Frequencies & Poles -->
+            <div class="grid grid-cols-2 gap-2 pt-1 border-t border-[#30363d]/40">
+              <div>
+                <span class="text-[10px] font-semibold text-[#8b949e] block mb-1">Grid Frequencies:</span>
+                <div class="flex items-center gap-2.5">
+                  <label class="flex items-center gap-1 text-xs text-[#c9d1d9] cursor-pointer" id="lbl_edit_feat_motor_freq_50hz">
+                    <input type="checkbox" name="feat_motor_frequencies" id="edit_feat_motor_freq_50hz" value="50hz" class="accent-[#58a6ff] rounded">
+                    <span>50 Hz</span>
+                  </label>
+                  <label class="flex items-center gap-1 text-xs text-[#c9d1d9] cursor-pointer" id="lbl_edit_feat_motor_freq_60hz">
+                    <input type="checkbox" name="feat_motor_frequencies" id="edit_feat_motor_freq_60hz" value="60hz" class="accent-[#58a6ff] rounded">
+                    <span>60 Hz</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <span class="text-[10px] font-semibold text-[#8b949e] block mb-1">Poles:</span>
+                <div class="flex flex-wrap items-center gap-2">
+                  {% for p in ['2', '4', '6', '8'] %}
+                    <label class="flex items-center gap-1 text-xs text-[#c9d1d9] cursor-pointer" id="lbl_edit_feat_motor_pole_{{ p }}">
+                      <input type="checkbox" name="feat_motor_poles" id="edit_feat_motor_pole_{{ p }}" value="{{ p }}" class="accent-[#58a6ff] rounded">
+                      <span>{{ p }}P</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Suppliers -->
+            <div class="pt-1 border-t border-[#30363d]/40">
+              <span class="text-[10px] font-semibold text-[#8b949e] block mb-1">Permitted Suppliers:</span>
+              <div class="flex flex-wrap gap-2 max-h-24 overflow-y-auto custom-scrollbar">
+                {% for sup in motor_suppliers %}
+                  {% set s_id = sup|lower|replace(' ', '_')|replace('-', '_') %}
+                  <label class="flex items-center gap-1 text-xs text-[#c9d1d9] cursor-pointer" id="lbl_edit_feat_motor_sup_{{ s_id }}">
+                    <input type="checkbox" name="feat_motor_suppliers" id="edit_feat_motor_sup_{{ s_id }}" value="{{ sup }}" class="accent-[#58a6ff] rounded">
+                    <span>{{ sup }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. PIPENETWORK MODULE -->
+        <div class="p-3 rounded-lg border border-[#30363d] bg-[#0d1117] space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+              <i class="bi bi-diagram-3-fill text-[#7ee787]"></i> Pipe Network Designer
+            </span>
+            <span id="org_cap_pn_notice" class="hidden text-[10px] text-[#f85149] font-mono">Disabled by Org (Level 0)</span>
+          </div>
+
+          <div id="edit_feat_pn_sub" class="ms-5 space-y-2 pt-1 border-t border-[#30363d]/60">
+            <!-- Canvas Mode -->
+            <div>
+              <label class="flex items-center gap-2 text-xs font-semibold text-[#e6edf3] cursor-pointer" id="lbl_edit_feat_pn_canvas">
+                <input type="checkbox" name="feat_pn_canvas" id="edit_feat_pn_canvas" value="1" class="accent-[#58a6ff] rounded"
+                       onchange="toggleFeatSubGroupRole('edit_feat_pn_canvas', 'edit_feat_pn_canvas_sub')">
+                <span>Interactive Visual Canvas Mode</span>
+              </label>
+              <div id="edit_feat_pn_canvas_sub" class="ms-5 flex items-center gap-4 pt-1">
+                <label class="flex items-center gap-1.5 text-xs text-[#8b949e] cursor-pointer" id="lbl_edit_feat_pn_canvas_schematic">
+                  <input type="checkbox" name="feat_pn_canvas_schematic" id="edit_feat_pn_canvas_schematic" value="1" class="accent-[#58a6ff] rounded">
+                  <span>Schematic View</span>
+                </label>
+                <label class="flex items-center gap-1.5 text-xs text-[#8b949e] cursor-pointer" id="lbl_edit_feat_pn_canvas_visual">
+                  <input type="checkbox" name="feat_pn_canvas_visual" id="edit_feat_pn_canvas_visual" value="1" class="accent-[#58a6ff] rounded">
+                  <span>Visual / Industrial 3D View</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Simple Mode -->
+            <div class="pt-1 border-t border-[#30363d]/40">
+              <label class="flex items-center gap-2 text-xs font-semibold text-[#e6edf3] cursor-pointer" id="lbl_edit_feat_pn_simple">
+                <input type="checkbox" name="feat_pn_simple" id="edit_feat_pn_simple" value="1" class="accent-[#58a6ff] rounded"
+                       onchange="toggleFeatSubGroupRole('edit_feat_pn_simple', 'edit_feat_pn_simple_sub')">
+                <span>Simple Topology Mode</span>
+              </label>
+              <div id="edit_feat_pn_simple_sub" class="ms-5 flex items-center gap-4 pt-1">
+                <label class="flex items-center gap-1.5 text-xs text-[#8b949e] cursor-pointer" id="lbl_edit_feat_pn_simple_series">
+                  <input type="checkbox" name="feat_pn_simple_series" id="edit_feat_pn_simple_series" value="1" class="accent-[#58a6ff] rounded">
+                  <span>Series Connection</span>
+                </label>
+                <label class="flex items-center gap-1.5 text-xs text-[#8b949e] cursor-pointer" id="lbl_edit_feat_pn_simple_parallel">
+                  <input type="checkbox" name="feat_pn_simple_parallel" id="edit_feat_pn_simple_parallel" value="1" class="accent-[#58a6ff] rounded">
+                  <span>Parallel Connection</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="pt-4 border-t border-[#30363d] flex items-center justify-end gap-2 shrink-0">
         <button type="button" onclick="closeEditRoleModal()"
                 class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d] border border-[#30363d]">
@@ -401,31 +890,105 @@
 
 {% block scripts %}
 <script>
-// Beginners Note: Opens Add Role modal and locks background scrolling
+const ORG_FEAT = {{ org_feature_flags|tojson }};
+const ORG_ACCESS_LEVELS = {{ org_access_levels|tojson }};
+const MOTOR_SUPPLIERS = {{ motor_suppliers|tojson }};
+
+// Tab switcher for Add and Edit Role modals
+function switchRoleTab(modalType, tabName) {
+  const btnMatrix = document.getElementById(`tab_btn_${modalType}_matrix`);
+  const btnFeatures = document.getElementById(`tab_btn_${modalType}_features`);
+  const contentMatrix = document.getElementById(`tab_content_${modalType}_matrix`);
+  const contentFeatures = document.getElementById(`tab_content_${modalType}_features`);
+
+  if (tabName === 'matrix') {
+    btnMatrix.classList.add('border-[#58a6ff]', 'text-white');
+    btnMatrix.classList.remove('border-transparent', 'text-[#8b949e]');
+    btnFeatures.classList.remove('border-[#58a6ff]', 'text-white');
+    btnFeatures.classList.add('border-transparent', 'text-[#8b949e]');
+    contentMatrix.classList.remove('hidden');
+    contentFeatures.classList.add('hidden');
+  } else {
+    btnFeatures.classList.add('border-[#58a6ff]', 'text-white');
+    btnFeatures.classList.remove('border-transparent', 'text-[#8b949e]');
+    btnMatrix.classList.remove('border-[#58a6ff]', 'text-white');
+    btnMatrix.classList.add('border-transparent', 'text-[#8b949e]');
+    contentFeatures.classList.remove('hidden');
+    contentMatrix.classList.add('hidden');
+  }
+}
+
+// Master checkbox toggle helper that dims and disables child inputs
+function toggleFeatSubGroupRole(masterId, subGroupId) {
+  const master = document.getElementById(masterId);
+  const subGroup = document.getElementById(subGroupId);
+  if (!master || !subGroup) return;
+  if (master.checked) {
+    subGroup.classList.remove('opacity-40', 'pointer-events-none');
+    const inputs = subGroup.querySelectorAll('input[type="checkbox"]');
+    inputs.forEach(inp => {
+      // Only enable if not locked by org ceiling
+      if (!inp.getAttribute('data-org-disabled')) {
+        inp.disabled = false;
+      }
+    });
+  } else {
+    subGroup.classList.add('opacity-40', 'pointer-events-none');
+    const inputs = subGroup.querySelectorAll('input[type="checkbox"]');
+    inputs.forEach(inp => inp.disabled = true);
+  }
+}
+
+// Opens Add Role modal and resets tabs
 function openAddRoleModal() {
+  switchRoleTab('add', 'matrix');
   document.getElementById('addRoleModal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
-// Beginners Note: Closes Add Role modal and restores background scrolling
+
 function closeAddRoleModal() {
   document.getElementById('addRoleModal').classList.add('hidden');
   document.body.style.overflow = '';
 }
-// Beginners Note: Opens Edit Role modal prefilled with role permissions and locks scrolling
+
+// Helper to configure a checkbox according to role value and org ceiling
+function applyFeatCheckbox(id, roleChecked, orgAllowed) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const lbl = el.closest('label');
+  if (!orgAllowed) {
+    el.checked = false;
+    el.disabled = true;
+    el.setAttribute('data-org-disabled', '1');
+    if (lbl) lbl.classList.add('opacity-40', 'cursor-not-allowed');
+  } else {
+    el.removeAttribute('data-org-disabled');
+    el.disabled = false;
+    el.checked = !!roleChecked;
+    if (lbl) lbl.classList.remove('opacity-40', 'cursor-not-allowed');
+  }
+}
+
+// Opens Edit Role modal prefilled with role permissions and ceiling-enforced feature flags
 function openEditRoleModal(role) {
+  switchRoleTab('edit', 'matrix');
   document.getElementById('editRoleTitle').textContent = role.name;
   document.getElementById('editRoleForm').action = "/admin/roles/" + role.id + "/edit";
   document.getElementById('edit_name').value = role.name;
   document.getElementById('edit_description').value = role.description || '';
 
+  // 1. Set Access Matrix Radios
+  // Rule: Role access level cannot exceed organisation ceiling (Role Level <= Org Level)
   const levels = role.access_levels || {};
+  const o_levels = ORG_ACCESS_LEVELS || {};
   for (const key of Object.keys(levels)) {
-    const val = levels[key];
+    let val = levels[key];
+    const orgCap = (o_levels[key] !== undefined) ? o_levels[key] : 2;
+    val = Math.min(val, orgCap);
     const el = document.getElementById('edit_access_' + key + '_' + val);
     if (el && !el.disabled) {
       el.checked = true;
     } else {
-      // If higher level is disabled by org cap, select the highest valid enabled level
       const el1 = document.getElementById('edit_access_' + key + '_1');
       const el0 = document.getElementById('edit_access_' + key + '_0');
       if (val >= 1 && el1 && !el1.disabled) {
@@ -435,10 +998,102 @@ function openEditRoleModal(role) {
       }
     }
   }
+
+  // 2. Set Feature Flags with Supreme Org Ceiling enforcement
+  // Use the role's own configured flags (not the effective/clamped ones)
+  // so the admin can see what the role has independently selected.
+  // The org ceiling (ORG_FEAT) determines which checkboxes are enabled/disabled.
+  const rf = role.configured_feature_flags || role.feature_flags || {};
+  const of = ORG_FEAT || {};
+  // NOTE: o_levels is already declared above on line ~983; reuse it here.
+
+  const of_fluid_en = (o_levels['fluid'] !== undefined ? o_levels['fluid'] : 2) > 0;
+  const of_motor_en = (o_levels['motor_drive'] !== undefined ? o_levels['motor_drive'] : 2) > 0;
+  const of_pn_en = (o_levels['pipe_network'] !== undefined ? o_levels['pipe_network'] : 2) > 0;
+
+  // Notice badges
+  const fluidNotice = document.getElementById('org_cap_fluid_notice');
+  if (fluidNotice) fluidNotice.classList.toggle('hidden', of_fluid_en);
+  const motorNotice = document.getElementById('org_cap_motor_notice');
+  if (motorNotice) motorNotice.classList.toggle('hidden', of_motor_en);
+  const pnNotice = document.getElementById('org_cap_pn_notice');
+  if (pnNotice) pnNotice.classList.toggle('hidden', of_pn_en);
+
+  // Fluid Properties
+  const rf_fluid = rf.fluid || {};
+  const of_fluid = of.fluid || {};
+  applyFeatCheckbox('edit_feat_fluid_water', rf_fluid.water !== false, of_fluid_en && of_fluid.water !== false);
+  applyFeatCheckbox('edit_feat_fluid_slurry', rf_fluid.slurry !== false, of_fluid_en && of_fluid.slurry !== false);
+  applyFeatCheckbox('edit_feat_fluid_viscous', rf_fluid.viscous !== false, of_fluid_en && of_fluid.viscous !== false);
+
+  // Operation Modes
+  const rf_op = rf.operation_mode || {};
+  const of_op = of.operation_mode || {};
+  applyFeatCheckbox('edit_feat_op_fixed', rf_op.fixed_speed !== false, of_op.fixed_speed !== false);
+  applyFeatCheckbox('edit_feat_op_fixed_auto', rf_op.fixed_auto !== false, of_op.fixed_speed !== false && of_op.fixed_auto !== false);
+  applyFeatCheckbox('edit_feat_op_fixed_manual', rf_op.fixed_manual !== false, of_op.fixed_speed !== false && of_op.fixed_manual !== false);
+  applyFeatCheckbox('edit_feat_op_vsd', rf_op.vsd !== false, of_op.vsd !== false);
+
+  // Motor & Drive
+  // Rule: Role's configured values determine checked state; org ceiling determines enabled/disabled.
+  // If a role doesn't explicitly list a motor option, it is UNCHECKED (not inherited from org).
+  const rf_motor = rf.motor_drive || {};
+  const of_motor = of.motor_drive || {};
+  const of_stds = of_motor.standards || ['iec', 'nema'];
+  const rf_stds = rf_motor.standards || [];
+  applyFeatCheckbox('edit_feat_motor_std_iec', rf_stds.includes('iec'), of_motor_en && of_stds.includes('iec'));
+  applyFeatCheckbox('edit_feat_motor_std_nema', rf_stds.includes('nema'), of_motor_en && of_stds.includes('nema'));
+
+  const of_eff = of_motor.eff_ratings || ['ie1', 'ie2', 'ie3', 'ie4'];
+  const rf_eff = rf_motor.eff_ratings || [];
+  ['ie1', 'ie2', 'ie3', 'ie4'].forEach(er => {
+    applyFeatCheckbox('edit_feat_motor_eff_' + er, rf_eff.includes(er), of_motor_en && of_eff.includes(er));
+  });
+
+  const of_freq = of_motor.frequencies || ['50hz', '60hz'];
+  const rf_freq = rf_motor.frequencies || [];
+  ['50hz', '60hz'].forEach(f => {
+    applyFeatCheckbox('edit_feat_motor_freq_' + f, rf_freq.includes(f), of_motor_en && of_freq.includes(f));
+  });
+
+  const of_poles = of_motor.poles || ['2', '4', '6', '8'];
+  const rf_poles = rf_motor.poles || [];
+  ['2', '4', '6', '8'].forEach(p => {
+    applyFeatCheckbox('edit_feat_motor_pole_' + p, rf_poles.includes(p), of_motor_en && of_poles.includes(p));
+  });
+
+  const of_sup = of_motor.suppliers || [];
+  const rf_sup = rf_motor.suppliers || [];
+  MOTOR_SUPPLIERS.forEach(sup => {
+    const s_id = sup.toLowerCase().replace(/ /g, '_').replace(/-/g, '_');
+    applyFeatCheckbox('edit_feat_motor_sup_' + s_id, rf_sup.includes(sup), of_motor_en && of_sup.includes(sup));
+  });
+
+  // Pipe Network
+  const rf_pn = rf.pipe_network || {};
+  const of_pn = of.pipe_network || {};
+
+  // canvas_mode
+  const of_canvas_en = of_pn_en && of_pn.canvas_mode !== false;
+  applyFeatCheckbox('edit_feat_pn_canvas', rf_pn.canvas_mode !== false, of_canvas_en);
+  applyFeatCheckbox('edit_feat_pn_canvas_schematic', rf_pn.canvas_schematic !== false, of_canvas_en && of_pn.canvas_schematic !== false);
+  applyFeatCheckbox('edit_feat_pn_canvas_visual', rf_pn.canvas_visual !== false, of_canvas_en && of_pn.canvas_visual !== false);
+
+  // simple_mode
+  const of_simple_en = of_pn_en && of_pn.simple_mode !== false;
+  applyFeatCheckbox('edit_feat_pn_simple', rf_pn.simple_mode !== false, of_simple_en);
+  applyFeatCheckbox('edit_feat_pn_simple_series', rf_pn.simple_series !== false, of_simple_en && of_pn.simple_series !== false);
+  applyFeatCheckbox('edit_feat_pn_simple_parallel', rf_pn.simple_parallel !== false, of_simple_en && of_pn.simple_parallel !== false);
+
+  // Trigger subgroup dimming
+  toggleFeatSubGroupRole('edit_feat_op_fixed', 'edit_feat_op_fixed_sub');
+  toggleFeatSubGroupRole('edit_feat_pn_canvas', 'edit_feat_pn_canvas_sub');
+  toggleFeatSubGroupRole('edit_feat_pn_simple', 'edit_feat_pn_simple_sub');
+
   document.getElementById('editRoleModal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
-// Beginners Note: Closes Edit Role modal and restores scrolling
+
 function closeEditRoleModal() {
   document.getElementById('editRoleModal').classList.add('hidden');
   document.body.style.overflow = '';

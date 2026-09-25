@@ -573,6 +573,278 @@
         </div>
       </div>
 
+      <!-- CARD: ORGANISATION FEATURE & MODULE PERMISSIONS -->
+      {% set feat = org_feature_flags if org_feature_flags else (current_org.get_feature_flags() if current_org else {}) %}
+      <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
+        <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
+              <i class="bi bi-toggles text-[#38bdf8]"></i> Feature &amp; Module Availability
+            </h2>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-[#38bdf8]/10 text-[#38bdf8] border border-[#38bdf8]/30">Organisation Ceiling</span>
+          </div>
+          {% if can_edit_org %}
+          <span class="text-[11px] text-[#3fb950] font-semibold flex items-center gap-1">
+            <i class="bi bi-shield-check"></i> Supreme Ceiling
+          </span>
+          {% endif %}
+        </div>
+
+        <form action="{{ url_for('organisations.save_features', org_id=current_org.id if current_org else 2) }}" method="POST" class="p-4 space-y-4">
+          {% set feat = org_feature_flags %}
+          <p class="text-xs text-[#8b949e]">
+            Set which technical modules and engineering options are available for <strong class="text-[#e6edf3]">{{ current_org.name if current_org else 'Active Org' }}</strong>. 
+            <span class="text-[#f0883e]">Supreme Rule:</span> User roles within this organisation can only access options enabled here.
+          </p>
+
+          <!-- 1. FLUID PROPERTIES -->
+          <div class="p-3.5 rounded-lg border border-[#30363d] bg-[#0d1117]/60 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                <i class="bi bi-droplet-fill text-[#58a6ff]"></i> Fluid Properties
+              </span>
+              {% set fluid_mod_lvl = cur_access.get('fluid', 2) %}
+              <div class="flex items-center gap-2">
+                {% if fluid_mod_lvl == 0 %}
+                  <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#da3633]/15 text-[#f85149] border border-[#da3633]/30">Module: No Access (0)</span>
+                {% endif %}
+                <span class="text-[10px] font-mono text-[#8b949e]">Water / Slurry / Viscous</span>
+              </div>
+            </div>
+
+            <div class="ms-6 grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 border-t border-[#30363d]/60 {{ 'opacity-40 pointer-events-none' if fluid_mod_lvl == 0 else '' }}">
+              <label class="flex items-center gap-2 text-xs text-[#c9d1d9] cursor-pointer">
+                <input type="checkbox" name="feat_fluid_water" value="1" class="accent-[#58a6ff] rounded"
+                       {{ 'checked' if feat.fluid.water else '' }}>
+                <span>Clean Water</span>
+              </label>
+              <label class="flex items-center gap-2 text-xs text-[#c9d1d9] cursor-pointer">
+                <input type="checkbox" name="feat_fluid_slurry" value="1" class="accent-[#58a6ff] rounded"
+                       {{ 'checked' if feat.fluid.slurry else '' }}>
+                <span>Slurry Fluid</span>
+              </label>
+              <label class="flex items-center gap-2 text-xs text-[#c9d1d9] cursor-pointer">
+                <input type="checkbox" name="feat_fluid_viscous" value="1" class="accent-[#58a6ff] rounded"
+                       {{ 'checked' if feat.fluid.viscous else '' }}>
+                <span>Viscous Fluid</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 2. OPERATION MODE -->
+          <div class="p-3.5 rounded-lg border border-[#30363d] bg-[#0d1117]/60 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                <i class="bi bi-speedometer2 text-[#a371f7]"></i> Operation Modes
+              </span>
+              <span class="text-[10px] font-mono text-[#8b949e]">Fixed Speed &amp; VSD</span>
+            </div>
+
+            <div class="space-y-2 pt-1 border-t border-[#30363d]/60">
+              <!-- Fixed Speed & Sub-options -->
+              <div class="space-y-1.5">
+                <label class="flex items-center gap-2 text-xs font-semibold text-[#e6edf3] cursor-pointer">
+                  <input type="checkbox" name="feat_op_fixed" id="feat_op_fixed" value="1"
+                         class="accent-[#58a6ff] w-4 h-4 rounded cursor-pointer"
+                         {{ 'checked' if feat.operation_mode.fixed_speed else '' }}
+                         onchange="toggleFeatSubGroup('feat_op_fixed', 'feat_op_fixed_sub')">
+                  <span>Fixed Speed Operation</span>
+                </label>
+                <div id="feat_op_fixed_sub" class="ms-6 grid grid-cols-1 sm:grid-cols-2 gap-2 {{ '' if feat.operation_mode.fixed_speed else 'opacity-40 pointer-events-none' }}">
+                  <label class="flex items-center gap-2 text-xs text-[#8b949e] hover:text-[#c9d1d9] cursor-pointer">
+                    <input type="checkbox" name="feat_op_fixed_auto" value="1" class="accent-[#58a6ff] rounded"
+                           {{ 'checked' if feat.operation_mode.fixed_auto else '' }}>
+                    <span>Automatic Calculation</span>
+                  </label>
+                  <label class="flex items-center gap-2 text-xs text-[#8b949e] hover:text-[#c9d1d9] cursor-pointer">
+                    <input type="checkbox" name="feat_op_fixed_manual" value="1" class="accent-[#58a6ff] rounded"
+                           {{ 'checked' if feat.operation_mode.fixed_manual else '' }}>
+                    <span>Manual Speed Specification</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- VSD -->
+              <div class="pt-1">
+                <label class="flex items-center gap-2 text-xs font-semibold text-[#e6edf3] cursor-pointer">
+                  <input type="checkbox" name="feat_op_vsd" value="1" class="accent-[#58a6ff] w-4 h-4 rounded cursor-pointer"
+                         {{ 'checked' if feat.operation_mode.vsd else '' }}>
+                  <span>Variable Speed Drive (VSD)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. MOTOR & DRIVE SPECS -->
+          <div class="p-3.5 rounded-lg border border-[#30363d] bg-[#0d1117]/60 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                <i class="bi bi-cpu text-[#f0883e]"></i> Motor &amp; Drive Specifications
+              </span>
+              {% set motor_mod_lvl = cur_access.get('motor_drive', 2) %}
+              <div class="flex items-center gap-2">
+                {% if motor_mod_lvl == 0 %}
+                  <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#da3633]/15 text-[#f85149] border border-[#da3633]/30">Module: No Access (0)</span>
+                {% endif %}
+                <span class="text-[10px] font-mono text-[#8b949e]">Standards, Ratings, Suppliers</span>
+              </div>
+            </div>
+
+            <div class="ms-6 space-y-3 pt-1 border-t border-[#30363d]/60 {{ 'opacity-40 pointer-events-none' if motor_mod_lvl == 0 else '' }}">
+              <!-- Standards & Efficiency -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <span class="text-[11px] font-semibold text-[#8b949e] block mb-1">Permitted Standards:</span>
+                  <div class="flex items-center gap-3">
+                    <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] cursor-pointer">
+                      <input type="checkbox" name="feat_motor_standards" value="iec" class="accent-[#58a6ff] rounded"
+                             {{ 'checked' if 'iec' in feat.motor_drive.standards else '' }}>
+                      <span>IEC</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] cursor-pointer">
+                      <input type="checkbox" name="feat_motor_standards" value="nema" class="accent-[#58a6ff] rounded"
+                             {{ 'checked' if 'nema' in feat.motor_drive.standards else '' }}>
+                      <span>NEMA</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <span class="text-[11px] font-semibold text-[#8b949e] block mb-1">Efficiency Ratings:</span>
+                  <div class="flex flex-wrap items-center gap-2.5">
+                    {% for er in ['ie1', 'ie2', 'ie3', 'ie4'] %}
+                      <label class="flex items-center gap-1 text-xs text-[#c9d1d9] cursor-pointer">
+                        <input type="checkbox" name="feat_motor_eff_ratings" value="{{ er }}" class="accent-[#58a6ff] rounded"
+                               {{ 'checked' if er in feat.motor_drive.eff_ratings else '' }}>
+                        <span>{{ er|upper }}</span>
+                      </label>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Frequencies & Poles -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-[#30363d]/40">
+                <div>
+                  <span class="text-[11px] font-semibold text-[#8b949e] block mb-1">Grid Frequencies:</span>
+                  <div class="flex items-center gap-3">
+                    <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] cursor-pointer">
+                      <input type="checkbox" name="feat_motor_frequencies" value="50hz" class="accent-[#58a6ff] rounded"
+                             {{ 'checked' if '50hz' in feat.motor_drive.frequencies else '' }}>
+                      <span>50 Hz</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] cursor-pointer">
+                      <input type="checkbox" name="feat_motor_frequencies" value="60hz" class="accent-[#58a6ff] rounded"
+                             {{ 'checked' if '60hz' in feat.motor_drive.frequencies else '' }}>
+                      <span>60 Hz</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <span class="text-[11px] font-semibold text-[#8b949e] block mb-1">Poles:</span>
+                  <div class="flex items-center gap-2.5">
+                    {% for p in ['2', '4', '6', '8'] %}
+                      <label class="flex items-center gap-1 text-xs text-[#c9d1d9] cursor-pointer">
+                        <input type="checkbox" name="feat_motor_poles" value="{{ p }}" class="accent-[#58a6ff] rounded"
+                               {{ 'checked' if p in feat.motor_drive.poles else '' }}>
+                        <span>{{ p }}P</span>
+                      </label>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Permitted Suppliers -->
+              <div class="pt-1 border-t border-[#30363d]/40">
+                <span class="text-[11px] font-semibold text-[#8b949e] block mb-1">Permitted Motor Suppliers / Brands:</span>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {% for s_name in motor_suppliers %}
+                    <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] cursor-pointer">
+                      <input type="checkbox" name="feat_motor_suppliers" value="{{ s_name }}" class="accent-[#58a6ff] rounded"
+                             {{ 'checked' if s_name in feat.motor_drive.suppliers else '' }}>
+                      <span class="truncate">{{ s_name }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. PIPENETWORK MODULE -->
+          <div class="p-3.5 rounded-lg border border-[#30363d] bg-[#0d1117]/60 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                <i class="bi bi-diagram-3-fill text-[#22c55e]"></i> Pipe Network Designer
+              </span>
+              {% set pn_mod_lvl = cur_access.get('pipe_network', 2) %}
+              <div class="flex items-center gap-2">
+                {% if pn_mod_lvl == 0 %}
+                  <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#da3633]/15 text-[#f85149] border border-[#da3633]/30">Module: No Access (0)</span>
+                {% endif %}
+                <span class="text-[10px] font-mono text-[#8b949e]">Canvas &amp; Simple Modes</span>
+              </div>
+            </div>
+
+            <div class="ms-6 space-y-3 pt-1 border-t border-[#30363d]/60 {{ 'opacity-40 pointer-events-none' if pn_mod_lvl == 0 else '' }}">
+              <!-- Canvas Mode -->
+              <div class="space-y-1.5">
+                <label class="flex items-center gap-2 text-xs font-semibold text-[#e6edf3] cursor-pointer">
+                  <input type="checkbox" name="feat_pn_canvas" id="feat_pn_canvas" value="1"
+                         class="accent-[#58a6ff] w-4 h-4 rounded cursor-pointer"
+                         {{ 'checked' if feat.pipe_network.canvas_mode else '' }}
+                         onchange="toggleFeatSubGroup('feat_pn_canvas', 'feat_pn_canvas_sub')">
+                  <span>Interactive Canvas Designer Mode</span>
+                </label>
+                <div id="feat_pn_canvas_sub" class="ms-6 flex items-center gap-4 {{ '' if feat.pipe_network.canvas_mode else 'opacity-40 pointer-events-none' }}">
+                  <label class="flex items-center gap-1.5 text-xs text-[#8b949e] hover:text-[#c9d1d9] cursor-pointer">
+                    <input type="checkbox" name="feat_pn_canvas_schematic" value="1" class="accent-[#58a6ff] rounded"
+                           {{ 'checked' if feat.pipe_network.canvas_schematic else '' }}>
+                    <span>Schematic View</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 text-xs text-[#8b949e] hover:text-[#c9d1d9] cursor-pointer">
+                    <input type="checkbox" name="feat_pn_canvas_visual" value="1" class="accent-[#58a6ff] rounded"
+                           {{ 'checked' if feat.pipe_network.canvas_visual else '' }}>
+                    <span>Visual / Industrial Piping View</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Simple Mode -->
+              <div class="space-y-1.5 pt-1 border-t border-[#30363d]/40">
+                <label class="flex items-center gap-2 text-xs font-semibold text-[#e6edf3] cursor-pointer">
+                  <input type="checkbox" name="feat_pn_simple" id="feat_pn_simple" value="1"
+                         class="accent-[#58a6ff] w-4 h-4 rounded cursor-pointer"
+                         {{ 'checked' if feat.pipe_network.simple_mode else '' }}
+                         onchange="toggleFeatSubGroup('feat_pn_simple', 'feat_pn_simple_sub')">
+                  <span>Simple Network Mode (Series / Parallel)</span>
+                </label>
+                <div id="feat_pn_simple_sub" class="ms-6 flex items-center gap-4 {{ '' if feat.pipe_network.simple_mode else 'opacity-40 pointer-events-none' }}">
+                  <label class="flex items-center gap-1.5 text-xs text-[#8b949e] hover:text-[#c9d1d9] cursor-pointer">
+                    <input type="checkbox" name="feat_pn_simple_series" value="1" class="accent-[#58a6ff] rounded"
+                           {{ 'checked' if feat.pipe_network.simple_series else '' }}>
+                    <span>Series Topology</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 text-xs text-[#8b949e] hover:text-[#c9d1d9] cursor-pointer">
+                    <input type="checkbox" name="feat_pn_simple_parallel" value="1" class="accent-[#58a6ff] rounded"
+                           {{ 'checked' if feat.pipe_network.simple_parallel else '' }}>
+                    <span>Parallel Branch Topology</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {% if can_edit_org %}
+          <div class="pt-2 flex justify-end">
+            <button type="submit" class="px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 shadow-sm transition">
+              <i class="bi bi-check-circle"></i> Save Feature Permissions
+            </button>
+          </div>
+          {% endif %}
+        </form>
+      </div>
+
       <!-- CARD: MULTI-ORGANISATION SQL FILTER SETTINGS -->
       <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
         <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
@@ -1111,6 +1383,22 @@
     const badge = document.getElementById('attr-count-badge');
     if (badge) {
       badge.textContent = activeCount + ' Active';
+    }
+  }
+
+  // Helper to toggle enabled/disabled state and visual dimming on child feature checkbox groups
+  function toggleFeatSubGroup(masterId, subGroupId) {
+    const master = document.getElementById(masterId);
+    const subGroup = document.getElementById(subGroupId);
+    if (!master || !subGroup) return;
+    if (master.checked) {
+      subGroup.classList.remove('opacity-40', 'pointer-events-none');
+      const inputs = subGroup.querySelectorAll('input[type="checkbox"]');
+      inputs.forEach(inp => inp.disabled = false);
+    } else {
+      subGroup.classList.add('opacity-40', 'pointer-events-none');
+      const inputs = subGroup.querySelectorAll('input[type="checkbox"]');
+      inputs.forEach(inp => inp.disabled = true);
     }
   }
 </script>

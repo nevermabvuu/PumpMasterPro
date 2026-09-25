@@ -188,10 +188,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const liquidSel = document.getElementById('liquidSel');
   if (liquidSel) {
     function updateLiquidPanels() {
-      const liquid = liquidSel.value;
-      document.getElementById('waterParams').style.display   = liquid === 'water'   ? '' : 'none';
-      document.getElementById('viscousParams').style.display = liquid === 'viscous' ? '' : 'none';
-      document.getElementById('slurryParams').style.display  = liquid === 'slurry'  ? '' : 'none';
+      // Defensive fallback: If no valid option is selected or value is empty, select the first available option
+      if (liquidSel.options.length > 0 && (liquidSel.selectedIndex < 0 || !liquidSel.value)) {
+        liquidSel.selectedIndex = 0;
+      }
+      const liquid = liquidSel.value || (liquidSel.options.length > 0 ? liquidSel.options[0].value : 'water');
+      const wP = document.getElementById('waterParams');
+      const vP = document.getElementById('viscousParams');
+      const sP = document.getElementById('slurryParams');
+      if (wP) wP.style.display = liquid === 'water'   ? '' : 'none';
+      if (vP) vP.style.display = liquid === 'viscous' ? '' : 'none';
+      if (sP) sP.style.display = liquid === 'slurry'  ? '' : 'none';
     }
     liquidSel.addEventListener('change', updateLiquidPanels);
     updateLiquidPanels();
@@ -927,7 +934,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const fluidType = data.liquid || data.fluid_type || 'water';
     const liquidSel = document.getElementById('liquidSel');
     if (liquidSel && liquidSel.value !== fluidType) {
-      liquidSel.value = fluidType;
+      // Validate that the requested fluid exists in permitted options before setting it
+      const hasOption = Array.from(liquidSel.options).some(o => o.value === fluidType);
+      if (hasOption) {
+        liquidSel.value = fluidType;
+      } else if (liquidSel.options.length > 0) {
+        liquidSel.selectedIndex = 0;
+      }
       liquidSel.dispatchEvent(new Event('change', { bubbles: true }));
     }
 

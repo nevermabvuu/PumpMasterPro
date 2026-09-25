@@ -13,7 +13,7 @@ if _app_dir not in sys.path:
     sys.path.insert(0, _app_dir)
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from models import db, Organisation, Pump, ReportConfig, Role
+from models import db, Organisation, Pump, ReportConfig, Role, DEFAULT_FEATURE_FLAGS, clamp_feature_flags
 from utils import CURRENT_ORGANISATION_ID, get_current_organisation, get_visible_pumps_query
 from routes.auth import require_access, get_current_user
 
@@ -50,6 +50,19 @@ def settings():
         for org in all_organisations
     }
 
+    # Available motor manufacturers / suppliers:
+    motor_suppliers = ['Standard IEC', 'WEG', 'ABB', 'Siemens', 'Baldor-Reliance']
+    try:
+        from motor_models import Motor
+        db_mfg = [m.manufacturer for m in Motor.query.with_entities(Motor.manufacturer).distinct().all() if m.manufacturer]
+        for m in db_mfg:
+            if m and m not in motor_suppliers:
+                motor_suppliers.append(m)
+    except Exception:
+        pass
+
+    org_feature_flags = current_org.get_feature_flags() if current_org else DEFAULT_FEATURE_FLAGS
+
     return render_template(
         'organisations_settings.html',
         current_org=current_org,
@@ -63,7 +76,9 @@ def settings():
         view_all_mode=view_all_mode,
         total_pumps=total_pumps,
         visible_pumps=visible_pumps,
-        org_pump_counts=org_pump_counts
+        org_pump_counts=org_pump_counts,
+        org_feature_flags=org_feature_flags,
+        motor_suppliers=motor_suppliers
     )
 
 
@@ -346,6 +361,67 @@ def save_access_levels(org_id):
     org.set_all_access_levels(levels_dict)
     db.session.commit()
     flash(f"Supreme access control levels for organisation '{org.name}' updated successfully.", "success")
+    return redirect(url_for('organisations.settings'))
+
+
+@organisations_bp.route('/<int:org_id>/features/save', methods=['POST'], endpoint='save_features')
+@require_access('organisation_settings', min_level=2)
+def save_features(org_id):
+    """
+    Beginners Note: Saves feature availability permissions for an organisation:
+    - Fluid properties (water, slurry, viscous)
+    - Operation mode (fixed_speed [auto, manual], vsd)
+    - Motor & Drive specs (standards, eff_ratings, suppliers, frequencies, poles)
+    - PipeNetwork module (canvas [schematic, visual], simple [series, parallel])
+
+    Enforces Supreme Ceiling: Automatically clamps all existing roles in this organisation
+    to ensure no role possesses permissions disabled by the parent organisation.
+    """
+    current_u = get_current_user()
+    is_super = current_u.is_super_admin_user if current_u else False
+
+    org = Organisation.query.get_or_404(org_id)
+    if not is_super and org.id != (current_u.organisation_id if current_u else None):
+        flash('You do not have permission to modify settings for another organisation.', 'danger')
+        return redirect(url_for('organisations.settings'))
+
+    flags = {
+        'fluid': {
+            'water': 'feat_fluid_water' in request.form,
+            'slurry': 'feat_fluid_slurry' in request.form,
+            'viscous': 'feat_fluid_viscous' in request.form,
+        },
+        'operation_mode': {
+            'fixed_speed': 'feat_op_fixed' in request.form,
+            'vsd': 'feat_op_vsd' in request.form,
+            'fixed_auto': 'feat_op_fixed_auto' in request.form,
+            'fixed_manual': 'feat_op_fixed_manual' in request.form,
+        },
+        'motor_drive': {
+            'standards': request.form.getlist('feat_motor_standards'),
+            'eff_ratings': request.form.getlist('feat_motor_eff_ratings'),
+            'suppliers': request.form.getlist('feat_motor_suppliers'),
+            'frequencies': request.form.getlist('feat_motor_frequencies'),
+            'poles': request.form.getlist('feat_motor_poles'),
+        },
+        'pipe_network': {
+            'canvas_mode': 'feat_pn_canvas' in request.form,
+            'canvas_schematic': 'feat_pn_canvas_schematic' in request.form,
+            'canvas_visual': 'feat_pn_canvas_visual' in request.form,
+            'simple_mode': 'feat_pn_simple' in request.form,
+            'simple_series': 'feat_pn_simple_series' in request.form,
+            'simple_parallel': 'feat_pn_simple_parallel' in request.form,
+        }
+    }
+
+    org.set_feature_flags(flags)
+
+    # Enforce Supreme Ceiling: Synchronize and clamp all existing roles for this organisation
+    for role in org.roles:
+        role.set_feature_flags(clamp_feature_flags(role.get_feature_flags(), org.get_feature_flags()))
+
+    db.session.commit()
+    flash(f"Feature availability and module permissions for organisation '{org.name}' updated successfully.", "success")
     return redirect(url_for('organisations.settings'))
 
 

@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}PumpSelect Pro &mdash; Industrial Pump Analysis{% endblock %}</title>
   
+  <!-- Browser Favicon & Touch Icons -->
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}" />
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32x32.png') }}" />
+  <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='img/favicon-16x16.png') }}" />
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}" />
+  <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" />
+  
   <!-- Beginners Note: Tailwind CSS CDN for utility classes and custom animations -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -229,7 +236,7 @@
         </a>
         {% endif %}
 
-        {% if not current_user or current_user.can_access('selection_liquid') or current_user.can_access('selection_advanced_filters') or current_user.can_access('selection_motors') %}
+        {% if not current_user or current_user.can_access('fluid') or current_user.can_access('selection_advanced_filters') or current_user.can_access('motor_drive') %}
         <a class="nav-link-anim {% if request.endpoint == 'pump_selection' %}tw-active{% endif %}"
            href="{{ url_for('pump_selection') }}"
            style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 0.75rem;border-radius:6px;font-size:0.9rem;text-decoration:none;color:{% if request.endpoint == 'pump_selection' %}#58a6ff{% else %}#8b949e{% endif %};"
@@ -467,7 +474,7 @@
        style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;font-size:0.9rem;margin-bottom:2px;color:{% if 'pump_data' in request.endpoint or 'pump_new' in request.endpoint or 'pump_edit' in request.endpoint %}#58a6ff{% else %}#8b949e{% endif %};">
       <i class="bi bi-database"></i>Pump Catalogue</a>
     {% endif %}
-    {% if not current_user or (current_user.can_access('selection_liquid') or current_user.can_access('selection_advanced_filters') or current_user.can_access('selection_motors')) %}
+    {% if not current_user or (current_user.can_access('fluid') or current_user.can_access('selection_advanced_filters') or current_user.can_access('motor_drive')) %}
     <a href="{{ url_for('pump_selection') }}"
        style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;font-size:0.9rem;margin-bottom:2px;color:{% if request.endpoint == 'pump_selection' %}#58a6ff{% else %}#8b949e{% endif %};">
       <i class="bi bi-bullseye"></i>Pump Selection</a>

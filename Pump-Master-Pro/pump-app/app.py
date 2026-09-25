@@ -16,7 +16,7 @@ try:
 except ImportError:
     pass
 
-from flask import Flask, request, redirect, url_for, jsonify
+from flask import Flask, request, redirect, url_for, jsonify, send_from_directory
 from models import db, Organisation, Supplier, ReportConfig, User, RegistrationRequest, Role, PipeFitting, PipeMaterial
 from motor_models import Motor, seed_motors
 from seed_data import seed_pumps, seed_pipe_reference_data
@@ -71,6 +71,24 @@ with app.app_context():
     # 1. Create any missing model tables (safe and idempotent across all SQL engines)
     db.create_all()
 
+    # 1b. Cross-dialect column migrations for feature_flags_json
+    #     Uses SQLAlchemy inspect() which works across SQLite, MSSQL, PostgreSQL, etc.
+    try:
+        from sqlalchemy import inspect as sa_inspect, text as sa_text
+        inspector = sa_inspect(db.engine)
+        for tbl_name in ['organisations', 'roles']:
+            if tbl_name in inspector.get_table_names():
+                existing_cols = [c['name'] for c in inspector.get_columns(tbl_name)]
+                if 'feature_flags_json' not in existing_cols:
+                    with db.engine.connect() as mig_conn:
+                        mig_conn.execute(sa_text(
+                            f"ALTER TABLE {tbl_name} ADD feature_flags_json {'NVARCHAR(MAX)' if dialect_name == 'mssql' else 'TEXT'} DEFAULT '{{}}'"
+                        ))
+                        mig_conn.commit()
+                    print(f"Migrated: Added feature_flags_json to {tbl_name}")
+    except Exception as e:
+        print("Migration notice:", e)
+
     # 2. SQLite-specific legacy migrations:
     #    PRAGMA table_info is only valid on SQLite engines. Running PRAGMA on MS SQL
     #    or other engines raises syntax errors. Hence we only run this block on SQLite.
@@ -114,6 +132,8 @@ with app.app_context():
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN pump_details_template VARCHAR(255) DEFAULT 'details/default_pump_details.html'"))
             if 'access_levels_json' not in org_cols:
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN access_levels_json TEXT DEFAULT '{}'"))
+            if 'feature_flags_json' not in org_cols:
+                conn.execute(text("ALTER TABLE organisations ADD COLUMN feature_flags_json TEXT DEFAULT '{}'"))
             for i in range(1, 31):
                 col_name = f'PumpAttributeName{i}'
                 if col_name not in org_cols:
@@ -127,6 +147,8 @@ with app.app_context():
             role_cols = [row[1] for row in role_res.fetchall()]
             if 'access_levels_json' not in role_cols:
                 conn.execute(text("ALTER TABLE roles ADD COLUMN access_levels_json TEXT DEFAULT '{}'"))
+            if 'feature_flags_json' not in role_cols:
+                conn.execute(text("ALTER TABLE roles ADD COLUMN feature_flags_json TEXT DEFAULT '{}'"))
             conn.commit()
 
             # 1. Reports table schema migrations
@@ -550,7 +572,8 @@ def handle_url_build_error(error, endpoint, values):
 
 @app.route('/favicon.ico')
 def favicon():
-    return ('', 204)
+    return send_from_directory(os.path.join(app.root_path, 'static', 'img'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 app.url_build_error_handlers.append(handle_url_build_error)
 

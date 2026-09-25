@@ -29,15 +29,47 @@
   </div>
 </div>
 
+<style>
+  .pmp-subtab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    color: #8b949e;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .pmp-subtab-btn:hover:not(.active-subtab) {
+    color: #f0f6fc;
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .pmp-subtab-btn.active-subtab {
+    color: #58a6ff !important;
+    background: rgba(88, 166, 255, 0.12) !important;
+    border-color: rgba(88, 166, 255, 0.35) rgba(88, 166, 255, 0.35) transparent rgba(88, 166, 255, 0.35) !important;
+    border-bottom: 2px solid #58a6ff !important;
+    font-weight: 700;
+    box-shadow: 0 -2px 12px rgba(88, 166, 255, 0.15);
+  }
+  .pmp-subtab-btn.active-subtab i {
+    color: #38bdf8 !important;
+    filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.5));
+  }
+</style>
+
 <!-- ── Tab bar ──────────────────────────────────────────────────────────────── -->
 <div style="display:flex;align-items:center;gap:6px;border-bottom:1px solid #30363d;margin-bottom:16px;margin-top:12px;flex-wrap:wrap;">
-  <button id="tab-btn-selection" onclick="switchSelectionTab('selection')"
-    style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;font-size:13px;font-weight:600;border:none;background:transparent;cursor:pointer;border-bottom:2px solid #58a6ff;color:#58a6ff;transition:all .2s;">
+  <button id="tab-btn-selection" onclick="switchSelectionTab('selection')" class="pmp-subtab-btn active-subtab">
     <i class="bi bi-bullseye"></i> Pump Selection
   </button>
   {% if feat_pipe_network or (current_user and current_user.is_super_admin_user) %}
-  <button id="tab-btn-pipenet" onclick="switchSelectionTab('pipenet')"
-    style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;font-size:13px;font-weight:600;border:none;background:transparent;cursor:pointer;border-bottom:2px solid transparent;color:#8b949e;transition:all .2s;"
+  <button id="tab-btn-pipenet" onclick="switchSelectionTab('pipenet')" class="pmp-subtab-btn"
     title="Open Pipe Network Designer to configure piping systems visually on a canvas or using dropdown lists">
     <i class="bi bi-diagram-3"></i> Pipe Network Designer
   </button>
@@ -3713,8 +3745,8 @@
       if (pnPanel)  pnPanel.style.display  = 'none';
 
       // Highlight active Selection tab button
-      if (selBtn) { selBtn.style.borderBottom = '2px solid #58a6ff'; selBtn.style.color = '#58a6ff'; }
-      if (pnBtn)  { pnBtn.style.borderBottom  = '2px solid transparent'; pnBtn.style.color  = '#8b949e'; }
+      if (selBtn) { selBtn.classList.add('active-subtab'); }
+      if (pnBtn)  { pnBtn.classList.remove('active-subtab'); }
 
       // Synchronize flow, temp, and SG back to selection inputs
       if (typeof window.syncPipeNetworkToPumpSelection === 'function') {
@@ -3727,8 +3759,8 @@
       if (pnPanel)  pnPanel.style.display  = '';
 
       // Highlight active Pipe Network tab button
-      if (selBtn) { selBtn.style.borderBottom = '2px solid transparent'; selBtn.style.color = '#8b949e'; }
-      if (pnBtn)  { pnBtn.style.borderBottom  = '2px solid #58a6ff'; pnBtn.style.color  = '#58a6ff'; }
+      if (pnBtn)  { pnBtn.classList.add('active-subtab'); }
+      if (selBtn) { selBtn.classList.remove('active-subtab'); }
 
       // Determine active designer mode (Visual Canvas vs. Simple Dropdown)
       const hasCanvas = {{ 'true' if ((feat_pipe_canvas and (feat_pipe_schematic or feat_pipe_visual)) or (current_user and current_user.is_super_admin_user)) else 'false' }};

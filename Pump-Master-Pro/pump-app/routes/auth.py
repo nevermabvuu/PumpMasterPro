@@ -69,6 +69,8 @@ def inject_current_user():
 
     return {
         'current_user': user,
+        'current_org': active_org,
+        'active_org': active_org,
         'admin_notification_email': effective_email,
         'ACCESS_MODULE_INFO': ACCESS_MODULE_INFO
     }

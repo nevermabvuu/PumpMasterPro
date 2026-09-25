@@ -119,3 +119,5 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     PORT = int(os.environ.get('PORT', 8000))
     FLASK_ENV = os.environ.get('FLASK_ENV', 'development')
+    SITE_URL = os.environ.get('SITE_URL', 'https://www.pumpmasterpro.com').rstrip('/')
+    GOOGLE_SITE_VERIFICATION = os.environ.get('GOOGLE_SITE_VERIFICATION', '')

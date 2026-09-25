@@ -63,6 +63,21 @@ def inject_standard_pipes_context():
     except Exception:
         return {'standard_pipes_json': '[]'}
 
+@app.context_processor
+def inject_seo_context():
+    """
+    Beginners Note:
+    Exposes canonical site_url and Google Search Console verification token to all templates.
+    In local development, uses the local request URL root.
+    In production, defaults to canonical 'https://www.pumpmasterpro.com'.
+    """
+    is_local = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
+    canonical_url = request.url_root.rstrip('/') if is_local else app.config.get('SITE_URL', 'https://www.pumpmasterpro.com').rstrip('/')
+    return {
+        'site_url': canonical_url,
+        'google_site_verification': app.config.get('GOOGLE_SITE_VERIFICATION', ''),
+    }
+
 # ── Database Creation & Dialect-Aware Auto-Migration ───────────────────────────
 with app.app_context():
     dialect_name = db.engine.dialect.name
@@ -543,9 +558,13 @@ def enforce_login_gatekeeper():
         return None
 
     # 2. Allow public authentication endpoints, public catalog APIs, and SEO files
-    public_endpoints = {'auth.login', 'auth.register', 'auth.logout', 'favicon', 'robots_txt', 'sitemap_xml', 'pipe_network.get_standard_pipes'}
+    public_endpoints = {'auth.login', 'auth.register', 'auth.logout', 'favicon', 'robots_txt', 'sitemap_xml', 'google_verification_file', 'pipe_network.get_standard_pipes'}
     public_paths = {'/login', '/register', '/request-access', '/logout', '/favicon.ico', '/robots.txt', '/sitemap.xml'}
-    if request.endpoint in public_endpoints or request.path in public_paths or request.path.startswith('/api/pipe-network/standard-pipes') or request.path.endswith('/manifest.json'):
+    if (request.endpoint in public_endpoints or 
+        request.path in public_paths or 
+        request.path.startswith('/api/pipe-network/standard-pipes') or 
+        request.path.endswith('/manifest.json') or
+        (request.path.startswith('/google') and request.path.endswith('.html'))):
         return None
 
     # 3. Check if user is authenticated
@@ -576,10 +595,27 @@ def favicon():
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 
+def get_canonical_base_url():
+    """Return canonical production domain (https://www.pumpmasterpro.com) or local URL for dev."""
+    is_local = request.host.startswith('localhost') or request.host.startswith('127.0.0.1')
+    return request.url_root.rstrip('/') if is_local else app.config.get('SITE_URL', 'https://www.pumpmasterpro.com').rstrip('/')
+
+
+# ── SEO: Google Search Console HTML File Verification ──────────────────────────
+@app.route('/google<token>.html')
+def google_verification_file(token):
+    """
+    Automatically serves any Google Search Console HTML verification file.
+    Example: requesting /google45a6b7c8d9e0.html returns:
+    'google-site-verification: google45a6b7c8d9e0.html'
+    """
+    return f"google-site-verification: google{token}.html", 200, {'Content-Type': 'text/html; charset=utf-8'}
+
+
 # ── SEO: robots.txt served dynamically with canonical sitemap URL ──────────────
 @app.route('/robots.txt')
 def robots_txt():
-    base_url = request.url_root.rstrip('/')
+    base_url = get_canonical_base_url()
     content = f"""User-agent: *
 Allow: /
 Allow: /login
@@ -603,7 +639,7 @@ Sitemap: {base_url}/sitemap.xml
 def sitemap_xml():
     """Generate a dynamic XML sitemap listing all public, indexable pages."""
     from datetime import datetime
-    base_url = request.url_root.rstrip('/')
+    base_url = get_canonical_base_url()
     today = datetime.utcnow().strftime('%Y-%m-%d')
 
     # Define public pages with their change frequency and priority

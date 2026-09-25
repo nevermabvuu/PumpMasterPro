@@ -13,21 +13,24 @@
 
   <!-- ── SEO: Google Search Console Verification ──────────────────────────── -->
   {% block google_verification %}
+  {% set g_ver = google_site_verification or config.get('GOOGLE_SITE_VERIFICATION') %}
+  {% if g_ver %}
+  <meta name="google-site-verification" content="{{ g_ver }}" />
+  {% else %}
   <meta name="google-site-verification" content="{% block google_site_verification %}{% endblock %}" />
+  {% endif %}
   {% endblock %}
 
   <!-- ── SEO: Canonical URL ──────────────────────────────────────────────── -->
-  {% if request %}
-  <link rel="canonical" href="{{ request.url_root.rstrip('/') }}{{ request.path }}" />
-  {% endif %}
+  <link rel="canonical" href="{{ (site_url if site_url else request.url_root.rstrip('/')) }}{{ request.path if request else '/' }}" />
 
   <!-- ── SEO: Open Graph / Facebook ──────────────────────────────────────── -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Pump Master Pro" />
   <meta property="og:title" content="{% block og_title %}Pump Master Pro — Industrial Pump Sizing, Selection & Curve Fitting Software{% endblock %}" />
   <meta property="og:description" content="{% block og_description %}Professional pump sizing, pump selection, fluid calculations, pipe network analysis, pump curves generation, pump materials, pump catalogue, engineering quotations, and pump drawings.{% endblock %}" />
-  <meta property="og:image" content="{% block og_image %}{{ url_for('static', filename='img/og-preview.png', _external=True) if request else '' }}{% endblock %}" />
-  {% if request %}<meta property="og:url" content="{{ request.url }}" />{% endif %}
+  <meta property="og:image" content="{% block og_image %}{{ (site_url if site_url else request.url_root.rstrip('/')) }}/static/img/apple-touch-icon.png{% endblock %}" />
+  <meta property="og:url" content="{{ (site_url if site_url else request.url_root.rstrip('/')) }}{{ request.path if request else '/' }}" />
 
   <!-- ── SEO: Twitter Card ───────────────────────────────────────────────── -->
   <meta name="twitter:card" content="summary_large_image" />

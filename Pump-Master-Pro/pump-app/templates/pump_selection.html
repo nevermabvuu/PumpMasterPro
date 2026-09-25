@@ -1887,32 +1887,46 @@
 
     <div style="display:inline-flex;align-items:center;background:#0d1117;border:2px solid #30363d;border-radius:8px;padding:3px;gap:4px;box-shadow:0 2px 8px rgba(0,0,0,0.4);">
       <span style="font-size:11.5px;color:#8b949e;font-weight:700;padding:0 8px;">Designer Mode:</span>
-      {% if feat_pipe_canvas or (current_user and current_user.is_super_admin_user) %}
+      {% set can_canvas = feat_pipe_canvas or (current_user and current_user.is_super_admin_user) %}
+      {% set can_schematic = feat_pipe_schematic or (current_user and current_user.is_super_admin_user) %}
+      {% set can_visual = feat_pipe_visual or (current_user and current_user.is_super_admin_user) %}
+      {% set can_simple = feat_pipe_simple or (current_user and current_user.is_super_admin_user) %}
+      {% set is_canvas_allowed = can_canvas and (can_schematic or can_visual) %}
+
+      {% if is_canvas_allowed %}
       <button id="btn-top-mode-canvas" type="button" class="pn-btn active-tool" style="padding:6px 14px;font-size:12px;font-weight:700;border:none;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;" onclick="setDesignerMode('canvas')">
-        <i class="bi bi-diagram-3-fill" style="color:#38bdf8;"></i> Visual Canvas
+        {% if can_schematic and not can_visual %}
+          <i class="bi bi-bezier2" style="color:#38bdf8;"></i> Schematic Canvas
+        {% elif can_visual and not can_schematic %}
+          <i class="bi bi-water" style="color:#38bdf8;"></i> Visual Canvas
+        {% else %}
+          <i class="bi bi-diagram-3-fill" style="color:#38bdf8;"></i> Canvas Designer
+        {% endif %}
       </button>
       {% endif %}
-      {% if feat_pipe_simple or (current_user and current_user.is_super_admin_user) %}
-      <button id="btn-top-mode-simple" type="button" class="pn-btn {{ 'active-tool' if not feat_pipe_canvas and not (current_user and current_user.is_super_admin_user) else '' }}" style="padding:6px 14px;font-size:12px;font-weight:700;border:none;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:#22c55e;" onclick="setDesignerMode('simple')">
+      {% if can_simple %}
+      <button id="btn-top-mode-simple" type="button" class="pn-btn {{ 'active-tool' if not is_canvas_allowed else '' }}" style="padding:6px 14px;font-size:12px;font-weight:700;border:none;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:#22c55e;" onclick="setDesignerMode('simple')">
         <i class="bi bi-list-columns-reverse" style="color:#22c55e;"></i> Simple Mode (Dropdowns)
       </button>
       {% endif %}
     </div>
   </div>
 
-  <div id="pn-outer">
+  <div id="pn-outer" style="{{ 'height:680px;' if is_canvas_allowed else 'height:auto;' }}">
 
     <!-- TOP TOOLBAR -->
     <div id="pn-toolbar">
-      <span class="pn-canvas-only" style="display:inline-flex;align-items:center;gap:6px;">
+      <span class="pn-canvas-only" style="display:{{ 'inline-flex' if is_canvas_allowed else 'none' }};align-items:center;gap:6px;">
         <span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-right:-2px;">View:</span>
-        {% if feat_pipe_schematic or (current_user and current_user.is_super_admin_user) %}
-        <button id="btn-view-schematic" type="button" class="pn-btn" title="Schematic View">
+        {% set can_schematic = feat_pipe_schematic or (current_user and current_user.is_super_admin_user) %}
+        {% set can_visual = feat_pipe_visual or (current_user and current_user.is_super_admin_user) %}
+        {% if can_schematic %}
+        <button id="btn-view-schematic" type="button" class="pn-btn {{ 'active-tool' if not can_visual else '' }}" title="Schematic View">
           <i class="bi bi-bezier2"></i> Schematic
         </button>
         {% endif %}
-        {% if feat_pipe_visual or (current_user and current_user.is_super_admin_user) %}
-        <button id="btn-view-industrial" type="button" class="pn-btn active-tool" title="Industrial Installation View">
+        {% if can_visual %}
+        <button id="btn-view-industrial" type="button" class="pn-btn {{ 'active-tool' if can_visual else '' }}" title="Industrial Installation View">
           <i class="bi bi-water" style="color:#38bdf8;"></i> Visual
         </button>
         {% endif %}
@@ -2092,7 +2106,7 @@
     </div><!-- end toolbar -->
 
     <!-- MAIN ROW: LHS Sidebar + SVG Canvas + Properties Panel -->
-    <div id="pn-main-row">
+    <div id="pn-main-row" style="{{ 'display:flex;' if is_canvas_allowed else 'display:none;' }}">
 
       <!-- LHS SIDEBAR: Add Network Members Tool Palette -->
       <div id="pn-left-sidebar">
@@ -2520,7 +2534,7 @@
          Active when user switches to "Simple Mode (Dropdowns)" in the top toolbar or tab bar.
          Presents a clean, non-drawn pipeline configurator for Series or Parallel networks.
          ───────────────────────────────────────────────────────────────────────── -->
-    <div id="pn-simple-mode-wrap">
+    <div id="pn-simple-mode-wrap" style="{{ 'display:none;' if is_canvas_allowed else 'display:flex;' }}">
 
       <!-- Card 1: Network Topology & Static Elevation -->
       <div class="pn-simple-card">
@@ -3717,8 +3731,8 @@
       if (pnBtn)  { pnBtn.style.borderBottom  = '2px solid #58a6ff'; pnBtn.style.color  = '#58a6ff'; }
 
       // Determine active designer mode (Visual Canvas vs. Simple Dropdown)
-      const hasCanvas = {{ 'true' if feat_pipe_canvas else 'false' }};
-      const hasSimple = {{ 'true' if feat_pipe_simple else 'false' }};
+      const hasCanvas = {{ 'true' if ((feat_pipe_canvas and (feat_pipe_schematic or feat_pipe_visual)) or (current_user and current_user.is_super_admin_user)) else 'false' }};
+      const hasSimple = {{ 'true' if (feat_pipe_simple or (current_user and current_user.is_super_admin_user)) else 'false' }};
 
       let mode = 'canvas';
       if (tab === 'simple_pipenet') {
@@ -3798,6 +3812,12 @@
   window.__PMP_UNIT_H = "{{ unit_h or 'm' }}";
   window.__PMP_UNIT_SYSTEM = "{{ unit_system or 'metric' }}";
   window.__PMP_UNITS_TABLES = {{ units_tables | tojson | safe if units_tables else '{}' }};
+  window.FEAT_PIPE_CANVAS = {{ 'true' if ((feat_pipe_canvas and (feat_pipe_schematic or feat_pipe_visual)) or (current_user and current_user.is_super_admin_user)) else 'false' }};
+  window.FEAT_PIPE_SIMPLE = {{ 'true' if (feat_pipe_simple or (current_user and current_user.is_super_admin_user)) else 'false' }};
+  window.FEAT_PIPE_VISUAL = {{ 'true' if (feat_pipe_visual or (current_user and current_user.is_super_admin_user)) else 'false' }};
+  window.FEAT_PIPE_SCHEMATIC = {{ 'true' if (feat_pipe_schematic or (current_user and current_user.is_super_admin_user)) else 'false' }};
+  window.FEAT_PIPE_SERIES = {{ 'true' if (feat_pipe_series or (current_user and current_user.is_super_admin_user)) else 'false' }};
+  window.FEAT_PIPE_PARALLEL = {{ 'true' if (feat_pipe_parallel or (current_user and current_user.is_super_admin_user)) else 'false' }};
 </script>
 
 <script src="{{ url_for('static', filename='js/pump_selection.js') }}?v=20260913_1635"></script>

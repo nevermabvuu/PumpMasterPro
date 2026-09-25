@@ -489,8 +489,7 @@ const state = {
   pan: { x: 0, y: 0 },
   zoom: 1.0,
   panDrag: null,
-  nodeDrag: null,
-  viewMode: 'industrial', // 'industrial' (Visual thick 3D pipes) | 'schematic' (Thin 2D single-line)
+  viewMode: 'schematic', // Defaults to 'schematic' (safe default if visual is disallowed), updated during init by setViewMode
   displaySettings: loadSavedDisplaySettings(), // User customizable diagram annotation layers
   units: {
     system: 'metric', // 'metric' | 'imperial' | 'custom'
@@ -1367,19 +1366,40 @@ function loadNetworkFromStorage() {
  * @param {'schematic'|'industrial'} mode
  */
 function setViewMode(mode) {
-  state.viewMode = mode;
   const btnSchematic = document.getElementById('btn-view-schematic');
   const btnIndustrial = document.getElementById('btn-view-industrial');
-  if (btnSchematic && btnIndustrial) {
-    if (mode === 'industrial') {
-      btnIndustrial.classList.add('active-tool');
-      btnSchematic.classList.remove('active-tool');
-    } else {
-      btnSchematic.classList.add('active-tool');
-      btnIndustrial.classList.remove('active-tool');
-    }
+
+  // Enforce feature permissions:
+  // If visual is not permitted (btnIndustrial is absent or window.FEAT_PIPE_VISUAL === false),
+  // cannot use 'industrial' mode -> force to 'schematic'.
+  // If schematic is not permitted (btnSchematic is absent), force to 'industrial'.
+  const allowVisual = (typeof window.FEAT_PIPE_VISUAL !== 'undefined')
+    ? Boolean(window.FEAT_PIPE_VISUAL)
+    : Boolean(btnIndustrial);
+  const allowSchematic = (typeof window.FEAT_PIPE_SCHEMATIC !== 'undefined')
+    ? Boolean(window.FEAT_PIPE_SCHEMATIC)
+    : (Boolean(btnSchematic) || !allowVisual);
+
+  if (mode === 'industrial' && !allowVisual) {
+    mode = 'schematic';
+  } else if (mode === 'schematic' && !allowSchematic && allowVisual) {
+    mode = 'industrial';
   }
-  localStorage.setItem('pmp_pipe_view_mode', mode);
+
+  state.viewMode = mode;
+
+  if (btnSchematic) {
+    btnSchematic.classList.toggle('active-tool', mode === 'schematic');
+  }
+  if (btnIndustrial) {
+    btnIndustrial.classList.toggle('active-tool', mode === 'industrial');
+    if (!allowVisual) btnIndustrial.style.display = 'none';
+  }
+
+  try {
+    localStorage.setItem('pmp_pipe_view_mode', mode);
+  } catch (e) {}
+
   renderAll();
 }
 
@@ -7200,9 +7220,33 @@ function init() {
   document.getElementById('btn-view-schematic')?.addEventListener('click', () => setViewMode('schematic'));
   document.getElementById('btn-view-industrial')?.addEventListener('click', () => setViewMode('industrial'));
 
-  // Restore saved view mode preference (defaults to 'industrial' / Visual mode)
-  const savedViewMode = localStorage.getItem('pmp_pipe_view_mode') || 'industrial';
-  setViewMode(savedViewMode);
+  // Restore saved view mode preference with permission check
+  const btnSchematic = document.getElementById('btn-view-schematic');
+  const btnIndustrial = document.getElementById('btn-view-industrial');
+  const allowVisual = (typeof window.FEAT_PIPE_VISUAL !== 'undefined')
+    ? Boolean(window.FEAT_PIPE_VISUAL)
+    : Boolean(btnIndustrial);
+  const allowSchematic = (typeof window.FEAT_PIPE_SCHEMATIC !== 'undefined')
+    ? Boolean(window.FEAT_PIPE_SCHEMATIC)
+    : (Boolean(btnSchematic) || !allowVisual);
+
+  let initialViewMode = 'industrial';
+  if (!allowVisual && allowSchematic) {
+    initialViewMode = 'schematic';
+  } else if (allowVisual && !allowSchematic) {
+    initialViewMode = 'industrial';
+  } else {
+    try {
+      const saved = localStorage.getItem('pmp_pipe_view_mode');
+      if (saved === 'schematic' || saved === 'industrial') {
+        initialViewMode = (saved === 'industrial' && !allowVisual) ? 'schematic' : saved;
+      }
+    } catch (e) {
+      initialViewMode = allowVisual ? 'industrial' : 'schematic';
+    }
+  }
+
+  setViewMode(initialViewMode);
 
   // Canvas Theme toggle (Dark CAD blueprint vs. Light CAD mode)
   document.getElementById('btn-theme-toggle')?.addEventListener('click', () => toggleTheme());

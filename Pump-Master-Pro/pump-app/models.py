@@ -1178,15 +1178,78 @@ def normalize_feature_flags(flags_dict):
             if isinstance(val, list):
                 result['motor_drive'][k] = [str(x) for x in val]
 
-    # 4. Pipe Network
+    # 4. Pipe Network (Hierarchical ceiling: schematic/visual depend on canvas_mode; series/parallel depend on simple_mode)
     pn_in = flags_dict.get('pipe_network')
     if isinstance(pn_in, dict):
-        result['pipe_network']['canvas_mode'] = bool(pn_in.get('canvas_mode', True))
-        result['pipe_network']['canvas_schematic'] = bool(pn_in.get('canvas_schematic', True))
-        result['pipe_network']['canvas_visual'] = bool(pn_in.get('canvas_visual', True))
-        result['pipe_network']['simple_mode'] = bool(pn_in.get('simple_mode', True))
-        result['pipe_network']['simple_series'] = bool(pn_in.get('simple_series', True))
-        result['pipe_network']['simple_parallel'] = bool(pn_in.get('simple_parallel', True))
+        # Canvas mode and its children
+        if 'canvas_mode' in pn_in:
+            canvas_enabled = bool(pn_in['canvas_mode'])
+        elif isinstance(pn_in.get('canvas'), dict):
+            canvas_enabled = bool(pn_in['canvas'].get('enabled', True))
+        elif 'canvas' in pn_in and isinstance(pn_in['canvas'], bool):
+            canvas_enabled = bool(pn_in['canvas'])
+        else:
+            canvas_enabled = True
+
+        result['pipe_network']['canvas_mode'] = canvas_enabled
+        if canvas_enabled:
+            # schematic
+            if 'canvas_schematic' in pn_in:
+                result['pipe_network']['canvas_schematic'] = bool(pn_in['canvas_schematic'])
+            elif isinstance(pn_in.get('canvas'), dict) and 'schematic' in pn_in['canvas']:
+                result['pipe_network']['canvas_schematic'] = bool(pn_in['canvas']['schematic'])
+            else:
+                result['pipe_network']['canvas_schematic'] = True
+
+            # visual
+            if 'canvas_visual' in pn_in:
+                result['pipe_network']['canvas_visual'] = bool(pn_in['canvas_visual'])
+            elif isinstance(pn_in.get('canvas'), dict) and 'visual' in pn_in['canvas']:
+                result['pipe_network']['canvas_visual'] = bool(pn_in['canvas']['visual'])
+            else:
+                result['pipe_network']['canvas_visual'] = True
+        else:
+            # Supreme ceiling: if canvas_mode is false, neither child is accessible
+            result['pipe_network']['canvas_schematic'] = False
+            result['pipe_network']['canvas_visual'] = False
+
+        # Simple mode and its children
+        if 'simple_mode' in pn_in:
+            simple_enabled = bool(pn_in['simple_mode'])
+        elif isinstance(pn_in.get('simple'), dict):
+            simple_enabled = bool(pn_in['simple'].get('enabled', True))
+        elif 'simple' in pn_in and isinstance(pn_in['simple'], bool):
+            simple_enabled = bool(pn_in['simple'])
+        else:
+            simple_enabled = True
+
+        result['pipe_network']['simple_mode'] = simple_enabled
+        if simple_enabled:
+            if 'simple_series' in pn_in:
+                result['pipe_network']['simple_series'] = bool(pn_in['simple_series'])
+            elif isinstance(pn_in.get('simple'), dict) and 'series' in pn_in['simple']:
+                result['pipe_network']['simple_series'] = bool(pn_in['simple']['series'])
+            else:
+                result['pipe_network']['simple_series'] = True
+
+            if 'simple_parallel' in pn_in:
+                result['pipe_network']['simple_parallel'] = bool(pn_in['simple_parallel'])
+            elif isinstance(pn_in.get('simple'), dict) and 'parallel' in pn_in['simple']:
+                result['pipe_network']['simple_parallel'] = bool(pn_in['simple']['parallel'])
+            else:
+                result['pipe_network']['simple_parallel'] = True
+        else:
+            # Supreme ceiling: if simple_mode is false, neither child is accessible
+            result['pipe_network']['simple_series'] = False
+            result['pipe_network']['simple_parallel'] = False
+
+        # If neither schematic nor visual view is enabled, canvas_mode cannot be active
+        if not result['pipe_network']['canvas_schematic'] and not result['pipe_network']['canvas_visual']:
+            result['pipe_network']['canvas_mode'] = False
+
+        # If neither series nor parallel topology is enabled, simple_mode cannot be active
+        if not result['pipe_network']['simple_series'] and not result['pipe_network']['simple_parallel']:
+            result['pipe_network']['simple_mode'] = False
 
     return result
 
@@ -2450,13 +2513,21 @@ class User(db.Model):
         # This block maps common alias names used in templates to the correct flat keys.
         if category == 'pipe_network':
             if option in ('canvas', 'canvas_mode'):
-                return bool(cat_data.get('canvas_mode', True))
+                if sub_option in ('visual', 'canvas_visual'):
+                    return bool(cat_data.get('canvas_mode', True)) and bool(cat_data.get('canvas_visual', True))
+                if sub_option in ('schematic', 'canvas_schematic'):
+                    return bool(cat_data.get('canvas_mode', True)) and bool(cat_data.get('canvas_schematic', True))
+                return bool(cat_data.get('canvas_mode', True)) and (bool(cat_data.get('canvas_schematic', True)) or bool(cat_data.get('canvas_visual', True)))
             if option in ('canvas_schematic', 'schematic'):
                 return bool(cat_data.get('canvas_mode', True)) and bool(cat_data.get('canvas_schematic', True))
             if option in ('canvas_visual', 'visual'):
                 return bool(cat_data.get('canvas_mode', True)) and bool(cat_data.get('canvas_visual', True))
             if option in ('simple', 'simple_mode'):
-                return bool(cat_data.get('simple_mode', True))
+                if sub_option in ('series', 'simple_series'):
+                    return bool(cat_data.get('simple_mode', True)) and bool(cat_data.get('simple_series', True))
+                if sub_option in ('parallel', 'simple_parallel'):
+                    return bool(cat_data.get('simple_mode', True)) and bool(cat_data.get('simple_parallel', True))
+                return bool(cat_data.get('simple_mode', True)) and (bool(cat_data.get('simple_series', True)) or bool(cat_data.get('simple_parallel', True)))
             if option in ('simple_series', 'series'):
                 return bool(cat_data.get('simple_mode', True)) and bool(cat_data.get('simple_series', True))
             if option in ('simple_parallel', 'parallel'):

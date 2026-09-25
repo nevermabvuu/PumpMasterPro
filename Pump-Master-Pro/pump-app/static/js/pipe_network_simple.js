@@ -86,9 +86,20 @@ class SimpleNetworkController {
    * - Renders initial tables and triggers the initial calculation
    */
   init() {
+    const allowSeries = (typeof window.FEAT_PIPE_SERIES !== 'undefined')
+      ? Boolean(window.FEAT_PIPE_SERIES)
+      : (document.getElementById('topo-card-series') ? true : false);
+    const allowParallel = (typeof window.FEAT_PIPE_PARALLEL !== 'undefined')
+      ? Boolean(window.FEAT_PIPE_PARALLEL)
+      : (document.getElementById('topo-card-parallel') ? true : false);
+    const defaultTopo = (allowSeries ? 'series' : (allowParallel ? 'parallel' : 'series'));
+
     const sess = window.__PMP_SESSION_PIPE_NETWORK;
     if (sess && sess.mode === 'simple') {
-      this.state.topology = sess.topology || 'series';
+      let desiredTopo = sess.topology || defaultTopo;
+      if (desiredTopo === 'series' && !allowSeries && allowParallel) desiredTopo = 'parallel';
+      if (desiredTopo === 'parallel' && !allowParallel && allowSeries) desiredTopo = 'series';
+      this.state.topology = desiredTopo;
       this.state.parallel_balancing = sess.parallel_balancing || 'auto';
       this.state.flow_rate = parseFloat(sess.flow_rate || sess.flow_m3h || 100.0);
       this.state.flow_unit = sess.flow_unit || window.__PMP_UNIT_Q || 'm3h';
@@ -125,7 +136,7 @@ class SimpleNetworkController {
       // Default clean initialization
       this.loadPresetData('series');
       this.loadPresetData('parallel');
-      this.state.topology = 'series';
+      this.state.topology = defaultTopo;
     }
 
     this.syncControlsFromState();
@@ -261,6 +272,16 @@ class SimpleNetworkController {
    * Switches network topology between 'series' and 'parallel' and updates visual cards.
    */
   setTopology(topo) {
+    const allowSeries = (typeof window.FEAT_PIPE_SERIES !== 'undefined')
+      ? Boolean(window.FEAT_PIPE_SERIES)
+      : (document.getElementById('topo-card-series') ? true : false);
+    const allowParallel = (typeof window.FEAT_PIPE_PARALLEL !== 'undefined')
+      ? Boolean(window.FEAT_PIPE_PARALLEL)
+      : (document.getElementById('topo-card-parallel') ? true : false);
+
+    if (topo === 'series' && !allowSeries && allowParallel) topo = 'parallel';
+    if (topo === 'parallel' && !allowParallel && allowSeries) topo = 'series';
+
     if (topo !== 'series' && topo !== 'parallel') return;
     this.state.topology = topo;
 
@@ -2224,6 +2245,14 @@ function setDesignerMode(mode) {
   const topCanvasBtn = document.getElementById('btn-top-mode-canvas');
   const topSimpleBtn = document.getElementById('btn-top-mode-simple');
   const canvasOnlyEls = document.querySelectorAll('.pn-canvas-only');
+
+  const allowCanvas = (typeof window.FEAT_PIPE_CANVAS !== 'undefined')
+    ? Boolean(window.FEAT_PIPE_CANVAS)
+    : Boolean(topCanvasBtn);
+
+  if (mode === 'canvas' && !allowCanvas) {
+    mode = 'simple';
+  }
 
   if (mode === 'simple') {
     canvasBtn?.classList.remove('active-tool');

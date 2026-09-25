@@ -908,35 +908,50 @@
   <!-- ── PROMINENT TOP DESIGNER MODE SWITCHER ── -->
   <div style="display:inline-flex;align-items:center;background:#0d1117;border:2px solid #30363d;border-radius:8px;padding:3px;gap:4px;box-shadow:0 2px 8px rgba(0,0,0,0.3);">
     <span style="font-size:11.5px;color:#8b949e;font-weight:700;padding:0 8px;">Designer Mode:</span>
-    {% if not current_user or current_user.has_feature('pipe_network', 'canvas') or (current_user and current_user.is_super_admin_user) %}
+    {% set can_canvas = not current_user or current_user.has_feature('pipe_network', 'canvas_mode') or (current_user and current_user.is_super_admin_user) %}
+    {% set can_schematic = not current_user or current_user.has_feature('pipe_network', 'canvas_schematic') or (current_user and current_user.is_super_admin_user) %}
+    {% set can_visual = not current_user or current_user.has_feature('pipe_network', 'canvas_visual') or (current_user and current_user.is_super_admin_user) %}
+    {% set can_simple = not current_user or current_user.has_feature('pipe_network', 'simple_mode') or (current_user and current_user.is_super_admin_user) %}
+
+    {% set is_canvas_allowed = can_canvas and (can_schematic or can_visual) %}
+
+    {% if is_canvas_allowed %}
     <button id="btn-top-mode-canvas" type="button" class="pn-btn active-tool" style="padding:6px 14px;font-size:12px;font-weight:700;border:none;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;" onclick="setDesignerMode('canvas')">
-      <i class="bi bi-diagram-3-fill" style="color:#38bdf8;"></i> Visual Canvas
+      {% if can_schematic and not can_visual %}
+        <i class="bi bi-bezier2" style="color:#38bdf8;"></i> Schematic Canvas
+      {% elif can_visual and not can_schematic %}
+        <i class="bi bi-water" style="color:#38bdf8;"></i> Visual Canvas
+      {% else %}
+        <i class="bi bi-diagram-3-fill" style="color:#38bdf8;"></i> Canvas Designer
+      {% endif %}
     </button>
     {% endif %}
-    {% if not current_user or current_user.has_feature('pipe_network', 'simple') or (current_user and current_user.is_super_admin_user) %}
-    <button id="btn-top-mode-simple" type="button" class="pn-btn {{ 'active-tool' if current_user and not current_user.has_feature('pipe_network', 'canvas') and not current_user.is_super_admin_user else '' }}" style="padding:6px 14px;font-size:12px;font-weight:700;border:none;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:#22c55e;" onclick="setDesignerMode('simple')">
+    {% if can_simple %}
+    <button id="btn-top-mode-simple" type="button" class="pn-btn {{ 'active-tool' if not is_canvas_allowed else '' }}" style="padding:6px 14px;font-size:12px;font-weight:700;border:none;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:#22c55e;" onclick="setDesignerMode('simple')">
       <i class="bi bi-list-columns-reverse" style="color:#22c55e;"></i> Simple Mode (Dropdowns)
     </button>
     {% endif %}
   </div>
 </div>
 
-<div id="pn-outer">
+<div id="pn-outer" style="{{ 'height:680px;' if is_canvas_allowed else 'height:auto;' }}">
 
   <!-- ─────────────────────────────────────────────────────────────────────
        TOP TOOLBAR
        Contains: mode tools | add-node tools | separator | zoom | file ops
        ──────────────────────────────────────────────────────────────────── -->
   <div id="pn-toolbar">
-    <span class="pn-canvas-only" style="display:inline-flex;align-items:center;gap:6px;">
+    <span class="pn-canvas-only" style="display:{{ 'inline-flex' if is_canvas_allowed else 'none' }};align-items:center;gap:6px;">
       <span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-right:-2px;">View:</span>
-      {% if not current_user or current_user.has_feature('pipe_network', 'canvas_schematic') or (current_user and current_user.is_super_admin_user) %}
-      <button id="btn-view-schematic" class="pn-btn" title="Schematic View">
+      {% set can_schematic = not current_user or current_user.has_feature('pipe_network', 'canvas_schematic') or (current_user and current_user.is_super_admin_user) %}
+      {% set can_visual = not current_user or current_user.has_feature('pipe_network', 'canvas_visual') or (current_user and current_user.is_super_admin_user) %}
+      {% if can_schematic %}
+      <button id="btn-view-schematic" class="pn-btn {{ 'active-tool' if not can_visual else '' }}" title="Schematic View">
         <i class="bi bi-bezier2"></i> Schematic
       </button>
       {% endif %}
-      {% if not current_user or current_user.has_feature('pipe_network', 'canvas_visual') or (current_user and current_user.is_super_admin_user) %}
-      <button id="btn-view-industrial" class="pn-btn active-tool" title="Industrial Installation View">
+      {% if can_visual %}
+      <button id="btn-view-industrial" class="pn-btn {{ 'active-tool' if can_visual else '' }}" title="Industrial Installation View">
         <i class="bi bi-water" style="color:#38bdf8;"></i> Visual
       </button>
       {% endif %}
@@ -1118,7 +1133,7 @@
   <!-- ─────────────────────────────────────────────────────────────────────
        MAIN ROW: SVG Canvas (left) + Properties Panel (right)
        ──────────────────────────────────────────────────────────────────── -->
-  <div id="pn-main-row">
+  <div id="pn-main-row" style="{{ 'display:flex;' if is_canvas_allowed else 'display:none;' }}">
 
     <!-- ─────────────────────────────────────────────────────────────────
          LHS SIDEBAR: Add Network Members Tool Palette & Elements Tree
@@ -1557,7 +1572,7 @@
        Active when user switches to "Simple Mode (Dropdowns)" in the top toolbar.
        Presents a clean, non-drawn pipeline configurator for Series or Parallel networks.
        ───────────────────────────────────────────────────────────────────────── -->
-  <div id="pn-simple-mode-wrap">
+  <div id="pn-simple-mode-wrap" style="{{ 'display:none;' if is_canvas_allowed else 'display:flex;' }}">
 
     <!-- Card 1: Network Topology & Static Elevation -->
     <div class="pn-simple-card">
@@ -2746,6 +2761,12 @@
   window.__PMP_UNIT_H = "{{ unit_h or 'm' }}";
   window.__PMP_UNIT_SYSTEM = "{{ unit_system or 'metric' }}";
   window.__PMP_UNITS_TABLES = {{ units_tables | tojson | safe if units_tables else '{}' }};
+  window.FEAT_PIPE_CANVAS = {{ 'true' if (not current_user or current_user.has_feature('pipe_network', 'canvas') or (current_user and current_user.is_super_admin_user)) else 'false' }};
+  window.FEAT_PIPE_SIMPLE = {{ 'true' if (not current_user or current_user.has_feature('pipe_network', 'simple') or (current_user and current_user.is_super_admin_user)) else 'false' }};
+  window.FEAT_PIPE_VISUAL = {{ 'true' if (not current_user or current_user.has_feature('pipe_network', 'canvas_visual') or (current_user and current_user.is_super_admin_user)) else 'false' }};
+  window.FEAT_PIPE_SCHEMATIC = {{ 'true' if (not current_user or current_user.has_feature('pipe_network', 'canvas_schematic') or (current_user and current_user.is_super_admin_user)) else 'false' }};
+  window.FEAT_PIPE_SERIES = {{ 'true' if (not current_user or current_user.has_feature('pipe_network', 'simple_series') or (current_user and current_user.is_super_admin_user)) else 'false' }};
+  window.FEAT_PIPE_PARALLEL = {{ 'true' if (not current_user or current_user.has_feature('pipe_network', 'simple_parallel') or (current_user and current_user.is_super_admin_user)) else 'false' }};
 </script>
 <script src="{{ url_for('static', filename='js/pipe_network.js') }}?v={{ range(1, 99999) | random }}"></script>
 <script>
@@ -2990,6 +3011,14 @@
     const topSimpleBtn = document.getElementById('btn-top-mode-simple');
     const canvasOnlyEls = document.querySelectorAll('.pn-canvas-only');
 
+    const allowCanvas = (typeof window.FEAT_PIPE_CANVAS !== 'undefined')
+      ? Boolean(window.FEAT_PIPE_CANVAS)
+      : Boolean(topCanvasBtn);
+
+    if (mode === 'canvas' && !allowCanvas) {
+      mode = 'simple';
+    }
+
     if (mode === 'simple') {
       // 1. Update toolbar and top header button highlights
       canvasBtn?.classList.remove('active-tool');
@@ -3052,8 +3081,8 @@
   // Auto-restore previously preferred designer mode on page load
   document.addEventListener('DOMContentLoaded', () => {
     try {
-      const hasCanvas = {{ 'true' if not current_user or current_user.has_feature('pipe_network', 'canvas') else 'false' }};
-      const hasSimple = {{ 'true' if not current_user or current_user.has_feature('pipe_network', 'simple') else 'false' }};
+      const hasCanvas = {{ 'true' if (not current_user or current_user.has_feature('pipe_network', 'canvas') or (current_user and current_user.is_super_admin_user)) else 'false' }};
+      const hasSimple = {{ 'true' if (not current_user or current_user.has_feature('pipe_network', 'simple') or (current_user and current_user.is_super_admin_user)) else 'false' }};
       const urlParams = new URLSearchParams(window.location.search);
       const urlMode = urlParams.get('mode');
       const sess = window.__PMP_SESSION_PIPE_NETWORK;

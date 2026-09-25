@@ -12,6 +12,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, session, jsonify, request, redirect, url_for, flash
 from models import db, Pump, ReportConfig, Organisation
 from utils import get_current_organisation
+from routes.auth import require_access, get_current_user
 # Secure URL token encoder — passed to debug_session.html so it can build
 # signed pump edit URLs instead of exposing raw DB integer IDs.
 from pump_token import encode_pump_id
@@ -57,6 +58,7 @@ def model_to_dict(obj):
 @debug_bp.route('/debug/session')
 @debug_bp.route('/session-debug')
 @debug_bp.route('/reports/debug')
+@require_access('debug', min_level=1)
 def session_debug_view():
     """
     Beginners Note: Main debug inspector view.
@@ -156,6 +158,10 @@ def api_session_json():
     """
     Beginners Note: Returns the aggregated debug state as raw JSON for API consumption or test scripts.
     """
+    user = get_current_user()
+    if not user or not (user.can_access('debug', 1) or user.is_super_admin_user):
+        return jsonify({'error': 'Access denied: Debug Console is restricted.'}), 403
+
     session_data = {k: session[k] for k in list(session.keys())}
     active_selection = session.get('active_selection', {})
 
@@ -179,6 +185,7 @@ def api_session_json():
 
 
 @debug_bp.route('/debug/clear-session', methods=['POST'])
+@require_access('debug', min_level=2)
 def clear_session():
     """
     Beginners Note: Clears all variables in the active user session.
@@ -190,6 +197,7 @@ def clear_session():
 
 
 @debug_bp.route('/debug/seed-sample-session', methods=['POST'])
+@require_access('debug', min_level=2)
 def seed_sample_session():
     """
     Beginners Note: Populates a realistic sample pump selection session (Pump 1, Proposal report, Q=40, H=28).

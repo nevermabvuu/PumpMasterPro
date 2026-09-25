@@ -10,10 +10,12 @@ const PLOTLY_LAYOUT_BASE = {
   font: { color: '#8b949e', size: 11, family: 'system-ui, sans-serif' },
   xaxis: {
     gridcolor: '#21262d', zerolinecolor: '#30363d',
+    showline: true, linewidth: 1.5, linecolor: '#30363d', mirror: true,
     tickfont: { color: '#8b949e' }, titlefont: { color: '#c9d1d9', size: 12 }
   },
   yaxis: {
     gridcolor: '#21262d', zerolinecolor: '#30363d',
+    showline: true, linewidth: 1.5, linecolor: '#30363d', mirror: true,
     tickfont: { color: '#8b949e' }, titlefont: { color: '#c9d1d9', size: 12 }
   },
   margin: { l: 58, r: 24, t: 28, b: 52 },

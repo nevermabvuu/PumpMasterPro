@@ -370,8 +370,8 @@ var FORM_LAYOUT = {
   plot_bgcolor: '#1a1d23',
   font: { color: '#c9d1d9', size: 11 },
   margin: { l: 44, r: 10, t: 28, b: 36 },
-  xaxis: { gridcolor: '#30363d', zerolinecolor: '#30363d', title: { font: { size: 11 } } },
-  yaxis: { gridcolor: '#30363d', zerolinecolor: '#30363d', title: { font: { size: 11 } } },
+  xaxis: { gridcolor: '#30363d', zerolinecolor: '#30363d', showline: true, linewidth: 1.5, linecolor: '#30363d', mirror: true, title: { font: { size: 11 } } },
+  yaxis: { gridcolor: '#30363d', zerolinecolor: '#30363d', showline: true, linewidth: 1.5, linecolor: '#30363d', mirror: true, title: { font: { size: 11 } } },
 };
 
 /* ── Raw table helpers ─────────────────────────────────────────────────────── */

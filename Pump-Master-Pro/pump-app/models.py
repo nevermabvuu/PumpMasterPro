@@ -993,6 +993,12 @@ ACCESS_MODULE_INFO = {
         'label': 'Pipe Network Designer',
         'description': 'Interactive visual canvas and simple mode for piping system head loss calculations.',
         'icon': 'bi-diagram-3'
+    },
+    'debug': {
+        'key': 'debug',
+        'label': 'Debug Console & Inspector',
+        'description': 'Inspect live session state, pump hydraulics, curve mathematical models, and raw database payloads.',
+        'icon': 'bi-bug'
     }
 }
 
@@ -1493,7 +1499,8 @@ class Organisation(db.Model):
             'major_grid_color': '#30363d',
             'minor_grid_color': '#21262d',
             'axis_line_color': '#30363d',
-            'chart_bg_color': 'rgba(0,0,0,0)'
+            'chart_bg_color': 'rgba(0,0,0,0)',
+            'border_outline_mode': 'both'  # 'both', 'panels', 'outline', 'none'
         }
 
         raw = getattr(self, 'graph_styles_json', '')
@@ -1870,6 +1877,7 @@ class ReportConfig(db.Model):
             'axis_line_color': '#475569',
             'axis_line_width': 1.5,
             'chart_bg_color': '#ffffff',
+            'border_outline_mode': 'both',  # 'both', 'panels', 'outline', 'none'
 
             # 5. Isolines Styling
             'iso_eta_color': '#059669',
@@ -2001,11 +2009,12 @@ class Role(db.Model):
                         mods['motor_drive'] = mods['selection_motors']
                     if any(k in mods for k in ACCESS_MODULE_INFO.keys()):
                         levels = {}
+                        default_fallback = 2 if getattr(self, 'code', '') == 'admin' else 0
                         for k in ACCESS_MODULE_INFO.keys():
                             try:
-                                levels[k] = max(0, min(2, int(mods.get(k, 0))))
+                                levels[k] = max(0, min(2, int(mods.get(k, default_fallback))))
                             except (ValueError, TypeError):
-                                levels[k] = 0
+                                levels[k] = default_fallback
                         return levels
             except Exception:
                 pass
@@ -2026,7 +2035,8 @@ class Role(db.Model):
                 'selection_advanced_filters': 1,
                 'motor_drive': 1,
                 'pump_catalogue': 1,
-                'pipe_network': 1
+                'pipe_network': 1,
+                'debug': 0
             }
         else: # engineer or custom role
             can_sel = 2 if getattr(self, 'can_select_pumps', True) else 0
@@ -2045,7 +2055,8 @@ class Role(db.Model):
                 'selection_advanced_filters': can_sel,
                 'motor_drive': can_sel,
                 'pump_catalogue': can_edit_cat,
-                'pipe_network': can_sel
+                'pipe_network': can_sel,
+                'debug': 0
             }
 
     def get_all_access_levels(self, raw=False):

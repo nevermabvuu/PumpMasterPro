@@ -495,6 +495,15 @@
                 <label class="block text-[10px] text-[#8b949e] mb-0.5">Axis Border Color</label>
                 <input type="color" id="org_style_axis_color" value="{{ org_styles.get('axis_line_color', '#30363d') }}" class="h-7 w-full bg-[#161b22] border border-[#30363d] rounded p-0.5 cursor-pointer">
               </div>
+              <div>
+                <label class="block text-[10px] text-[#8b949e] mb-0.5">Borders &amp; Outline</label>
+                <select id="org_style_border_outline_mode" class="w-full bg-[#161b22] border border-[#30363d] rounded px-1.5 py-1 text-xs text-white">
+                  <option value="both" {% if org_styles.get('border_outline_mode', 'both') == 'both' %}selected{% endif %}>Subplot Borders &amp; Area Outline</option>
+                  <option value="outline" {% if org_styles.get('border_outline_mode') == 'outline' %}selected{% endif %}>One Outline Border for Graph Area</option>
+                  <option value="panels" {% if org_styles.get('border_outline_mode') == 'panels' %}selected{% endif %}>Individual Subplot Panel Borders</option>
+                  <option value="none" {% if org_styles.get('border_outline_mode') == 'none' %}selected{% endif %}>Standard Axis Lines Only</option>
+                </select>
+              </div>
             </div>
           </div>
           </fieldset>
@@ -1182,7 +1191,7 @@
       <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg text-xs text-[#8b949e] flex items-center gap-2.5">
         <i class="bi bi-info-circle text-[#58a6ff] text-base shrink-0"></i>
         <span>
-          As the <strong>Lytrose SuperAdmin</strong>, you set the ceiling permissions for this organisation across all 10 modules.
+          As the <strong>Lytrose SuperAdmin</strong>, you set the ceiling permissions for this organisation across all {{ ACCESS_MODULE_INFO|length }} modules.
           Any role created or edited within this company will be clamped to these supreme levels.
         </span>
       </div>
@@ -1278,7 +1287,8 @@
       font_family: document.getElementById('org_style_font_family')?.value || 'Inter, sans-serif',
       system_curve_color: document.getElementById('org_style_sys_color')?.value || '#8b949e',
       major_grid_color: document.getElementById('org_style_grid_color')?.value || '#30363d',
-      axis_line_color: document.getElementById('org_style_axis_color')?.value || '#30363d'
+      axis_line_color: document.getElementById('org_style_axis_color')?.value || '#30363d',
+      border_outline_mode: document.getElementById('org_style_border_outline_mode')?.value || 'both'
     };
     const jsonEl = document.getElementById('org_graph_styles_json');
     if (jsonEl) jsonEl.value = JSON.stringify(styles);

@@ -174,6 +174,98 @@ function applyAxisScale(axisConfig, axisKey, pumpObj, minorGridColor, axisLineCo
   axisConfig.mirror = true;
 }
 
+/**
+ * Constructs Plotly layout shapes for subplot panel borders (including top borders)
+ * and/or a single enclosing outer outline border for the entire graph area.
+ *
+ * @param {string} mode - 'both' | 'panels' | 'outline' | 'none'
+ * @param {Array<{key: string, domain: number[]}>} activeDomains - Active subplot domains
+ * @param {string} color - Border line color (hex or rgba)
+ * @returns {Array} List of Plotly shape objects
+ */
+function buildBorderShapes(mode, activeDomains, color) {
+  if (!activeDomains || activeDomains.length === 0 || mode === 'none') {
+    return [];
+  }
+
+  const shapes = [];
+  const borderColor = color || '#30363d';
+  const borderWidth = 1.5;
+
+  // 1. Individual Subplot Panel Borders (crisp top border + complete bounding box for each panel)
+  if (mode === 'panels' || mode === 'both') {
+    activeDomains.forEach(d => {
+      if (d.domain && d.domain.length === 2) {
+        shapes.push({
+          type: 'rect',
+          xref: 'paper',
+          yref: 'paper',
+          x0: 0,
+          x1: 1,
+          y0: d.domain[0],
+          y1: d.domain[1],
+          line: {
+            color: borderColor,
+            width: borderWidth
+          },
+          fillcolor: 'rgba(0,0,0,0)',
+          layer: 'below'
+        });
+      }
+    });
+  }
+
+  // 2. Single Outline Border for the entire Graph Area
+  if (mode === 'outline' || mode === 'both') {
+    const minY = Math.min(...activeDomains.map(d => d.domain[0]));
+    const maxY = Math.max(...activeDomains.map(d => d.domain[1]));
+    shapes.push({
+      type: 'rect',
+      xref: 'paper',
+      yref: 'paper',
+      x0: 0,
+      x1: 1,
+      y0: minY,
+      y1: maxY,
+      line: {
+        color: borderColor,
+        width: mode === 'outline' ? 2.0 : 1.8
+      },
+      fillcolor: 'rgba(0,0,0,0)',
+      layer: 'below'
+    });
+  }
+
+  return shapes;
+}
+
+/**
+ * Updates the graph border mode interactively on the live Plotly chart
+ * and persists the user preference in localStorage.
+ *
+ * @param {string} mode - 'both' | 'panels' | 'outline' | 'none'
+ */
+window.setGraphBorderMode = function(mode) {
+  if (!['both', 'panels', 'outline', 'none'].includes(mode)) {
+    mode = 'both';
+  }
+  try {
+    localStorage.setItem('pump_graph_border_mode', mode);
+  } catch (e) {}
+
+  window.currentGraphBorderMode = mode;
+  const selectEl = document.getElementById('graphBorderOption');
+  if (selectEl && selectEl.value !== mode) {
+    selectEl.value = mode;
+  }
+
+  const chartEl = document.getElementById('chartComp');
+  if (chartEl && chartEl.layout && window.activeGraphDomains) {
+    const shapes = buildBorderShapes(mode, window.activeGraphDomains, window.currentAxisLineColor || '#30363d');
+    Plotly.relayout(chartEl, { shapes: shapes });
+  }
+};
+
 function addLabel(annotations, x, y, yref, text, color, isMid = false) {
   if (x && x.length > 0) {
     let idx = isMid ? Math.floor(x.length / 2) : x.length - 1;
@@ -455,7 +547,7 @@ function renderAll() {
     });
   }
 
-  // ── Y-axis domain layout ──
+  // ── Y-axis domain layout & Active Subplot Domains ──
   // When the pump has NPSH data, the chart is split into four vertical sub-plots:
   //   y  (NPSH)  0.00-0.20  |  y2 (Power) 0.25-0.45  |  y3 (Eff) 0.50-0.70  |  y4 (Head) 0.75-1.0
   // When there is no NPSH data the bottom 20 % is reclaimed and shared equally among
@@ -464,6 +556,33 @@ function renderAll() {
   const domainPow = hasNpsh ? [0.25, 0.45] : [0.00, 0.32];
   const domainEff = hasNpsh ? [0.50, 0.70] : [0.36, 0.65];
   const domainHead = hasNpsh ? [0.75, 1.00] : [0.69, 1.00];
+
+  const activeDomains = [
+    { key: 'head', domain: domainHead },
+    { key: 'eff', domain: domainEff },
+    { key: 'power', domain: domainPow }
+  ];
+  if (hasNpsh && domainNpsh) {
+    activeDomains.push({ key: 'npsh', domain: domainNpsh });
+  }
+
+  let preferredBorderMode = 'both';
+  try {
+    preferredBorderMode = localStorage.getItem('pump_graph_border_mode') || org.border_outline_mode || 'both';
+  } catch (e) {
+    preferredBorderMode = org.border_outline_mode || 'both';
+  }
+
+  window.currentGraphBorderMode = preferredBorderMode;
+  window.activeGraphDomains = activeDomains;
+  window.currentAxisLineColor = axisLineColor;
+
+  const borderSelectEl = document.getElementById('graphBorderOption');
+  if (borderSelectEl) {
+    borderSelectEl.value = preferredBorderMode;
+  }
+
+  const initialShapes = buildBorderShapes(preferredBorderMode, activeDomains, axisLineColor);
 
   const layout = {
     paper_bgcolor: 'rgba(0,0,0,0)',
@@ -498,7 +617,8 @@ function renderAll() {
     },
     legend: { orientation: 'h', y: 1.05, x: 0 },
     height: 900,
-    annotations: annotations
+    annotations: annotations,
+    shapes: initialShapes
   };
 
   applyAxisScale(layout.xaxis, 'flow', pumpObj, minorGridColor, axisLineColor);

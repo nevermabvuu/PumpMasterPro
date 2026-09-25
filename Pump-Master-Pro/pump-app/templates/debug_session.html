@@ -53,15 +53,21 @@
         <i class="bi bi-file-earmark-pdf"></i> View Report
       </a>
 
-      <!-- Clear Session Form -->
+      <!-- Clear Session Form: Requires Full Access (Level 2) -->
+      {% if current_user and (current_user.can_access('debug', 2) or current_user.is_super_admin_user) %}
       <form action="{{ url_for('debug.clear_session') }}" method="POST" class="inline m-0">
         <button type="submit"
                 onclick="return confirm('Are you sure you want to clear all active session variables?')"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#da3633]/20 hover:bg-[#da3633]/30 text-[#f85149] border border-[#da3633]/50 transition-all"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#da3633]/20 hover:bg-[#da3633]/30 text-[#f85149] border border-[#da3633]/50 transition-all cursor-pointer"
                 title="Clear all session variables">
           <i class="bi bi-trash3"></i> Clear Session
         </button>
       </form>
+      {% else %}
+      <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#21262d] text-[#8b949e] border border-[#30363d] opacity-75" title="Read-only access: Session mutation disabled">
+        <i class="bi bi-lock-fill"></i> Read-Only View
+      </span>
+      {% endif %}
     </div>
   </div>
 
@@ -154,11 +160,13 @@
         <div class="text-xs text-[#8b949e] mt-0.5">The session does not currently hold an evaluated pump duty point. You can seed a realistic sample session for quick debugging.</div>
       </div>
     </div>
+    {% if current_user and (current_user.can_access('debug', 2) or current_user.is_super_admin_user) %}
     <form action="{{ url_for('debug.seed_sample_session') }}" method="POST" class="m-0">
-      <button type="submit" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#238636] hover:bg-[#2ea043] text-white shadow-sm transition-all whitespace-nowrap">
+      <button type="submit" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#238636] hover:bg-[#2ea043] text-white shadow-sm transition-all whitespace-nowrap cursor-pointer">
         <i class="bi bi-magic"></i> Seed Sample Session
       </button>
     </form>
+    {% endif %}
   </div>
   {% endif %}
 

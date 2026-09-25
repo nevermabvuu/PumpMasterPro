@@ -1,0 +1,33 @@
+{
+  "name": "Pump Master Pro",
+  "short_name": "PumpMaster",
+  "description": "Professional pump selection software with automatic curve fitting, H-Q performance analysis, NPSH calculations, viscous & slurry derating, pipe network design, and multi-pump comparison tools.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "orientation": "any",
+  "categories": ["engineering", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "img/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "img/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "img/favicon-64x64.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "img/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

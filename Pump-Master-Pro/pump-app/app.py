@@ -542,10 +542,10 @@ def enforce_login_gatekeeper():
     if request.endpoint == 'static' or request.path.startswith('/static') or request.path == '/favicon.ico':
         return None
 
-    # 2. Allow public authentication endpoints & public catalog APIs
-    public_endpoints = {'auth.login', 'auth.register', 'auth.logout', 'favicon', 'pipe_network.get_standard_pipes'}
-    public_paths = {'/login', '/register', '/request-access', '/logout', '/favicon.ico'}
-    if request.endpoint in public_endpoints or request.path in public_paths or request.path.startswith('/api/pipe-network/standard-pipes'):
+    # 2. Allow public authentication endpoints, public catalog APIs, and SEO files
+    public_endpoints = {'auth.login', 'auth.register', 'auth.logout', 'favicon', 'robots_txt', 'sitemap_xml', 'pipe_network.get_standard_pipes'}
+    public_paths = {'/login', '/register', '/request-access', '/logout', '/favicon.ico', '/robots.txt', '/sitemap.xml'}
+    if request.endpoint in public_endpoints or request.path in public_paths or request.path.startswith('/api/pipe-network/standard-pipes') or request.path.endswith('/manifest.json'):
         return None
 
     # 3. Check if user is authenticated
@@ -574,6 +574,66 @@ def handle_url_build_error(error, endpoint, values):
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static', 'img'),
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
+
+# ── SEO: robots.txt served dynamically with canonical sitemap URL ──────────────
+@app.route('/robots.txt')
+def robots_txt():
+    base_url = request.url_root.rstrip('/')
+    content = f"""User-agent: *
+Allow: /
+Allow: /login
+Allow: /register
+Disallow: /api/
+Disallow: /papi/
+Disallow: /debug/
+Disallow: /organisations/
+Disallow: /reports/settings
+Disallow: /admin/
+
+# Google Search Engine Sitemap Reference
+Sitemap: {base_url}/sitemap.xml
+"""
+    from flask import Response
+    return Response(content, mimetype='text/plain')
+
+
+# ── SEO: Dynamic XML sitemap for search engine indexing ──
+@app.route('/sitemap.xml')
+def sitemap_xml():
+    """Generate a dynamic XML sitemap listing all public, indexable pages."""
+    from datetime import datetime
+    base_url = request.url_root.rstrip('/')
+    today = datetime.utcnow().strftime('%Y-%m-%d')
+
+    # Define public pages with their change frequency and priority
+    pages = [
+        {'loc': '/',                  'changefreq': 'weekly',  'priority': '1.0'},
+        {'loc': '/login',             'changefreq': 'monthly', 'priority': '0.9'},
+        {'loc': '/register',          'changefreq': 'monthly', 'priority': '0.7'},
+        {'loc': '/pump-data',         'changefreq': 'weekly',  'priority': '0.8'},
+        {'loc': '/pump-selection',    'changefreq': 'weekly',  'priority': '0.9'},
+        {'loc': '/pump-comparison',   'changefreq': 'weekly',  'priority': '0.7'},
+        {'loc': '/pipe-network',      'changefreq': 'weekly',  'priority': '0.8'},
+    ]
+
+    xml_entries = []
+    for page in pages:
+        xml_entries.append(f'''  <url>
+    <loc>{base_url}{page["loc"]}</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>{page["changefreq"]}</changefreq>
+    <priority>{page["priority"]}</priority>
+  </url>''')
+
+    sitemap_xml_content = f'''<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{chr(10).join(xml_entries)}
+</urlset>'''
+
+    from flask import Response
+    return Response(sitemap_xml_content, mimetype='application/xml')
+
 
 app.url_build_error_handlers.append(handle_url_build_error)
 

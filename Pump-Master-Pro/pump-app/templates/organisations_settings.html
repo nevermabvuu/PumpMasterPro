@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 
-{% block title %}Organisation Settings &amp; Multi-Company Permissions — Pump Master Pro{% endblock %}
+{% block title %}Organisation Settings & Multi-Company Permissions — Pump Master Pro{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
 
 {% block content %}
 {% set org_access_level = current_user.get_access_level('organisation_settings') if current_user else 0 %}

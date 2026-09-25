@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /register
+Disallow: /api/
+Disallow: /papi/
+Disallow: /debug/
+Disallow: /organisations/
+Disallow: /reports/settings
+Disallow: /admin/
+Disallow: /static/js/
+Disallow: /static/css/
+
+# Sitemap — search engines will auto-discover via this reference
+Sitemap: /sitemap.xml

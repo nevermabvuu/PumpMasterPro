@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}User Management — Pump Master Pro{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
 
 {% block content %}
 {% set users_access_lvl = current_user.get_access_level('users_settings') if current_user else 2 %}

@@ -3,8 +3,84 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}PumpSelect Pro &mdash; Industrial Pump Analysis{% endblock %}</title>
-  
+  <title>{% block title %}Pump Master Pro — Industrial Pump Selection & Curve Fitting Software{% endblock %}</title>
+
+  <!-- ── SEO: Primary Meta Tags ──────────────────────────────────────────── -->
+  {% block meta %}
+  <meta name="description" content="{% block meta_description %}Pump Master Pro — Industrial pump sizing, pump selection, pump curves generation, and fluid calculations software. Features comprehensive pump catalogue, pipe network hydraulic analysis, pump materials specification, engineering quotations, dimensional pump drawings, and real-time pump monitoring.{% endblock %}" />
+  <meta name="keywords" content="{% block meta_keywords %}pump sizing, pump selection, pump monitoring, fluid calculations, pipe network, pump catalogue, pump curves generation, pump materials, quotations, pump drawings, centrifugal pump selection, H-Q curve analysis, NPSH calculator, pump performance curves, hydraulic pump design, system curve calculator, pump head calculator, pump efficiency calculator, viscous fluid derating, slurry pump derating, ANSI HI standards, pump comparison tool, industrial pump software, water pump sizing, BEP best efficiency point, pump duty point, Darcy-Weisbach calculator, pump submittals{% endblock %}" />
+  {% endblock %}
+
+  <!-- ── SEO: Google Search Console Verification ──────────────────────────── -->
+  {% block google_verification %}
+  <meta name="google-site-verification" content="{% block google_site_verification %}{% endblock %}" />
+  {% endblock %}
+
+  <!-- ── SEO: Canonical URL ──────────────────────────────────────────────── -->
+  {% if request %}
+  <link rel="canonical" href="{{ request.url_root.rstrip('/') }}{{ request.path }}" />
+  {% endif %}
+
+  <!-- ── SEO: Open Graph / Facebook ──────────────────────────────────────── -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Pump Master Pro" />
+  <meta property="og:title" content="{% block og_title %}Pump Master Pro — Industrial Pump Sizing, Selection & Curve Fitting Software{% endblock %}" />
+  <meta property="og:description" content="{% block og_description %}Professional pump sizing, pump selection, fluid calculations, pipe network analysis, pump curves generation, pump materials, pump catalogue, engineering quotations, and pump drawings.{% endblock %}" />
+  <meta property="og:image" content="{% block og_image %}{{ url_for('static', filename='img/og-preview.png', _external=True) if request else '' }}{% endblock %}" />
+  {% if request %}<meta property="og:url" content="{{ request.url }}" />{% endif %}
+
+  <!-- ── SEO: Twitter Card ───────────────────────────────────────────────── -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Pump Master Pro — Industrial Pump Sizing & Hydraulic Software" />
+  <meta name="twitter:description" content="Pump sizing, pump selection, pump monitoring, fluid calculations, pipe network design, pump curves generation, pump materials, quotations, and pump drawings." />
+
+  <!-- ── SEO: Additional Meta ────────────────────────────────────────────── -->
+  <meta name="robots" content="{% block robots %}index, follow{% endblock %}" />
+  <meta name="author" content="Pump Master Pro" />
+  <meta name="application-name" content="Pump Master Pro" />
+  <meta name="theme-color" content="#0d1117" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Pump Master Pro" />
+
+  <!-- ── SEO: JSON-LD Structured Data (SoftwareApplication) ──────────────── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Pump Master Pro",
+    "applicationCategory": "EngineeringApplication",
+    "applicationSubCategory": "Pump Sizing, Selection & Hydraulic Engineering",
+    "operatingSystem": "Web Browser",
+    "description": "Complete industrial pump sizing and selection platform: fluid calculations, pipe network friction analysis, pump catalogue, automatic pump curves generation, pump materials compatibility, technical quotations, pump drawings, and pump monitoring.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "keywords": "pump sizing, pump selection, pump monitoring, fluid calculations, pipe network, pump catalogue, pump curves generation, pump materials, quotations, pump drawings",
+    "featureList": [
+      "Pump sizing and duty point matching (Flow rate Q, Total Head H, NPSHa)",
+      "Pump selection with multi-parameter ranking and efficiency scoring",
+      "Pump monitoring and operating point telemetry diagnostics",
+      "Fluid calculations (viscosity derating, slurry specific gravity, vapor pressure)",
+      "Pipe network friction loss modeling (Darcy-Weisbach, series & parallel)",
+      "Pump catalogue with manufacturer datasheets and impeller specs",
+      "Pump curves generation (H-Q, NPSHr, Power, and Efficiency polynomial curves)",
+      "Pump materials selection (Cast Iron, 316SS, Duplex, Hastelloy, CD4MCu)",
+      "Engineering quotations and printable submittal reports",
+      "Dimensional pump drawings, nozzle orientations, and GA schematics",
+      "Affinity laws calculator for variable speed & impeller trimming",
+      "Best Efficiency Point (BEP) and preferred operating region (POR) analysis"
+    ]
+  }
+  </script>
+  {% block structured_data %}{% endblock %}
+
+  <!-- ── Web App Manifest ────────────────────────────────────────────────── -->
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}" />
+
   <!-- Browser Favicon & Touch Icons -->
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}" />
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32x32.png') }}" />

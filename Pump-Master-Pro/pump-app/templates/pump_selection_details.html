@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}{{ pump.name }} - Selection Details{% endblock %}
+{% block title %}{{ pump.name }} — Selection Details & Operating Point Analysis | Pump Master Pro{% endblock %}
+{% block meta_description %}Detailed pump selection analysis for {{ pump.name }}. View operating point on H-Q curves, BEP proximity, NPSH margin, power consumption, efficiency at duty point, and motor sizing recommendations.{% endblock %}
 
 {% block content %}
 {% set active_result_ns = namespace(value=none) %}

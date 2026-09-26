@@ -1439,8 +1439,8 @@ class Organisation(db.Model):
         Beginners Note: Returns the email configured to receive access and registration requests for this organisation.
         Falls back to contact_email or system default if not specifically configured.
         """
-        from services.email_service import ADMIN_NOTIFICATION_EMAIL
-        return (self.admin_notification_email or '').strip() or (self.contact_email or '').strip() or ADMIN_NOTIFICATION_EMAIL
+        from services.email_service import get_lytrose_registration_email
+        return (self.admin_notification_email or '').strip() or (self.contact_email or '').strip() or get_lytrose_registration_email()
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -2668,7 +2668,7 @@ class RegistrationRequest(db.Model):
     """
     Beginners Note: Registration Request Model ('registration_requests' table)
     Stores incoming online access requests submitted by new engineers/companies.
-    Notifications are immediately dispatched to 'nevermabvuu@gmail.com'.
+    Notifications are dispatched to Lytrose Engineering's database registration email.
     Statuses: 'pending', 'approved', 'rejected'.
     """
     __tablename__ = 'registration_requests'

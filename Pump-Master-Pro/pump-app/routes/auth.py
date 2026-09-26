@@ -4,7 +4,7 @@ routes/auth.py — User Authentication & Online Registration Requests.
 Beginners Note:
 This module manages:
   1. User login and session lifecycle (/login, /logout)
-  2. Online registration requests with email dispatch to nevermabvuu@gmail.com (/register)
+  2. Online registration requests with email dispatch to Lytrose Engineering (/register)
   3. Administrative request approval console (/admin/registration-requests)
   4. Authentication & Role-based access decorators (@login_required, @admin_required)
 """
@@ -17,9 +17,12 @@ from flask import (
 )
 from models import db, User, RegistrationRequest, Organisation, Role, ACCESS_MODULE_INFO, DEFAULT_FEATURE_FLAGS, clamp_feature_flags, normalize_feature_flags
 from services.email_service import (
+    get_lytrose_registration_email,
     send_registration_request_notification,
+    send_registration_received_confirmation,
     send_registration_decision_notification,
-    ADMIN_NOTIFICATION_EMAIL
+    ADMIN_NOTIFICATION_EMAIL,
+    is_smtp_configured
 )
 
 auth_bp = Blueprint('auth', __name__)
@@ -65,13 +68,16 @@ def inject_current_user():
     if active_org:
         org_alert_email = (getattr(active_org, 'admin_notification_email', '') or '').strip() or (active_org.contact_email or '').strip()
 
-    effective_email = org_alert_email or ADMIN_NOTIFICATION_EMAIL
+    lytrose_reg_email = get_lytrose_registration_email()
+    effective_email = org_alert_email or lytrose_reg_email or ADMIN_NOTIFICATION_EMAIL
 
     return {
         'current_user': user,
         'current_org': active_org,
         'active_org': active_org,
         'admin_notification_email': effective_email,
+        'lytrose_registration_email': lytrose_reg_email,
+        'smtp_configured': is_smtp_configured(),
         'ACCESS_MODULE_INFO': ACCESS_MODULE_INFO
     }
 
@@ -172,14 +178,16 @@ def login():
         if not user:
             # Check if there is a pending registration request for this email
             pending_req = RegistrationRequest.query.filter_by(email=email, status='pending').first()
+            admin_email = get_lytrose_registration_email()
             if pending_req:
-                flash(f"Your registration request from {pending_req.created_at.strftime('%b %d, %Y')} is currently pending verification by engineering administration ({ADMIN_NOTIFICATION_EMAIL}).", "info")
+                flash(f"Your registration request from {pending_req.created_at.strftime('%b %d, %Y')} is currently pending verification by engineering administration ({admin_email}).", "info")
             else:
                 flash("No account exists with this email address. You can submit an access request below.", "danger")
             return render_template('auth/login.html', email=email)
 
         if user.status == 'pending_approval':
-            flash(f"Your account registration is under review by administrator ({ADMIN_NOTIFICATION_EMAIL}). You will be notified once activated.", "info")
+            admin_email = get_lytrose_registration_email()
+            flash(f"Your account registration is under review by administrator ({admin_email}). You will be notified once activated.", "info")
             return render_template('auth/login.html', email=email)
 
         if user.status == 'disabled':
@@ -232,7 +240,7 @@ def register():
     Online Registration Request View:
     Captures applicant credentials, company metadata, and intended use.
     Saves a RegistrationRequest record and dispatches an instant email notification
-    to 'nevermabvuu@gmail.com' for administrative verification.
+    to Lytrose Engineering's database-configured email for administrative verification.
     """
     if get_current_user():
         return redirect(url_for('index'))
@@ -263,66 +271,148 @@ def register():
             flash("Passwords do not match. Please re-enter.", "warning")
             return render_template('auth/register_request.html', form_data=request.form, organisations=organisations)
 
-        # Check if an active user with this email already exists
+        # ── Step 1: Account & Existing Request Checks ─────────────────────────
+        # Check if an active account already exists with this email
         existing_user = User.query.filter_by(email=email).first()
-        if existing_user:
-            if existing_user.status == 'active':
-                flash("An active account already exists with this email address. Please sign in.", "info")
-                return redirect(url_for('auth.login', email=email))
-            elif existing_user.status == 'pending_approval':
-                flash(f"A registration request for this email is already awaiting verification by {ADMIN_NOTIFICATION_EMAIL}.", "warning")
-                return redirect(url_for('auth.login', email=email))
+        admin_email = get_lytrose_registration_email()
 
-        # Check if an unprocessed registration request already exists
+        if existing_user and existing_user.status == 'active':
+            # Active account already exists: inform the user to sign in
+            err_msg = "An active account already exists with this email address. Please sign in."
+            flash(err_msg, "info")
+            return render_template('auth/register_request.html', form_data=request.form, organisations=organisations, error_message=err_msg)
+
+        # Check if an existing RegistrationRequest record exists
         existing_req = RegistrationRequest.query.filter_by(email=email, status='pending').first()
+
+        # ── Step 2: Create or Update Registration Request & User Records ──────
+        # If an unapproved registration already exists, update it with the new info.
+        # Otherwise, construct a brand new RegistrationRequest record.
         if existing_req:
-            flash(f"An access request for {email} was already received on {existing_req.created_at.strftime('%b %d, %Y')} and is pending review by {ADMIN_NOTIFICATION_EMAIL}.", "info")
-            return redirect(url_for('auth.login', email=email))
+            reg_req = existing_req
+            reg_req.first_name = first_name
+            reg_req.last_name = last_name
+            reg_req.company = company
+            reg_req.phone = phone
+            reg_req.job_title = job_title
+            reg_req.notes = notes
+            reg_req.set_password(password)
+        else:
+            reg_req = RegistrationRequest(
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                company=company,
+                phone=phone,
+                job_title=job_title,
+                notes=notes,
+                status='pending'
+            )
+            reg_req.set_password(password)
+            db.session.add(reg_req)
 
-        # Create the RegistrationRequest record
-        reg_req = RegistrationRequest(
-            first_name=first_name,
-            last_name=last_name,
-            email=email,
-            company=company,
-            phone=phone,
-            job_title=job_title,
-            notes=notes,
-            status='pending'
-        )
-        reg_req.set_password(password)
-        db.session.add(reg_req)
+        # ── Step 3: Link to Organisation ──────────────────────────────────────
+        selected_org_id = request.form.get('organisation_id')
+        matched_org = None
+        if selected_org_id and selected_org_id.isdigit():
+            matched_org = Organisation.query.get(int(selected_org_id))
+        if not matched_org and company:
+            matched_org = Organisation.query.filter(Organisation.name.ilike(f"%{company}%")).first()
 
-        # Also pre-create the User in 'pending_approval' state
-        pending_user = User(
-            email=email,
-            first_name=first_name,
-            last_name=last_name,
-            company=company,
-            phone=phone,
-            job_title=job_title,
-            role='engineer',
-            status='pending_approval'
-        )
-        pending_user.set_password(password)
-        
-        # Link to organisation if matched by company name
-        matched_org = Organisation.query.filter(Organisation.name.ilike(f"%{company}%")).first() if company else None
-        target_email = None
-        if matched_org:
-            pending_user.organisation_id = matched_org.id
+        org_name = matched_org.name if matched_org else company
+
+        # Create or update pre-created User in 'pending_approval' state
+        if existing_user and existing_user.status == 'pending_approval':
+            pending_user = existing_user
+            pending_user.first_name = first_name
+            pending_user.last_name = last_name
+            pending_user.company = company
+            pending_user.phone = phone
+            pending_user.job_title = job_title
+            pending_user.organisation_id = matched_org.id if matched_org else None
+            pending_user.set_password(password)
+        else:
+            pending_user = User(
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                company=company,
+                phone=phone,
+                job_title=job_title,
+                role='engineer',
+                organisation_id=matched_org.id if matched_org else None,
+                status='pending_approval'
+            )
+            pending_user.set_password(password)
+            db.session.add(pending_user)
+
+        # ── Step 4: Determine Email Recipients ────────────────────────────────
+        # Rule: The main registration alert MUST be sent to whatever email is set
+        # for user registration in the database for organisation 'Lytrose Engineering'.
+        lytrose_reg_email = get_lytrose_registration_email()
+        org_recipients = [lytrose_reg_email]
+
+        # If user requested another organisation, also alert that organisation's contact email
+        if matched_org and matched_org.id != 2:
             if getattr(matched_org, 'admin_notification_email', None) and matched_org.admin_notification_email.strip():
-                target_email = matched_org.admin_notification_email.strip()
-            elif matched_org.contact_email and matched_org.contact_email.strip():
-                target_email = matched_org.contact_email.strip()
-        
-        db.session.add(pending_user)
-        db.session.commit()
+                org_recipients.append(matched_org.admin_notification_email.strip())
+            if matched_org.contact_email and matched_org.contact_email.strip():
+                org_recipients.append(matched_org.contact_email.strip())
 
-        # Send instant notification email to designated organisation or system administrator
-        send_registration_request_notification(reg_req, target_email=target_email)
+        # Include central system admin in supervisory loop if configured
+        if ADMIN_NOTIFICATION_EMAIL and ADMIN_NOTIFICATION_EMAIL.strip():
+            org_recipients.append(ADMIN_NOTIFICATION_EMAIL.strip())
 
-        return render_template('auth/register_success.html', reg_req=reg_req)
+        # ── Step 5: Database Commit with Full Error Handling ──────────────────
+        try:
+            db.session.commit()
+            current_app.logger.info(f"[REGISTRATION SUCCESS] Saved request #{reg_req.id} and pending user #{pending_user.id} for {email}")
+        except Exception as db_err:
+            db.session.rollback()
+            current_app.logger.error(f"[REGISTRATION DATABASE ERROR] Failed to save {email}: {db_err}")
+            err_msg = f"Database Transaction Error: Unable to save registration request. ({db_err})"
+            flash(err_msg, "danger")
+            return render_template(
+                'auth/register_request.html',
+                form_data=request.form,
+                organisations=organisations,
+                error_message=err_msg
+            )
+
+        # ── Step 6: Dispatch Dual Notifications (Admin Alert + Applicant Confirmation) ──
+        email_errors = []
+
+        # 1. Alert organisation administration (Lytrose Engineering + requested org)
+        try:
+            ok_admin, msg_admin = send_registration_request_notification(reg_req, target_email=org_recipients, org_name=org_name)
+            if not ok_admin:
+                email_errors.append(f"Admin alert delivery: {msg_admin}")
+        except Exception as e_admin:
+            email_errors.append(f"Admin alert error: {e_admin}")
+            current_app.logger.error(f"Error dispatching admin registration alert: {e_admin}")
+
+        # Brief delay to allow SMTP session teardown before opening confirmation session
+        import time
+        time.sleep(0.5)
+
+        # 2. Confirmation receipt directly to the applicant
+        try:
+            ok_user, msg_user = send_registration_received_confirmation(reg_req, org_name=org_name)
+            if not ok_user:
+                email_errors.append(f"Applicant receipt delivery: {msg_user}")
+        except Exception as e_user:
+            email_errors.append(f"Applicant receipt error: {e_user}")
+            current_app.logger.error(f"Error dispatching applicant confirmation receipt: {e_user}")
+
+        # ── Step 7: Render Success View with Diagnostics ──────────────────────
+        return render_template(
+            'auth/register_success.html',
+            reg_req=reg_req,
+            org_name=org_name,
+            org_email=lytrose_reg_email,
+            smtp_configured=is_smtp_configured(),
+            email_errors=email_errors
+        )
 
     return render_template('auth/register_request.html', organisations=organisations)
 
@@ -387,15 +477,28 @@ def admin_request_action(req_id):
 
         user.status = 'active'
         user.role = role
+        assigned_org = None
         if org_id and org_id.isdigit():
             user.organisation_id = int(org_id)
+            assigned_org = Organisation.query.get(int(org_id))
             matched_role = Role.query.filter_by(organisation_id=int(org_id), code=role).first()
             if matched_role:
                 user.role_id = matched_role.id
 
         db.session.commit()
+
+        role_obj = Role.query.get(user.role_id) if user and user.role_id else None
+        role_title = role_obj.name if role_obj else role.replace('_', ' ').title()
+        org_title = assigned_org.name if assigned_org else (user.company or reg_req.company or '')
+
         # Dispatch approval notification email to applicant
-        send_registration_decision_notification(reg_req, approved=True, notes=admin_notes)
+        send_registration_decision_notification(
+            reg_req,
+            approved=True,
+            notes=admin_notes,
+            role_name=role_title,
+            org_name=org_title
+        )
         flash(f"Access approved for {reg_req.full_name} ({reg_req.email}). Welcome email dispatched.", "success")
 
     elif action == 'reject':
@@ -403,8 +506,15 @@ def admin_request_action(req_id):
         if user:
             user.status = 'disabled'
         db.session.commit()
-        send_registration_decision_notification(reg_req, approved=False, notes=admin_notes)
-        flash(f"Access request from {reg_req.full_name} has been rejected.", "info")
+
+        # Dispatch rejection notification email to applicant
+        send_registration_decision_notification(
+            reg_req,
+            approved=False,
+            notes=admin_notes,
+            org_name=reg_req.company
+        )
+        flash(f"Access request from {reg_req.full_name} has been rejected. Notification email dispatched.", "info")
 
     return redirect(url_for('auth.admin_requests'))
 
@@ -919,6 +1029,7 @@ def admin_user_edit(user_id):
         flash("You do not have permission to edit users from another organisation.", "danger")
         return redirect(url_for('auth.admin_users'))
 
+    prev_status = target_user.status
     target_user.first_name = (request.form.get('first_name') or '').strip()
     target_user.last_name = (request.form.get('last_name') or '').strip()
     target_user.company = (request.form.get('company') or '').strip()
@@ -949,6 +1060,38 @@ def admin_user_edit(user_id):
             target_user.role = role_str
 
     db.session.commit()
+
+    # If user was pending approval and status was modified in Users Console, notify them:
+    if prev_status == 'pending_approval' and target_user.status in ('active', 'disabled'):
+        matched_req = RegistrationRequest.query.filter_by(email=target_user.email, status='pending').order_by(RegistrationRequest.created_at.desc()).first()
+        req_proxy = matched_req or target_user
+        if target_user.status == 'active':
+            role_obj = Role.query.get(target_user.role_id) if target_user.role_id else None
+            role_title = role_obj.name if role_obj else (target_user.role or 'engineer').replace('_', ' ').title()
+            org_obj = target_user.organisation_ref or (Organisation.query.get(target_user.organisation_id) if target_user.organisation_id else None)
+            org_title = org_obj.name if org_obj else target_user.company
+            send_registration_decision_notification(
+                req_proxy,
+                approved=True,
+                notes="Access activated by administrator in Users Console.",
+                role_name=role_title,
+                org_name=org_title
+            )
+            if matched_req:
+                matched_req.status = 'approved'
+                matched_req.reviewed_at = datetime.now(timezone.utc)
+                db.session.commit()
+        elif target_user.status == 'disabled':
+            send_registration_decision_notification(
+                req_proxy,
+                approved=False,
+                notes="Registration declined by administrator.",
+                org_name=target_user.company
+            )
+            if matched_req:
+                matched_req.status = 'rejected'
+                matched_req.reviewed_at = datetime.now(timezone.utc)
+                db.session.commit()
     flash(f"User '{target_user.full_name}' updated successfully.", "success")
     return redirect(url_for('auth.admin_users'))
 

@@ -41,6 +41,35 @@
       </div>
     </div>
 
+    <!-- Onscreen Error & Diagnostic Display Banner -->
+    {% if error_message %}
+    <div class="p-3.5 mb-6 rounded-xl bg-[#381a1a]/90 border border-[#f85149] text-xs text-[#ff7b72] flex items-start gap-3 shadow-lg">
+      <i class="bi bi-exclamation-octagon-fill text-base shrink-0 mt-0.5 text-[#f85149]"></i>
+      <div>
+        <div class="font-bold text-white mb-0.5">Registration Submission Error</div>
+        <div class="leading-relaxed">{{ error_message }}</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Flashed notifications within registration card -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-6 space-y-2">
+          {% for cat, msg in messages %}
+            <div class="p-3 rounded-lg flex items-start gap-2.5 text-xs border
+                 {% if cat == 'danger' or cat == 'error' %}bg-[#381a1a]/80 border-[#f85149]/60 text-[#f85149]
+                 {% elif cat == 'warning' %}bg-[#341a04]/80 border-[#d29922]/60 text-[#e3b341]
+                 {% elif cat == 'success' %}bg-[#0e2a18]/80 border-[#3fb950]/60 text-[#3fb950]
+                 {% else %}bg-[#0c2d6b]/80 border-[#58a6ff]/60 text-[#58a6ff]{% endif %}">
+              <i class="bi {% if cat == 'danger' or cat == 'error' %}bi-x-circle-fill text-[#f85149]{% elif cat == 'warning' %}bi-exclamation-triangle-fill text-[#d29922]{% elif cat == 'success' %}bi-check-circle-fill text-[#3fb950]{% else %}bi-info-circle-fill text-[#58a6ff]{% endif %} mt-0.5 shrink-0 text-sm"></i>
+              <span class="leading-relaxed">{{ msg }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
     <form method="POST" action="{{ url_for('auth.register') }}" class="space-y-4">
 
       <!-- Name Fields (Row of 2) -->
@@ -99,8 +128,27 @@
         </div>
       </div>
 
-      <!-- Company & Job Title (Row of 2) -->
+      <!-- Organisation Selection & Company Name -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1.5" for="selectOrg">
+            Select Organisation / Affiliation
+          </label>
+          <div class="relative flex items-center rounded-lg border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
+            <span class="pl-2.5 text-[#8b949e]"><i class="bi bi-building"></i></span>
+            <select name="organisation_id" id="selectOrg" onchange="syncOrgSelection(this)"
+                    class="w-full bg-transparent text-xs text-white px-2.5 py-2 focus:outline-none cursor-pointer">
+              <option value="" class="bg-[#161b22] text-[#8b949e]">-- Choose Organisation (Optional) --</option>
+              {% for org in organisations %}
+                <option value="{{ org.id }}" data-name="{{ org.name }}" data-email="{{ org.contact_email or org.admin_notification_email or '' }}" class="bg-[#161b22] text-white">
+                  {{ org.name }}
+                </option>
+              {% endfor %}
+              <option value="custom" class="bg-[#161b22] text-[#58a6ff]">+ Other / Not Listed (Type below)</option>
+            </select>
+          </div>
+        </div>
+
         <div>
           <label class="block text-xs font-semibold text-[#c9d1d9] mb-1.5" for="inputCompany">
             Company / Organisation Name *
@@ -113,18 +161,19 @@
                    class="w-full bg-transparent text-xs text-white px-2.5 py-2 focus:outline-none placeholder-[#484f58]">
           </div>
         </div>
+      </div>
 
-        <div>
-          <label class="block text-xs font-semibold text-[#c9d1d9] mb-1.5" for="inputJobTitle">
-            Job Title / Role
-          </label>
-          <div class="relative flex items-center rounded-lg border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
-            <span class="pl-2.5 text-[#8b949e]"><i class="bi bi-briefcase"></i></span>
-            <input type="text" name="job_title" id="inputJobTitle"
-                   value="{{ form_data.job_title if form_data else '' }}"
-                   placeholder="e.g. Slurry Pump Specialist"
-                   class="w-full bg-transparent text-xs text-white px-2.5 py-2 focus:outline-none placeholder-[#484f58]">
-          </div>
+      <!-- Job Title / Role -->
+      <div>
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1.5" for="inputJobTitle">
+          Job Title / Engineering Role
+        </label>
+        <div class="relative flex items-center rounded-lg border border-[#30363d] focus-within:border-[#58a6ff] bg-[#0d1117]">
+          <span class="pl-2.5 text-[#8b949e]"><i class="bi bi-briefcase"></i></span>
+          <input type="text" name="job_title" id="inputJobTitle"
+                 value="{{ form_data.job_title if form_data else '' }}"
+                 placeholder="e.g. Lead Hydraulic Engineer / Slurry Specialist"
+                 class="w-full bg-transparent text-xs text-white px-2.5 py-2 focus:outline-none placeholder-[#484f58]">
         </div>
       </div>
 
@@ -165,12 +214,25 @@
                   class="w-full rounded-lg border border-[#30363d] focus:border-[#58a6ff] bg-[#0d1117] text-xs text-white p-3 focus:outline-none placeholder-[#484f58]">{{ form_data.notes if form_data else '' }}</textarea>
       </div>
 
-      <!-- Terms & Submission Notice -->
-      <div class="p-3 rounded-lg bg-[#161b22] border border-[#30363d] text-[11px] text-[#8b949e] flex items-center gap-2.5">
-        <i class="bi bi-send-check text-[#58a6ff] text-base shrink-0"></i>
-        <span>
-          Clicking <strong>Submit Access Request</strong> will immediately send an alert email with your application to <strong class="text-[#e6edf3]">{{ admin_notification_email }}</strong>.
-        </span>
+      <!-- Terms & Dual Email Notification Notice -->
+      <div class="p-3.5 rounded-xl bg-[#161b22] border border-[#30363d] text-xs text-[#8b949e] space-y-2">
+        <div class="flex items-center gap-2 text-white font-semibold">
+          <i class="bi bi-envelope-check text-[#58a6ff]"></i>
+          <span>Dual Email Notification Guarantee</span>
+        </div>
+        <p class="text-[11px] leading-relaxed text-[#c9d1d9] m-0">
+          When you submit this request, automated emails will be dispatched immediately:
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-[11px]">
+          <div class="p-2 rounded bg-[#0d1117] border border-[#21262d]">
+            <span class="text-[#3fb950] font-semibold block">&bull; To You (Applicant):</span>
+            <span class="text-[#8b949e]">Confirmation receipt confirming your submission is under review.</span>
+          </div>
+          <div class="p-2 rounded bg-[#0d1117] border border-[#21262d]">
+            <span class="text-[#58a6ff] font-semibold block">&bull; To Organisation Contact &amp; Admin:</span>
+            <span class="text-[#8b949e]">Access alert dispatched to the organisation contact email for review.</span>
+          </div>
+        </div>
       </div>
 
       <!-- Action Button -->
@@ -186,6 +248,21 @@
       </div>
 
     </form>
+
+    <script>
+      function syncOrgSelection(selectElem) {
+        var opt = selectElem.options[selectElem.selectedIndex];
+        var companyInput = document.getElementById('inputCompany');
+        if (opt && opt.value && opt.value !== 'custom') {
+          var orgName = opt.getAttribute('data-name');
+          if (orgName) {
+            companyInput.value = orgName;
+          }
+        } else if (opt && opt.value === 'custom') {
+          companyInput.focus();
+        }
+      }
+    </script>
 
   </div>
 </div>

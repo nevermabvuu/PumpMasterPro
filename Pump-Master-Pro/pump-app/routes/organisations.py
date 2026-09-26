@@ -198,7 +198,9 @@ def save_selection_defaults():
     6. Filters: filter_manufacturer, filter_pump_type
     7. Pipe Network System Defaults:
        - pn_friction_method, pn_solver_method, pn_topology
-       - pn_default_material, pn_default_diameter_mm, pn_default_length_m
+       - pn_default_standard, pn_default_material, pn_default_schedule_sdr
+       - pn_default_pipe_id, pn_default_nb_mm
+       - pn_default_diameter_mm, pn_default_length_m
        - pn_default_elev_change_m, pn_default_roughness_mm, pn_default_hw_c
     """
     current_org = get_current_organisation()

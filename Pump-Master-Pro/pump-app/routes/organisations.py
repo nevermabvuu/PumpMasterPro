@@ -13,8 +13,8 @@ if _app_dir not in sys.path:
     sys.path.insert(0, _app_dir)
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from models import db, Organisation, Pump, ReportConfig, Role, DEFAULT_FEATURE_FLAGS, clamp_feature_flags
-from utils import CURRENT_ORGANISATION_ID, get_current_organisation, get_visible_pumps_query
+from models import db, Organisation, Pump, ReportConfig, Role, PipeMaterial, DEFAULT_FEATURE_FLAGS, clamp_feature_flags
+from utils import CURRENT_ORGANISATION_ID, get_current_organisation, get_visible_pumps_query, UNITS_FLOW, UNITS_HEAD, UNITS_POWER, UNITS_DENSITY, UNITS_SIZE
 from routes.auth import require_access, get_current_user
 
 organisations_bp = Blueprint('organisations', __name__, url_prefix='/organisations')
@@ -63,6 +63,17 @@ def settings():
 
     org_feature_flags = current_org.get_feature_flags() if current_org else DEFAULT_FEATURE_FLAGS
 
+    # Unit tables, materials, and Pump Selection defaults for the active organisation
+    units_tables = {
+        'flow': UNITS_FLOW,
+        'head': UNITS_HEAD,
+        'power': UNITS_POWER,
+        'density': UNITS_DENSITY,
+        'size': UNITS_SIZE
+    }
+    selection_defaults = current_org.get_selection_defaults() if current_org else {}
+    materials = PipeMaterial.query.filter_by(is_active=True).order_by(PipeMaterial.sort_order).all()
+
     return render_template(
         'organisations_settings.html',
         current_org=current_org,
@@ -78,7 +89,10 @@ def settings():
         visible_pumps=visible_pumps,
         org_pump_counts=org_pump_counts,
         org_feature_flags=org_feature_flags,
-        motor_suppliers=motor_suppliers
+        motor_suppliers=motor_suppliers,
+        units_tables=units_tables,
+        selection_defaults=selection_defaults,
+        materials=materials
     )
 
 
@@ -135,16 +149,110 @@ def save_profile():
     current_org.address = request.form.get('address', '').strip()
     current_org.primary_color = request.form.get('primary_color', '#1e3a8a').strip()
 
-    # Engineering Unit Defaults
-    current_org.default_unit_flow = request.form.get('default_unit_flow', 'm3h').strip()
-    current_org.default_unit_head = request.form.get('default_unit_head', 'm').strip()
-    current_org.default_unit_power = request.form.get('default_unit_power', 'kw').strip()
-    current_org.default_unit_npsh = request.form.get('default_unit_npsh', 'm').strip()
+    # Engineering Unit Defaults (optional fallback if submitted in profile form)
+    if 'default_unit_flow' in request.form:
+        current_org.default_unit_flow = request.form.get('default_unit_flow', 'm3h').strip()
+    if 'default_unit_head' in request.form:
+        current_org.default_unit_head = request.form.get('default_unit_head', 'm').strip()
+    if 'default_unit_power' in request.form:
+        current_org.default_unit_power = request.form.get('default_unit_power', 'kw').strip()
+    if 'default_unit_npsh' in request.form:
+        current_org.default_unit_npsh = request.form.get('default_unit_npsh', 'm').strip()
     current_org.pump_details_template = request.form.get('pump_details_template', 'details/default_pump_details.html').strip()
     current_org.notes = request.form.get('notes', '').strip()
 
+    # Synchronize primary unit columns with selection_defaults_json if units were submitted
+    if any(k in request.form for k in ['default_unit_flow', 'default_unit_head', 'default_unit_power', 'default_unit_npsh']):
+        cur_sel_defaults = current_org.get_selection_defaults()
+        cur_sel_defaults['unit_q'] = current_org.default_unit_flow
+        cur_sel_defaults['unit_h'] = current_org.default_unit_head
+        cur_sel_defaults['unit_pow'] = current_org.default_unit_power
+        cur_sel_defaults['unit_npsh'] = current_org.default_unit_npsh
+        current_org.set_selection_defaults(cur_sel_defaults)
+
     db.session.commit()
     flash(f'Organisation settings for "{current_org.name}" saved successfully.', 'success')
+    return redirect(url_for('organisations.settings'))
+
+
+@organisations_bp.route('/selection-defaults/save', methods=['POST'], endpoint='save_selection_defaults')
+@require_access('organisation_settings', min_level=2)
+def save_selection_defaults():
+    """
+    Beginners Note:
+    Saves the complete set of default engineering units, initial input field values,
+    slurry calculation active/passive parameter checkboxes, and pipe network defaults
+    for the active organisation.
+    
+    Fields saved include:
+    1. Engineering Units: unit_system, unit_q, unit_h, unit_npsh, unit_static_head, unit_rho, unit_d50, unit_pow
+    2. Duty Point Inputs: q_duty, h_duty, npsh_avail, static_head
+    3. Fluid Properties & Slurry Checkboxes:
+       - liquid, temperature_c, rho, viscosity_cSt, fluid_ph, fluid_concentration
+       - Slurry Checkboxes (cb_L, cb_S, cb_M, cb_Cv, cb_Cw) determine which 3 values are user inputs vs calculated
+       - Slurry Values: sg_l, sg_s, sg_m, slurry_cv, slurry_cw, slurry_d50
+       - Flags: is_hazardous, is_flammable
+    4. Operation Mode: operation_mode, fixed_speed_mode, manual_pump_speed_rpm, vsd_f_min, vsd_f_max
+    5. Motor Specifications: motor_standard, motor_efficiency, motor_supplier, motor_freq_hz, motor_poles,
+                             drive_type, motor_margin_basis, motor_margin_pct
+    6. Filters: filter_manufacturer, filter_pump_type
+    7. Pipe Network System Defaults:
+       - pn_friction_method, pn_solver_method, pn_topology
+       - pn_default_material, pn_default_diameter_mm, pn_default_length_m
+       - pn_default_elev_change_m, pn_default_roughness_mm, pn_default_hw_c
+    """
+    current_org = get_current_organisation()
+    if not current_org:
+        flash('Active organisation not found.', 'error')
+        return redirect(url_for('organisations.settings'))
+
+    fields = [
+        # Units
+        'unit_system', 'unit_q', 'unit_h', 'unit_npsh', 'unit_static_head', 'unit_rho', 'unit_d50', 'unit_pow',
+        # Duty Point Inputs
+        'q_duty', 'h_duty', 'npsh_avail', 'static_head',
+        # Fluid Properties
+        'liquid', 'temperature_c', 'rho', 'viscosity_cSt', 'fluid_ph', 'fluid_concentration',
+        'sg_l', 'sg_s', 'sg_m', 'slurry_cv', 'slurry_cw', 'slurry_d50',
+        # Operation Mode
+        'operation_mode', 'fixed_speed_mode', 'manual_pump_speed_rpm', 'vsd_f_min', 'vsd_f_max',
+        # Motor Specifications
+        'motor_standard', 'motor_efficiency', 'motor_supplier', 'motor_freq_hz', 'motor_poles',
+        'drive_type', 'motor_margin_basis', 'motor_margin_pct',
+        # Filters
+        'filter_manufacturer', 'filter_pump_type',
+        # Pipe Network Defaults
+        'pn_friction_method', 'pn_solver_method', 'pn_topology',
+        'pn_default_standard', 'pn_default_material', 'pn_default_schedule_sdr',
+        'pn_default_pipe_id', 'pn_default_nb_mm',
+        'pn_default_diameter_mm', 'pn_default_length_m',
+        'pn_default_elev_change_m', 'pn_default_roughness_mm', 'pn_default_hw_c'
+    ]
+
+    new_defaults = {}
+    for fld in fields:
+        val = request.form.get(fld)
+        if val is not None:
+            new_defaults[fld] = val.strip()
+
+    # Explicit handling for HTML checkboxes (omitted from POST if unchecked)
+    checkbox_fields = ['cb_L', 'cb_S', 'cb_M', 'cb_Cv', 'cb_Cw', 'is_hazardous', 'is_flammable']
+    for cb in checkbox_fields:
+        new_defaults[cb] = '1' if request.form.get(cb) == '1' else '0'
+
+    # Synchronize legacy organisation unit columns with saved selection defaults
+    if 'unit_q' in new_defaults and new_defaults['unit_q']:
+        current_org.default_unit_flow = new_defaults['unit_q']
+    if 'unit_h' in new_defaults and new_defaults['unit_h']:
+        current_org.default_unit_head = new_defaults['unit_h']
+    if 'unit_pow' in new_defaults and new_defaults['unit_pow']:
+        current_org.default_unit_power = new_defaults['unit_pow']
+    if 'unit_npsh' in new_defaults and new_defaults['unit_npsh']:
+        current_org.default_unit_npsh = new_defaults['unit_npsh']
+
+    current_org.set_selection_defaults(new_defaults)
+    db.session.commit()
+    flash(f'Pump Selection & Pipe Network defaults saved successfully for "{current_org.name}".', 'success')
     return redirect(url_for('organisations.settings'))
 
 

@@ -101,6 +101,13 @@ with app.app_context():
                         ))
                         mig_conn.commit()
                     print(f"Migrated: Added feature_flags_json to {tbl_name}")
+                if tbl_name == 'organisations' and 'selection_defaults_json' not in existing_cols:
+                    with db.engine.connect() as mig_conn:
+                        mig_conn.execute(sa_text(
+                            f"ALTER TABLE organisations ADD selection_defaults_json {'NVARCHAR(MAX)' if dialect_name == 'mssql' else 'TEXT'} DEFAULT '{{}}'"
+                        ))
+                        mig_conn.commit()
+                    print("Migrated: Added selection_defaults_json to organisations")
     except Exception as e:
         print("Migration notice:", e)
 
@@ -149,6 +156,8 @@ with app.app_context():
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN access_levels_json TEXT DEFAULT '{}'"))
             if 'feature_flags_json' not in org_cols:
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN feature_flags_json TEXT DEFAULT '{}'"))
+            if 'selection_defaults_json' not in org_cols:
+                conn.execute(text("ALTER TABLE organisations ADD COLUMN selection_defaults_json TEXT DEFAULT '{}'"))
             for i in range(1, 31):
                 col_name = f'PumpAttributeName{i}'
                 if col_name not in org_cols:

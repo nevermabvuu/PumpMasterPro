@@ -789,26 +789,44 @@ function defaultNodeProps(type, count) {
 
 function defaultPipeProps(id) {
   let defStd = null;
+  const orgDefaults = window.__PMP_PIPE_NETWORK_DEFAULTS || {};
   if (Array.isArray(STANDARD_PIPES) && STANDARD_PIPES.length > 0) {
-    defStd = STANDARD_PIPES.find(p => p.standard.includes('B36.10M') && p.nb_mm === 100 && p.schedule_sdr.includes('40'))
-      || STANDARD_PIPES.find(p => p.nb_mm === 100)
-      || STANDARD_PIPES[0];
+    if (orgDefaults.pn_default_pipe_id) {
+      defStd = STANDARD_PIPES.find(p => String(p.id) === String(orgDefaults.pn_default_pipe_id));
+    }
+    if (!defStd && orgDefaults.pn_default_standard) {
+      defStd = STANDARD_PIPES.find(p =>
+        p.standard === orgDefaults.pn_default_standard &&
+        (!orgDefaults.pn_default_schedule_sdr || p.schedule_sdr === orgDefaults.pn_default_schedule_sdr) &&
+        (!orgDefaults.pn_default_nb_mm || String(p.nb_mm) === String(orgDefaults.pn_default_nb_mm))
+      ) || STANDARD_PIPES.find(p => p.standard === orgDefaults.pn_default_standard);
+    }
+    if (!defStd && orgDefaults.pn_default_material) {
+      defStd = STANDARD_PIPES.find(p => p.material_key === orgDefaults.pn_default_material && (p.nb_mm === 100 || (p.od_mm >= 110 && p.od_mm <= 125)));
+    }
+    if (!defStd) {
+      defStd = STANDARD_PIPES.find(p => p.standard && p.standard.includes('B36.10M') && p.nb_mm === 100 && p.schedule_sdr && p.schedule_sdr.includes('40'))
+        || STANDARD_PIPES.find(p => p.nb_mm === 100)
+        || STANDARD_PIPES[0];
+    }
   }
+  const dia = defStd ? defStd.id_mm : (parseFloat(orgDefaults.pn_default_diameter_mm) || 102.26);
+  const mat = defStd ? (defStd.material_key || defStd.material) : (orgDefaults.pn_default_material || 'commercial_steel');
   return {
     label: id,
     dimension_mode: 'standard', // 'standard' | 'custom'
     standard_pipe_id: defStd ? defStd.id : null,
-    standard: defStd ? defStd.standard : 'ASME B36.10M',
-    schedule_sdr: defStd ? defStd.schedule_sdr : 'Sch 40 (STD)',
-    nb_mm: defStd ? defStd.nb_mm : 100,
+    standard: defStd ? defStd.standard : (orgDefaults.pn_default_standard || 'ASME B36.10M'),
+    schedule_sdr: defStd ? defStd.schedule_sdr : (orgDefaults.pn_default_schedule_sdr || 'Sch 40 (STD)'),
+    nb_mm: defStd ? defStd.nb_mm : (parseInt(orgDefaults.pn_default_nb_mm) || 100),
     nb_inch: defStd ? defStd.nb_inch : '4"',
     od_mm: defStd ? defStd.od_mm : 114.3,
     wall_thickness_mm: defStd ? defStd.wall_thickness_mm : 6.02,
-    id_mm: defStd ? defStd.id_mm : 102.26,
+    id_mm: dia,
     pressure_rating: defStd ? defStd.pressure_rating : 'PN 79 bar (1145 psi)',
-    diameter_mm: defStd ? defStd.id_mm : 100,
-    length_m: 10.0,
-    material: defStd ? defStd.material_key : 'commercial_steel',
+    diameter_mm: dia,
+    length_m: parseFloat(orgDefaults.pn_default_length_m) || 10.0,
+    material: mat,
     elev_change_m: 0.0,
     fittings: [],
     custom_k: 0.0,

@@ -84,14 +84,19 @@ def run_selection_from_form(f, all_pumps=None, current_org=None):
         
     enabled_pump_attributes = _get_enabled_pump_attributes(current_org, all_pumps)
 
-    unit_system      = f.get('unit_system', 'metric')
-    unit_q           = f.get('unit_q', 'm3h')
-    unit_h           = f.get('unit_h', 'm')
-    unit_npsh        = f.get('unit_npsh', 'm')
-    unit_static_head = f.get('unit_static_head', 'm')
-    unit_rho         = f.get('unit_rho', 'kgm3')
-    unit_d50         = f.get('unit_d50', 'mm')
-    unit_pow         = f.get('unit_pow', 'hp' if unit_system == 'imperial' else 'kw')
+    # ── Resolve Organisation Defaults for Engineering Units ──────────────────
+    # Beginners Note: If specific unit settings are absent from the form dictionary `f`,
+    # they fall back to the organisation's configured defaults rather than hardcoded literals.
+    org_defaults = current_org.get_selection_defaults() if current_org else {}
+
+    unit_system      = f.get('unit_system', org_defaults.get('unit_system', 'metric'))
+    unit_q           = f.get('unit_q', org_defaults.get('unit_q', 'm3h'))
+    unit_h           = f.get('unit_h', org_defaults.get('unit_h', 'm'))
+    unit_npsh        = f.get('unit_npsh', org_defaults.get('unit_npsh', 'm'))
+    unit_static_head = f.get('unit_static_head', org_defaults.get('unit_static_head', 'm'))
+    unit_rho         = f.get('unit_rho', org_defaults.get('unit_rho', 'kgm3'))
+    unit_d50         = f.get('unit_d50', org_defaults.get('unit_d50', 'mm'))
+    unit_pow         = f.get('unit_pow', org_defaults.get('unit_pow', 'hp' if unit_system == 'imperial' else 'kw'))
 
     units_tables = {
         'flow':    UNITS_FLOW,
@@ -300,13 +305,33 @@ def pump_selection():
     enabled_pump_attributes = _get_enabled_pump_attributes(current_org, all_pumps)
     filter_options = get_filter_options(all_pumps, enabled_attributes=enabled_pump_attributes)
 
+    # ── Resolve Organisation Defaults for Pump Selection ────────────────────
+    # Beginners Note:
+    # Each organisation can define corporate default engineering units and input field values.
+    # When a user loads /pump-selection on a clean session, these defaults pre-fill the form.
+    # An optional ?reset=1 query parameter allows manually clearing active session state to reload org defaults.
+    if request.args.get('reset') == '1':
+        session.pop('selection_form_data', None)
+        session.pop('active_selection', None)
+        flash('Selection form reset to organisation defaults.', 'info')
+        return redirect(url_for('selection.pump_selection'))
+
+    org_defaults = current_org.get_selection_defaults() if current_org else {}
+
     if request.method == 'POST':
         f = request.form.to_dict()
         session['selection_form_data'] = f
         form_data = f
     else:
-        f = session.get('selection_form_data', {})
-        form_data = f
+        saved_f = session.get('selection_form_data')
+        if saved_f:
+            # Active working session: retain user's working inputs, with org defaults as fallback for unconfigured keys
+            form_data = dict(org_defaults)
+            form_data.update(saved_f)
+        else:
+            # Initial / fresh visit: pre-populate fully with organisation defaults
+            form_data = dict(org_defaults)
+            session['selection_form_data'] = form_data
 
     results, ctx = run_selection_from_form(form_data, all_pumps=all_pumps, current_org=current_org)
     unit_system      = ctx['unit_system']

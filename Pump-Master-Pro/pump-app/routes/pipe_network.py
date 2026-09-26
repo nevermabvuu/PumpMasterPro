@@ -222,6 +222,10 @@ def pipe_network():
     active_selection_json = json.dumps(active_sel)
     selection_form_data_json = json.dumps(sel_form)
 
+    from routes.organisations import get_current_organisation
+    current_org = get_current_organisation()
+    org_defaults = current_org.get_selection_defaults() if current_org else {}
+
     # Engineering units metadata passed from active session/selection form
     units_tables = {
         'flow': UNITS_FLOW,
@@ -230,11 +234,13 @@ def pipe_network():
         'density': UNITS_DENSITY,
         'size': UNITS_SIZE
     }
-    unit_system = sel_form.get('unit_system') or active_sel.get('unit_system') or session.get('unit_system') or 'metric'
-    unit_q = sel_form.get('unit_q') or active_sel.get('unit_q') or session.get('unit_q') or 'm3h'
-    unit_h = sel_form.get('unit_h') or active_sel.get('unit_h') or session.get('unit_h') or 'm'
+    unit_system = sel_form.get('unit_system') or active_sel.get('unit_system') or session.get('unit_system') or org_defaults.get('unit_system', 'metric')
+    unit_q = sel_form.get('unit_q') or active_sel.get('unit_q') or session.get('unit_q') or org_defaults.get('unit_q', 'm3h')
+    unit_h = sel_form.get('unit_h') or active_sel.get('unit_h') or session.get('unit_h') or org_defaults.get('unit_h', 'm')
 
     user_feature_flags = user.get_effective_feature_flags() if user else DEFAULT_FEATURE_FLAGS
+
+    pipe_network_defaults_json = json.dumps(org_defaults)
 
     return render_template('pipe_network.html',
                            fittings_json=fittings_json,
@@ -243,6 +249,8 @@ def pipe_network():
                            pipe_network_json=pipe_network_json,
                            active_selection_json=active_selection_json,
                            selection_form_data_json=selection_form_data_json,
+                           pipe_network_defaults=org_defaults,
+                           pipe_network_defaults_json=pipe_network_defaults_json,
                            active_selection=active_sel,
                            selection_form_data=sel_form,
                            units_tables=units_tables,

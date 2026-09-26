@@ -375,6 +375,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // Handle Checkbox Toggles: keep exactly 3 checked
   let checkedOrder = [...slurryCheckboxes].filter(cb => cb.checked);
   
+  function syncPumpSelectionSlurryReadOnlyState() {
+    const active = new Set(checkedOrder.map(c => c.dataset.param));
+    const elementsToToggle = [
+      ['sg_l', 'L'],
+      ['sg_s', 'S'],
+      ['sg_m', 'M'],
+      ['slurry_cv', 'Cv'],
+      ['slurry_cw', 'Cw']
+    ];
+    elementsToToggle.forEach(([elemId, param]) => {
+      const el = document.getElementById(elemId);
+      if (el) {
+        el.readOnly = !active.has(param);
+        el.style.opacity = active.has(param) ? '1' : '0.75';
+      }
+    });
+  }
+
   slurryCheckboxes.forEach(cb => {
     cb.addEventListener('change', (e) => {
       if (e.target.checked) {
@@ -389,25 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.checked = true;
       }
       
-      // Update readonly state based on checked param
-      const active = new Set(checkedOrder.map(c => c.dataset.param));
-      
-      const elementsToToggle = [
-        ['sg_l', 'L'],
-        ['sg_s', 'S'],
-        ['sg_m', 'M'],
-        ['slurry_cv', 'Cv'],
-        ['slurry_cw', 'Cw']
-      ];
-      
-      elementsToToggle.forEach(([elemId, param]) => {
-        const el = document.getElementById(elemId);
-        if (el) {
-          el.readOnly = !active.has(param);
-          el.style.opacity = active.has(param) ? '1' : '0.75';
-        }
-      });
-      
+      syncPumpSelectionSlurryReadOnlyState();
       updateSlurryCalculator();
       syncPumpSelectionSgToStorage();
     });
@@ -416,6 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initial update
   if (slurryCheckboxes.length > 0) {
     try {
+      syncPumpSelectionSlurryReadOnlyState();
       updateSlurryCalculator();
     } catch (err) {
       console.warn('Slurry init notice:', err);

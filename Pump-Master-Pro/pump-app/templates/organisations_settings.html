@@ -107,11 +107,11 @@
     <!-- ── LEFT COLUMN: ACTIVE ORGANISATION PROFILE & ENGINEERING DEFAULTS (7 cols) ── -->
     <div class="lg:col-span-7 space-y-6">
       
-      <!-- CARD: ORGANISATION PROFILE & ENGINEERING DEFAULTS -->
+      <!-- CARD: ORGANISATION PROFILE & DETAILS -->
       <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
         <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
           <h2 class="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
-            <i class="bi bi-sliders text-[#58a6ff]"></i> Active Organisation Profile &amp; Engineering Defaults
+            <i class="bi bi-building text-[#58a6ff]"></i> Active Organisation Profile &amp; General Details
           </h2>
           <span class="text-xs font-mono text-[#8b949e]">ID #{{ current_org.id }}</span>
         </div>
@@ -154,50 +154,6 @@
             </div>
           </div>
 
-          <!-- Default Engineering Units for Organisation -->
-          <div class="p-3.5 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-2">
-            <span class="block text-xs font-bold text-[#f0883e] uppercase tracking-wider flex items-center gap-1.5">
-              <i class="bi bi-ruler"></i> Organisation Default Engineering Units
-            </span>
-            <p class="text-[11px] text-[#8b949e]">Default unit system used when creating new pumps and generating technical documents.</p>
-            
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-              <div>
-                <label class="block text-[11px] text-[#8b949e] mb-1">Flow Rate (Q):</label>
-                <select name="default_unit_flow" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#f0883e]">
-                  <option value="m3h" {% if current_org and current_org.default_unit_flow == 'm3h' %}selected{% endif %}>m³/h</option>
-                  <option value="ls" {% if current_org and current_org.default_unit_flow == 'ls' %}selected{% endif %}>L/s</option>
-                  <option value="gpm" {% if current_org and current_org.default_unit_flow == 'gpm' %}selected{% endif %}>US gpm</option>
-                  <option value="lmin" {% if current_org and current_org.default_unit_flow == 'lmin' %}selected{% endif %}>L/min</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-[11px] text-[#8b949e] mb-1">Head (H):</label>
-                <select name="default_unit_head" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#f0883e]">
-                  <option value="m" {% if current_org and current_org.default_unit_head == 'm' %}selected{% endif %}>m (meters)</option>
-                  <option value="ft" {% if current_org and current_org.default_unit_head == 'ft' %}selected{% endif %}>ft (feet)</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-[11px] text-[#8b949e] mb-1">Power (P):</label>
-                <select name="default_unit_power" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#f0883e]">
-                  <option value="kw" {% if current_org and current_org.default_unit_power == 'kw' %}selected{% endif %}>kW (kilowatts)</option>
-                  <option value="hp" {% if current_org and current_org.default_unit_power == 'hp' %}selected{% endif %}>hp (horsepower)</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-[11px] text-[#8b949e] mb-1">NPSHr:</label>
-                <select name="default_unit_npsh" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#f0883e]">
-                  <option value="m" {% if current_org and current_org.default_unit_npsh == 'm' %}selected{% endif %}>m (meters)</option>
-                  <option value="ft" {% if current_org and current_org.default_unit_npsh == 'ft' %}selected{% endif %}>ft (feet)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Branding Primary Color</label>
@@ -224,7 +180,547 @@
           <div class="pt-2 flex justify-end">
             {% if can_edit_org %}
             <button type="submit" class="px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
-              <i class="bi bi-check-lg"></i> Save Profile &amp; Defaults
+              <i class="bi bi-check-lg"></i> Save Profile
+            </button>
+            {% else %}
+            <button type="button" disabled class="px-4 py-2 bg-[#21262d] text-xs font-semibold text-[#8b949e] rounded-lg border border-[#30363d] cursor-not-allowed flex items-center gap-1.5 opacity-60">
+              <i class="bi bi-lock-fill"></i> Read-Only (Changes Disabled)
+            </button>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+
+      <!-- CARD: PUMP SELECTION & PIPE NETWORK DEFAULT UNITS & INPUT VALUES -->
+      {% set sd = selection_defaults if selection_defaults else (current_org.get_selection_defaults() if current_org else {}) %}
+      <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
+        <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
+              <i class="bi bi-sliders text-[#38bdf8]"></i> Pump Selection &amp; Pipe Network Corporate Defaults
+            </h2>
+            <span class="text-xs text-[#8b949e] font-mono">Corporate Engineering Standards</span>
+          </div>
+          <span class="px-2 py-0.5 rounded text-[11px] font-mono bg-[#38bdf8]/10 text-[#38bdf8] border border-[#38bdf8]/30">
+            {{ sd.unit_system|upper if sd.unit_system else 'METRIC' }}
+          </span>
+        </div>
+
+        <form action="{{ url_for('organisations.save_selection_defaults') }}" method="POST" class="p-4 space-y-4">
+          <p class="text-xs text-[#8b949e]">
+            Set corporate engineering units and initial input parameters for the <strong class="text-white">Pump Selection</strong> suite (<code class="text-[#58a6ff]">/pump-selection</code>) and <strong class="text-white">Pipe Network</strong> designer (<code class="text-[#a78bfa]">/pipe-network</code>).
+            When engineers load or reset calculations, these corporate defaults automatically pre-fill all forms.
+          </p>
+
+          <fieldset {% if not can_edit_org %}disabled{% endif %} class="contents space-y-4">
+          
+          <!-- SUBSECTION 1: DUTY POINT & UNIT SYSTEM PRESET -->
+          <div class="p-3.5 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-3">
+            <div class="flex items-center justify-between border-b border-[#30363d]/60 pb-2">
+              <span class="text-xs font-bold text-[#58a6ff] uppercase tracking-wider flex items-center gap-1.5">
+                <i class="bi bi-crosshair"></i> 1. Duty Point Defaults &amp; Engineering Units
+              </span>
+              <!-- Unit System Preset -->
+              <div class="flex items-center gap-2">
+                <label class="text-[11px] text-[#8b949e]">Unit Preset:</label>
+                <select name="unit_system" class="bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white font-mono focus:outline-none focus:border-[#58a6ff]">
+                  <option value="metric" {% if sd.unit_system != 'imperial' %}selected{% endif %}>Metric (SI)</option>
+                  <option value="imperial" {% if sd.unit_system == 'imperial' %}selected{% endif %}>Imperial (US)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <!-- Flow Rate Q -->
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Flow Rate Q (Default Input &amp; Unit)</label>
+                <div class="flex rounded overflow-hidden border border-[#30363d] bg-[#161b22]">
+                  <input type="number" step="any" name="q_duty" value="{{ sd.q_duty or '' }}" placeholder="Optional default (e.g. 150)" class="w-full bg-transparent px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none">
+                  <select name="unit_q" class="bg-[#0d1117] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono focus:outline-none">
+                    {% for k, u in units_tables.flow.items() %}
+                      <option value="{{ k }}" {% if sd.unit_q == k %}selected{% endif %}>{{ u.name }} ({{ u.label }})</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+
+              <!-- Total Head H -->
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Total Head H (Default Input &amp; Unit)</label>
+                <div class="flex rounded overflow-hidden border border-[#30363d] bg-[#161b22]">
+                  <input type="number" step="any" name="h_duty" value="{{ sd.h_duty or '' }}" placeholder="Optional default (e.g. 35)" class="w-full bg-transparent px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none">
+                  <select name="unit_h" class="bg-[#0d1117] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono focus:outline-none">
+                    {% for k, u in units_tables.head.items() %}
+                      <option value="{{ k }}" {% if sd.unit_h == k %}selected{% endif %}>{{ u.name }} ({{ u.label }})</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+
+              <!-- NPSHa -->
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">NPSHa (Default Input &amp; Unit)</label>
+                <div class="flex rounded overflow-hidden border border-[#30363d] bg-[#161b22]">
+                  <input type="number" step="any" name="npsh_avail" value="{{ sd.npsh_avail or '' }}" placeholder="Optional default (e.g. 8.0)" class="w-full bg-transparent px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none">
+                  <select name="unit_npsh" class="bg-[#0d1117] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono focus:outline-none">
+                    {% for k, u in units_tables.head.items() %}
+                      <option value="{{ k }}" {% if sd.unit_npsh == k %}selected{% endif %}>{{ u.name }} ({{ u.label }})</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+
+              <!-- Static Head Hs -->
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Static Head H<sub>s</sub> (Default Input &amp; Unit)</label>
+                <div class="flex rounded overflow-hidden border border-[#30363d] bg-[#161b22]">
+                  <input type="number" step="any" name="static_head" value="{{ sd.static_head or '0' }}" placeholder="0" class="w-full bg-transparent px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none">
+                  <select name="unit_static_head" class="bg-[#0d1117] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-xs font-mono focus:outline-none">
+                    {% for k, u in units_tables.head.items() %}
+                      <option value="{{ k }}" {% if sd.unit_static_head == k %}selected{% endif %}>{{ u.name }} ({{ u.label }})</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+
+              <!-- Power Unit -->
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Power Output Unit</label>
+                <select name="unit_pow" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#58a6ff]">
+                  {% for k, u in units_tables.power.items() %}
+                    <option value="{{ k }}" {% if sd.unit_pow == k %}selected{% endif %}>{{ u.name }} ({{ u.label }})</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBSECTION 2: FLUID PROPERTIES & SLURRY DEFAULTS -->
+          <div class="p-3.5 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-3">
+            <span class="block text-xs font-bold text-[#3fb950] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#30363d]/60 pb-2">
+              <i class="bi bi-droplet-half"></i> 2. Fluid Properties &amp; Slurry Defaults
+            </span>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Default Liquid Type</label>
+                <select name="liquid" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#3fb950]">
+                  <option value="water" {% if sd.liquid == 'water' %}selected{% endif %}>Clean Water</option>
+                  <option value="viscous" {% if sd.liquid == 'viscous' %}selected{% endif %}>Viscous Fluid</option>
+                  <option value="slurry" {% if sd.liquid == 'slurry' %}selected{% endif %}>Slurry Mixture</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Temperature (°C)</label>
+                <input type="number" step="0.5" name="temperature_c" value="{{ sd.temperature_c or '20' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#3fb950]">
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Density &amp; Unit</label>
+                <div class="flex rounded overflow-hidden border border-[#30363d] bg-[#161b22]">
+                  <input type="number" step="any" name="rho" value="{{ sd.rho or '1000' }}" class="w-full bg-transparent px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none">
+                  <select name="unit_rho" class="bg-[#0d1117] text-[#3fb950] border-l border-[#30363d] px-2 py-1 text-xs font-mono focus:outline-none">
+                    {% for k, u in units_tables.density.items() %}
+                      <option value="{{ k }}" {% if sd.unit_rho == k %}selected{% endif %}>{{ u.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Viscosity (cSt)</label>
+                <input type="number" step="any" min="0.01" name="viscosity_cSt" value="{{ sd.viscosity_cSt or '1.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#3fb950]">
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Fluid pH</label>
+                <input type="number" step="0.1" min="0" max="14" name="fluid_ph" value="{{ sd.fluid_ph or '7.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#3fb950]">
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Concentration</label>
+                <input type="text" name="fluid_concentration" value="{{ sd.fluid_concentration or '' }}" placeholder="e.g. 25 wt%" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#3fb950]">
+              </div>
+            </div>
+
+            <!-- Fluid Hazard & Flammability Flags -->
+            <div class="pt-2 border-t border-[#30363d]/40 flex flex-wrap items-center gap-4 text-xs">
+              <label class="flex items-center gap-1.5 text-[#f87171] cursor-pointer">
+                <input type="checkbox" name="is_hazardous" value="1" class="accent-[#ef4444] rounded" {% if sd.is_hazardous == '1' %}checked{% endif %}>
+                <span><i class="bi bi-radioactive"></i> Hazardous / Toxic Liquid</span>
+              </label>
+              <label class="flex items-center gap-1.5 text-[#fbbf24] cursor-pointer">
+                <input type="checkbox" name="is_flammable" value="1" class="accent-[#f59e0b] rounded" {% if sd.is_flammable == '1' %}checked{% endif %}>
+                <span><i class="bi bi-fire"></i> Flammable Fluid</span>
+              </label>
+            </div>
+
+            <!-- Slurry Baseline Defaults & Active Parameters -->
+            <div class="pt-2 border-t border-[#30363d]/50 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-[#8b949e] uppercase tracking-wider block">
+                  Slurry Hydraulic Inputs &amp; Calculation Defaults
+                </span>
+                <span class="text-[10px] text-[#58a6ff] bg-[#58a6ff]/10 px-2 py-0.5 rounded border border-[#58a6ff]/20">
+                  Select 3 checked inputs (2 unchecked are calculated)
+                </span>
+              </div>
+              <p class="text-[11px] text-[#8b949e]">
+                Choose which 3 parameters serve as active user inputs (checked). The 2 unchecked parameters will be calculated automatically based on solids SG and volume/weight conservation, exactly as in the pump selection view.
+              </p>
+
+              <div class="space-y-2 pt-1">
+                <!-- Liquid SG (Sl) -->
+                <div class="border border-[#30363d] p-2 rounded bg-[#161b22] flex items-center justify-between">
+                  <label class="flex items-center gap-2 text-xs text-[#e6edf3] font-semibold cursor-pointer">
+                    <input type="checkbox" name="cb_L" value="1" id="org_cb_L" class="org-slurry-cb accent-[#58a6ff] w-4 h-4 cursor-pointer" data-param="L" {% if sd.cb_L == '1' or (not sd and True) %}checked{% endif %}>
+                    <span>Liquid SG (S<sub>l</sub>)</span>
+                  </label>
+                  <input type="number" step="0.01" min="0.1" name="sg_l" id="org_sg_l" value="{{ sd.sg_l or '1.00' }}" class="org-slurry-input w-28 bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-[#58a6ff]" {% if sd.cb_L == '0' %}readonly style="opacity:0.75;"{% endif %}>
+                </div>
+
+                <!-- Solid SG (Ss) -->
+                <div class="border border-[#30363d] p-2 rounded bg-[#161b22] flex items-center justify-between">
+                  <label class="flex items-center gap-2 text-xs text-[#e6edf3] font-semibold cursor-pointer">
+                    <input type="checkbox" name="cb_S" value="1" id="org_cb_S" class="org-slurry-cb accent-[#58a6ff] w-4 h-4 cursor-pointer" data-param="S" {% if sd.cb_S == '1' or (not sd and True) %}checked{% endif %}>
+                    <span>Solid SG (S<sub>s</sub>)</span>
+                  </label>
+                  <input type="number" step="0.01" min="0.1" name="sg_s" id="org_sg_s" value="{{ sd.sg_s or '2.65' }}" class="org-slurry-input w-28 bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-[#58a6ff]" {% if sd.cb_S == '0' %}readonly style="opacity:0.75;"{% endif %}>
+                </div>
+
+                <!-- Slurry Mixture SG (Sm) -->
+                <div class="border border-[#30363d] p-2 rounded bg-[#161b22] flex items-center justify-between">
+                  <label class="flex items-center gap-2 text-xs text-[#e6edf3] font-semibold cursor-pointer">
+                    <input type="checkbox" name="cb_M" value="1" id="org_cb_M" class="org-slurry-cb accent-[#58a6ff] w-4 h-4 cursor-pointer" data-param="M" {% if sd.cb_M == '1' %}checked{% endif %}>
+                    <span>Slurry SG (S<sub>m</sub>)</span>
+                  </label>
+                  <input type="number" step="0.01" min="0.1" name="sg_m" id="org_sg_m" value="{{ sd.sg_m or '1.33' }}" class="org-slurry-input w-28 bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-[#58a6ff]" {% if sd.cb_M != '1' %}readonly style="opacity:0.75;"{% endif %}>
+                </div>
+
+                <!-- Volumetric Concentration (Cv) -->
+                <div class="border border-[#30363d] p-2 rounded bg-[#161b22] flex items-center justify-between">
+                  <label class="flex items-center gap-2 text-xs text-[#e6edf3] font-semibold cursor-pointer">
+                    <input type="checkbox" name="cb_Cv" value="1" id="org_cb_Cv" class="org-slurry-cb accent-[#58a6ff] w-4 h-4 cursor-pointer" data-param="Cv" {% if sd.cb_Cv == '1' or (not sd and True) %}checked{% endif %}>
+                    <span>Concentration by Volume C<sub>v</sub> (vol. frac)</span>
+                  </label>
+                  <input type="number" step="0.001" min="0" max="0.8" name="slurry_cv" id="org_slurry_cv" value="{{ sd.slurry_cv or '0.200' }}" class="org-slurry-input w-28 bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-[#58a6ff]" {% if sd.cb_Cv == '0' %}readonly style="opacity:0.75;"{% endif %}>
+                </div>
+
+                <!-- Weight Concentration (Cw) -->
+                <div class="border border-[#30363d] p-2 rounded bg-[#161b22] flex items-center justify-between">
+                  <label class="flex items-center gap-2 text-xs text-[#e6edf3] font-semibold cursor-pointer">
+                    <input type="checkbox" name="cb_Cw" value="1" id="org_cb_Cw" class="org-slurry-cb accent-[#58a6ff] w-4 h-4 cursor-pointer" data-param="Cw" {% if sd.cb_Cw == '1' %}checked{% endif %}>
+                    <span>Concentration by Weight C<sub>w</sub> (wt. frac)</span>
+                  </label>
+                  <input type="number" step="0.001" min="0" max="0.95" name="slurry_cw" id="org_slurry_cw" value="{{ sd.slurry_cw or '0.400' }}" class="org-slurry-input w-28 bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-[#58a6ff]" {% if sd.cb_Cw != '1' %}readonly style="opacity:0.75;"{% endif %}>
+                </div>
+
+                <!-- Particle Size d50 & Unit -->
+                <div class="border border-[#30363d] p-2 rounded bg-[#161b22] flex items-center justify-between">
+                  <label class="text-xs text-[#e6edf3] font-semibold">
+                    Particle Size d<sub>50</sub> (Median Diameter)
+                  </label>
+                  <div class="flex rounded overflow-hidden border border-[#30363d] bg-[#0d1117] w-44">
+                    <input type="number" step="0.01" name="slurry_d50" value="{{ sd.slurry_d50 or '0.3' }}" class="w-full bg-transparent px-2.5 py-1 text-xs text-white font-mono focus:outline-none text-right">
+                    <select name="unit_d50" class="bg-[#161b22] text-[#3fb950] border-l border-[#30363d] px-2 py-0.5 text-xs font-mono focus:outline-none">
+                      {% for k, u in units_tables.size.items() %}
+                        <option value="{{ k }}" {% if sd.unit_d50 == k %}selected{% endif %}>{{ u.name }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBSECTION 3: OPERATION MODE & MOTOR SPECIFICATIONS -->
+          <div class="p-3.5 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-3">
+            <span class="block text-xs font-bold text-[#f0883e] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#30363d]/60 pb-2">
+              <i class="bi bi-speedometer2"></i> 3. Operation Mode &amp; Motor Specification Defaults
+            </span>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Operation Mode</label>
+                <select name="operation_mode" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#f0883e]">
+                  <option value="fixed" {% if sd.operation_mode != 'vsd' %}selected{% endif %}>Fixed Speed</option>
+                  <option value="vsd" {% if sd.operation_mode == 'vsd' %}selected{% endif %}>Variable Speed Drive (VSD)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Fixed Speed Mode</label>
+                <select name="fixed_speed_mode" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#f0883e]">
+                  <option value="auto" {% if sd.fixed_speed_mode != 'manual' %}selected{% endif %}>Auto Calculation (Full Dia)</option>
+                  <option value="manual" {% if sd.fixed_speed_mode == 'manual' %}selected{% endif %}>Manual Speed (Trim Evaluated)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Manual Pump RPM</label>
+                <input type="number" step="10" name="manual_pump_speed_rpm" value="{{ sd.manual_pump_speed_rpm or '' }}" placeholder="Optional (e.g. 1450)" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#f0883e]">
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">VSD Freq Range (Min / Max Hz)</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <input type="number" step="0.5" name="vsd_f_min" value="{{ sd.vsd_f_min or '30.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1.5 text-xs text-white font-mono" placeholder="Min (30.0)">
+                  <input type="number" step="0.5" name="vsd_f_max" value="{{ sd.vsd_f_max or '50.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1.5 text-xs text-white font-mono" placeholder="Max (50.0)">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Supply Frequency (Hz)</label>
+                <select name="motor_freq_hz" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#f0883e]">
+                  <option value="50" {% if sd.motor_freq_hz|string == '50' %}selected{% endif %}>50 Hz</option>
+                  <option value="60" {% if sd.motor_freq_hz|string == '60' %}selected{% endif %}>60 Hz</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Poles</label>
+                <select name="motor_poles" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#f0883e]">
+                  <option value="2" {% if sd.motor_poles|string == '2' %}selected{% endif %}>2 Pole (3000 / 3600 rpm)</option>
+                  <option value="4" {% if sd.motor_poles|string == '4' or not sd.motor_poles %}selected{% endif %}>4 Pole (1500 / 1800 rpm)</option>
+                  <option value="6" {% if sd.motor_poles|string == '6' %}selected{% endif %}>6 Pole (1000 / 1200 rpm)</option>
+                  <option value="8" {% if sd.motor_poles|string == '8' %}selected{% endif %}>8 Pole (750 / 900 rpm)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Motor Standard</label>
+                <select name="motor_standard" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#f0883e]">
+                  <option value="all" {% if sd.motor_standard == 'all' or not sd.motor_standard %}selected{% endif %}>All Standards</option>
+                  <option value="IEC" {% if sd.motor_standard == 'IEC' %}selected{% endif %}>IEC</option>
+                  <option value="NEMA" {% if sd.motor_standard == 'NEMA' %}selected{% endif %}>NEMA</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Efficiency Class</label>
+                <select name="motor_efficiency" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#f0883e]">
+                  <option value="all" {% if sd.motor_efficiency == 'all' or not sd.motor_efficiency %}selected{% endif %}>All Classes</option>
+                  <option value="IE1" {% if sd.motor_efficiency == 'IE1' %}selected{% endif %}>IE1 (Standard)</option>
+                  <option value="IE2" {% if sd.motor_efficiency == 'IE2' %}selected{% endif %}>IE2 (High)</option>
+                  <option value="IE3" {% if sd.motor_efficiency == 'IE3' %}selected{% endif %}>IE3 (Premium)</option>
+                  <option value="IE4" {% if sd.motor_efficiency == 'IE4' %}selected{% endif %}>IE4 (Super Premium)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Preferred Motor Supplier</label>
+                <select name="motor_supplier" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#f0883e]">
+                  <option value="all" {% if sd.motor_supplier == 'all' or not sd.motor_supplier %}selected{% endif %}>All Suppliers</option>
+                  {% for sup in motor_suppliers %}
+                    <option value="{{ sup }}" {% if sd.motor_supplier == sup %}selected{% endif %}>{{ sup }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Drive Type</label>
+                <select name="drive_type" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#f0883e]">
+                  <option value="direct" {% if sd.drive_type != 'belt' %}selected{% endif %}>Direct Drive</option>
+                  <option value="belt" {% if sd.drive_type == 'belt' %}selected{% endif %}>Belt / Gear</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Sizing Margin Basis</label>
+                <select name="motor_margin_basis" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#f0883e]">
+                  <option value="duty" {% if sd.motor_margin_basis != 'bep' and sd.motor_margin_basis != 'end_of_curve' %}selected{% endif %}>Duty Point</option>
+                  <option value="bep" {% if sd.motor_margin_basis == 'bep' %}selected{% endif %}>BEP Point</option>
+                  <option value="end_of_curve" {% if sd.motor_margin_basis == 'end_of_curve' %}selected{% endif %}>End of Curve</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Safety Margin (%)</label>
+                <div class="flex items-center gap-1.5">
+                  <input type="number" step="0.5" min="0" max="100" name="motor_margin_pct" value="{{ sd.motor_margin_pct or '15.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono text-right focus:outline-none focus:border-[#f0883e]">
+                  <span class="text-xs text-[#8b949e] font-mono">%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBSECTION 4: PIPE NETWORK SYSTEM DEFAULTS -->
+          <div class="p-3.5 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-3">
+            <span class="block text-xs font-bold text-[#a78bfa] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#30363d]/60 pb-2">
+              <i class="bi bi-diagram-2"></i> 4. Pipe Network System Corporate Defaults
+            </span>
+            <p class="text-[11px] text-[#8b949e]">
+              Standardize hydraulic friction methods, numerical solvers, and preferred standard pipe catalog specifications (Standard, SDR, Material, and Nominal Size) for the <strong class="text-white">Pipe Network</strong> designer (<code class="text-[#a78bfa]">/pipe-network</code>) and its default demo network.
+            </p>
+
+            <!-- Row 1: Hydraulic Solver & Network Geometry Settings -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <!-- Friction Calculation Method -->
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
+                  <i class="bi bi-droplet-half text-[#38bdf8] mr-1"></i>Friction Model
+                </label>
+                <select name="pn_friction_method" id="pn_friction_method" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#a78bfa]">
+                  <option value="darcy_weisbach" {% if sd.pn_friction_method != 'hazen_williams' %}selected{% endif %}>Darcy-Weisbach (Moody / Colebrook)</option>
+                  <option value="hazen_williams" {% if sd.pn_friction_method == 'hazen_williams' %}selected{% endif %}>Hazen-Williams (C-Factor)</option>
+                </select>
+              </div>
+
+              <!-- Solver Method -->
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
+                  <i class="bi bi-cpu text-[#a78bfa] mr-1"></i>Network Solver Formulation
+                </label>
+                <select name="pn_solver_method" id="pn_solver_method" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#a78bfa]">
+                  <option value="ggm" {% if sd.pn_solver_method == 'ggm' or not sd.pn_solver_method %}selected{% endif %}>Global Gradient Method (GGM / EPANET)</option>
+                  <option value="newton_raphson" {% if sd.pn_solver_method == 'newton_raphson' %}selected{% endif %}>Newton-Raphson (Node-Head)</option>
+                  <option value="hardy_cross" {% if sd.pn_solver_method == 'hardy_cross' %}selected{% endif %}>Hardy Cross Loop Balancing</option>
+                  <option value="linear_theory" {% if sd.pn_solver_method == 'linear_theory' %}selected{% endif %}>Linear Theory (Successive Linearization)</option>
+                </select>
+              </div>
+
+              <!-- Default Topology -->
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
+                  <i class="bi bi-bezier2 text-[#58a6ff] mr-1"></i>Default Pipeline Topology
+                </label>
+                <select name="pn_topology" id="pn_topology" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#a78bfa]">
+                  <option value="series" {% if sd.pn_topology != 'parallel' %}selected{% endif %}>Series Pipeline (Sequential Segments)</option>
+                  <option value="parallel" {% if sd.pn_topology == 'parallel' %}selected{% endif %}>Parallel Pipeline (Multi-Branch Manifold)</option>
+                </select>
+              </div>
+
+              <!-- Default Pipe Length m -->
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Default Segment Length (m)</label>
+                <div class="flex items-center gap-1.5">
+                  <input type="number" step="0.5" min="0.1" name="pn_default_length_m" id="pn_default_length_m" value="{{ sd.pn_default_length_m or '50.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#a78bfa]">
+                  <span class="text-xs text-[#8b949e] font-mono">m</span>
+                </div>
+              </div>
+
+              <!-- Default Static Elevation Change m -->
+              <div>
+                <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Default Elevation Change (Δz)</label>
+                <div class="flex items-center gap-1.5">
+                  <input type="number" step="0.5" name="pn_default_elev_change_m" id="pn_default_elev_change_m" value="{{ sd.pn_default_elev_change_m or '10.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#a78bfa]">
+                  <span class="text-xs text-[#8b949e] font-mono">m</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Row 2: Standard Pipe Catalog, SDR, and Dimensions Selector -->
+            <div class="mt-3 p-3.5 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-3">
+              <div class="flex items-center justify-between border-b border-[#30363d]/60 pb-2">
+                <span class="text-xs font-bold text-[#38bdf8] flex items-center gap-1.5">
+                  <i class="bi bi-rulers"></i> Corporate Standard Pipe Specification
+                </span>
+                <span class="text-[11px] text-[#8b949e]">
+                  Internal diameter, wall roughness (ε), and Hazen-Williams (C) are automatically derived from the standard pipe
+                </span>
+              </div>
+
+              <!-- Cascading Standard, Material, Schedule / SDR, and Pipe Size -->
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <!-- 1. Standard Family -->
+                <div>
+                  <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
+                    <i class="bi bi-journal-bookmark text-[#38bdf8] mr-1"></i>1. Standard
+                  </label>
+                  <select name="pn_default_standard" id="pn_default_standard" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8]" onchange="onOrgPipeStandardChange(this.value)">
+                    <!-- Populated dynamically via JS -->
+                  </select>
+                </div>
+
+                <!-- 2. Material -->
+                <div>
+                  <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
+                    <i class="bi bi-box-seam text-[#58a6ff] mr-1"></i>2. Material
+                  </label>
+                  <select name="pn_default_material" id="pn_default_material" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8]" onchange="onOrgPipeMaterialChange(this.value)">
+                    <!-- Populated dynamically via JS -->
+                  </select>
+                </div>
+
+                <!-- 3. Schedule / SDR -->
+                <div>
+                  <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
+                    <i class="bi bi-layers text-[#a78bfa] mr-1"></i>3. Schedule / SDR
+                  </label>
+                  <select name="pn_default_schedule_sdr" id="pn_default_schedule_sdr" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8]" onchange="onOrgPipeScheduleChange(this.value)">
+                    <!-- Populated dynamically via JS -->
+                  </select>
+                </div>
+
+                <!-- 4. Nominal Size (DN / NB) / Catalog Item -->
+                <div>
+                  <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
+                    <i class="bi bi-arrows-expand text-[#22c55e] mr-1"></i>4. Nominal Size (DN / NB)
+                  </label>
+                  <select name="pn_default_pipe_id" id="pn_default_pipe_id" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8]" onchange="onOrgPipeItemSelect(this.value)">
+                    <!-- Populated dynamically via JS -->
+                  </select>
+                  <input type="hidden" name="pn_default_nb_mm" id="pn_default_nb_mm" value="{{ sd.pn_default_nb_mm or '100' }}">
+                </div>
+              </div>
+
+              <!-- Live Derived Specifications Grid -->
+              <div id="org-pipe-preview-card" class="grid grid-cols-2 md:grid-cols-5 gap-2.5 pt-1">
+                <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5">
+                  <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Outside Dia (OD)</div>
+                  <div id="org-pipe-prev-od" class="text-sm font-extrabold text-[#38bdf8] font-mono mt-0.5">—</div>
+                </div>
+                <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5">
+                  <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Wall Thickness (t)</div>
+                  <div id="org-pipe-prev-wall" class="text-sm font-extrabold text-[#facc15] font-mono mt-0.5">—</div>
+                </div>
+                <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5">
+                  <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Inside Dia (ID)</div>
+                  <div id="org-pipe-prev-id" class="text-sm font-extrabold text-[#22c55e] font-mono mt-0.5">—</div>
+                </div>
+                <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5">
+                  <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Roughness (ε)</div>
+                  <div id="org-pipe-prev-rough" class="text-sm font-extrabold text-[#e6edf3] font-mono mt-0.5">—</div>
+                </div>
+                <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5">
+                  <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Hazen-Williams (C)</div>
+                  <div id="org-pipe-prev-hw" class="text-sm font-extrabold text-[#a78bfa] font-mono mt-0.5">—</div>
+                </div>
+              </div>
+
+              <!-- Manual Override Toggle & Detail Bar -->
+              <div class="pt-2 border-t border-[#30363d]/40 flex items-center justify-between">
+                <label class="flex items-center gap-2 cursor-pointer text-[11px] text-[#8b949e] hover:text-[#c9d1d9] transition-colors">
+                  <input type="checkbox" id="org_pn_manual_override" class="accent-[#38bdf8] rounded" onchange="toggleOrgManualOverride(this.checked)">
+                  <span>Allow manual override of Diameter, Roughness &amp; Hazen-Williams</span>
+                </label>
+                <span class="text-[10px] text-[#64748b] font-mono" id="org-pipe-pressure-rating">Standard Catalog Sizing</span>
+              </div>
+
+              <!-- Manual Override Inputs (Auto-populated and synchronized from standard pipe) -->
+              <div id="org-pipe-manual-fields" class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2" style="display:none;">
+                <div>
+                  <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Internal Diameter (mm)</label>
+                  <input type="number" step="0.1" min="1" name="pn_default_diameter_mm" id="pn_default_diameter_mm" value="{{ sd.pn_default_diameter_mm or '102.3' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#38bdf8]">
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Pipe Roughness ε (mm)</label>
+                  <input type="number" step="0.001" min="0.0001" name="pn_default_roughness_mm" id="pn_default_roughness_mm" value="{{ sd.pn_default_roughness_mm or '0.046' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#38bdf8]">
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Hazen-Williams C Coefficient</label>
+                  <input type="number" step="1" min="10" max="200" name="pn_default_hw_c" id="pn_default_hw_c" value="{{ sd.pn_default_hw_c or '140' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#38bdf8]">
+                </div>
+              </div>
+            </div>
+          </div>
+          </fieldset>
+
+          <div class="pt-2 flex justify-end">
+            {% if can_edit_org %}
+            <button type="submit" class="px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
+              <i class="bi bi-check-lg"></i> Save Selection &amp; Pipe Network Defaults
             </button>
             {% else %}
             <button type="button" disabled class="px-4 py-2 bg-[#21262d] text-xs font-semibold text-[#8b949e] rounded-lg border border-[#30363d] cursor-not-allowed flex items-center gap-1.5 opacity-60">
@@ -1411,6 +1907,400 @@
       const inputs = subGroup.querySelectorAll('input[type="checkbox"]');
       inputs.forEach(inp => inp.disabled = true);
     }
+  }
+
+  // ── Organisation Slurry Defaults Interactive Calculator ─────────────────────
+  // Beginners Note:
+  // Exactly 3 of the 5 slurry properties (Sl, Ss, Sm, Cv, Cw) are user inputs (checked).
+  // The remaining 2 parameters (unchecked) are locked (readOnly) and calculated dynamically
+  // using mass & volume conservation laws, matching the behavior of /pump-selection.
+  const orgSlurryCheckboxes = document.querySelectorAll('.org-slurry-cb');
+  const orgSlurryInputs = document.querySelectorAll('.org-slurry-input');
+
+  const getOrgVal = (id) => {
+    const el = document.getElementById(id);
+    return el ? (parseFloat(el.value) || 0) : 0;
+  };
+
+  const setOrgVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (document.activeElement !== el && !isNaN(val) && isFinite(val)) {
+      if (id === 'org_sg_l' || id === 'org_sg_s' || id === 'org_sg_m') {
+        el.value = Number(val).toFixed(2);
+      } else if (id === 'org_slurry_cv' || id === 'org_slurry_cw') {
+        el.value = Number(val).toFixed(3);
+      } else {
+        el.value = (val % 1 !== 0) ? parseFloat(val.toFixed(3)) : val;
+      }
+    }
+  };
+
+  function updateOrgSlurryCalculator() {
+    try {
+      const active = new Set([...orgSlurryCheckboxes].filter(cb => cb.checked).map(cb => cb.dataset.param));
+      if (active.size !== 3) return;
+
+      let L = Math.max(0.5, getOrgVal('org_sg_l') || 1.0);
+      let S = Math.max(1.05, getOrgVal('org_sg_s') || 2.65);
+      let M = Math.max(0.5, getOrgVal('org_sg_m') || 1.33);
+      let Cv = Math.max(0.0, Math.min(0.65, getOrgVal('org_slurry_cv')));
+      let Cw = Math.max(0.0, Math.min(0.90, getOrgVal('org_slurry_cw')));
+
+      if (active.has('L') && active.has('S') && active.has('M')) {
+        if (S <= L) S = L + 0.1;
+        M = Math.max(L, Math.min(S, M));
+        Cv = (S - L > 0.001) ? (M - L) / (S - L) : 0;
+        Cw = M > 0.001 ? (S * Cv) / M : 0;
+      }
+      else if (active.has('L') && active.has('S') && active.has('Cv')) {
+        if (S <= L) S = L + 0.1;
+        M = L * (1 - Cv) + S * Cv;
+        Cw = M > 0.001 ? (S * Cv) / M : 0;
+      }
+      else if (active.has('L') && active.has('S') && active.has('Cw')) {
+        if (S <= L) S = L + 0.1;
+        const denom = S - Cw * (S - L);
+        Cv = (denom > 0.001) ? (Cw * L) / denom : 0;
+        Cv = Math.max(0.0, Math.min(0.65, Cv));
+        M = L * (1 - Cv) + S * Cv;
+      }
+      else if (active.has('L') && active.has('M') && active.has('Cv')) {
+        if (Cv < 0.005) {
+          S = 2.65;
+          M = L;
+        } else {
+          const lPart = L * (1 - Cv);
+          if (M < lPart) M = lPart + 0.01;
+          S = (M - lPart) / Cv;
+          S = Math.max(L + 0.05, Math.min(10.0, S));
+        }
+        Cw = M > 0.001 ? (S * Cv) / M : 0;
+      }
+      else if (active.has('L') && active.has('M') && active.has('Cw')) {
+        const denom = L + M * (Cw - 1);
+        if (denom > 0.001 && Cw > 0.005) {
+          S = (Cw * M * L) / denom;
+          S = Math.max(L + 0.05, Math.min(10.0, S));
+        } else {
+          S = Math.max(L + 0.1, 2.65);
+        }
+        Cv = (S - L > 0.001) ? Math.max(0.0, (M - L) / (S - L)) : 0;
+      }
+      else if (active.has('S') && active.has('M') && active.has('Cv')) {
+        if (Cv >= 0.99) Cv = 0.65;
+        const sPart = S * Cv;
+        if (M < sPart) {
+          L = 1.0;
+          M = L * (1 - Cv) + S * Cv;
+        } else {
+          L = (M - sPart) / (1 - Cv);
+          L = Math.max(0.5, Math.min(2.5, L));
+        }
+        Cw = M > 0.001 ? (S * Cv) / M : 0;
+      }
+      else if (active.has('S') && active.has('M') && active.has('Cw')) {
+        Cv = (S > 0.001) ? (Cw * M) / S : 0;
+        Cv = Math.max(0.0, Math.min(0.65, Cv));
+        const sPart = S * Cv;
+        L = (Cv < 0.99 && M > sPart) ? (M - sPart) / (1 - Cv) : 1.0;
+        L = Math.max(0.5, Math.min(2.5, L));
+      }
+      else if (active.has('L') && active.has('Cv') && active.has('Cw')) {
+        if (Cw > 0.001 && Cv > 0.001 && (Cv / Cw - Cv) > 0.001) {
+          S = (L * (1 - Cv)) / (Cv / Cw - Cv);
+          S = Math.max(L + 0.05, Math.min(10.0, S));
+        } else {
+          S = 2.65;
+        }
+        M = L * (1 - Cv) + S * Cv;
+      }
+      else if (active.has('S') && active.has('Cv') && active.has('Cw')) {
+        M = (Cw > 0.001) ? (S * Cv) / Cw : S;
+        M = Math.max(0.5, Math.min(S, M));
+        const sPart = S * Cv;
+        L = (Cv < 0.99 && M > sPart) ? (M - sPart) / (1 - Cv) : 1.0;
+        L = Math.max(0.5, Math.min(2.5, L));
+      }
+      else if (active.has('M') && active.has('Cv') && active.has('Cw')) {
+        S = (Cv > 0.001) ? (Cw * M) / Cv : 2.65;
+        S = Math.max(1.05, Math.min(10.0, S));
+        const sPart = S * Cv;
+        L = (Cv < 0.99 && M > sPart) ? (M - sPart) / (1 - Cv) : 1.0;
+        L = Math.max(0.5, Math.min(2.5, L));
+      }
+
+      L = Math.max(0.5, Math.min(2.5, L));
+      S = Math.max(L + 0.05, Math.min(10.0, S));
+      Cv = Math.max(0.0, Math.min(0.65, Cv));
+      Cw = Math.max(0.0, Math.min(0.90, Cw));
+      M = Math.max(L, Math.min(S, M));
+
+      if (!active.has('L')) setOrgVal('org_sg_l', parseFloat(L.toFixed(2)));
+      if (!active.has('S')) setOrgVal('org_sg_s', parseFloat(S.toFixed(2)));
+      if (!active.has('M')) setOrgVal('org_sg_m', parseFloat(M.toFixed(2)));
+      if (!active.has('Cv')) setOrgVal('org_slurry_cv', parseFloat(Cv.toFixed(3)));
+      if (!active.has('Cw')) setOrgVal('org_slurry_cw', parseFloat(Cw.toFixed(3)));
+    } catch (e) {
+      console.warn('Org slurry calculation error:', e);
+    }
+  }
+
+  function syncOrgSlurryReadOnlyState() {
+    const active = new Set([...orgSlurryCheckboxes].filter(cb => cb.checked).map(cb => cb.dataset.param));
+    const items = [
+      ['org_sg_l', 'L'],
+      ['org_sg_s', 'S'],
+      ['org_sg_m', 'M'],
+      ['org_slurry_cv', 'Cv'],
+      ['org_slurry_cw', 'Cw']
+    ];
+    items.forEach(([id, param]) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.readOnly = !active.has(param);
+        el.style.opacity = active.has(param) ? '1' : '0.75';
+      }
+    });
+  }
+
+  let orgCheckedOrder = [...orgSlurryCheckboxes].filter(cb => cb.checked);
+  orgSlurryCheckboxes.forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        orgCheckedOrder.push(e.target);
+        if (orgCheckedOrder.length > 3) {
+          const oldest = orgCheckedOrder.shift();
+          oldest.checked = false;
+        }
+      } else {
+        e.target.checked = true;
+      }
+      syncOrgSlurryReadOnlyState();
+      updateOrgSlurryCalculator();
+    });
+  });
+
+  orgSlurryInputs.forEach(input => {
+    input.addEventListener('input', updateOrgSlurryCalculator);
+    input.addEventListener('change', updateOrgSlurryCalculator);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // ORGANISATION STANDARD PIPE DEFAULTS CASCADING CONTROLLER
+  // ─────────────────────────────────────────────────────────────────────────
+  const orgStandardPipes = {{ standard_pipes_json | default('[]', true) | safe }};
+
+  const orgMaterialsLookup = {
+    'commercial_steel': { roughness: 0.046, hw_c: 140, label: 'Commercial Steel' },
+    'stainless_steel':  { roughness: 0.015, hw_c: 150, label: 'Stainless Steel' },
+    'hdpe':             { roughness: 0.007, hw_c: 150, label: 'HDPE / PE100' },
+    'pvc':              { roughness: 0.0015, hw_c: 150, label: 'uPVC / PVC-U' },
+    'ductile_iron':     { roughness: 0.12,  hw_c: 130, label: 'Ductile Iron' },
+    'copper':           { roughness: 0.0015, hw_c: 150, label: 'Copper / Brass' },
+    'cast_iron':        { roughness: 0.26,  hw_c: 100, label: 'Cast Iron' },
+    'galvanised_steel': { roughness: 0.15,  hw_c: 120, label: 'Galvanised Steel' },
+    'concrete':         { roughness: 1.0,   hw_c: 120, label: 'Concrete' }
+  };
+
+  let selectedOrgStd = "{{ sd.pn_default_standard or 'ASME B36.10M' }}";
+  let selectedOrgMat = "{{ sd.pn_default_material or 'commercial_steel' }}";
+  let selectedOrgSch = "{{ sd.pn_default_schedule_sdr or 'Sch 40 (STD)' }}";
+  let selectedOrgPipeId = "{{ sd.pn_default_pipe_id or '' }}";
+
+  function populateOrgStandards() {
+    const stdSel = document.getElementById('pn_default_standard');
+    if (!stdSel) return;
+    const standards = Array.from(new Set(orgStandardPipes.map(p => p.standard).filter(Boolean))).sort();
+    stdSel.innerHTML = '';
+    standards.forEach(std => {
+      const opt = document.createElement('option');
+      opt.value = std;
+      opt.textContent = std;
+      if (std === selectedOrgStd) opt.selected = true;
+      stdSel.appendChild(opt);
+    });
+    if (stdSel.selectedIndex === -1 && stdSel.options.length > 0) {
+      stdSel.selectedIndex = 0;
+      selectedOrgStd = stdSel.value;
+    }
+  }
+
+  function populateOrgMaterials() {
+    const matSel = document.getElementById('pn_default_material');
+    if (!matSel) return;
+    const std = document.getElementById('pn_default_standard')?.value || selectedOrgStd;
+    const filtered = orgStandardPipes.filter(p => p.standard === std);
+    const materials = Array.from(new Set(filtered.map(p => p.material_key || p.material).filter(Boolean))).sort();
+
+    matSel.innerHTML = '';
+    materials.forEach(matKey => {
+      const info = orgMaterialsLookup[matKey] || { label: matKey };
+      const opt = document.createElement('option');
+      opt.value = matKey;
+      opt.textContent = `${info.label} (ε = ${info.roughness !== undefined ? info.roughness + 'mm' : '—'})`;
+      if (matKey === selectedOrgMat) opt.selected = true;
+      matSel.appendChild(opt);
+    });
+    if (matSel.selectedIndex === -1 && matSel.options.length > 0) {
+      matSel.selectedIndex = 0;
+      selectedOrgMat = matSel.value;
+    }
+  }
+
+  function populateOrgSchedules() {
+    const schSel = document.getElementById('pn_default_schedule_sdr');
+    if (!schSel) return;
+    const std = document.getElementById('pn_default_standard')?.value || selectedOrgStd;
+    const mat = document.getElementById('pn_default_material')?.value || selectedOrgMat;
+
+    const filtered = orgStandardPipes.filter(p => {
+      const matchStd = (p.standard === std);
+      const matchMat = (p.material_key === mat || p.material === mat);
+      return matchStd && matchMat;
+    });
+
+    const schedules = Array.from(new Set(filtered.map(p => p.schedule_sdr).filter(Boolean))).sort();
+    schSel.innerHTML = '';
+    schedules.forEach(sch => {
+      const opt = document.createElement('option');
+      opt.value = sch;
+      opt.textContent = sch;
+      if (sch === selectedOrgSch) opt.selected = true;
+      schSel.appendChild(opt);
+    });
+    if (schSel.selectedIndex === -1 && schSel.options.length > 0) {
+      schSel.selectedIndex = 0;
+      selectedOrgSch = schSel.value;
+    }
+  }
+
+  function populateOrgPipeItems() {
+    const pipeSel = document.getElementById('pn_default_pipe_id');
+    if (!pipeSel) return;
+    const std = document.getElementById('pn_default_standard')?.value || selectedOrgStd;
+    const mat = document.getElementById('pn_default_material')?.value || selectedOrgMat;
+    const sch = document.getElementById('pn_default_schedule_sdr')?.value || selectedOrgSch;
+
+    const filtered = orgStandardPipes.filter(p => {
+      const matchStd = (p.standard === std);
+      const matchMat = (p.material_key === mat || p.material === mat);
+      const matchSch = (p.schedule_sdr === sch);
+      return matchStd && matchMat && matchSch;
+    }).sort((a, b) => (a.od_mm || a.nb_mm || 0) - (b.od_mm || b.nb_mm || 0));
+
+    pipeSel.innerHTML = '';
+    filtered.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      let label = '';
+      if (p.nb_inch && !String(p.nb_inch).includes('mm')) {
+        label = `${p.nb_inch} (DN${p.nb_mm}) • OD ${p.od_mm}mm, t=${p.wall_thickness_mm}mm → ID ${p.id_mm}mm`;
+      } else if (p.nb_mm) {
+        label = `DN${p.nb_mm} • OD ${p.od_mm}mm, t=${p.wall_thickness_mm}mm → ID ${p.id_mm}mm`;
+      } else {
+        label = `OD ${p.od_mm}mm, t=${p.wall_thickness_mm}mm → ID ${p.id_mm}mm`;
+      }
+      opt.textContent = label;
+      if (String(p.id) === String(selectedOrgPipeId)) {
+        opt.selected = true;
+      }
+      pipeSel.appendChild(opt);
+    });
+
+    if (pipeSel.selectedIndex === -1 && pipeSel.options.length > 0) {
+      const defaultMatch = filtered.find(p => p.nb_mm === 100 || (p.od_mm >= 110 && p.od_mm <= 125)) || filtered[0];
+      if (defaultMatch) {
+        pipeSel.value = defaultMatch.id;
+      } else {
+        pipeSel.selectedIndex = 0;
+      }
+    }
+
+    const activePipe = filtered.find(p => String(p.id) === String(pipeSel.value)) || filtered[0];
+    updateOrgPipePreview(activePipe);
+  }
+
+  function updateOrgPipePreview(item) {
+    if (!item) return;
+    const odEl = document.getElementById('org-pipe-prev-od');
+    const wallEl = document.getElementById('org-pipe-prev-wall');
+    const idEl = document.getElementById('org-pipe-prev-id');
+    const roughEl = document.getElementById('org-pipe-prev-rough');
+    const hwEl = document.getElementById('org-pipe-prev-hw');
+    const ratingEl = document.getElementById('org-pipe-pressure-rating');
+
+    const matInfo = orgMaterialsLookup[item.material_key] || { roughness: 0.046, hw_c: 140 };
+
+    if (odEl) odEl.textContent = item.od_mm ? `${item.od_mm} mm` : '—';
+    if (wallEl) wallEl.textContent = item.wall_thickness_mm ? `${item.wall_thickness_mm} mm` : '—';
+    if (idEl) idEl.textContent = item.id_mm ? `${item.id_mm} mm` : '—';
+    if (roughEl) roughEl.textContent = `${matInfo.roughness} mm`;
+    if (hwEl) hwEl.textContent = `${matInfo.hw_c}`;
+    if (ratingEl) ratingEl.textContent = item.pressure_rating || `${item.standard} • ${item.schedule_sdr}`;
+
+    const diaIn = document.getElementById('pn_default_diameter_mm');
+    const roughIn = document.getElementById('pn_default_roughness_mm');
+    const hwIn = document.getElementById('pn_default_hw_c');
+    const nbIn = document.getElementById('pn_default_nb_mm');
+
+    const isManual = document.getElementById('org_pn_manual_override')?.checked;
+    if (!isManual) {
+      if (diaIn && item.id_mm) diaIn.value = item.id_mm;
+      if (roughIn) roughIn.value = matInfo.roughness;
+      if (hwIn) hwIn.value = matInfo.hw_c;
+    }
+    if (nbIn) nbIn.value = item.nb_mm || '';
+    selectedOrgPipeId = String(item.id);
+  }
+
+  function onOrgPipeStandardChange(stdVal) {
+    selectedOrgStd = stdVal;
+    populateOrgMaterials();
+    populateOrgSchedules();
+    populateOrgPipeItems();
+  }
+
+  function onOrgPipeMaterialChange(matVal) {
+    selectedOrgMat = matVal;
+    populateOrgSchedules();
+    populateOrgPipeItems();
+  }
+
+  function onOrgPipeScheduleChange(schVal) {
+    selectedOrgSch = schVal;
+    populateOrgPipeItems();
+  }
+
+  function onOrgPipeItemSelect(pipeId) {
+    selectedOrgPipeId = pipeId;
+    const item = orgStandardPipes.find(p => String(p.id) === String(pipeId));
+    updateOrgPipePreview(item);
+  }
+
+  function toggleOrgManualOverride(checked) {
+    const manualFields = document.getElementById('org-pipe-manual-fields');
+    if (manualFields) {
+      manualFields.style.display = checked ? 'grid' : 'none';
+    }
+    if (!checked) {
+      const item = orgStandardPipes.find(p => String(p.id) === String(selectedOrgPipeId));
+      if (item) updateOrgPipePreview(item);
+    }
+  }
+
+  // Initial standard pipes setup
+  if (Array.isArray(orgStandardPipes) && orgStandardPipes.length > 0) {
+    populateOrgStandards();
+    populateOrgMaterials();
+    populateOrgSchedules();
+    populateOrgPipeItems();
+  }
+
+  // Initial slurry state & calculation on load
+  if (orgSlurryCheckboxes.length > 0) {
+    syncOrgSlurryReadOnlyState();
+    updateOrgSlurryCalculator();
   }
 </script>
 {% endblock %}

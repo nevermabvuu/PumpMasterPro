@@ -109,23 +109,30 @@
         </div>
         <div class="p-3.5 space-y-3">
 
-          <!-- Unit System Preset Switcher -->
+          <!-- Unit System Preset Switcher & Organisation Reset -->
           <div class="flex items-center justify-between pb-2.5 border-b border-[#30363d]">
-            <span class="text-xs font-semibold text-[#8b949e] flex items-center gap-1">
-              <i class="bi bi-sliders"></i> Presets:
-            </span>
-            <div class="inline-flex rounded-lg p-0.5 bg-[#0d1117] border border-[#30363d]">
-              <button type="button" id="btnPresetMetric"
-                      onclick="applyUnitPreset('metric')"
-                      class="px-2 py-0.5 text-xs font-semibold rounded transition-all {{ 'bg-[#21262d] text-[#58a6ff] shadow-sm' if unit_system != 'imperial' else 'text-[#8b949e] hover:text-white' }}">
-                Metric
-              </button>
-              <button type="button" id="btnPresetImperial"
-                      onclick="applyUnitPreset('imperial')"
-                      class="px-2 py-0.5 text-xs font-semibold rounded transition-all {{ 'bg-[#21262d] text-[#58a6ff] shadow-sm' if unit_system == 'imperial' else 'text-[#8b949e] hover:text-white' }}">
-                Imperial
-              </button>
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-semibold text-[#8b949e] flex items-center gap-1">
+                <i class="bi bi-sliders"></i> Presets:
+              </span>
+              <div class="inline-flex rounded-lg p-0.5 bg-[#0d1117] border border-[#30363d]">
+                <button type="button" id="btnPresetMetric"
+                        onclick="applyUnitPreset('metric')"
+                        class="px-2 py-0.5 text-xs font-semibold rounded transition-all {{ 'bg-[#21262d] text-[#58a6ff] shadow-sm' if unit_system != 'imperial' else 'text-[#8b949e] hover:text-white' }}">
+                  Metric
+                </button>
+                <button type="button" id="btnPresetImperial"
+                        onclick="applyUnitPreset('imperial')"
+                        class="px-2 py-0.5 text-xs font-semibold rounded transition-all {{ 'bg-[#21262d] text-[#58a6ff] shadow-sm' if unit_system == 'imperial' else 'text-[#8b949e] hover:text-white' }}">
+                  Imperial
+                </button>
+              </div>
             </div>
+            <a href="{{ url_for('selection.pump_selection', reset=1) }}" 
+               class="text-[11px] text-[#8b949e] hover:text-[#58a6ff] flex items-center gap-1 transition-colors py-0.5 px-1.5 rounded hover:bg-[#21262d]"
+               title="Reset all fields and units to Organisation Defaults">
+              <i class="bi bi-arrow-counterclockwise"></i> Reset Defaults
+            </a>
           </div>
 
           <!-- Flow Q Input -->
@@ -318,7 +325,7 @@
                   <input type="checkbox" name="cb_L" value="1" class="slurry-cb accent-[#58a6ff]" data-param="L" {{ 'checked' if form_data.cb_L == '1' or (not form_data and True) else '' }}> 
                   <span>Liquid SG (S<sub>l</sub>)</span>
                 </label>
-                <input type="number" name="sg_l" id="sg_l" class="slurry-input form-control form-control-dark w-24 text-xs py-1 px-1.5 font-mono text-right" value="{{ form_data.sg_l or 1.0 }}" step="0.01" min="0.1" placeholder="1.00">
+                <input type="number" name="sg_l" id="sg_l" class="slurry-input form-control form-control-dark w-24 text-xs py-1 px-1.5 font-mono text-right" value="{{ form_data.sg_l or 1.0 }}" step="0.01" min="0.1" placeholder="1.00" {{ 'readonly style="opacity:0.75;"' if form_data.cb_L == '0' else '' }}>
               </div>
             </div>
 
@@ -329,7 +336,7 @@
                   <input type="checkbox" name="cb_S" value="1" class="slurry-cb accent-[#58a6ff]" data-param="S" {{ 'checked' if form_data.cb_S == '1' or (not form_data and True) else '' }}> 
                   <span>Solid SG (S<sub>s</sub>)</span>
                 </label>
-                <input type="number" name="sg_s" id="sg_s" class="slurry-input form-control form-control-dark w-24 text-xs py-1 px-1.5 font-mono text-right" value="{{ form_data.sg_s or 2.65 }}" step="0.01" min="0.1" placeholder="2.65">
+                <input type="number" name="sg_s" id="sg_s" class="slurry-input form-control form-control-dark w-24 text-xs py-1 px-1.5 font-mono text-right" value="{{ form_data.sg_s or 2.65 }}" step="0.01" min="0.1" placeholder="2.65" {{ 'readonly style="opacity:0.75;"' if form_data.cb_S == '0' else '' }}>
               </div>
             </div>
 
@@ -340,7 +347,7 @@
                   <input type="checkbox" name="cb_M" value="1" class="slurry-cb accent-[#58a6ff]" data-param="M" {{ 'checked' if form_data.cb_M == '1' else '' }}> 
                   <span>Slurry SG (S<sub>m</sub>)</span>
                 </label>
-                <input type="number" name="sg_m" id="sg_m" class="slurry-input form-control form-control-dark w-24 text-xs py-1 px-1.5 font-mono text-right" value="{{ form_data.sg_m or '' }}" step="0.01" min="0.1" placeholder="1.33" {{ 'readonly' if form_data.cb_M != '1' else '' }}>
+                <input type="number" name="sg_m" id="sg_m" class="slurry-input form-control form-control-dark w-24 text-xs py-1 px-1.5 font-mono text-right" value="{{ form_data.sg_m or '' }}" step="0.01" min="0.1" placeholder="1.33" {{ 'readonly style="opacity:0.75;"' if form_data.cb_M != '1' else '' }}>
               </div>
             </div>
 
@@ -351,14 +358,14 @@
                   <input type="checkbox" name="cb_Cv" value="1" class="slurry-cb accent-[#58a6ff]" data-param="Cv" {{ 'checked' if form_data.cb_Cv == '1' or (not form_data and True) else '' }}> 
                   <span>C<sub>v</sub> (vol. frac)</span>
                 </label>
-                <input type="number" name="slurry_cv" id="slurry_cv" class="slurry-input form-control form-control-dark w-24 text-xs py-1 px-1.5 font-mono text-right" value="{{ form_data.slurry_cv or 0.20 }}" step="0.01" min="0" max="0.8" placeholder="0.20">
+                <input type="number" name="slurry_cv" id="slurry_cv" class="slurry-input form-control form-control-dark w-24 text-xs py-1 px-1.5 font-mono text-right" value="{{ form_data.slurry_cv or 0.20 }}" step="0.01" min="0" max="0.8" placeholder="0.20" {{ 'readonly style="opacity:0.75;"' if form_data.cb_Cv == '0' else '' }}>
               </div>
               <div class="flex items-center justify-between">
                 <label class="flex items-center gap-1.5 text-xs text-white font-semibold cursor-pointer">
                   <input type="checkbox" name="cb_Cw" value="1" class="slurry-cb accent-[#58a6ff]" data-param="Cw" {{ 'checked' if form_data.cb_Cw == '1' else '' }}> 
                   <span>C<sub>w</sub> (wt. frac)</span>
                 </label>
-                <input type="number" name="slurry_cw" id="slurry_cw" class="slurry-input form-control form-control-dark w-24 text-xs py-1 px-1.5 font-mono text-right" value="{{ form_data.slurry_cw or '' }}" step="0.01" min="0" max="0.95" placeholder="0.40" {{ 'readonly' if form_data.cb_Cw != '1' else '' }}>
+                <input type="number" name="slurry_cw" id="slurry_cw" class="slurry-input form-control form-control-dark w-24 text-xs py-1 px-1.5 font-mono text-right" value="{{ form_data.slurry_cw or '' }}" step="0.01" min="0" max="0.95" placeholder="0.40" {{ 'readonly style="opacity:0.75;"' if form_data.cb_Cw != '1' else '' }}>
               </div>
               <div>
                 <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">d<sub>50</sub> (Median Particle Size)</label>
@@ -606,10 +613,10 @@
               <label class="text-[10px] text-[#8b949e] block mb-0.5">Frequency</label>
               <select name="motor_freq_hz" class="form-select form-control-dark w-full text-xs font-mono">
                 {% if feat_motor_50hz %}
-                <option value="50" {{ 'selected' if form_data.get('motor_freq_hz', '50') == '50' else '' }}>50 Hz</option>
+                <option value="50" {{ 'selected' if (form_data.get('motor_freq_hz')|string) == '50' or not form_data.get('motor_freq_hz') else '' }}>50 Hz</option>
                 {% endif %}
                 {% if feat_motor_60hz %}
-                <option value="60" {{ 'selected' if form_data.get('motor_freq_hz') == '60' else '' }}>60 Hz</option>
+                <option value="60" {{ 'selected' if (form_data.get('motor_freq_hz')|string) == '60' else '' }}>60 Hz</option>
                 {% endif %}
               </select>
             </div>

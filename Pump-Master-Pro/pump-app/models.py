@@ -1345,6 +1345,9 @@ class Organisation(db.Model):
     # Organisation-level Graph & Chart Visual Styles (Colors, Line Styles, Font Family, Grids)
     graph_styles_json = db.Column(db.Text, default='{}')
 
+    # Default Engineering Units & Initial Input Parameters for Pump Selection (/pump-selection)
+    selection_defaults_json = db.Column(db.Text, default='{}')
+
     # Custom Pump Details Jinja2 Template Path (served from templates/ directory)
     # e.g., 'details/default_pump_details.html' or 'details/lytrose_pump_details.html'
     pump_details_template = db.Column(db.String(255), default='details/default_pump_details.html')
@@ -1514,6 +1517,158 @@ class Organisation(db.Model):
             except Exception:
                 pass
         return default_styles
+
+    def get_selection_defaults(self):
+        """
+        Beginners Note:
+        Returns the dictionary of default engineering units and default input parameters
+        for the Pump Selection page (/pump-selection) for this organisation.
+        
+        When a user visits the pump selection suite or resets their session, this configuration
+        ensures their organisation's standard engineering preferences (such as preferred units,
+        baseline duty parameters, fluid characteristics, motor standards, and safety margins)
+        are seamlessly pre-populated.
+
+        Resolution hierarchy:
+        1. Explicit configuration saved in `selection_defaults_json`.
+        2. Legacy organisation unit columns (`default_unit_flow`, `default_unit_head`, etc.)
+        3. Standard global engineering baselines (e.g. Metric, Clean Water, 50 Hz, 15% margin).
+        """
+        import json
+
+        # Standard baseline engineering defaults:
+        baseline = {
+            # ── 1. Default Engineering Units & Preset ──────────────────────────
+            'unit_system': 'metric',
+            'unit_q': getattr(self, 'default_unit_flow', 'm3h') or 'm3h',
+            'unit_h': getattr(self, 'default_unit_head', 'm') or 'm',
+            'unit_npsh': getattr(self, 'default_unit_npsh', 'm') or 'm',
+            'unit_static_head': getattr(self, 'default_unit_head', 'm') or 'm',
+            'unit_rho': 'kgm3',
+            'unit_d50': 'mm',
+            'unit_pow': getattr(self, 'default_unit_power', 'kw') or 'kw',
+
+            # ── 2. Duty Point Default Inputs ──────────────────────────────────
+            'q_duty': '',               # e.g. '150' (optional default flow)
+            'h_duty': '',               # e.g. '35' (optional default head)
+            'npsh_avail': '',           # e.g. '8.0' (optional default NPSHa)
+            'static_head': '0',         # Default static head Hs
+
+            # ── 3. Fluid Properties Defaults ──────────────────────────────────
+            'liquid': 'water',          # 'water', 'viscous', or 'slurry'
+            'temperature_c': '20',      # Operating temperature in °C
+            'rho': '1000',              # Fluid density (kg/m³)
+            'viscosity_cSt': '1.0',     # Fluid kinematic viscosity (cSt)
+            'fluid_ph': '7.0',          # Neutral pH
+            'fluid_concentration': '',  # Concentration string (e.g. '25 wt%')
+            'is_hazardous': '0',        # Non-hazardous by default
+            'is_flammable': '0',        # Non-flammable by default
+            'sg_l': '1.0',              # Slurry liquid SG (Sl)
+            'sg_s': '2.65',             # Slurry solid SG (Ss)
+            'sg_m': '1.33',             # Slurry mixture SG (Sm)
+            'slurry_cv': '0.20',        # Slurry concentration by volume (Cv)
+            'slurry_cw': '0.40',        # Slurry concentration by weight (Cw)
+            'slurry_d50': '0.3',        # Slurry particle size d50 (mm)
+
+            # Slurry Checkbox States (which 3 parameters are given inputs vs 2 calculated)
+            'cb_L': '1',                # Checkbox: Liquid SG (Sl) active input (1=checked, 0=calculated)
+            'cb_S': '1',                # Checkbox: Solid SG (Ss) active input
+            'cb_M': '0',                # Checkbox: Slurry SG (Sm) calculated by default
+            'cb_Cv': '1',               # Checkbox: Volumetric Concentration (Cv) active input
+            'cb_Cw': '0',               # Checkbox: Weight Concentration (Cw) calculated by default
+
+            # ── 4. Operation Mode Defaults ────────────────────────────────────
+            'operation_mode': 'fixed',  # 'fixed' speed or 'vsd'
+            'fixed_speed_mode': 'auto', # 'auto' calculation or 'manual' speed
+            'manual_pump_speed_rpm': '',# Custom manual RPM
+            'vsd_f_min': '30.0',        # VSD minimum frequency (Hz)
+            'vsd_f_max': '50.0',        # VSD maximum frequency (Hz)
+
+            # ── 5. Motor & Drive Specifications Defaults ──────────────────────
+            'motor_standard': 'all',    # 'all', 'IEC', or 'NEMA'
+            'motor_efficiency': 'all',  # 'all', 'IE1', 'IE2', 'IE3', 'IE4'
+            'motor_supplier': 'all',    # 'all', 'Standard IEC', 'WEG', 'ABB', etc.
+            'motor_freq_hz': '50',      # 50 Hz or 60 Hz
+            'motor_poles': '4',         # 2, 4, 6, or 8 pole
+            'drive_type': 'direct',     # 'direct' or 'belt'
+            'motor_margin_basis': 'duty',# 'duty', 'bep', or 'end_of_curve'
+            'motor_margin_pct': '15.0', # Safety sizing margin percentage
+
+            # ── 6. Catalogue Filters Defaults ─────────────────────────────────
+            'filter_manufacturer': '',  # '' means all manufacturers
+            'filter_pump_type': '',     # '' means all pump types
+
+            # ── 7. Pipe Network System Defaults ───────────────────────────────
+            # Beginners Note: Sets default hydraulic parameters, pipe catalog specifications,
+            # sizing, material roughness, and solvers for pipe network friction calculations.
+            'pn_friction_method': 'darcy_weisbach', # 'darcy_weisbach' or 'hazen_williams'
+            'pn_solver_method': 'ggm',              # 'ggm', 'newton_raphson', 'hardy_cross', or 'linear_theory'
+            'pn_topology': 'series',                # 'series' or 'parallel'
+            'pn_default_standard': 'ASME B36.10M',  # Pipe standard family (e.g. 'ASME B36.10M', 'ISO 4427 / SANS 4427')
+            'pn_default_material': 'commercial_steel', # Default pipe material key
+            'pn_default_schedule_sdr': 'Sch 40 (STD)', # Schedule / SDR (e.g. 'Sch 40 (STD)', 'SDR 11')
+            'pn_default_pipe_id': '',               # Specific StandardPipe ID from catalog
+            'pn_default_nb_mm': '100',              # Nominal bore / size (mm)
+            'pn_default_diameter_mm': '102.3',      # Nominal internal diameter (mm)
+            'pn_default_length_m': '50.0',          # Segment pipe length (m)
+            'pn_default_elev_change_m': '10.0',     # Static elevation difference / lift (m)
+            'pn_default_roughness_mm': '0.046',     # Absolute pipe wall roughness epsilon (mm)
+            'pn_default_hw_c': '140'                # Hazen-Williams roughness coefficient C
+        }
+
+        # Overlay stored JSON if configured
+        raw = getattr(self, 'selection_defaults_json', '')
+        raw_dict = {}
+        if raw and str(raw).strip():
+            try:
+                data = json.loads(raw)
+                if isinstance(data, dict):
+                    raw_dict = data
+                    for k, v in data.items():
+                        if v is not None:
+                            baseline[k] = str(v)
+            except Exception:
+                pass
+
+        # Harmonize with legacy unit columns if not explicitly overridden in JSON
+        if 'unit_q' not in raw_dict and getattr(self, 'default_unit_flow', None):
+            baseline['unit_q'] = self.default_unit_flow
+        if 'unit_h' not in raw_dict and getattr(self, 'default_unit_head', None):
+            baseline['unit_h'] = self.default_unit_head
+            if 'unit_static_head' not in raw_dict:
+                baseline['unit_static_head'] = self.default_unit_head
+        if 'unit_pow' not in raw_dict and getattr(self, 'default_unit_power', None):
+            baseline['unit_pow'] = self.default_unit_power
+        if 'unit_npsh' not in raw_dict and getattr(self, 'default_unit_npsh', None):
+            baseline['unit_npsh'] = self.default_unit_npsh
+
+        return baseline
+
+    def set_selection_defaults(self, defaults_dict):
+        """
+        Beginners Note:
+        Updates the organisation's pump selection defaults from a dictionary,
+        serializing the config to JSON and keeping legacy unit columns in sync.
+        """
+        import json
+        if not isinstance(defaults_dict, dict):
+            return
+        clean_data = {}
+        for k, v in defaults_dict.items():
+            if v is not None:
+                clean_data[k] = str(v).strip()
+
+        self.selection_defaults_json = json.dumps(clean_data, indent=2)
+
+        # Sync legacy unit columns for backward compatibility across all modules
+        if 'unit_q' in clean_data and clean_data['unit_q']:
+            self.default_unit_flow = clean_data['unit_q']
+        if 'unit_h' in clean_data and clean_data['unit_h']:
+            self.default_unit_head = clean_data['unit_h']
+        if 'unit_pow' in clean_data and clean_data['unit_pow']:
+            self.default_unit_power = clean_data['unit_pow']
+        if 'unit_npsh' in clean_data and clean_data['unit_npsh']:
+            self.default_unit_npsh = clean_data['unit_npsh']
 
     def get_allowed_org_ids(self):
         """

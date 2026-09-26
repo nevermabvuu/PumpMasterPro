@@ -92,7 +92,9 @@ class SimpleNetworkController {
     const allowParallel = (typeof window.FEAT_PIPE_PARALLEL !== 'undefined')
       ? Boolean(window.FEAT_PIPE_PARALLEL)
       : (document.getElementById('topo-card-parallel') ? true : false);
-    const defaultTopo = (allowSeries ? 'series' : (allowParallel ? 'parallel' : 'series'));
+    const orgDefaults = window.__PMP_PIPE_NETWORK_DEFAULTS || {};
+    const configuredTopo = orgDefaults.pn_topology || 'series';
+    const defaultTopo = (configuredTopo === 'parallel' && allowParallel) ? 'parallel' : (allowSeries ? 'series' : (allowParallel ? 'parallel' : 'series'));
 
     const sess = window.__PMP_SESSION_PIPE_NETWORK;
     if (sess && sess.mode === 'simple') {
@@ -102,10 +104,10 @@ class SimpleNetworkController {
       this.state.topology = desiredTopo;
       this.state.parallel_balancing = sess.parallel_balancing || 'auto';
       this.state.flow_rate = parseFloat(sess.flow_rate || sess.flow_m3h || 100.0);
-      this.state.flow_unit = sess.flow_unit || window.__PMP_UNIT_Q || 'm3h';
-      this.state.static_elevation = parseFloat(sess.static_elevation_m || sess.static_head || 10.0);
-      this.state.solver_method = sess.solver_method || 'ggm';
-      this.state.friction_method = sess.friction_method || 'darcy_weisbach';
+      this.state.flow_unit = sess.flow_unit || window.__PMP_UNIT_Q || orgDefaults.unit_q || 'm3h';
+      this.state.static_elevation = parseFloat(sess.static_elevation_m || sess.static_head || orgDefaults.pn_default_elev_change_m || 10.0);
+      this.state.solver_method = sess.solver_method || orgDefaults.pn_solver_method || 'ggm';
+      this.state.friction_method = sess.friction_method || orgDefaults.pn_friction_method || 'darcy_weisbach';
       if (sess.fluid) {
         this.state.fluid = Object.assign({}, this.state.fluid, sess.fluid);
       }
@@ -133,10 +135,14 @@ class SimpleNetworkController {
         this.loadPresetData('parallel');
       }
     } else {
-      // Default clean initialization
+      // Default clean initialization using Organisation Defaults
       this.loadPresetData('series');
       this.loadPresetData('parallel');
       this.state.topology = defaultTopo;
+      if (orgDefaults.pn_solver_method) this.state.solver_method = orgDefaults.pn_solver_method;
+      if (orgDefaults.pn_friction_method) this.state.friction_method = orgDefaults.pn_friction_method;
+      if (orgDefaults.pn_default_elev_change_m) this.state.static_elevation = parseFloat(orgDefaults.pn_default_elev_change_m);
+      if (orgDefaults.unit_q) this.state.flow_unit = orgDefaults.unit_q;
     }
 
     this.syncControlsFromState();
@@ -235,14 +241,19 @@ class SimpleNetworkController {
    * Normalizes a pipe segment object with guaranteed safe numeric and string defaults.
    */
   normalizePipeInput(p, defaultLabel = 'Pipe Segment') {
+    const orgDefaults = window.__PMP_PIPE_NETWORK_DEFAULTS || {};
+    const defMat = orgDefaults.pn_default_material || 'commercial_steel';
+    const defDia = parseFloat(orgDefaults.pn_default_diameter_mm) || 102.3;
+    const defLen = parseFloat(orgDefaults.pn_default_length_m) || 50.0;
+    const defRough = parseFloat(orgDefaults.pn_default_roughness_mm) || 0.046;
     return {
       id: p.id || 'pipe_' + Math.random().toString(36).substring(2, 9),
       label: p.label || defaultLabel,
       catalog_id: p.catalog_id || '',
-      diameter_mm: Math.max(1.0, parseFloat(p.diameter_mm || p.diameter || 102.3)),
-      material: p.material || 'commercial_steel',
-      roughness_mm: Math.max(0.0001, parseFloat(p.roughness_mm || p.roughness || 0.046)),
-      length_m: Math.max(0.1, parseFloat(p.length_m || p.length || 50.0)),
+      diameter_mm: Math.max(1.0, parseFloat(p.diameter_mm || p.diameter || defDia)),
+      material: p.material || defMat,
+      roughness_mm: Math.max(0.0001, parseFloat(p.roughness_mm || p.roughness || defRough)),
+      length_m: Math.max(0.1, parseFloat(p.length_m || p.length || defLen)),
       elevation_m: parseFloat(p.elevation_m || p.elevation || 0.0),
       fittings: (typeof p.fittings === 'object' && p.fittings !== null) ? Object.assign({}, p.fittings) : {},
       custom_k: Math.max(0.0, parseFloat(p.custom_k || 0.0)),
@@ -480,14 +491,16 @@ class SimpleNetworkController {
 
   addPipe() {
     const idx = this.state.pipes.length + 1;
+    const def = this.getDefaultPipeSpec();
+    const defLen = parseFloat(window.__PMP_PIPE_NETWORK_DEFAULTS?.pn_default_length_m) || 50.0;
     this.state.pipes.push({
       id: 'pipe_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
       label: `Pipe ${idx} - Segment`,
-      catalog_id: '',
-      diameter_mm: 102.3,
-      material: 'commercial_steel',
-      roughness_mm: 0.046,
-      length_m: 50.0,
+      catalog_id: def.catalog_id,
+      diameter_mm: def.diameter_mm,
+      material: def.material,
+      roughness_mm: def.roughness_mm,
+      length_m: defLen,
       elevation_m: 0.0,
       fittings: {},
       custom_k: 0.0,
@@ -526,14 +539,16 @@ class SimpleNetworkController {
       this.loadPresetData('parallel');
     } else {
       if (!confirm('Clear all series pipeline segments and start fresh?')) return;
+      const def = this.getDefaultPipeSpec();
+      const defLen = parseFloat(window.__PMP_PIPE_NETWORK_DEFAULTS?.pn_default_length_m) || 50.0;
       this.state.pipes = [{
         id: 'pipe_' + Date.now(),
         label: 'Pipeline Main',
-        catalog_id: '',
-        diameter_mm: 102.3,
-        material: 'commercial_steel',
-        roughness_mm: 0.046,
-        length_m: 50.0,
+        catalog_id: def.catalog_id,
+        diameter_mm: def.diameter_mm,
+        material: def.material,
+        roughness_mm: def.roughness_mm,
+        length_m: defLen,
         elevation_m: 0.0,
         fittings: {},
         custom_k: 0.0,
@@ -554,6 +569,8 @@ class SimpleNetworkController {
   addParallelBranch() {
     const bNum = this.state.parallel_branches.length + 1;
     const defaultFlowPct = +(100 / bNum).toFixed(1);
+    const def = this.getDefaultPipeSpec();
+    const defLen = parseFloat(window.__PMP_PIPE_NETWORK_DEFAULTS?.pn_default_length_m) || 50.0;
     this.state.parallel_branches.push({
       id: 'branch_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
       label: `Branch ${bNum} - Pipeline`,
@@ -563,11 +580,11 @@ class SimpleNetworkController {
         {
           id: 'subpipe_' + Date.now() + '_1',
           label: `${bNum}.1 Branch Segment`,
-          catalog_id: '',
-          diameter_mm: 102.3,
-          material: 'commercial_steel',
-          roughness_mm: 0.046,
-          length_m: 50.0,
+          catalog_id: def.catalog_id,
+          diameter_mm: def.diameter_mm,
+          material: def.material,
+          roughness_mm: def.roughness_mm,
+          length_m: defLen,
           elevation_m: 0.0,
           fittings: {},
           custom_k: 0.0
@@ -619,14 +636,16 @@ class SimpleNetworkController {
       return;
     }
     const pNum = branch.pipes.length + 1;
+    const def = this.getDefaultPipeSpec();
+    const defLen = parseFloat(window.__PMP_PIPE_NETWORK_DEFAULTS?.pn_default_length_m) || 30.0;
     branch.pipes.push({
       id: 'subpipe_' + Date.now() + '_' + pNum,
       label: `${bIdx + 1}.${pNum} Sub-Pipe`,
-      catalog_id: '',
-      diameter_mm: 102.3,
-      material: 'commercial_steel',
-      roughness_mm: 0.046,
-      length_m: 30.0,
+      catalog_id: def.catalog_id,
+      diameter_mm: def.diameter_mm,
+      material: def.material,
+      roughness_mm: def.roughness_mm,
+      length_m: defLen,
       elevation_m: 0.0,
       fittings: {},
       custom_k: 0.0
@@ -685,12 +704,29 @@ class SimpleNetworkController {
   }
 
   loadPresetData(presetName) {
+    const def = this.getDefaultPipeSpec();
+    const catalog = this.getStandardPipesList();
+
+    // Helper to find standard pipe of similar standard/material for suction (larger) and riser (smaller)
+    const findSizedPipe = (targetNb) => {
+      let match = catalog.find(p => p.standard === def.standard && p.schedule_sdr === def.schedule_sdr && p.nb_mm === targetNb);
+      if (!match && def.material) {
+        match = catalog.find(p => p.material_key === def.material && p.nb_mm === targetNb);
+      }
+      return match;
+    };
+
+    const p150 = findSizedPipe(150);
+    const dia150 = p150 ? (p150.id_mm || p150.od_mm - 2 * p150.wall_thickness_mm) : 154.1;
+    const p80 = findSizedPipe(80);
+    const dia80 = p80 ? (p80.id_mm || p80.od_mm - 2 * p80.wall_thickness_mm) : 77.9;
+
     if (presetName === 'parallel') {
       this.state.topology = 'parallel';
       this.state.parallel_balancing = 'auto';
       this.state.flow_rate = 160.0;
       this.state.flow_unit = 'm3h';
-      this.state.friction_method = 'darcy_weisbach';
+      this.state.friction_method = window.__PMP_PIPE_NETWORK_DEFAULTS?.pn_friction_method || 'darcy_weisbach';
       this.state.fluid = { type: 'water', temp_c: 20, sg: 1.0, viscosity_cst: 1.004 };
 
       // Multi-branch system with multiple series pipes per branch and independent discharge heights:
@@ -703,11 +739,11 @@ class SimpleNetworkController {
           pipes: [
             {
               id: 'p_1_1',
-              label: '1.1 Manifold Takeoff (150mm Steel)',
-              catalog_id: '',
-              diameter_mm: 154.1,
-              material: 'commercial_steel',
-              roughness_mm: 0.046,
+              label: `1.1 Manifold Takeoff (${p150 ? (p150.nb_inch || '150mm') : '150mm'} ${def.material.replace('_', ' ')})`,
+              catalog_id: p150 ? String(p150.id) : '',
+              diameter_mm: +parseFloat(dia150).toFixed(1),
+              material: def.material,
+              roughness_mm: def.roughness_mm,
               length_m: 12.0,
               elevation_m: 0.0,
               fittings: { 'gate_valve_open': 1, 'elbow_90_standard': 1 },
@@ -715,11 +751,11 @@ class SimpleNetworkController {
             },
             {
               id: 'p_1_2',
-              label: '1.2 Overland Main (100mm Steel)',
-              catalog_id: '',
-              diameter_mm: 102.3,
-              material: 'commercial_steel',
-              roughness_mm: 0.046,
+              label: `1.2 Overland Main (${def.pipe ? (def.pipe.nb_inch || def.pipe.nb_mm + 'mm') : def.diameter_mm + 'mm'} Default Pipe)`,
+              catalog_id: def.catalog_id,
+              diameter_mm: def.diameter_mm,
+              material: def.material,
+              roughness_mm: def.roughness_mm,
               length_m: 120.0,
               elevation_m: 4.0,
               fittings: { 'swing_check_open': 1, 'elbow_90_standard': 2 },
@@ -727,11 +763,11 @@ class SimpleNetworkController {
             },
             {
               id: 'p_1_3',
-              label: '1.3 Tank Terminal Riser (80mm Steel)',
-              catalog_id: '',
-              diameter_mm: 77.9,
-              material: 'commercial_steel',
-              roughness_mm: 0.046,
+              label: `1.3 Tank Terminal Riser (${p80 ? (p80.nb_inch || '80mm') : '80mm'} ${def.material.replace('_', ' ')})`,
+              catalog_id: p80 ? String(p80.id) : '',
+              diameter_mm: +parseFloat(dia80).toFixed(1),
+              material: def.material,
+              roughness_mm: def.roughness_mm,
               length_m: 25.0,
               elevation_m: 12.0,
               fittings: { 'butterfly_valve_open': 1, 'elbow_90_standard': 2 },
@@ -747,11 +783,11 @@ class SimpleNetworkController {
           pipes: [
             {
               id: 'p_2_1',
-              label: '2.1 Bypass Takeoff (100mm Steel)',
-              catalog_id: '',
-              diameter_mm: 102.3,
-              material: 'commercial_steel',
-              roughness_mm: 0.046,
+              label: `2.1 Bypass Takeoff (${def.pipe ? (def.pipe.nb_inch || def.pipe.nb_mm + 'mm') : def.diameter_mm + 'mm'} Default Pipe)`,
+              catalog_id: def.catalog_id,
+              diameter_mm: def.diameter_mm,
+              material: def.material,
+              roughness_mm: def.roughness_mm,
               length_m: 15.0,
               elevation_m: 0.0,
               fittings: { 'gate_valve_open': 1, 'elbow_90_standard': 1 },
@@ -759,11 +795,11 @@ class SimpleNetworkController {
             },
             {
               id: 'p_2_2',
-              label: '2.2 Discharge Line (80mm HDPE)',
-              catalog_id: '',
-              diameter_mm: 79.2,
-              material: 'hdpe',
-              roughness_mm: 0.007,
+              label: `2.2 Discharge Line (${p80 ? (p80.nb_inch || '80mm') : '80mm'} Branch Line)`,
+              catalog_id: p80 ? String(p80.id) : '',
+              diameter_mm: +parseFloat(dia80).toFixed(1),
+              material: def.material,
+              roughness_mm: def.roughness_mm,
               length_m: 95.0,
               elevation_m: 8.0,
               fittings: { 'swing_check_open': 1, 'elbow_90_standard': 3 },
@@ -778,17 +814,17 @@ class SimpleNetworkController {
       this.state.parallel_balancing = 'auto';
       this.state.flow_rate = 120.0;
       this.state.flow_unit = 'm3h';
-      this.state.static_elevation = 18.0;
-      this.state.friction_method = 'darcy_weisbach';
+      this.state.static_elevation = parseFloat(window.__PMP_PIPE_NETWORK_DEFAULTS?.pn_default_elev_change_m) || 18.0;
+      this.state.friction_method = window.__PMP_PIPE_NETWORK_DEFAULTS?.pn_friction_method || 'darcy_weisbach';
       this.state.fluid = { type: 'water', temp_c: 20, sg: 1.0, viscosity_cst: 1.004 };
       this.state.pipes = [
         {
           id: 'pipe_suction',
-          label: '1. Suction Line (150mm / 6")',
-          catalog_id: '',
-          diameter_mm: 154.1,
-          material: 'commercial_steel',
-          roughness_mm: 0.046,
+          label: `1. Suction Line (${p150 ? (p150.nb_inch || '150mm') : '150mm'} ${def.material.replace('_', ' ')})`,
+          catalog_id: p150 ? String(p150.id) : '',
+          diameter_mm: +parseFloat(dia150).toFixed(1),
+          material: def.material,
+          roughness_mm: def.roughness_mm,
           length_m: 12.0,
           elevation_m: -1.5,
           fittings: { 'foot_valve_strainer': 1, 'elbow_90_long_radius': 1 },
@@ -797,12 +833,12 @@ class SimpleNetworkController {
         },
         {
           id: 'pipe_discharge',
-          label: '2. Discharge Overland Main (100mm / 4")',
-          catalog_id: '',
-          diameter_mm: 102.3,
-          material: 'commercial_steel',
-          roughness_mm: 0.046,
-          length_m: 140.0,
+          label: `2. Discharge Overland Main (${def.pipe ? (def.pipe.nb_inch || def.pipe.nb_mm + 'mm') : def.diameter_mm + 'mm'} Default Pipe)`,
+          catalog_id: def.catalog_id,
+          diameter_mm: def.diameter_mm,
+          material: def.material,
+          roughness_mm: def.roughness_mm,
+          length_m: parseFloat(window.__PMP_PIPE_NETWORK_DEFAULTS?.pn_default_length_m) || 140.0,
           elevation_m: 4.5,
           fittings: { 'swing_check_open': 1, 'gate_valve_open': 1, 'elbow_90_standard': 3 },
           custom_k: 0.0,
@@ -810,11 +846,11 @@ class SimpleNetworkController {
         },
         {
           id: 'pipe_riser',
-          label: '3. Vertical Riser to Storage Tank (80mm / 3")',
-          catalog_id: '',
-          diameter_mm: 77.9,
-          material: 'commercial_steel',
-          roughness_mm: 0.046,
+          label: `3. Vertical Riser to Storage Tank (${p80 ? (p80.nb_inch || '80mm') : '80mm'} ${def.material.replace('_', ' ')})`,
+          catalog_id: p80 ? String(p80.id) : '',
+          diameter_mm: +parseFloat(dia80).toFixed(1),
+          material: def.material,
+          roughness_mm: def.roughness_mm,
           length_m: 35.0,
           elevation_m: 15.0,
           fittings: { 'elbow_90_standard': 2, 'butterfly_valve_open': 1 },
@@ -893,6 +929,70 @@ class SimpleNetworkController {
       }
     }
     return `Custom ID ${pipe.diameter_mm}mm`;
+  }
+
+  /**
+   * Retrieves the active organisation's corporate default standard pipe specification.
+   * Resolves catalog pipe item, inside diameter, wall roughness, and Hazen-Williams C.
+   */
+  getDefaultPipeSpec() {
+    const orgDefaults = window.__PMP_PIPE_NETWORK_DEFAULTS || {};
+    const catalog = this.getStandardPipesList();
+
+    let pipe = null;
+    // 1. Match by explicit catalog ID if saved
+    if (orgDefaults.pn_default_pipe_id) {
+      pipe = catalog.find(p => String(p.id) === String(orgDefaults.pn_default_pipe_id));
+    }
+    // 2. Match by standard, schedule, and nominal size (or diameter)
+    if (!pipe && orgDefaults.pn_default_standard) {
+      pipe = catalog.find(p =>
+        p.standard === orgDefaults.pn_default_standard &&
+        (!orgDefaults.pn_default_schedule_sdr || p.schedule_sdr === orgDefaults.pn_default_schedule_sdr) &&
+        (!orgDefaults.pn_default_nb_mm || String(p.nb_mm) === String(orgDefaults.pn_default_nb_mm))
+      );
+      if (!pipe) {
+        pipe = catalog.find(p => p.standard === orgDefaults.pn_default_standard && (!orgDefaults.pn_default_schedule_sdr || p.schedule_sdr === orgDefaults.pn_default_schedule_sdr));
+      }
+    }
+    // 3. Fallback to material match
+    if (!pipe && orgDefaults.pn_default_material) {
+      pipe = catalog.find(p => p.material_key === orgDefaults.pn_default_material && (p.nb_mm === 100 || (p.od_mm >= 110 && p.od_mm <= 125)));
+    }
+    // 4. Default fallback to 100mm carbon steel
+    if (!pipe) {
+      pipe = catalog.find(p => p.standard && p.standard.includes('B36.10M') && p.nb_mm === 100 && p.schedule_sdr && p.schedule_sdr.includes('40'))
+        || catalog.find(p => p.nb_mm === 100)
+        || catalog[0];
+    }
+
+    const mat = orgDefaults.pn_default_material || (pipe ? pipe.material_key : 'commercial_steel');
+    let dia = pipe ? (pipe.id_mm || (pipe.od_mm - 2 * (pipe.wall_thickness_mm || 0))) : (parseFloat(orgDefaults.pn_default_diameter_mm) || 102.3);
+    dia = Math.round(dia * 10) / 10;
+
+    let rough = parseFloat(orgDefaults.pn_default_roughness_mm);
+    if (!rough || isNaN(rough)) {
+      if (mat === 'hdpe') rough = 0.007;
+      else if (mat === 'pvc') rough = 0.0015;
+      else if (mat === 'stainless_steel') rough = 0.015;
+      else if (mat === 'ductile_iron') rough = 0.12;
+      else if (mat === 'galvanised_steel') rough = 0.15;
+      else rough = 0.046;
+    }
+
+    const hw_c = parseFloat(orgDefaults.pn_default_hw_c) || (mat === 'commercial_steel' ? 140 : 150);
+
+    return {
+      catalog_id: pipe ? String(pipe.id) : (orgDefaults.pn_default_pipe_id || ''),
+      standard: pipe ? pipe.standard : (orgDefaults.pn_default_standard || 'ASME B36.10M'),
+      material: mat,
+      schedule_sdr: pipe ? pipe.schedule_sdr : (orgDefaults.pn_default_schedule_sdr || 'Sch 40 (STD)'),
+      diameter_mm: dia,
+      roughness_mm: rough,
+      hw_c: hw_c,
+      nb_mm: pipe ? pipe.nb_mm : (parseInt(orgDefaults.pn_default_nb_mm) || 100),
+      pipe: pipe
+    };
   }
 
   // ─────────────────────────────────────────────────────────────────────────

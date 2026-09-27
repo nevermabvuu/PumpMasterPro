@@ -358,16 +358,34 @@
   .pn-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 5px;
-    padding: 5px 10px;
+    height: 30px;
+    padding: 0 10px;
     border-radius: 6px;
     border: 1px solid #30363d;
     background: #21262d;
     color: #c9d1d9;
     font-size: 12px;
+    line-height: 1;
     cursor: pointer;
     transition: all 0.15s;
     white-space: nowrap;
+    box-sizing: border-box;
+    vertical-align: middle;
+  }
+
+  .pn-btn-icon {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .pn-canvas-only {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
   }
 
   .pn-btn:hover {
@@ -965,18 +983,18 @@
     </button>
 
     <!-- Zoom controls (Canvas only) -->
-    <span class="pn-canvas-only" style="display:inline-flex;align-items:center;gap:4px;">
+    <span class="pn-canvas-only" style="display:inline-flex;align-items:center;gap:4px;vertical-align:middle;">
       <span class="pn-sep"></span>
-      <button id="btn-zoom-out" class="pn-btn" title="Zoom out">
+      <button id="btn-zoom-out" class="pn-btn pn-btn-icon" title="Zoom out">
         <i class="bi bi-zoom-out"></i>
       </button>
-      <button id="btn-zoom-reset" class="pn-btn" title="Reset zoom and pan">
+      <button id="btn-zoom-reset" class="pn-btn pn-btn-icon" title="Reset zoom and pan">
         <i class="bi bi-fullscreen-exit"></i>
       </button>
-      <button id="btn-zoom-in" class="pn-btn" title="Zoom in">
+      <button id="btn-zoom-in" class="pn-btn pn-btn-icon" title="Zoom in">
         <i class="bi bi-zoom-in"></i>
       </button>
-      <div class="pn-sep"></div>
+      <span class="pn-sep"></span>
     </span>
 
     <!-- File operations -->

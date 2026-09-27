@@ -994,6 +994,12 @@ ACCESS_MODULE_INFO = {
         'description': 'Interactive visual canvas and simple mode for piping system head loss calculations.',
         'icon': 'bi-diagram-3'
     },
+    'projects': {
+        'key': 'projects',
+        'label': 'Projects & Saved Selections',
+        'description': 'Manage engineering project folders, custom project attributes, and save/reload pump selections.',
+        'icon': 'bi-folder2-open'
+    },
     'debug': {
         'key': 'debug',
         'label': 'Debug Console & Inspector',
@@ -1441,6 +1447,52 @@ class Organisation(db.Model):
         Beginners Note: Returns only defined and enabled pump attribute slots.
         """
         return [attr for attr in self.get_pump_attributes() if attr['name'] and attr['enabled']]
+
+    # Custom Organisation Project Attribute Definitions (ProjectAttributeName1 to 10)
+    ProjectAttributeName1  = db.Column(db.String(100), default='')
+    ProjectAttributeName2  = db.Column(db.String(100), default='')
+    ProjectAttributeName3  = db.Column(db.String(100), default='')
+    ProjectAttributeName4  = db.Column(db.String(100), default='')
+    ProjectAttributeName5  = db.Column(db.String(100), default='')
+    ProjectAttributeName6  = db.Column(db.String(100), default='')
+    ProjectAttributeName7  = db.Column(db.String(100), default='')
+    ProjectAttributeName8  = db.Column(db.String(100), default='')
+    ProjectAttributeName9  = db.Column(db.String(100), default='')
+    ProjectAttributeName10 = db.Column(db.String(100), default='')
+
+    # Checkbox flags to enable/disable each project attribute definition
+    ProjectAttributeEnabled1  = db.Column(db.Boolean, default=True)
+    ProjectAttributeEnabled2  = db.Column(db.Boolean, default=True)
+    ProjectAttributeEnabled3  = db.Column(db.Boolean, default=True)
+    ProjectAttributeEnabled4  = db.Column(db.Boolean, default=True)
+    ProjectAttributeEnabled5  = db.Column(db.Boolean, default=True)
+    ProjectAttributeEnabled6  = db.Column(db.Boolean, default=True)
+    ProjectAttributeEnabled7  = db.Column(db.Boolean, default=True)
+    ProjectAttributeEnabled8  = db.Column(db.Boolean, default=True)
+    ProjectAttributeEnabled9  = db.Column(db.Boolean, default=True)
+    ProjectAttributeEnabled10 = db.Column(db.Boolean, default=True)
+
+    def get_project_attributes(self):
+        """
+        Returns all 10 custom project attribute slots with index, name, and enabled state.
+        """
+        attrs = []
+        for i in range(1, 11):
+            name = (getattr(self, f'ProjectAttributeName{i}', '') or '').strip()
+            val = getattr(self, f'ProjectAttributeEnabled{i}', True)
+            enabled = True if val is None else bool(val)
+            attrs.append({
+                'index': i,
+                'name': name,
+                'enabled': enabled
+            })
+        return attrs
+
+    def get_enabled_project_attributes(self):
+        """
+        Returns only defined and enabled project attribute slots.
+        """
+        return [attr for attr in self.get_project_attributes() if attr['name'] and attr['enabled']]
 
     def get_notification_email(self):
         """
@@ -2871,3 +2923,177 @@ class RegistrationRequest(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else '',
             'reviewed_at': self.reviewed_at.isoformat() if self.reviewed_at else ''
         }
+
+
+class Project(db.Model):
+    """
+    Beginners Note: Project Model ('projects' table)
+    Represents an Engineering Project or tender package within an Organisation.
+    Supports up to 10 customizable project attributes defined by the organisation,
+    and holds multiple pump selections / quotes.
+    """
+    __tablename__ = 'projects'
+
+    id = db.Column(db.Integer, primary_key=True)
+    organisation_id = db.Column(db.Integer, db.ForeignKey('organisations.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    name = db.Column(db.String(150), nullable=False)
+    project_number = db.Column(db.String(100), default='')
+    client_name = db.Column(db.String(150), default='')
+    description = db.Column(db.Text, default='')
+    status = db.Column(db.String(50), default='active')  # active, quoted, won, on_hold, completed, archived
+
+    # Up to 10 Custom Project Attribute Values
+    attribute_value_1 = db.Column(db.String(255), default='')
+    attribute_value_2 = db.Column(db.String(255), default='')
+    attribute_value_3 = db.Column(db.String(255), default='')
+    attribute_value_4 = db.Column(db.String(255), default='')
+    attribute_value_5 = db.Column(db.String(255), default='')
+    attribute_value_6 = db.Column(db.String(255), default='')
+    attribute_value_7 = db.Column(db.String(255), default='')
+    attribute_value_8 = db.Column(db.String(255), default='')
+    attribute_value_9 = db.Column(db.String(255), default='')
+    attribute_value_10 = db.Column(db.String(255), default='')
+
+    created_at = db.Column(db.DateTime, default=_utcnow)
+    updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow)
+
+    # Relationships
+    organisation = db.relationship('Organisation', backref=db.backref('projects', lazy=True, cascade='all, delete-orphan'))
+    user = db.relationship('User', backref=db.backref('projects', lazy=True))
+    selections = db.relationship('ProjectSelection', backref='project', lazy=True, cascade='all, delete-orphan', order_by='ProjectSelection.created_at.desc()')
+
+    def get_attribute_items(self):
+        """
+        Returns list of configured project attributes with defined names, enabled status, and project values.
+        """
+        org_attrs = self.organisation.get_project_attributes() if self.organisation else []
+        items = []
+        for a in org_attrs:
+            val = getattr(self, f"attribute_value_{a['index']}", '') or ''
+            items.append({
+                'index': a['index'],
+                'name': a['name'] or f"Attribute {a['index']}",
+                'enabled': a['enabled'],
+                'value': val
+            })
+        return items
+
+    def get_attribute_value(self, index):
+        """Returns the stored value for attribute index 1..10."""
+        return getattr(self, f"attribute_value_{index}", '') or ''
+
+    def get_active_attribute_items(self):
+        """
+        Returns only enabled attributes that have a configured name on the parent organisation.
+        """
+        return [item for item in self.get_attribute_items() if item['name'] and item['enabled']]
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'project_number': self.project_number,
+            'client_name': self.client_name,
+            'description': self.description,
+            'status': self.status,
+            'selections_count': len(self.selections),
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else '',
+            'updated_at': self.updated_at.strftime('%Y-%m-%d %H:%M') if self.updated_at else '',
+            'attributes': {f'attribute_{i}': getattr(self, f'attribute_value_{i}', '') for i in range(1, 11)}
+        }
+
+
+class ProjectSelection(db.Model):
+    """
+    Beginners Note: ProjectSelection Model ('project_selections' table)
+    Represents a saved pump selection / quote within a project.
+    Stores the selected pump, operating duty point, fluid properties,
+    detailed selection parameters, and complete pipe network configuration.
+    """
+    __tablename__ = 'project_selections'
+
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
+    organisation_id = db.Column(db.Integer, db.ForeignKey('organisations.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    name = db.Column(db.String(150), nullable=False)  # e.g. "Option A - High Flow Duty"
+    quote_number = db.Column(db.String(100), default='')  # e.g. "QUO-2026-001"
+    tag_number = db.Column(db.String(100), default='')  # e.g. "01-PP-002A"
+
+    # Pump info
+    pump_id = db.Column(db.Integer, db.ForeignKey('pumps.id'), nullable=True)
+    pump_name = db.Column(db.String(150), default='')
+    pump_model = db.Column(db.String(100), default='')
+    impeller_dia_mm = db.Column(db.Float, nullable=True)
+    speed_rpm = db.Column(db.Float, nullable=True)
+
+    # Operating duty point
+    flow_rate = db.Column(db.Float, nullable=True)
+    flow_unit = db.Column(db.String(20), default='m3h')
+    head = db.Column(db.Float, nullable=True)
+    head_unit = db.Column(db.String(20), default='m')
+    efficiency_pct = db.Column(db.Float, nullable=True)
+    power_kw = db.Column(db.Float, nullable=True)
+    npshr_m = db.Column(db.Float, nullable=True)
+
+    # Fluid properties
+    liquid_type = db.Column(db.String(50), default='water')
+    temperature_c = db.Column(db.Float, default=20.0)
+    sg = db.Column(db.Float, default=1.0)
+    viscosity_cst = db.Column(db.Float, default=1.0)
+
+    # Full serialized snapshots
+    selection_data_json = db.Column(db.Text, default='{}')  # Full session active_selection and form data
+    pipe_network_json = db.Column(db.Text, default='{}')  # Full pipe network (nodes, pipes, solver, units)
+
+    notes = db.Column(db.Text, default='')
+
+    created_at = db.Column(db.DateTime, default=_utcnow)
+    updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow)
+
+    # Relationships
+    organisation = db.relationship('Organisation', backref=db.backref('project_selections', lazy=True))
+    user = db.relationship('User', backref=db.backref('project_selections', lazy=True))
+    pump = db.relationship('Pump', backref=db.backref('project_selections', lazy=True))
+
+    def get_selection_data(self):
+        try:
+            return json.loads(self.selection_data_json) if self.selection_data_json else {}
+        except Exception:
+            return {}
+
+    def get_pipe_network(self):
+        try:
+            return json.loads(self.pipe_network_json) if self.pipe_network_json else {}
+        except Exception:
+            return {}
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'project_id': self.project_id,
+            'project_name': self.project.name if self.project else '',
+            'name': self.name,
+            'quote_number': self.quote_number,
+            'tag_number': self.tag_number,
+            'pump_id': self.pump_id,
+            'pump_name': self.pump_name,
+            'pump_model': self.pump_model,
+            'impeller_dia_mm': self.impeller_dia_mm,
+            'speed_rpm': self.speed_rpm,
+            'flow_rate': self.flow_rate,
+            'flow_unit': self.flow_unit,
+            'head': self.head,
+            'head_unit': self.head_unit,
+            'efficiency_pct': self.efficiency_pct,
+            'power_kw': self.power_kw,
+            'npshr_m': self.npshr_m,
+            'liquid_type': self.liquid_type,
+            'has_pipe_network': bool(self.pipe_network_json and len(self.pipe_network_json) > 10),
+            'notes': self.notes,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else ''
+        }
+

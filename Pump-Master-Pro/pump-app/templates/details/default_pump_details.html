@@ -103,7 +103,7 @@
           {% endif %}
         </div>
         <div class="text-[10px] text-[#58a6ff] mt-0.5">
-          {{ 'VSD Regulated' if (active_result and active_result.is_vsd) else ('Trimmed Impeller' if active_result and active_result.optimal_trim_ratio < 0.99 else 'Full Impeller') }}
+          {{ 'VSD Regulated' if (active_result and (active_result.get('is_vsd') if active_result is mapping else active_result.is_vsd)) else ('Trimmed Impeller' if (active_result and (active_result.get('optimal_trim_ratio') if active_result is mapping else getattr(active_result, 'optimal_trim_ratio', 1.0)) and (active_result.get('optimal_trim_ratio') if active_result is mapping else getattr(active_result, 'optimal_trim_ratio', 1.0)) < 0.99) else 'Full Impeller') }}
         </div>
       </div>
     </div>

@@ -959,6 +959,93 @@
         </form>
       </div>
 
+      <!-- CARD: CUSTOM PROJECT ATTRIBUTE DEFINITIONS (ProjectAttributeNames 1 to 10) -->
+      {% set all_project_attrs = current_org.get_project_attributes() if current_org else [] %}
+      {% set enabled_project_attrs = current_org.get_enabled_project_attributes() if current_org else [] %}
+      <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
+        <div class="px-4 py-3 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
+              <i class="bi bi-folder2-open text-[#38bdf8]"></i> Custom Project Attribute Definitions
+            </h2>
+            <span class="text-xs text-[#8b949e] font-mono">ProjectAttributeNames 1-10</span>
+          </div>
+          <span id="proj-attr-count-badge" class="px-2 py-0.5 rounded text-[11px] font-mono bg-[#38bdf8]/10 text-[#38bdf8] border border-[#38bdf8]/30">
+            {{ enabled_project_attrs|length }} Active
+          </span>
+        </div>
+
+        <form action="{{ url_for('organisations.save_project_attributes') }}" method="POST" class="p-4 space-y-4">
+          <p class="text-xs text-[#8b949e]">
+            Define up to 10 custom project attributes for your organisation (e.g. <em class="text-[#c9d1d9]">Project Number</em>, <em class="text-[#c9d1d9]">Client Name</em>, <em class="text-[#c9d1d9]">Site Location</em>, <em class="text-[#c9d1d9]">Consulting Engineer</em>, <em class="text-[#c9d1d9]">Target Commission Date</em>).
+            These custom attributes will be displayed when creating or editing projects in the <strong class="text-[#e6edf3]">Projects</strong> tab.
+          </p>
+
+          <fieldset {% if not can_edit_org %}disabled{% endif %} class="contents space-y-2.5">
+          <div id="project-attributes-container" class="space-y-2.5 max-h-[480px] overflow-y-auto pe-1 custom-scrollbar">
+            {% for attr in all_project_attrs %}
+              {% set has_content = (attr.name and attr.name|trim|length > 0) %}
+              <div class="attribute-row flex items-center gap-2.5 p-2 bg-[#0d1117] border border-[#30363d] rounded-lg transition-all {% if not has_content and attr.index > 4 %}hidden{% endif %}" id="proj-attr-row-{{ attr.index }}">
+                <span class="px-2 py-1 bg-[#21262d] text-[#38bdf8] border border-[#30363d] rounded text-[11px] font-mono font-bold shrink-0">
+                  #{{ attr.index }}
+                </span>
+                
+                <div class="flex-1 min-w-0">
+                  <input type="text" 
+                         name="ProjectAttributeName{{ attr.index }}" 
+                         id="proj_attr_name_{{ attr.index }}"
+                         value="{{ attr.name }}" 
+                         placeholder="Attribute {{ attr.index }} Name (e.g. {% if attr.index == 1 %}Project Number{% elif attr.index == 2 %}Client / End User{% elif attr.index == 3 %}Site Location{% elif attr.index == 4 %}Consulting Engineer / EPCM{% elif attr.index == 5 %}Contract / Tender Ref{% elif attr.index == 6 %}Industry Sector{% elif attr.index == 7 %}Target Delivery Date{% elif attr.index == 8 %}Sales Representative{% elif attr.index == 9 %}Cost Center / Budget{% else %}Special Specifications{% endif %}...)"
+                         oninput="updateProjectAttrStatus({{ attr.index }})"
+                         class="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8] transition-colors">
+                </div>
+
+                <label class="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#161b22] border border-[#30363d] rounded text-xs text-[#c9d1d9] cursor-pointer hover:border-[#38bdf8]/50 transition-colors shrink-0 select-none">
+                  <input type="checkbox" 
+                         name="ProjectAttributeEnabled{{ attr.index }}" 
+                         id="proj_attr_enabled_{{ attr.index }}"
+                         value="1" 
+                         {% if attr.enabled %}checked{% endif %}
+                         onchange="updateProjectAttrStatus({{ attr.index }})"
+                         class="accent-[#238636] rounded">
+                  <span class="text-[11px] font-medium" id="proj_attr_label_{{ attr.index }}">{% if attr.enabled %}Enabled{% else %}Disabled{% endif %}</span>
+                </label>
+
+                {% if can_edit_org %}
+                <button type="button" 
+                        onclick="clearProjectAttrRow({{ attr.index }})" 
+                        class="p-1.5 text-[#8b949e] hover:text-[#f85149] rounded hover:bg-[#21262d] transition-colors shrink-0" 
+                        title="Clear attribute slot">
+                  <i class="bi bi-trash text-xs"></i>
+                </button>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+          </fieldset>
+
+          <div class="flex items-center justify-between pt-2 border-t border-[#30363d]">
+            {% if can_edit_org %}
+            <button type="button" 
+                    id="btnAddProjectAttribute" 
+                    onclick="addNextProjectAttrSlot()" 
+                    class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-xs font-semibold text-[#38bdf8] rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer">
+              <i class="bi bi-plus-circle"></i> Add Project Attribute
+            </button>
+
+            <button type="submit" class="px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
+              <i class="bi bi-check-lg"></i> Save Project Attributes
+            </button>
+            {% else %}
+            <div></div>
+            <button type="button" disabled class="px-4 py-2 bg-[#21262d] text-xs font-semibold text-[#8b949e] rounded-lg border border-[#30363d] cursor-not-allowed flex items-center gap-1.5 opacity-60">
+              <i class="bi bi-lock-fill"></i> Read-Only (Changes Disabled)
+            </button>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+
       <!-- CARD: ORGANISATION GRAPH & VISUAL STYLES -->
       {% set org_styles = current_org.get_graph_styles() if current_org else {} %}
       <div class="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm">
@@ -2029,6 +2116,51 @@
       }
     }
     const badge = document.getElementById('attr-count-badge');
+    if (badge) {
+      badge.textContent = activeCount + ' Active';
+    }
+  }
+
+  function addNextProjectAttrSlot() {
+    for (let i = 1; i <= 10; i++) {
+      const row = document.getElementById('proj-attr-row-' + i);
+      if (row && row.classList.contains('hidden')) {
+        row.classList.remove('hidden');
+        const input = document.getElementById('proj_attr_name_' + i);
+        if (input) input.focus();
+        return;
+      }
+    }
+    alert('Maximum of 10 custom project attributes reached.');
+  }
+
+  function clearProjectAttrRow(idx) {
+    const input = document.getElementById('proj_attr_name_' + idx);
+    const chk = document.getElementById('proj_attr_enabled_' + idx);
+    if (input) input.value = '';
+    if (chk) chk.checked = false;
+    updateProjectAttrStatus(idx);
+    if (idx > 4) {
+      const row = document.getElementById('proj-attr-row-' + idx);
+      if (row) row.classList.add('hidden');
+    }
+  }
+
+  function updateProjectAttrStatus(idx) {
+    const chk = document.getElementById('proj_attr_enabled_' + idx);
+    const lbl = document.getElementById('proj_attr_label_' + idx);
+    if (chk && lbl) {
+      lbl.textContent = chk.checked ? 'Enabled' : 'Disabled';
+    }
+    let activeCount = 0;
+    for (let i = 1; i <= 10; i++) {
+      const input = document.getElementById('proj_attr_name_' + i);
+      const c = document.getElementById('proj_attr_enabled_' + i);
+      if (input && input.value.trim() && c && c.checked) {
+        activeCount++;
+      }
+    }
+    const badge = document.getElementById('proj-attr-count-badge');
     if (badge) {
       badge.textContent = activeCount + ' Active';
     }

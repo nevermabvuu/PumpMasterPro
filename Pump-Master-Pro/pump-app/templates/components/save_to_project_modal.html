@@ -1,0 +1,429 @@
+<!-- ── Component: Save Current Selection to Project Modal ────────────────────── -->
+<div id="saveToProjectModal"
+     class="hidden"
+     style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:99999;overflow-y:auto;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);padding:1rem;box-sizing:border-box;"
+     onclick="if(event.target===this||event.target.id==='saveToProjectModalWrap')closeSaveToProjectModal()">
+  <div id="saveToProjectModalWrap" style="min-height:100%;width:100%;display:flex;align-items:center;justify-content:center;padding:1rem 0;">
+    <div class="bg-[#161b22] border border-[#30363d] rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl space-y-0"
+         style="max-width:32rem;width:100%;position:relative;z-index:100000;"
+         onclick="event.stopPropagation()">
+
+    <!-- Header -->
+    <div class="px-5 py-4 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i class="bi bi-bookmark-plus text-[#38bdf8] text-base"></i>
+        <h3 class="text-sm font-bold text-white">Save Selection to Project</h3>
+      </div>
+      <button type="button"
+              onclick="closeSaveToProjectModal()"
+              class="text-[#8b949e] hover:text-white text-lg leading-none cursor-pointer"
+              title="Close">&times;</button>
+    </div>
+
+    <!-- Body / Form -->
+    <form id="saveToProjectForm" onsubmit="handleSaveToProjectSubmit(event)" class="p-5 space-y-4">
+      <!-- Target Project Selector -->
+      <div>
+        <label for="stp_project_id" class="block text-xs font-bold text-[#e6edf3] mb-1">
+          Target Project <span class="text-[#f85149]">*</span>
+        </label>
+        <select id="stp_project_id"
+                name="project_id"
+                required
+                onchange="handleStpProjectChange(this.value)"
+                class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#38bdf8] transition-colors">
+          <option value="">-- Loading Projects... --</option>
+        </select>
+      </div>
+
+      <!-- Quick Create New Project Inputs (Toggled when "+ Create New Project..." is chosen) -->
+      <div id="stp_new_project_fields" class="hidden p-3 bg-[#0d1117] border border-[#38bdf8]/40 rounded-xl space-y-2.5">
+        <div class="text-[11px] font-bold text-[#38bdf8] flex items-center gap-1.5">
+          <i class="bi bi-folder-plus"></i> New Project Details
+        </div>
+        <div>
+          <label class="block text-[11px] text-[#c9d1d9] mb-0.5">Project Name <span class="text-[#f85149]">*</span></label>
+          <input type="text"
+                 id="stp_new_name"
+                 name="new_project_name"
+                 placeholder="e.g. Copper Concentrator Tailings Line"
+                 class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white placeholder-[#8b949e] focus:outline-none focus:border-[#38bdf8]">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] text-[#c9d1d9] mb-0.5">Project Code / #</label>
+            <input type="text"
+                   id="stp_new_number"
+                   name="new_project_number"
+                   placeholder="e.g. PRJ-2026-09"
+                   class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white placeholder-[#8b949e] font-mono focus:outline-none focus:border-[#38bdf8]">
+          </div>
+          <div>
+            <label class="block text-[11px] text-[#c9d1d9] mb-0.5">Client / Customer</label>
+            <input type="text"
+                   id="stp_new_client"
+                   name="new_project_client"
+                   placeholder="e.g. Mining Corp"
+                   class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white placeholder-[#8b949e] focus:outline-none focus:border-[#38bdf8]">
+          </div>
+        </div>
+      </div>
+
+      <!-- Selection / Option Name -->
+      <div>
+        <label for="stp_selection_name" class="block text-xs font-bold text-[#e6edf3] mb-1">
+          Selection / Option Name <span class="text-[#f85149]">*</span>
+        </label>
+        <input type="text"
+               id="stp_selection_name"
+               name="name"
+               required
+               placeholder="e.g. Option A - Primary Duty Point"
+               class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-xs text-white placeholder-[#8b949e] focus:outline-none focus:border-[#38bdf8] transition-colors">
+      </div>
+
+      <!-- Quote Number & Tag -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="stp_quote_number" class="block text-xs font-semibold text-[#c9d1d9] mb-1">Quote Reference #</label>
+          <input type="text"
+                 id="stp_quote_number"
+                 name="quote_number"
+                 placeholder="e.g. QUO-2026-001"
+                 class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-xs text-white font-mono placeholder-[#8b949e] focus:outline-none focus:border-[#38bdf8] transition-colors">
+        </div>
+        <div>
+          <label for="stp_tag_number" class="block text-xs font-semibold text-[#c9d1d9] mb-1">Equipment Tag</label>
+          <input type="text"
+                 id="stp_tag_number"
+                 name="tag_number"
+                 placeholder="e.g. 01-PP-002"
+                 class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-xs text-white font-mono placeholder-[#8b949e] focus:outline-none focus:border-[#38bdf8] transition-colors">
+        </div>
+      </div>
+
+      <!-- Active Engineering Parameters Preview -->
+      <div id="stp_preview_box" class="bg-[#0d1117] border border-[#30363d] rounded-xl p-3 text-xs space-y-1.5">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-[#8b949e] flex items-center justify-between pb-1 border-b border-[#30363d]/60">
+          <span>Active Parameters Snapshot</span>
+          <span class="text-[#3fb950] font-mono"><i class="bi bi-check-circle mr-1"></i>Ready</span>
+        </div>
+        <div class="flex justify-between text-[#c9d1d9]">
+          <span class="text-[#8b949e]">Pump Model:</span>
+          <span id="stp_prev_pump" class="font-bold text-[#58a6ff] truncate max-w-[200px]">—</span>
+        </div>
+        <div class="flex justify-between text-[#c9d1d9]">
+          <span class="text-[#8b949e]">Operating Duty:</span>
+          <span id="stp_prev_duty" class="font-mono font-bold text-white">—</span>
+        </div>
+        <div class="flex justify-between text-[#c9d1d9]">
+          <span class="text-[#8b949e]">Pipe Network Circuit:</span>
+          <span id="stp_prev_pipenet" class="font-mono text-[#38bdf8]">Checking...</span>
+        </div>
+      </div>
+
+      <!-- Engineering Notes -->
+      <div>
+        <label for="stp_notes" class="block text-xs font-semibold text-[#c9d1d9] mb-1">Quotation / Engineering Notes</label>
+        <textarea id="stp_notes"
+                  name="notes"
+                  rows="2"
+                  placeholder="Optional technical notes, special metallurgy, or warranty stipulations..."
+                  class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg p-2.5 text-xs text-white placeholder-[#8b949e] focus:outline-none focus:border-[#38bdf8] transition-colors"></textarea>
+      </div>
+
+      <!-- Status / Feedback Banner -->
+      <div id="stp_feedback" class="hidden p-2.5 rounded-lg text-xs"></div>
+
+      <!-- Footer Buttons -->
+      <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-[#30363d]">
+        <button type="button"
+                onclick="closeSaveToProjectModal()"
+                class="px-3.5 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#8b949e] hover:text-white rounded-lg border border-[#30363d] transition-colors cursor-pointer">
+          Cancel
+        </button>
+        <button type="submit"
+                id="btnSubmitSaveToProject"
+                class="px-4 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
+          <i class="bi bi-bookmark-check"></i>
+          <span>Save to Project</span>
+        </button>
+      </div>
+    </form>
+
+  </div>
+  </div>
+</div>
+
+<script>
+/**
+ * Global Save-To-Project Controller
+ * Populates current duty point, pump details, pipe network state, and projects list.
+ */
+let stpProjectsCache = null;
+let currentStpContext = {};
+
+// Auto-hoist modal to document.body on load so parent CSS transforms never clip or offset it
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('saveToProjectModal');
+  if (modal && modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+});
+
+function openSaveToProjectModal(customContext = {}) {
+  const modal = document.getElementById('saveToProjectModal');
+  if (!modal) return;
+
+  // Ensure modal is directly under document.body
+  if (modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+
+  currentStpContext = Object.assign({}, customContext);
+
+  const feedback = document.getElementById('stp_feedback');
+  if (feedback) feedback.className = 'hidden';
+
+  // Load project options
+  fetchProjectsForStpModal();
+
+  // Populate preview and default selection name
+  let pumpName = customContext.pump_name || '';
+  let dutyStr = '';
+  let hasPipeNet = false;
+
+  if (customContext.flow_rate && customContext.head) {
+    dutyStr = `${customContext.flow_rate} ${customContext.flow_unit || 'm3h'} @ ${customContext.head} m`;
+  }
+
+  // Check window configs
+  if (!dutyStr && window.PumpDetailsConfig) {
+    const c = window.PumpDetailsConfig;
+    if (c.Q_DUTY && c.H_DUTY) {
+      dutyStr = `${c.Q_DUTY} ${c.UNIT_Q || 'm3h'} @ ${c.H_DUTY} ${c.UNIT_H || 'm'}`;
+    }
+  }
+
+  // Check active_selection session data injected into templates
+  if (!pumpName && typeof active_sel !== 'undefined' && active_sel && active_sel.pump_id) {
+    pumpName = active_sel.pump_name || `Pump #${active_sel.pump_id}`;
+  }
+  if (!dutyStr && typeof active_sel !== 'undefined' && active_sel && active_sel.q_duty) {
+    dutyStr = `${active_sel.q_duty} ${active_sel.unit_q || 'm3h'} @ ${active_sel.h_duty} ${active_sel.unit_h || 'm'}`;
+  }
+
+  // Check header title if on details page
+  const pageTitleEl = document.querySelector('.page-title');
+  if (!pumpName && pageTitleEl) {
+    pumpName = pageTitleEl.textContent.trim();
+  }
+
+  // Check Pipe Network canvas or simple controller
+  if (typeof state !== 'undefined' && state && Array.isArray(state.pipes) && state.pipes.length > 0) {
+    hasPipeNet = true;
+  } else if (typeof simpleController !== 'undefined' && simpleController.state && Array.isArray(simpleController.state.pipes) && simpleController.state.pipes.length > 0) {
+    hasPipeNet = true;
+  } else {
+    try {
+      const stored = localStorage.getItem('pmpro_pipe_network') || localStorage.getItem('pmpro_pipe_network_v3');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && Array.isArray(parsed.pipes) && parsed.pipes.length > 0) hasPipeNet = true;
+      }
+    } catch (e) {}
+  }
+
+  const prevPump = document.getElementById('stp_prev_pump');
+  const prevDuty = document.getElementById('stp_prev_duty');
+  const prevPipe = document.getElementById('stp_prev_pipenet');
+  const selNameInput = document.getElementById('stp_selection_name');
+
+  if (prevPump) prevPump.textContent = pumpName || 'Active Pump';
+  if (prevDuty) prevDuty.textContent = dutyStr || 'Specified Duty Point';
+  if (prevPipe) {
+    prevPipe.textContent = hasPipeNet ? 'Active Pipe Network Layout Included' : 'Standard Head Loss Circuit';
+    prevPipe.className = hasPipeNet ? 'font-mono text-[#3fb950] font-bold' : 'font-mono text-[#8b949e]';
+  }
+
+  if (selNameInput && !selNameInput.value) {
+    const d = new Date();
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    selNameInput.value = pumpName ? `${pumpName} - Duty ${dutyStr || dateStr}` : `Selection ${dateStr}`;
+  }
+
+  modal.classList.remove('hidden');
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSaveToProjectModal() {
+  const modal = document.getElementById('saveToProjectModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
+  document.body.style.overflow = '';
+}
+
+function fetchProjectsForStpModal() {
+  const sel = document.getElementById('stp_project_id');
+  if (!sel) return;
+
+  fetch('/projects/api/list')
+    .then(res => res.json())
+    .then(data => {
+      const projs = data.projects || [];
+      stpProjectsCache = projs;
+      sel.innerHTML = '';
+
+      if (projs.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = 'new';
+        opt.textContent = '+ Create New Project...';
+        sel.appendChild(opt);
+        handleStpProjectChange('new');
+      } else {
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '-- Select a Project (' + projs.length + ' Available) --';
+        sel.appendChild(placeholder);
+
+        projs.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = `${p.name} ${p.project_number ? '(' + p.project_number + ')' : ''} [${p.selections_count} selections]`;
+          sel.appendChild(opt);
+        });
+
+        const newOpt = document.createElement('option');
+        newOpt.value = 'new';
+        newOpt.textContent = '+ Create New Project...';
+        sel.appendChild(newOpt);
+
+        if (sel.options.length > 1) {
+          sel.selectedIndex = 1;
+          handleStpProjectChange(sel.value);
+        }
+      }
+    })
+    .catch(err => {
+      sel.innerHTML = '<option value="new">+ Create New Project...</option>';
+      handleStpProjectChange('new');
+    });
+}
+
+function handleStpProjectChange(val) {
+  const newFields = document.getElementById('stp_new_project_fields');
+  const newName = document.getElementById('stp_new_name');
+  if (!newFields) return;
+
+  if (val === 'new') {
+    newFields.classList.remove('hidden');
+    if (newName) newName.required = true;
+  } else {
+    newFields.classList.add('hidden');
+    if (newName) newName.required = false;
+  }
+}
+
+function handleSaveToProjectSubmit(e) {
+  e.preventDefault();
+  const form = document.getElementById('saveToProjectForm');
+  const btn = document.getElementById('btnSubmitSaveToProject');
+  const feedback = document.getElementById('stp_feedback');
+
+  const formData = new FormData(form);
+  const payload = {};
+  formData.forEach((v, k) => { payload[k] = v; });
+
+  // Attach live network payload or fallback to localStorage
+  if (typeof getNetworkPayload === 'function') {
+    try {
+      payload.pipe_network = getNetworkPayload();
+    } catch (e) {}
+  }
+  if (!payload.pipe_network && typeof simpleController !== 'undefined' && simpleController.state) {
+    try {
+      payload.pipe_network = simpleController.state;
+    } catch(e) {}
+  }
+  if (!payload.pipe_network) {
+    try {
+      const rawNet = localStorage.getItem('pmpro_pipe_network') || localStorage.getItem('pmpro_pipe_network_v3');
+      if (rawNet) payload.pipe_network = JSON.parse(rawNet);
+    } catch(err) {}
+  }
+
+  // Merge context properties (e.g. flow_rate, head, pump_id)
+  if (currentStpContext) {
+    if (currentStpContext.flow_rate && !payload.flow_rate) payload.flow_rate = currentStpContext.flow_rate;
+    if (currentStpContext.flow_unit && !payload.flow_unit) payload.flow_unit = currentStpContext.flow_unit;
+    if (currentStpContext.head && !payload.head) payload.head = currentStpContext.head;
+    if (currentStpContext.pump_id && !payload.pump_id) payload.pump_id = currentStpContext.pump_id;
+    if (currentStpContext.pump_name && !payload.pump_name) payload.pump_name = currentStpContext.pump_name;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="inline-block animate-spin mr-1"><i class="bi bi-arrow-repeat"></i></span> Saving...';
+  }
+
+  fetch('/projects/save-selection', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-bookmark-check"></i> <span>Save to Project</span>';
+    }
+
+    if (data.success) {
+      if (feedback) {
+        feedback.className = 'p-3 rounded-lg text-xs bg-[#238636]/20 border border-[#238636]/50 text-[#3fb950] space-y-1 block';
+        feedback.innerHTML = `
+          <div class="font-bold flex items-center gap-1.5">
+            <i class="bi bi-check-circle-fill"></i>
+            <span>${data.message || 'Selection successfully saved!'}</span>
+          </div>
+          <div class="pt-1 flex items-center gap-2">
+            <a href="/projects/${data.project_id}" class="text-[#38bdf8] hover:underline font-semibold flex items-center gap-1">
+              <span>View in Project: ${data.project_name || 'Project'}</span>
+              <i class="bi bi-box-arrow-up-right text-[10px]"></i>
+            </a>
+          </div>
+        `;
+      }
+      setTimeout(() => {
+        closeSaveToProjectModal();
+      }, 2000);
+    } else {
+      if (feedback) {
+        feedback.className = 'p-3 rounded-lg text-xs bg-[#f85149]/20 border border-[#f85149]/50 text-[#f85149] block';
+        feedback.textContent = data.error || 'Failed to save selection. Please try again.';
+      }
+    }
+  })
+  .catch(err => {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-bookmark-check"></i> <span>Save to Project</span>';
+    }
+    if (feedback) {
+      feedback.className = 'p-3 rounded-lg text-xs bg-[#f85149]/20 border border-[#f85149]/50 text-[#f85149] block';
+      feedback.textContent = 'Network or server error while saving selection.';
+    }
+  });
+}
+
+// Close modal on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeSaveToProjectModal();
+});
+</script>

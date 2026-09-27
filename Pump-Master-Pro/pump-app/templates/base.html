@@ -393,6 +393,14 @@
         </a>
         {% endif %}
 
+        {% if not current_user or current_user.can_access('projects') %}
+        <a class="nav-link-anim {% if request.endpoint and 'projects' in request.endpoint %}tw-active{% endif %}"
+           href="{{ url_for('projects.index') }}"
+           title="Projects &amp; Saved Selections">
+          <i class="bi bi-folder2-open"></i>Projects
+        </a>
+        {% endif %}
+
         {% if not current_user or current_user.can_access('comparison') %}
         <a class="nav-link-anim {% if request.endpoint and ('pump_comparison' in request.endpoint or 'comparison' in request.endpoint) %}tw-active{% endif %}"
            href="{{ url_for('pump_comparison') }}"
@@ -626,6 +634,13 @@
     <a href="{{ url_for('pipe_network.pipe_network') }}"
        class="mobile-nav-link {% if request.endpoint and 'pipe_network' in request.endpoint %}tw-active{% endif %}">
       <i class="bi bi-diagram-3"></i>Pipe Network
+    </a>
+    {% endif %}
+
+    {% if not current_user or current_user.can_access('projects') %}
+    <a href="{{ url_for('projects.index') }}"
+       class="mobile-nav-link {% if request.endpoint and 'projects' in request.endpoint %}tw-active{% endif %}">
+      <i class="bi bi-folder2-open"></i>Projects
     </a>
     {% endif %}
 

@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Projects Directory — PumpMaster Pro{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+  <!-- ── Breadcrumb & Top Bar ──────────────────────────────────────────────── -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#30363d]">
+    <div>
+      <div class="flex items-center gap-2 text-xs text-[#8b949e] mb-1 font-mono">
+        <a href="{{ url_for('index') }}" class="hover:text-[#58a6ff] transition-colors">Dashboard</a>
+        <span>/</span>
+        <span class="text-[#e6edf3] font-semibold">Projects</span>
+      </div>
+      <h1 class="text-2xl font-extrabold text-[#e6edf3] flex items-center gap-2.5">
+        <i class="bi bi-folder2-open text-[#38bdf8]"></i> Engineering Projects &amp; Quotations
+      </h1>
+      <p class="text-xs text-[#8b949e] mt-1">
+        Manage tender packages, client engineering projects, and saved pump selections with organisation-defined attributes.
+      </p>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="flex items-center gap-2.5 shrink-0">
+      <a href="{{ url_for('projects.saved_selections') }}"
+         class="px-3.5 py-2 bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-xs font-semibold text-[#c9d1d9] hover:text-white rounded-lg flex items-center gap-2 transition-all shadow-sm">
+        <i class="bi bi-clock-history text-[#a78bfa]"></i>
+        <span>Saved Selections ({{ total_selections }})</span>
+      </a>
+
+      {% if current_user and current_user.can_access('projects', 2) %}
+      <a href="{{ url_for('projects.new_project') }}"
+         class="px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg flex items-center gap-2 transition-all shadow-sm hover:shadow">
+        <i class="bi bi-plus-lg"></i>
+        <span>New Project</span>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── KPI Counter Cards ────────────────────────────────────────────────── -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-4 flex items-center gap-4 shadow-sm">
+      <div class="w-12 h-12 rounded-lg bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-center text-[#38bdf8] text-xl">
+        <i class="bi bi-folder-check"></i>
+      </div>
+      <div>
+        <div class="text-2xl font-black text-[#e6edf3]">{{ total_projects }}</div>
+        <div class="text-xs text-[#8b949e] font-medium">Total Registered Projects</div>
+      </div>
+    </div>
+
+    <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-4 flex items-center gap-4 shadow-sm">
+      <div class="w-12 h-12 rounded-lg bg-[#3fb950]/10 border border-[#3fb950]/20 flex items-center justify-center text-[#3fb950] text-xl">
+        <i class="bi bi-activity"></i>
+      </div>
+      <div>
+        <div class="text-2xl font-black text-[#e6edf3]">{{ active_projects }}</div>
+        <div class="text-xs text-[#8b949e] font-medium">Active &amp; Quoted Tenders</div>
+      </div>
+    </div>
+
+    <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-4 flex items-center gap-4 shadow-sm">
+      <div class="w-12 h-12 rounded-lg bg-[#a78bfa]/10 border border-[#a78bfa]/20 flex items-center justify-center text-[#a78bfa] text-xl">
+        <i class="bi bi-bookmark-star"></i>
+      </div>
+      <div>
+        <div class="text-2xl font-black text-[#e6edf3]">{{ total_selections }}</div>
+        <div class="text-xs text-[#8b949e] font-medium">Saved Pump Selections</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Search & Filter Controls ─────────────────────────────────────────── -->
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-4 shadow-sm">
+    <form method="GET" action="{{ url_for('projects.index') }}" class="flex flex-col md:flex-row gap-3 items-center justify-between">
+      <!-- Search Input -->
+      <div class="relative w-full md:w-96">
+        <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-[#8b949e] text-xs"></i>
+        <input type="text"
+               name="q"
+               value="{{ search_query }}"
+               placeholder="Search by project name, number, client, attributes..."
+               class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-[#8b949e] focus:outline-none focus:border-[#38bdf8] transition-colors">
+      </div>
+
+      <!-- Status Filter Pills -->
+      <div class="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+        <span class="text-xs text-[#8b949e] mr-1 hidden lg:inline">Status:</span>
+        {% set statuses = [('all', 'All'), ('active', 'Active'), ('quoted', 'Quoted'), ('won', 'Won'), ('completed', 'Completed'), ('archived', 'Archived')] %}
+        {% for s_val, s_label in statuses %}
+          <a href="{{ url_for('projects.index', status=s_val if s_val != 'all' else '', q=search_query) }}"
+             class="px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition-colors {% if (not status_filter and s_val == 'all') or (status_filter == s_val) %}bg-[#38bdf8] text-[#0d1117]{% else %}bg-[#21262d] text-[#8b949e] hover:text-white hover:bg-[#30363d]{% endif %}">
+            {{ s_label }}
+          </a>
+        {% endfor %}
+      </div>
+    </form>
+  </div>
+
+  <!-- ── Projects List / Cards ────────────────────────────────────────────── -->
+  {% if projects %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {% for proj in projects %}
+      <div class="bg-[#161b22] border border-[#30363d] hover:border-[#38bdf8]/60 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
+        <!-- Card Header -->
+        <div class="p-4 space-y-2.5">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0 flex-1">
+              {% if proj.project_number %}
+              <span class="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#38bdf8]/10 text-[#38bdf8] border border-[#38bdf8]/30 mb-1">
+                {{ proj.project_number }}
+              </span>
+              {% endif %}
+              <h2 class="text-base font-bold text-white group-hover:text-[#38bdf8] transition-colors truncate" title="{{ proj.name }}">
+                <a href="{{ url_for('projects.project_detail', project_id=proj.id) }}">
+                  {{ proj.name }}
+                </a>
+              </h2>
+              {% if proj.client_name %}
+              <div class="text-xs text-[#8b949e] flex items-center gap-1.5 truncate mt-0.5">
+                <i class="bi bi-building"></i>
+                <span>{{ proj.client_name }}</span>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Status Badge -->
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase shrink-0
+              {% if proj.status == 'active' %}bg-[#3fb950]/15 text-[#3fb950] border border-[#3fb950]/30
+              {% elif proj.status == 'quoted' %}bg-[#facc15]/15 text-[#facc15] border border-[#facc15]/30
+              {% elif proj.status == 'won' %}bg-[#a78bfa]/15 text-[#a78bfa] border border-[#a78bfa]/30
+              {% elif proj.status == 'completed' %}bg-[#38bdf8]/15 text-[#38bdf8] border border-[#38bdf8]/30
+              {% else %}bg-[#8b949e]/15 text-[#8b949e] border border-[#8b949e]/30{% endif %}">
+              {{ proj.status }}
+            </span>
+          </div>
+
+          <!-- Description if any -->
+          {% if proj.description %}
+          <p class="text-xs text-[#8b949e] line-clamp-2">
+            {{ proj.description }}
+          </p>
+          {% endif %}
+
+          <!-- Defined Project Attributes Badges (Up to 10 defined in settings) -->
+          {% set active_attrs = proj.get_active_attribute_items() %}
+          {% if active_attrs %}
+          <div class="pt-2 border-t border-[#30363d]/60 space-y-1">
+            {% for a in active_attrs %}
+              {% if a.value %}
+              <div class="flex items-center justify-between text-[11px] gap-2">
+                <span class="text-[#8b949e] truncate">{{ a.name }}:</span>
+                <span class="text-[#e6edf3] font-medium font-mono truncate max-w-[160px] text-right">{{ a.value }}</span>
+              </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Card Footer -->
+        <div class="px-4 py-3 bg-[#1c2330] border-t border-[#30363d] flex items-center justify-between text-xs">
+          <div class="flex items-center gap-1.5 text-[#8b949e]" title="Saved Selections / Quotes in this project">
+            <i class="bi bi-layers text-[#a78bfa]"></i>
+            <span class="font-bold text-[#e6edf3]">{{ proj.selections|length }}</span>
+            <span>Selection{{ 's' if proj.selections|length != 1 else '' }}</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <a href="{{ url_for('projects.project_detail', project_id=proj.id) }}"
+               class="px-2.5 py-1 bg-[#21262d] hover:bg-[#30363d] text-[#38bdf8] hover:text-white rounded border border-[#30363d] text-[11px] font-semibold flex items-center gap-1 transition-colors">
+              <span>View</span>
+              <i class="bi bi-chevron-right text-[10px]"></i>
+            </a>
+
+            {% if current_user and current_user.can_access('projects', 2) %}
+            <a href="{{ url_for('projects.edit_project', project_id=proj.id) }}"
+               class="p-1 text-[#8b949e] hover:text-white rounded hover:bg-[#21262d] transition-colors"
+               title="Edit Project">
+              <i class="bi bi-pencil"></i>
+            </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <!-- Empty State -->
+    <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-12 text-center space-y-4">
+      <div class="w-16 h-16 rounded-full bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-center text-[#38bdf8] text-2xl mx-auto">
+        <i class="bi bi-folder-plus"></i>
+      </div>
+      <div class="space-y-1">
+        <h3 class="text-base font-bold text-[#e6edf3]">No Projects Found</h3>
+        <p class="text-xs text-[#8b949e] max-w-md mx-auto">
+          {% if search_query or status_filter %}
+            No projects matched your search criteria. Try clearing the filter or search term.
+          {% else %}
+            Start by creating a new engineering project to organize client inquiries, tender packages, and saved pump selections.
+          {% endif %}
+        </p>
+      </div>
+      <div>
+        {% if search_query or status_filter %}
+        <a href="{{ url_for('projects.index') }}" class="px-4 py-2 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-white rounded-lg inline-flex items-center gap-2 border border-[#30363d]">
+          <i class="bi bi-arrow-counterclockwise"></i> Clear Filters
+        </a>
+        {% elif current_user and current_user.can_access('projects', 2) %}
+        <a href="{{ url_for('projects.new_project') }}" class="px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg inline-flex items-center gap-2">
+          <i class="bi bi-plus-lg"></i> Create First Project
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -298,6 +298,29 @@ def save_attributes():
     return redirect(url_for('organisations.settings'))
 
 
+@organisations_bp.route('/project-attributes/save', methods=['POST'], endpoint='save_project_attributes')
+@require_access('organisation_settings', min_level=2)
+def save_project_attributes():
+    """
+    Beginners Note: Saves custom ProjectAttributeNames (1-10) and their enabled/disabled checkbox states
+    for the active organisation.
+    """
+    current_org = get_current_organisation()
+    if not current_org:
+        flash('Active organisation not found.', 'error')
+        return redirect(url_for('organisations.settings'))
+
+    for i in range(1, 11):
+        name_val = request.form.get(f'ProjectAttributeName{i}', '').strip()
+        setattr(current_org, f'ProjectAttributeName{i}', name_val)
+        is_enabled = f'ProjectAttributeEnabled{i}' in request.form
+        setattr(current_org, f'ProjectAttributeEnabled{i}', is_enabled)
+
+    db.session.commit()
+    flash('Custom project attribute definitions saved successfully.', 'success')
+    return redirect(url_for('organisations.settings'))
+
+
 @organisations_bp.route('/visibility/save', methods=['POST'], endpoint='save_visibility')
 @require_access('organisation_settings', min_level=2)
 def save_visibility():

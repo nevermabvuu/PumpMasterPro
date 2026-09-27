@@ -989,6 +989,9 @@
     <button id="btn-demo-config" class="pn-btn" title="Configure default suction pipe and discharge pipes for Demo" onclick="openDemoConfigModal()">
       <i class="bi bi-sliders2" style="color:#38bdf8;"></i> Demo Setup
     </button>
+    <button id="btn-save-project" class="pn-btn" style="border-color:rgba(56,189,248,0.4);color:#38bdf8;background:rgba(56,189,248,0.06);" title="Save current pipe network and duty point to a project" onclick="saveCurrentNetworkToProject()">
+      <i class="bi bi-folder-plus text-[#38bdf8]"></i> Save to Project
+    </button>
     <button id="btn-export" class="pn-btn" title="Export network as JSON">
       <i class="bi bi-download"></i> Export
     </button>
@@ -1684,6 +1687,9 @@
           </button>
           <button type="button" class="pn-btn pn-btn-primary" onclick="simpleController.calculate()" style="font-size:11px;padding:4px 12px;background:#2563eb;font-weight:700;" title="Calculate hydraulic losses and operating point">
             <i class="bi bi-calculator"></i> Calculate Losses
+          </button>
+          <button type="button" class="pn-btn" onclick="saveCurrentNetworkToProject()" style="font-size:11px;padding:4px 12px;border-color:rgba(56,189,248,0.4);color:#38bdf8;background:rgba(56,189,248,0.06);" title="Save pipeline configuration and duty point to a project">
+            <i class="bi bi-folder-plus text-[#38bdf8]"></i> Save to Project
           </button>
           <button type="button" class="pn-btn" onclick="simpleController.clearPipes()" style="font-size:11px;padding:4px 8px;color:#ef4444;" title="Reset configuration">
             <i class="bi bi-trash"></i> Reset All
@@ -3388,5 +3394,35 @@
       console.error('Error during designer mode initialization:', e);
     }
   });
+
+  /**
+   * Triggers Save to Project modal from Pipe Network Designer
+   */
+  function saveCurrentNetworkToProject() {
+    if (typeof saveNetworkToStorage === 'function') {
+      try { saveNetworkToStorage(); } catch(e) {}
+    }
+    const flowVal = document.getElementById('pn-global-flow')?.value || '';
+    const flowUnit = document.getElementById('pn-flow-unit')?.value || 'm3h';
+    let totalHead = '';
+
+    if (typeof state !== 'undefined' && state && state.lastCalculation && state.lastCalculation.total_head_loss_m !== undefined) {
+      totalHead = (Number(state.lastCalculation.total_head_loss_m || 0) + Number(state.lastCalculation.static_head_m || 0)).toFixed(2);
+    } else if (typeof simpleController !== 'undefined' && simpleController.state && simpleController.state.lastCalculation) {
+      totalHead = Number(simpleController.state.lastCalculation.total_head_m || 0).toFixed(2);
+    }
+
+    openSaveToProjectModal({
+      pump_name: 'Pipe Network System Analysis',
+      flow_rate: flowVal,
+      flow_unit: flowUnit,
+      head: totalHead
+    });
+  }
 </script>
+
+{% endblock %}
+
+{% block modals %}
+{% include "components/save_to_project_modal.html" %}
 {% endblock %}

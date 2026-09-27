@@ -20,7 +20,7 @@ from flask import Flask, request, redirect, url_for, jsonify, send_from_director
 from models import db, Organisation, Supplier, ReportConfig, User, RegistrationRequest, Role, PipeFitting, PipeMaterial
 from motor_models import Motor, seed_motors
 from seed_data import seed_pumps, seed_pipe_reference_data
-from routes import main_bp, pumps_bp, curves_bp, selection_bp, comparison_bp, reports_bp, organisations_bp, debug_bp, auth_bp, pipe_network_bp
+from routes import main_bp, pumps_bp, curves_bp, selection_bp, comparison_bp, reports_bp, organisations_bp, debug_bp, auth_bp, pipe_network_bp, projects_bp
 from routes.auth import get_current_user
 # Secure URL token helper — used to expose encode_pump_id() to Jinja templates.
 from pump_token import encode_pump_id
@@ -119,6 +119,31 @@ with app.app_context():
                         ))
                         mig_conn.commit()
                     print("Migrated: Added selection_defaults_json to organisations")
+
+        if 'organisations' in inspector.get_table_names():
+            existing_org_cols = [c['name'] for c in inspector.get_columns('organisations')]
+            for i in range(1, 11):
+                col_name = f'ProjectAttributeName{i}'
+                if col_name not in existing_org_cols:
+                    with db.engine.connect() as mig_conn:
+                        mig_conn.execute(sa_text(
+                            f"ALTER TABLE organisations ADD {col_name} {'NVARCHAR(100)' if dialect_name == 'mssql' else 'VARCHAR(100)'} DEFAULT ''"
+                        ))
+                        mig_conn.commit()
+                    print(f"Migrated: Added {col_name} to organisations")
+                col_enabled = f'ProjectAttributeEnabled{i}'
+                if col_enabled not in existing_org_cols:
+                    with db.engine.connect() as mig_conn:
+                        mig_conn.execute(sa_text(
+                            f"ALTER TABLE organisations ADD {col_enabled} {'INT' if dialect_name == 'mssql' else 'INTEGER'} DEFAULT 1"
+                        ))
+                        mig_conn.commit()
+                    print(f"Migrated: Added {col_enabled} to organisations")
+
+            with db.engine.connect() as mig_conn:
+                for i in range(1, 11):
+                    mig_conn.execute(sa_text(f"UPDATE organisations SET ProjectAttributeEnabled{i} = 1 WHERE ProjectAttributeEnabled{i} IS NULL"))
+                mig_conn.commit()
     except Exception as e:
         print("Migration notice:", e)
 
@@ -174,6 +199,13 @@ with app.app_context():
                 if col_name not in org_cols:
                     conn.execute(text(f"ALTER TABLE organisations ADD COLUMN {col_name} VARCHAR(100) DEFAULT ''"))
                 col_enabled = f'PumpAttributeEnabled{i}'
+                if col_enabled not in org_cols:
+                    conn.execute(text(f"ALTER TABLE organisations ADD COLUMN {col_enabled} INTEGER DEFAULT 1"))
+            for i in range(1, 11):
+                col_name = f'ProjectAttributeName{i}'
+                if col_name not in org_cols:
+                    conn.execute(text(f"ALTER TABLE organisations ADD COLUMN {col_name} VARCHAR(100) DEFAULT ''"))
+                col_enabled = f'ProjectAttributeEnabled{i}'
                 if col_enabled not in org_cols:
                     conn.execute(text(f"ALTER TABLE organisations ADD COLUMN {col_enabled} INTEGER DEFAULT 1"))
 
@@ -562,6 +594,7 @@ app.register_blueprint(organisations_bp)
 app.register_blueprint(debug_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(pipe_network_bp)  # Pipe network friction-loss designer
+app.register_blueprint(projects_bp)      # Projects & saved selections management
 
 
 # ── Global Authentication Gatekeeper ──────────────────────────────────────────
@@ -601,9 +634,11 @@ def enforce_login_gatekeeper():
 # Beginners Note: Register url_for alias resolver so templates calling url_for('pump_data')
 # automatically resolve to blueprint endpoints (e.g. pumps.pump_data) seamlessly.
 def handle_url_build_error(error, endpoint, values):
+    from flask import url_for as flask_url_for
+    if endpoint in ('projects', 'project'):
+        return flask_url_for('projects.index', **values)
     if '.' not in endpoint:
-        from flask import url_for as flask_url_for
-        for bp in ['main', 'pumps', 'curves', 'selection', 'comparison', 'reports', 'organisations', 'debug', 'auth']:
+        for bp in ['main', 'pumps', 'curves', 'selection', 'comparison', 'reports', 'organisations', 'debug', 'auth', 'pipe_network', 'projects']:
             target = f"{bp}.{endpoint}"
             if target in app.view_functions:
                 return flask_url_for(target, **values)

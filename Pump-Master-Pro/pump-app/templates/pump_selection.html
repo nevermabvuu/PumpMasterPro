@@ -937,6 +937,12 @@
                      title="Datasheet PDF Report">
                     <i class="bi bi-file-earmark-pdf"></i>
                   </a>
+                  <button type="button"
+                          onclick="openSaveToProjectModal({ pump_name: '{{ r.pump_name|escape }}', pump_id: {{ r.pump_id }} })"
+                          class="p-1 px-1.5 rounded text-xs font-semibold bg-[#21262d] hover:bg-[#38bdf8]/20 text-[#8b949e] hover:text-[#38bdf8] border border-[#30363d] hover:border-[#38bdf8]/40 transition-colors flex items-center cursor-pointer"
+                          title="Save this pump selection to an engineering project">
+                    <i class="bi bi-bookmark-plus"></i>
+                  </button>
                 </div>
               </div>
 
@@ -4079,4 +4085,9 @@
     refreshManageMaterials();
   }
 </script>
+
+{% endblock %}
+
+{% block modals %}
+{% include "components/save_to_project_modal.html" %}
 {% endblock %}

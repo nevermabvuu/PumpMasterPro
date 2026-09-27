@@ -40,6 +40,14 @@
       <i class="bi bi-file-earmark-pdf"></i>Generate Report
     </a>
 
+    <!-- Save to Project Button -->
+    <button type="button"
+            onclick="openSaveToProjectModal({ pump_name: '{{ pump.name }}' })"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold transition-colors bg-[#1f6feb] hover:bg-[#388bfd] text-white shadow-sm cursor-pointer"
+            title="Save this pump selection and duty point to an engineering project">
+      <i class="bi bi-bookmark-plus"></i>Save to Project
+    </button>
+
     <!-- Report Template Selector Dropdown -->
     {% if available_reports and available_reports|length > 0 %}
     <div class="relative inline-block text-left">
@@ -242,4 +250,8 @@
   });
 </script>
 
+{% endblock %}
+
+{% block modals %}
+{% include "components/save_to_project_modal.html" %}
 {% endblock %}

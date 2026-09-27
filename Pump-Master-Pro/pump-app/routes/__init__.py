@@ -22,6 +22,7 @@ from .debug import debug_bp
 from .auth import auth_bp
 from .pipe_network import pipe_network_bp
 from .projects import projects_bp
+from .calculations import calculations_bp
 
-__all__ = ['main_bp', 'pumps_bp', 'curves_bp', 'selection_bp', 'comparison_bp', 'reports_bp', 'organisations_bp', 'debug_bp', 'auth_bp', 'pipe_network_bp', 'projects_bp']
+__all__ = ['main_bp', 'pumps_bp', 'curves_bp', 'selection_bp', 'comparison_bp', 'reports_bp', 'organisations_bp', 'debug_bp', 'auth_bp', 'pipe_network_bp', 'projects_bp', 'calculations_bp']
 

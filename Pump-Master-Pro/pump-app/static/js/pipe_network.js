@@ -6519,24 +6519,33 @@ function applySlurrySettings() {
   state.slurry_solids_sg = solidsSg;
   state.slurry_c_weight = cWeightPct;
 
-  // Calculate mixture specific gravity (Sm) and volumetric concentration (Cv)
-  const cwFrac = parseFloat((cWeightPct / 100.0).toFixed(3));
-  const ss = Math.max(1.01, solidsSg);
-  const sl = parseFloat(Math.max(0.5, parseFloat(state.slurry_liquid_sg || 1.0)).toFixed(2));
-  state.slurry_liquid_sg = sl;
+  // Delegate mixture calculations to server calculation API (/api/calc/slurry-properties)
+  fetch('/api/calc/slurry-properties', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      c_weight_pct: cWeightPct,
+      solids_sg: solidsSg,
+      liquid_sg: state.slurry_liquid_sg || 1.0,
+      d50_mm: d50
+    })
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res.success) {
+      state.slurry_c_volume = parseFloat(Number(res.c_volume_pct).toFixed(1));
+      state.slurry_sg = parseFloat(Number(res.slurry_sg).toFixed(2));
+      state.slurry_vt_ms = res.settling_velocity_vt_m_s;
+      if (isEn) {
+        state.specific_gravity = parseFloat(Number(res.slurry_sg).toFixed(2));
+        const sgInput = document.getElementById('pn-sg');
+        if (sgInput) sgInput.value = state.specific_gravity.toFixed(2);
+      }
+    }
+  })
+  .catch(() => {});
 
-  const volS = cwFrac / ss;
-  const volL = (1.0 - cwFrac) / sl;
-  const cvFrac = (volS + volL > 0) ? (volS / (volS + volL)) : 0.0;
-  const sm = (volS + volL > 0) ? 1.0 / (volS + volL) : sl;
-
-  state.slurry_c_volume = parseFloat((cvFrac * 100.0).toFixed(1));
-  state.slurry_sg = parseFloat(sm.toFixed(2));
-  if (isEn) {
-    state.specific_gravity = parseFloat(sm.toFixed(2));
-    const sgInput = document.getElementById('pn-sg');
-    if (sgInput) sgInput.value = sm.toFixed(2);
-  } else {
+  if (!isEn) {
     state.specific_gravity = 1.0;
     const sgInput = document.getElementById('pn-sg');
     if (sgInput) sgInput.value = '1.00';

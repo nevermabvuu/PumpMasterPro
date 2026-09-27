@@ -142,39 +142,57 @@ function updatePlaceholders(type, unit, table) {
  *           = Q × H × 9810 / (η × 3600000) × 100
  *           = Q × H × 2.725 / η   (kW)
  */
-var WATER_FACTOR = 9810 / 3600000; // ρg / (3600 × 1000)  [kW per (m³/h·m·1)]
-function calcPowerKW(q_m3h, h_m, eta_pct) {
-  if (isNaN(q_m3h) || isNaN(h_m) || isNaN(eta_pct) || eta_pct <= 0) return null;
-  return (q_m3h * h_m * WATER_FACTOR) / (eta_pct / 100);
-}
+// ── Server-Side Hydraulic Power Calculation (Secured via /api/calc/power) ────
+const _powerDebounceMap = new WeakMap();
 
-function autoUpdatePowerInRow(row) {
-  const unitQ = document.getElementById('unit-q')?.value || 'm3h';
-  const unitH = document.getElementById('unit-h')?.value || 'm';
-  const unitPow = document.getElementById('unit-pow')?.value || 'kw';
-
+async function autoUpdatePowerInRow(row) {
   const qDisp = parseFloat(row.querySelector('.col-q')?.value);
   const hDisp = parseFloat(row.querySelector('.col-h')?.value);
   const etaDisp = parseFloat(row.querySelector('.col-eta')?.value);
   const powInput = row.querySelector('.col-pow');
   if (!powInput) return;
 
-  // Convert display values back to SI
-  const q_SI = isNaN(qDisp) ? NaN : qDisp / CONVERSIONS.q[unitQ];
-  const h_SI = isNaN(hDisp) ? NaN : hDisp / CONVERSIONS.h[unitH];
+  if (isNaN(qDisp) || isNaN(hDisp) || isNaN(etaDisp) || etaDisp <= 0) return;
 
-  const p_kw = calcPowerKW(q_SI, h_SI, etaDisp);
-  if (p_kw !== null) {
-    // Convert kW → display unit
-    const p_display = p_kw * CONVERSIONS.pow[unitPow];
-    powInput.value = p_display.toFixed(2);
-    powInput.classList.add('auto-calc-flash');
-    setTimeout(() => powInput.classList.remove('auto-calc-flash'), 600);
+  const unitQ = document.getElementById('unit-q')?.value || 'm3h';
+  const unitH = document.getElementById('unit-h')?.value || 'm';
+  const unitPow = document.getElementById('unit-pow')?.value || 'kw';
+
+  // Debounce typing to provide smooth, instantaneous user typing experience without API flooding
+  if (_powerDebounceMap.has(row)) {
+    clearTimeout(_powerDebounceMap.get(row));
   }
+
+  const timer = setTimeout(async () => {
+    try {
+      const resp = await fetch('/api/calc/power', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          flow: qDisp,
+          head: hDisp,
+          eta: etaDisp,
+          unit_q: unitQ,
+          unit_h: unitH,
+          unit_pow: unitPow
+        })
+      });
+      if (!resp.ok) return;
+      const res = await resp.json();
+      if (res.success && res.power_display !== null && res.power_display !== undefined) {
+        powInput.value = Number(res.power_display).toFixed(2);
+        powInput.classList.add('auto-calc-flash');
+        setTimeout(() => powInput.classList.remove('auto-calc-flash'), 600);
+      }
+    } catch (err) {
+      // Graceful error handling
+    }
+  }, 120);
+
+  _powerDebounceMap.set(row, timer);
 }
 
 function initPowerAutoCalc() {
-  // Listen on table body using event delegation
   const tbody = document.querySelector('#perfTable tbody');
   if (!tbody) return;
   tbody.addEventListener('input', (e) => {
@@ -186,12 +204,47 @@ function initPowerAutoCalc() {
       if (row) autoUpdatePowerInRow(row);
     }
   });
-  // Also trigger when unit changes cause value rewrite (via MutationObserver on value isn't needed;
-  // the unit-select change handler will call recalcAllPowerRows)
 }
 
-function recalcAllPowerRows() {
-  document.querySelectorAll('#perfTable tbody tr').forEach(row => autoUpdatePowerInRow(row));
+async function recalcAllPowerRows() {
+  const rows = Array.from(document.querySelectorAll('#perfTable tbody tr'));
+  if (!rows.length) return;
+
+  const unitQ = document.getElementById('unit-q')?.value || 'm3h';
+  const unitH = document.getElementById('unit-h')?.value || 'm';
+  const unitPow = document.getElementById('unit-pow')?.value || 'kw';
+
+  const payloadRows = rows.map(r => ({
+    q: parseFloat(r.querySelector('.col-q')?.value),
+    h: parseFloat(r.querySelector('.col-h')?.value),
+    eta: parseFloat(r.querySelector('.col-eta')?.value)
+  }));
+
+  try {
+    const resp = await fetch('/api/calc/batch-power', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        rows: payloadRows,
+        unit_q: unitQ,
+        unit_h: unitH,
+        unit_pow: unitPow
+      })
+    });
+    if (!resp.ok) return;
+    const res = await resp.json();
+    if (res.success && Array.isArray(res.results)) {
+      res.results.forEach(item => {
+        const row = rows[item.index];
+        const powInput = row?.querySelector('.col-pow');
+        if (powInput && item.power_display !== null && item.power_display !== undefined) {
+          powInput.value = Number(item.power_display).toFixed(2);
+        }
+      });
+    }
+  } catch (err) {
+    console.error('Batch power calculation error:', err);
+  }
 }
 
 /* ── Operating Region unit selector ─────────────────────────────────────── */
@@ -2803,7 +2856,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bindPreviewEvents();
 });
 
-function generateAffinityCurve() {
+async function generateAffinityCurve() {
   const affinityType = document.querySelector('input[name="affinityType"]:checked').value;
   const targetValue = parseFloat(document.getElementById('affinityValue').value);
   if (isNaN(targetValue) || targetValue <= 0) {
@@ -2819,78 +2872,102 @@ function generateAffinityCurve() {
     return;
   }
 
-  let ratio = 1.0;
-  let labelSuffix = '';
-  let dia_mm = null;
-  let speed = null;
+  let baseDia = null;
+  let baseSpeed = null;
 
   if (affinityType === 'diameter') {
     const mainCurveDiaEl = document.getElementById('main_curve_dia_mm');
     const impellerDiaEl = document.querySelector('[name="impeller_dia_mm"]');
-    const baseDia = parseFloat(mainCurveDiaEl?.value) || parseFloat(impellerDiaEl?.value) || parseFloat(mainCurveDiaEl?.placeholder) || 300.0;
+    baseDia = parseFloat(mainCurveDiaEl?.value) || parseFloat(impellerDiaEl?.value) || parseFloat(mainCurveDiaEl?.placeholder) || 300.0;
     if (isNaN(baseDia)) {
       alert("Please specify the base diameter in the pump details first.");
       return;
     }
-    ratio = targetValue / baseDia;
-    labelSuffix = `Dia: ${targetValue}mm`;
-    dia_mm = targetValue;
   } else {
-    const baseSpeed = parseFloat(document.querySelector('[name="speed_rpm"]')?.value);
+    baseSpeed = parseFloat(document.querySelector('[name="speed_rpm"]')?.value);
     if (isNaN(baseSpeed)) {
       alert("Please specify the base speed in the pump details first.");
       return;
     }
-    ratio = targetValue / baseSpeed;
-    labelSuffix = `Speed: ${targetValue} RPM`;
-    speed = targetValue;
   }
 
   const etaMap = new Map(); q_eta.forEach(p => etaMap.set(p[0], p[1]));
   const npshMap = new Map(); q_npsh.forEach(p => npshMap.set(p[0], p[1]));
   const powMap = new Map(); q_p.forEach(p => powMap.set(p[0], p[1]));
 
-  const newCurveData = [];
-  q_h.forEach(p => {
-    const q1 = p[0];
-    const h1 = p[1];
+  const rawPoints = q_h.map(p => ({
+    q: p[0],
+    h: p[1],
+    eta: etaMap.has(p[0]) ? etaMap.get(p[0]) : null,
+    npsh: npshMap.has(p[0]) ? npshMap.get(p[0]) : null,
+    power: powMap.has(p[0]) ? powMap.get(p[0]) : null
+  }));
 
-    const q2 = q1 * ratio;
-    const h2 = h1 * Math.pow(ratio, 2);
+  const btn = document.getElementById('btnGenerateAffinity');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+  }
 
-    let eta2 = etaMap.has(q1) ? etaMap.get(q1) : '';
-    if (eta2 !== '' && affinityType === 'diameter') {
-      const penalty = 40.0 * (1.0 - ratio);
-      eta2 = Math.max(0, Math.min(100, eta2 - penalty)).toFixed(1);
-    } else if (eta2 !== '') {
-      eta2 = parseFloat(eta2).toFixed(1);
+  try {
+    const resp = await fetch('/api/calc/affinity-curve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        points: rawPoints,
+        affinity_type: affinityType,
+        base_dia_mm: baseDia,
+        target_dia_mm: affinityType === 'diameter' ? targetValue : null,
+        base_speed_rpm: baseSpeed,
+        target_speed_rpm: affinityType === 'speed' ? targetValue : null
+      })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      alert(`Error generating curve: ${err.error || 'Server error'}`);
+      return;
     }
 
-    let npsh2 = npshMap.has(q1) ? npshMap.get(q1) * Math.pow(ratio, 2) : '';
-    if (npsh2 !== '') npsh2 = parseFloat(npsh2).toFixed(2);
+    const res = await resp.json();
+    if (!res.success || !Array.isArray(res.points)) {
+      alert("Failed to compute affinity curve.");
+      return;
+    }
 
-    let p2 = powMap.has(q1) ? powMap.get(q1) * Math.pow(ratio, 3) : '';
-    if (p2 !== '') p2 = parseFloat(p2).toFixed(2);
+    const newCurveData = res.points.map(pt => [
+      pt.q !== null ? Number(pt.q).toFixed(1) : '',
+      pt.h !== null ? Number(pt.h).toFixed(2) : '',
+      pt.eta !== null ? Number(pt.eta).toFixed(1) : '',
+      pt.npsh !== null ? Number(pt.npsh).toFixed(2) : '',
+      pt.power !== null ? Number(pt.power).toFixed(2) : ''
+    ]);
 
-    newCurveData.push([q2.toFixed(1), h2.toFixed(2), eta2, npsh2, p2]);
-  });
+    const curveObj = {
+      label: res.label || `Affinity (${targetValue})`,
+      diameter: affinityType === 'diameter' ? targetValue : '',
+      curve_mode: 'affinity',
+      raw_table: newCurveData
+    };
 
-  const curveObj = {
-    label: `Affinity ${labelSuffix}`,
-    diameter: dia_mm || '',
-    curve_mode: 'affinity',
-    raw_table: newCurveData
-  };
+    addExtraCurveCard(curveObj);
 
-  addExtraCurveCard(curveObj);
+    const newId = _extraCurveIdCounter;
+    fitExtraCurve(newId);
 
-  const newId = _extraCurveIdCounter;
-  fitExtraCurve(newId);
-
-  if (typeof closeAffinityModal === 'function') {
-    closeAffinityModal();
-  } else {
-    document.getElementById('affinityModal')?.classList.remove('open');
+    if (typeof closeAffinityModal === 'function') {
+      closeAffinityModal();
+    } else {
+      document.getElementById('affinityModal')?.classList.remove('open');
+    }
+  } catch (err) {
+    console.error('Affinity curve error:', err);
+    alert(`Network error: ${err.message}`);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Generate Curve';
+    }
   }
 }
 

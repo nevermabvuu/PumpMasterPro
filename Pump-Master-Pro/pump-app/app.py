@@ -50,7 +50,10 @@ def inject_token_helpers():
         {{ url_for('pump_edit', token=encode_pump_id(pump.id)) }}
     without the raw database integer ID being exposed in the browser URL bar.
     """
-    return {"encode_pump_id": encode_pump_id}
+    return {
+        "encode_pump_id": encode_pump_id,
+        "app_version": app.config.get("VERSION", "5.1.1.2")
+    }
 
 @app.context_processor
 def inject_standard_pipes_context():

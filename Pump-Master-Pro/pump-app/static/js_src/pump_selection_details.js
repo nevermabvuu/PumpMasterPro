@@ -1,17 +1,25 @@
 let pumpData = null;
 
 async function fetchPumpData() {
-  document.getElementById('chartLoading').style.display = 'block';
+  const loadingEl = document.getElementById('chartLoading');
+  if (loadingEl) loadingEl.style.display = 'block';
 
+  if (!window.PumpDetailsConfig || !window.PumpDetailsConfig.PUMP_ID) {
+    console.warn("window.PumpDetailsConfig is missing or PUMP_ID is undefined:", window.PumpDetailsConfig);
+    if (loadingEl) loadingEl.style.display = 'none';
+    return;
+  }
+
+  const cfg = window.PumpDetailsConfig;
   const params = new URLSearchParams({
-    ids: window.PumpDetailsConfig.PUMP_ID,
-    liquid: window.PumpDetailsConfig.LIQUID_TYPE,
-    rho: window.PumpDetailsConfig.RHO,
-    viscosity_cSt: window.PumpDetailsConfig.VISCOSITY,
-    slurry_cv: window.PumpDetailsConfig.SLURRY_CV,
-    slurry_d50: window.PumpDetailsConfig.SLURRY_D50,
-    rho_solid: window.PumpDetailsConfig.RHO_SOLID,
-    operation_mode: window.PumpDetailsConfig.OPERATION_MODE
+    ids: cfg.PUMP_ID,
+    liquid: cfg.LIQUID_TYPE || 'water',
+    rho: (cfg.RHO !== undefined && cfg.RHO !== null) ? cfg.RHO : 1000,
+    viscosity_cSt: (cfg.VISCOSITY !== undefined && cfg.VISCOSITY !== null) ? cfg.VISCOSITY : 1.0,
+    slurry_cv: (cfg.SLURRY_CV !== undefined && cfg.SLURRY_CV !== null) ? cfg.SLURRY_CV : 0.0,
+    slurry_d50: (cfg.SLURRY_D50 !== undefined && cfg.SLURRY_D50 !== null) ? cfg.SLURRY_D50 : 0.3,
+    rho_solid: (cfg.RHO_SOLID !== undefined && cfg.RHO_SOLID !== null) ? cfg.RHO_SOLID : 2650.0,
+    operation_mode: cfg.OPERATION_MODE || 'fixed'
   });
 
   try {
@@ -463,18 +471,64 @@ function renderAll() {
       traces.push({ x: ratedQ, y: ratedNpsh, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: { color: ratedColor, width: trimWidth, dash: trimStyle }, yaxis: 'y', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated, curveGroup: 'rated' });
     }
 
+    // ── Multi-Pump Combined Station Curve (Parallel or Series) ──
+    const stationN = parseInt(cfg.PUMPS_OPERATING) || 1;
+    const isParallel = (cfg.PUMP_ARRANGEMENT === 'parallel' && stationN > 1);
+    const isSeries = (cfg.PUMP_ARRANGEMENT === 'series' && stationN > 1);
 
+    if (isParallel) {
+      const stationQ = ratedQ.map(q => q * stationN);
+      const stationH = ratedH;
+      const hoverTmplStation = `<b>Combined Station (${stationN}x Parallel)</b><br>Station Total Flow: %{x:.1f} ${lblQ}<br>Head: %{y:.1f} ${lblH}<extra></extra>`;
+      traces.push({
+        x: stationQ,
+        y: stationH,
+        name: `Combined Station (${stationN}x Parallel)`,
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#22c55e', width: Math.max(2.8, trimWidth + 0.8), dash: 'solid' },
+        yaxis: 'y4',
+        showlegend: false,
+        hovertemplate: hoverTmplStation,
+        curveGroup: 'rated'
+      });
+      addLabel(annotations, stationQ, stationH, 'y4', `${stationN}x Parallel`, '#22c55e');
+    } else if (isSeries) {
+      const stationQ = ratedQ;
+      const stationH = ratedH.map(h => h * stationN);
+      const hoverTmplStation = `<b>Combined Station (${stationN}x Series)</b><br>Flow: %{x:.1f} ${lblQ}<br>Station Total Head: %{y:.1f} ${lblH}<extra></extra>`;
+      traces.push({
+        x: stationQ,
+        y: stationH,
+        name: `Combined Station (${stationN}x Series)`,
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#a855f7', width: Math.max(2.8, trimWidth + 0.8), dash: 'solid' },
+        yaxis: 'y4',
+        showlegend: false,
+        hovertemplate: hoverTmplStation,
+        curveGroup: 'rated'
+      });
+      addLabel(annotations, stationQ, stationH, 'y4', `${stationN}x Series`, '#a855f7');
+    }
   }
+
+  const stationN = parseInt(cfg.PUMPS_OPERATING) || 1;
+  const isParallel = (cfg.PUMP_ARRANGEMENT === 'parallel' && stationN > 1);
+  const isSeries = (cfg.PUMP_ARRANGEMENT === 'series' && stationN > 1);
 
   if (cfg.Q_DUTY && cfg.H_DUTY) {
     const k = cfg.H_DUTY / Math.pow(cfg.Q_DUTY, 2);
     const maxPumpH = Math.max(...scaledMaxH);
-    const limitH = maxPumpH * 1.25;
+    const limitH = (isSeries ? maxPumpH * stationN : maxPumpH) * 1.25;
+
+    // Use extended flow range in parallel mode so system curve covers total station flow
+    const baseFlowArr = isParallel ? scaledMaxQ.map(q => q * stationN) : scaledMaxQ;
 
     const sysQ = [];
     const sysH = [];
-    for (let i = 0; i < scaledMaxQ.length; i++) {
-      const q = scaledMaxQ[i];
+    for (let i = 0; i < baseFlowArr.length; i++) {
+      const q = baseFlowArr[i];
       const h = k * Math.pow(q, 2);
       if (h <= limitH) {
         sysQ.push(q);
@@ -524,27 +578,101 @@ function renderAll() {
     ratedLegendName = `Rated Curve (Ø ${cfg.RATED_TRIM} mm)`;
   }
   traces.push({ x: [null], y: [null], name: ratedLegendName, type: 'scatter', mode: 'lines', line: { color: ratedColor, width: trimWidth, dash: trimStyle }, showlegend: true, curveGroup: 'rated' });
+
+  if (isParallel) {
+    traces.push({ x: [null], y: [null], name: `Combined (${stationN}x Parallel)`, type: 'scatter', mode: 'lines', line: { color: '#22c55e', width: 2.8, dash: 'solid' }, showlegend: true, curveGroup: 'rated' });
+  } else if (isSeries) {
+    traces.push({ x: [null], y: [null], name: `Combined (${stationN}x Series)`, type: 'scatter', mode: 'lines', line: { color: '#a855f7', width: 2.8, dash: 'solid' }, showlegend: true, curveGroup: 'rated' });
+  }
+
   traces.push({ x: [null], y: [null], name: 'System Curve', type: 'scatter', mode: 'lines', line: { color: sysColor, width: 2.2, dash: sysStyle }, showlegend: true, curveGroup: 'system' });
 
   if (cfg.Q_DUTY && cfg.H_DUTY) {
-    traces.push({
-      x: [cfg.Q_DUTY], y: [cfg.H_DUTY], name: 'Duty Point',
-      type: 'scatter', mode: 'markers',
-      marker: { color: ratedColor, size: 12, symbol: 'star' },
-      yaxis: 'y4',
-      showlegend: true,
-      curveGroup: 'duty',
-      hovertemplate: `<b>Duty Point</b><br>Flow: %{x:.1f} ${lblQ}<br>Head: %{y:.1f} ${lblH}<extra></extra>`
-    });
-    annotations.push({
-      x: cfg.Q_DUTY, y: cfg.H_DUTY,
-      xref: 'x', yref: 'y4',
-      text: 'Duty',
-      showarrow: true,
-      arrowcolor: ratedColor,
-      ax: 20, ay: -20,
-      font: { color: ratedColor, size: 11 }
-    });
+    if (isParallel) {
+      const perQ = (cfg.EVAL_Q_DUTY != null && cfg.EVAL_Q_DUTY !== '') ? cfg.EVAL_Q_DUTY : (cfg.Q_DUTY / stationN);
+      const perH = cfg.H_DUTY;
+
+      // 1. Single Pump Duty Point
+      traces.push({
+        x: [perQ], y: [perH], name: '1x Pump Duty',
+        type: 'scatter', mode: 'markers',
+        marker: { color: ratedColor, size: 11, symbol: 'star' },
+        yaxis: 'y4', showlegend: true, curveGroup: 'duty',
+        hovertemplate: `<b>Per-Pump Duty Point (1 of ${stationN})</b><br>Flow: %{x:.1f} ${lblQ}<br>Head: %{y:.1f} ${lblH}<extra></extra>`
+      });
+      annotations.push({
+        x: perQ, y: perH, xref: 'x', yref: 'y4',
+        text: '1x Duty', showarrow: true, arrowcolor: ratedColor,
+        ax: 20, ay: -20, font: { color: ratedColor, size: 10 }
+      });
+
+      // 2. Station Total Duty Point
+      traces.push({
+        x: [cfg.Q_DUTY], y: [cfg.H_DUTY], name: `Station Total (${stationN}x)`,
+        type: 'scatter', mode: 'markers',
+        marker: { color: '#22c55e', size: 13, symbol: 'diamond' },
+        yaxis: 'y4', showlegend: true, curveGroup: 'duty',
+        hovertemplate: `<b>Station Total Duty (${stationN}x Parallel)</b><br>Total Flow: %{x:.1f} ${lblQ}<br>Head: %{y:.1f} ${lblH}<extra></extra>`
+      });
+      annotations.push({
+        x: cfg.Q_DUTY, y: cfg.H_DUTY, xref: 'x', yref: 'y4',
+        text: `Station (${stationN}x)`, showarrow: true, arrowcolor: '#22c55e',
+        ax: 25, ay: -25, font: { color: '#22c55e', size: 11 }
+      });
+
+    } else if (isSeries) {
+      const perQ = cfg.Q_DUTY;
+      const perH = (cfg.EVAL_H_DUTY != null && cfg.EVAL_H_DUTY !== '') ? cfg.EVAL_H_DUTY : (cfg.H_DUTY / stationN);
+
+      // 1. Single Pump Duty Point
+      traces.push({
+        x: [perQ], y: [perH], name: '1x Pump Duty',
+        type: 'scatter', mode: 'markers',
+        marker: { color: ratedColor, size: 11, symbol: 'star' },
+        yaxis: 'y4', showlegend: true, curveGroup: 'duty',
+        hovertemplate: `<b>Per-Pump Duty Point (1 of ${stationN})</b><br>Flow: %{x:.1f} ${lblQ}<br>Head: %{y:.1f} ${lblH}<extra></extra>`
+      });
+      annotations.push({
+        x: perQ, y: perH, xref: 'x', yref: 'y4',
+        text: '1x Duty', showarrow: true, arrowcolor: ratedColor,
+        ax: 20, ay: -20, font: { color: ratedColor, size: 10 }
+      });
+
+      // 2. Station Total Duty Point
+      traces.push({
+        x: [cfg.Q_DUTY], y: [cfg.H_DUTY], name: `Station Total (${stationN}x)`,
+        type: 'scatter', mode: 'markers',
+        marker: { color: '#a855f7', size: 13, symbol: 'diamond' },
+        yaxis: 'y4', showlegend: true, curveGroup: 'duty',
+        hovertemplate: `<b>Station Total Duty (${stationN}x Series)</b><br>Flow: %{x:.1f} ${lblQ}<br>Total Head: %{y:.1f} ${lblH}<extra></extra>`
+      });
+      annotations.push({
+        x: cfg.Q_DUTY, y: cfg.H_DUTY, xref: 'x', yref: 'y4',
+        text: `Station (${stationN}x)`, showarrow: true, arrowcolor: '#a855f7',
+        ax: 25, ay: -25, font: { color: '#a855f7', size: 11 }
+      });
+
+    } else {
+      // Standard single pump duty point
+      traces.push({
+        x: [cfg.Q_DUTY], y: [cfg.H_DUTY], name: 'Duty Point',
+        type: 'scatter', mode: 'markers',
+        marker: { color: ratedColor, size: 12, symbol: 'star' },
+        yaxis: 'y4',
+        showlegend: true,
+        curveGroup: 'duty',
+        hovertemplate: `<b>Duty Point</b><br>Flow: %{x:.1f} ${lblQ}<br>Head: %{y:.1f} ${lblH}<extra></extra>`
+      });
+      annotations.push({
+        x: cfg.Q_DUTY, y: cfg.H_DUTY,
+        xref: 'x', yref: 'y4',
+        text: 'Duty',
+        showarrow: true,
+        arrowcolor: ratedColor,
+        ax: 20, ay: -20,
+        font: { color: ratedColor, size: 11 }
+      });
+    }
   }
 
   // ── Y-axis domain layout & Active Subplot Domains ──

@@ -23,25 +23,82 @@
       {% endif %}
     </div>
 
+    {% if active_result and active_result.pump_arrangement in ['parallel', 'series'] and (active_result.pumps_operating|int or 1) > 1 %}
+    <div class="mb-4 p-3 rounded-lg border {{ 'border-[#22c55e]/40 bg-[#22c55e]/10' if active_result.pump_arrangement == 'parallel' else 'border-[#a855f7]/40 bg-[#a855f7]/10' }} flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+      <div class="flex items-center gap-2.5">
+        <span class="p-2 rounded-lg {{ 'bg-[#22c55e]/20 text-[#22c55e]' if active_result.pump_arrangement == 'parallel' else 'bg-[#a855f7]/20 text-[#a855f7]' }} text-base">
+          <i class="bi {{ 'bi-distribute-vertical' if active_result.pump_arrangement == 'parallel' else 'bi-distribute-horizontal' }}"></i>
+        </span>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-white text-sm">
+              {{ active_result.pumps_operating }} Pumps in {{ 'Parallel' if active_result.pump_arrangement == 'parallel' else 'Series' }}
+            </span>
+            {% if (active_result.pumps_standby|int or 0) > 0 %}
+              <span class="text-[10px] px-1.5 py-0.2 rounded font-mono bg-[#30363d] text-[#8b949e]">
+                +{{ active_result.pumps_standby }} Standby ({{ active_result.pumps_total_count }} total)
+              </span>
+            {% endif %}
+          </div>
+          <p class="text-[11px] text-[#8b949e] mt-0.5">
+            {% if active_result.pump_arrangement == 'parallel' %}
+              Flow is shared equally: Each pump delivers <strong class="text-white font-mono">{{ active_result.disp_per_pump_q_duty|round(1) }} {{ unit_q }}</strong> ({{ active_result.disp_total_q_duty }} / {{ active_result.pumps_operating }}) at full system head <strong class="text-white font-mono">{{ active_result.disp_total_h_duty }} {{ unit_h }}</strong>.
+            {% else %}
+              Head is shared equally: Each pump generates <strong class="text-white font-mono">{{ active_result.disp_per_pump_h_duty|round(1) }} {{ unit_h }}</strong> ({{ active_result.disp_total_h_duty }} / {{ active_result.pumps_operating }}) at full system flow <strong class="text-white font-mono">{{ active_result.disp_total_q_duty }} {{ unit_q }}</strong>.
+            {% endif %}
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 font-mono text-xs shrink-0 flex-wrap">
+        <div class="bg-[#0d1117] px-2.5 py-1.5 rounded border border-[#30363d]">
+          <span class="text-[#8b949e] text-[10px] block uppercase">Station Shaft Power</span>
+          <span class="font-bold text-[#f0c040]">{{ active_result.disp_station_power|round(1) }} {{ active_result.disp_unit_pow or unit_pow }}</span>
+        </div>
+        {% if active_result.station_motor_kw %}
+        <div class="bg-[#0d1117] px-2.5 py-1.5 rounded border border-[#30363d]">
+          <span class="text-[#8b949e] text-[10px] block uppercase">Station Motor</span>
+          <span class="font-bold text-white">{{ active_result.station_motor_kw }} kW</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       <!-- Duty Flow -->
       <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
-        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Target Flow (Q)</span>
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">
+          {{ 'Per-Pump Flow (Q)' if (active_result and active_result.pump_arrangement == 'parallel' and (active_result.pumps_operating|int or 1) > 1) else 'Target Flow (Q)' }}
+        </span>
         <div class="text-base font-extrabold text-[#58a6ff]">
           {{ active_result.disp_q_duty if active_result and active_result.disp_q_duty else (form_data.q_duty or '—') }}
           <span class="text-[11px] font-normal text-[#8b949e]">{{ active_result.disp_unit_q if active_result and active_result.disp_unit_q else unit_q }}</span>
         </div>
-        <div class="text-[10px] text-[#8b949e] mt-0.5">Specified Duty</div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">
+          {% if active_result and active_result.pump_arrangement == 'parallel' and (active_result.pumps_operating|int or 1) > 1 %}
+            Station Total: {{ active_result.disp_total_q_duty }} {{ unit_q }}
+          {% else %}
+            Specified Duty
+          {% endif %}
+        </div>
       </div>
 
       <!-- Delivered Head -->
       <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
-        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Delivered Head (H)</span>
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">
+          {{ 'Per-Pump Head (H)' if (active_result and active_result.pump_arrangement == 'series' and (active_result.pumps_operating|int or 1) > 1) else 'Delivered Head (H)' }}
+        </span>
         <div class="text-base font-extrabold text-[#58a6ff]">
           {{ active_result.disp_h_duty if active_result and active_result.disp_h_duty else (form_data.h_duty or '—') }}
           <span class="text-[11px] font-normal text-[#8b949e]">{{ active_result.disp_unit_h if active_result and active_result.disp_unit_h else unit_h }}</span>
         </div>
-        <div class="text-[10px] text-[#3fb950] mt-0.5"><i class="bi bi-check-circle"></i> On Target Head</div>
+        <div class="text-[10px] text-[#3fb950] mt-0.5">
+          {% if active_result and active_result.pump_arrangement == 'series' and (active_result.pumps_operating|int or 1) > 1 %}
+            Station Total: {{ active_result.disp_total_h_duty }} {{ unit_h }}
+          {% else %}
+            <i class="bi bi-check-circle"></i> On Target Head
+          {% endif %}
+        </div>
       </div>
 
       <!-- Operating Efficiency -->
@@ -58,12 +115,20 @@
 
       <!-- Shaft Power -->
       <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
-        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Shaft Power (P)</span>
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">
+          {{ 'Shaft Power (Per Pump)' if (active_result and active_result.pump_arrangement in ['parallel', 'series'] and (active_result.pumps_operating|int or 1) > 1) else 'Shaft Power (P)' }}
+        </span>
         <div class="text-base font-extrabold text-[#f0c040]">
           {{ active_result.disp_power if active_result and active_result.disp_power else ("%.2f"|format(active_result.op_power_kw|float) if active_result and active_result.op_power_kw else "—") }}
           <span class="text-[11px] font-normal text-[#8b949e]">{{ active_result.disp_unit_pow if active_result and active_result.disp_unit_pow else unit_pow }}</span>
         </div>
-        <div class="text-[10px] text-[#8b949e] mt-0.5">Hydraulic Absorbed</div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">
+          {% if active_result and active_result.pump_arrangement in ['parallel', 'series'] and (active_result.pumps_operating|int or 1) > 1 and active_result.disp_station_power %}
+            Station: {{ active_result.disp_station_power|round(1) }} {{ active_result.disp_unit_pow or unit_pow }}
+          {% else %}
+            Hydraulic Absorbed
+          {% endif %}
+        </div>
       </div>
 
       <!-- NPSHr -->

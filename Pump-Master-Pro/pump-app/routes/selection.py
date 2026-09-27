@@ -141,7 +141,38 @@ def run_selection_from_form(f, all_pumps=None, current_org=None):
 
     q_duty_str = f.get('q_duty')
     h_duty_str = f.get('h_duty')
-    
+
+    # ── Multi-Pump Configuration (Single / Parallel / Series) ─────────────────
+    pump_arrangement = f.get('pump_arrangement', 'single')
+    if pump_arrangement not in ('single', 'parallel', 'series'):
+        pump_arrangement = 'single'
+    f['pump_arrangement'] = pump_arrangement
+
+    try:
+        pumps_operating = int(f.get('pumps_operating', 1 if pump_arrangement == 'single' else 2))
+        if pumps_operating < 1:
+            pumps_operating = 1
+    except (ValueError, TypeError):
+        pumps_operating = 1 if pump_arrangement == 'single' else 2
+
+    try:
+        pumps_standby = int(f.get('pumps_standby', 0))
+        if pumps_standby < 0:
+            pumps_standby = 0
+    except (ValueError, TypeError):
+        pumps_standby = 0
+
+    if pump_arrangement == 'single':
+        pumps_operating = 1
+
+    f['pumps_operating'] = str(pumps_operating)
+    f['pumps_standby'] = str(pumps_standby)
+
+    eval_q_duty = 0.0
+    eval_h_duty = 0.0
+    raw_eval_q = 0.0
+    raw_eval_h = 0.0
+
     if q_duty_str and h_duty_str:
         raw_q_duty     = _get_float(f, 'q_duty', 0.0)
         raw_h_duty     = _get_float(f, 'h_duty', 0.0)
@@ -152,6 +183,26 @@ def run_selection_from_form(f, all_pumps=None, current_org=None):
         q_duty     = convert_unit(raw_q_duty, unit_q, 'm3h', 'flow')
         h_duty     = convert_unit(raw_h_duty, unit_h, 'm', 'head')
         npsh_avail = convert_unit(raw_npsh_avail, unit_npsh, 'm', 'head') if raw_npsh_avail is not None else None
+
+        # Hydraulic duty evaluation point per individual pump:
+        # • Parallel: Each pump delivers Flow = Q_total / N at Head = H_total
+        # • Series:   Each pump delivers Flow = Q_total at Head = H_total / N
+        # • Single:   Each pump delivers Flow = Q_total at Head = H_total
+        if pump_arrangement == 'parallel':
+            eval_q_duty = q_duty / pumps_operating
+            eval_h_duty = h_duty
+            raw_eval_q = raw_q_duty / pumps_operating
+            raw_eval_h = raw_h_duty
+        elif pump_arrangement == 'series':
+            eval_q_duty = q_duty
+            eval_h_duty = h_duty / pumps_operating
+            raw_eval_q = raw_q_duty
+            raw_eval_h = raw_h_duty / pumps_operating
+        else:
+            eval_q_duty = q_duty
+            eval_h_duty = h_duty
+            raw_eval_q = raw_q_duty
+            raw_eval_h = raw_h_duty
 
         if liquid == 'slurry':
             if f.get('sg_l') and str(f.get('sg_l')).strip() != '':
@@ -228,7 +279,7 @@ def run_selection_from_form(f, all_pumps=None, current_org=None):
         vsd_f_max                  = _get_float(f, 'vsd_f_max', 60.0 if motor_freq_hz == 60 else 50.0)
         drive_type                 = f.get('drive_type', 'direct')
 
-        results = select_pumps(all_pumps, q_duty, h_duty, npsh_avail,
+        results = select_pumps(all_pumps, eval_q_duty, eval_h_duty, npsh_avail,
                                liquid, rho, vis, cv, d50, rho_s,
                                filters=filters,
                                operation_mode=f.get('operation_mode', 'fixed'),
@@ -261,8 +312,18 @@ def run_selection_from_form(f, all_pumps=None, current_org=None):
                                drive_type=drive_type)
 
         for r in results:
-            r['disp_q_duty']   = raw_q_duty
-            r['disp_h_duty']   = raw_h_duty
+            r['pump_arrangement'] = pump_arrangement
+            r['pumps_operating'] = pumps_operating
+            r['pumps_standby'] = pumps_standby
+            r['pumps_total_count'] = pumps_operating + pumps_standby
+
+            r['disp_total_q_duty'] = raw_q_duty
+            r['disp_total_h_duty'] = raw_h_duty
+            r['disp_per_pump_q_duty'] = raw_eval_q
+            r['disp_per_pump_h_duty'] = raw_eval_h
+
+            r['disp_q_duty']   = raw_eval_q if pump_arrangement != 'single' else raw_q_duty
+            r['disp_h_duty']   = raw_eval_h if pump_arrangement != 'single' else raw_h_duty
             r['disp_unit_q']   = UNITS_FLOW.get(unit_q, {}).get('name', unit_q)
             r['disp_unit_h']   = UNITS_HEAD.get(unit_h, {}).get('name', unit_h)
             r['disp_unit_pow'] = UNITS_POWER.get(unit_pow, {}).get('name', unit_pow)
@@ -270,6 +331,14 @@ def run_selection_from_form(f, all_pumps=None, current_org=None):
             
             raw_p = r.get('op_power')
             r['disp_power']    = convert_unit(raw_p, 'kw', unit_pow, 'power') if raw_p is not None else None
+
+            # Station hydraulic power and electrical motor sizing
+            r['station_power_kw'] = (raw_p * pumps_operating) if raw_p is not None else None
+            r['disp_station_power'] = (r['disp_power'] * pumps_operating) if r.get('disp_power') is not None else None
+
+            if r.get('motor') and not r['motor'].get('error'):
+                r['station_motor_kw'] = r['motor']['rated_power_kw'] * pumps_operating
+                r['station_installed_motor_kw'] = r['motor']['rated_power_kw'] * (pumps_operating + pumps_standby)
             
             raw_np = r.get('op_npsh')
             r['disp_npshr']    = convert_unit(raw_np, 'm', unit_npsh, 'head') if raw_np is not None else None
@@ -287,6 +356,13 @@ def run_selection_from_form(f, all_pumps=None, current_org=None):
         'raw_h_duty': raw_h_duty,
         'q_duty': q_duty,
         'h_duty': h_duty,
+        'pump_arrangement': pump_arrangement,
+        'pumps_operating': pumps_operating,
+        'pumps_standby': pumps_standby,
+        'eval_q_duty': eval_q_duty,
+        'eval_h_duty': eval_h_duty,
+        'raw_eval_q': raw_eval_q,
+        'raw_eval_h': raw_eval_h,
         'liquid': liquid,
         'enabled_pump_attributes': enabled_pump_attributes,
         'units_tables': units_tables,
@@ -414,7 +490,8 @@ def pump_selection():
     active_sel = session.get('active_selection') or {}
     for k in ['liquid', 'temperature_c', 'rho', 'viscosity_cSt', 'fluid_ph',
               'fluid_concentration', 'is_hazardous', 'is_flammable',
-              'sg_l', 'sg_s', 'sg_m', 'slurry_cv', 'slurry_cw', 'slurry_d50', 'unit_d50']:
+              'sg_l', 'sg_s', 'sg_m', 'slurry_cv', 'slurry_cw', 'slurry_d50', 'unit_d50',
+              'pump_arrangement', 'pumps_operating', 'pumps_standby']:
         if form_data.get(k) is not None:
             active_sel[k] = form_data.get(k)
     session['active_selection'] = active_sel
@@ -578,6 +655,14 @@ def pump_selection_details(pump_id):
         'report_id': default_report_id,
         'q_duty': f.get('q_duty'),
         'h_duty': f.get('h_duty'),
+        'pump_arrangement': f.get('pump_arrangement', 'single'),
+        'pumps_operating': int(f.get('pumps_operating', 1 if f.get('pump_arrangement') == 'single' else 2)),
+        'pumps_standby': int(f.get('pumps_standby', 0)),
+        'total_q_duty': f.get('q_duty'),
+        'total_h_duty': f.get('h_duty'),
+        'eval_q_duty': active_result.get('disp_per_pump_q_duty') if active_result else f.get('q_duty'),
+        'eval_h_duty': active_result.get('disp_per_pump_h_duty') if active_result else f.get('h_duty'),
+        'disp_station_power': active_result.get('disp_station_power') if active_result else None,
         'unit_system': unit_system,
         'unit_q': unit_q,
         'unit_h': unit_h,
@@ -630,6 +715,60 @@ def pump_selection_details(pump_id):
 
     details_template = current_org.get_pump_details_template() if current_org else 'details/default_pump_details.html'
 
+    def _safe_float(val, fallback=None):
+        if val is None or val == '':
+            return fallback
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return fallback
+
+    q_duty_val = _safe_float(f.get('q_duty'))
+    h_duty_val = _safe_float(f.get('h_duty'))
+    p_arr = f.get('pump_arrangement', 'single')
+    p_op = int(f.get('pumps_operating', 1 if p_arr == 'single' else 2)) if str(f.get('pumps_operating', '')).isdigit() else (1 if p_arr == 'single' else 2)
+    p_stby = int(f.get('pumps_standby', 0)) if str(f.get('pumps_standby', '')).isdigit() else 0
+
+    eval_q_val = active_result.get('disp_per_pump_q_duty') if active_result else q_duty_val
+    eval_h_val = active_result.get('disp_per_pump_h_duty') if active_result else h_duty_val
+
+    pump_details_config = {
+        'PUMP_ID': pump.id,
+        'LIQUID_TYPE': f.get('liquid', 'water'),
+        'Q_DUTY': q_duty_val,
+        'H_DUTY': h_duty_val,
+        'PUMP_ARRANGEMENT': p_arr,
+        'PUMPS_OPERATING': p_op,
+        'PUMPS_STANDBY': p_stby,
+        'EVAL_Q_DUTY': eval_q_val,
+        'EVAL_H_DUTY': eval_h_val,
+        'UNIT_Q': unit_q or 'm3h',
+        'UNIT_H': unit_h or 'm',
+        'UNIT_NPSH': unit_npsh or 'm',
+        'UNIT_POW': unit_pow or 'kw',
+        'UNIT_SYSTEM': unit_system or 'metric',
+        'RHO': _safe_float(f.get('rho') if f.get('liquid') != 'slurry' else f.get('rho_l'), 1000.0),
+        'VISCOSITY': _safe_float(f.get('viscosity_cSt'), 1.0),
+        'SLURRY_CV': _safe_float(f.get('slurry_cv'), 0.0),
+        'SLURRY_D50': _safe_float(f.get('slurry_d50'), 0.3),
+        'RHO_SOLID': _safe_float(f.get('rho_solid'), 2650.0),
+        'TRIM_RATIO': _safe_float(active_result.get('optimal_trim_ratio') if active_result else 1.0, 1.0),
+        'COMPOSITE_RATIO': _safe_float((active_result.get('composite_ratio') or active_result.get('optimal_trim_ratio')) if active_result else 1.0, 1.0),
+        'OPERATION_MODE': f.get('operation_mode', 'fixed'),
+        'IS_VSD': bool(f.get('operation_mode') == 'vsd'),
+        'VSD_TRIM_MODE': f.get('vsd_trim_mode', 'auto'),
+        'FIXED_SPEED_MODE': f.get('fixed_speed_mode', 'auto'),
+        'FIXED_SPEED_MIN_RPM': _safe_float(f.get('fixed_speed_min_rpm')),
+        'FIXED_SPEED_MAX_RPM': _safe_float(f.get('fixed_speed_max_rpm')),
+        'VSD_SPEED_MIN_RPM': _safe_float(f.get('vsd_speed_min_rpm')),
+        'VSD_SPEED_MAX_RPM': _safe_float(f.get('vsd_speed_max_rpm')),
+        'MANUAL_SPEED_RPM': _safe_float(f.get('manual_pump_speed_rpm') or f.get('manual_speed_rpm')),
+        'RATED_SPEED': round(_safe_float(active_result.get('optimal_speed_rpm')), 1) if (active_result and active_result.get('optimal_speed_rpm')) else None,
+        'RATED_TRIM': round(_safe_float(active_result.get('optimal_trim_dia_mm')), 1) if (active_result and active_result.get('optimal_trim_dia_mm')) else None,
+        'ORG_STYLES': org_styles or {}
+    }
+    pump_details_config_json = json.dumps(pump_details_config)
+
     return render_template('pump_selection_details.html',
                            pump=pump,
                            results=results,
@@ -645,7 +784,8 @@ def pump_selection_details(pump_id):
                            unit_q=unit_q,
                            unit_h=unit_h,
                            unit_npsh=unit_npsh,
-                           unit_pow=unit_pow)
+                           unit_pow=unit_pow,
+                           pump_details_config_json=pump_details_config_json)
 
 
 @selection_bp.route('/papi/select-pumps', methods=['POST'])

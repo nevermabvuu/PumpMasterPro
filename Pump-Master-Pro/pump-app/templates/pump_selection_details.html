@@ -195,36 +195,27 @@
 <!-- Include Plotly -->
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <script>
-  window.PumpDetailsConfig = {
-    PUMP_ID: {{ pump.id }},
-    LIQUID_TYPE: "{{ form_data.liquid or 'water' }}",
-    Q_DUTY: {{ form_data.q_duty or 'null' }},
-    H_DUTY: {{ form_data.h_duty or 'null' }},
-    UNIT_Q: "{{ unit_q or 'm3h' }}",
-    UNIT_H: "{{ unit_h or 'm' }}",
-    UNIT_NPSH: "{{ unit_npsh or 'm' }}",
-    UNIT_POW: "{{ unit_pow or 'kw' }}",
-    UNIT_SYSTEM: "{{ unit_system or 'metric' }}",
-    RHO: {{ (form_data.rho if form_data.liquid != 'slurry' else form_data.rho_l) or 1000 }},
-    VISCOSITY: {{ form_data.viscosity_cSt or 1.0 }},
-    SLURRY_CV: {{ form_data.slurry_cv or 0.0 }},
-    SLURRY_D50: {{ form_data.slurry_d50 or 0.3 }},
-    RHO_SOLID: {{ form_data.rho_solid or 2650.0 }},
-    TRIM_RATIO: {{ active_result.optimal_trim_ratio if active_result else 1.0 }},
-    COMPOSITE_RATIO: {{ active_result.composite_ratio if (active_result and active_result.composite_ratio) else (active_result.optimal_trim_ratio if active_result else 1.0) }},
-    OPERATION_MODE: "{{ form_data.operation_mode or 'fixed' }}",
-    IS_VSD: {{ 'true' if (form_data.operation_mode == 'vsd') else 'false' }},
-    VSD_TRIM_MODE: "{{ form_data.vsd_trim_mode or 'auto' }}",
-    FIXED_SPEED_MODE: "{{ form_data.fixed_speed_mode or 'auto' }}",
-    FIXED_SPEED_MIN_RPM: {{ form_data.fixed_speed_min_rpm if form_data.fixed_speed_min_rpm else 'null' }},
-    FIXED_SPEED_MAX_RPM: {{ form_data.fixed_speed_max_rpm if form_data.fixed_speed_max_rpm else 'null' }},
-    VSD_SPEED_MIN_RPM: {{ form_data.vsd_speed_min_rpm if form_data.vsd_speed_min_rpm else 'null' }},
-    VSD_SPEED_MAX_RPM: {{ form_data.vsd_speed_max_rpm if form_data.vsd_speed_max_rpm else 'null' }},
-    MANUAL_SPEED_RPM: {{ form_data.manual_pump_speed_rpm if form_data.manual_pump_speed_rpm else (form_data.manual_speed_rpm if form_data.manual_speed_rpm else 'null') }},
-    RATED_SPEED: {{ active_result.optimal_speed_rpm | round(1) if active_result and active_result.optimal_speed_rpm else 'null' }},
-    RATED_TRIM: {{ active_result.optimal_trim_dia_mm | round(1) if active_result and active_result.optimal_trim_dia_mm else 'null' }},
-    ORG_STYLES: {{ (org_styles if org_styles else {}) | tojson }}
-  };
+  window.PumpDetailsConfig = {{ pump_details_config_json|safe if pump_details_config_json else '{}' }};
+  if (!window.PumpDetailsConfig || !window.PumpDetailsConfig.PUMP_ID) {
+    window.PumpDetailsConfig = Object.assign({
+      PUMP_ID: {{ pump.id }},
+      LIQUID_TYPE: "{{ form_data.liquid or 'water' }}",
+      Q_DUTY: {{ form_data.q_duty|tojson if form_data.q_duty else 'null' }},
+      H_DUTY: {{ form_data.h_duty|tojson if form_data.h_duty else 'null' }},
+      PUMP_ARRANGEMENT: "{{ form_data.pump_arrangement or 'single' }}",
+      PUMPS_OPERATING: {{ form_data.pumps_operating or 1 }},
+      PUMPS_STANDBY: {{ form_data.pumps_standby or 0 }},
+      UNIT_Q: "{{ unit_q or 'm3h' }}",
+      UNIT_H: "{{ unit_h or 'm' }}",
+      UNIT_NPSH: "{{ unit_npsh or 'm' }}",
+      UNIT_POW: "{{ unit_pow or 'kw' }}",
+      UNIT_SYSTEM: "{{ unit_system or 'metric' }}",
+      RHO: 1000,
+      VISCOSITY: 1.0,
+      OPERATION_MODE: "{{ form_data.operation_mode or 'fixed' }}",
+      ORG_STYLES: {{ (org_styles if org_styles else {}) | tojson }}
+    }, window.PumpDetailsConfig || {});
+  }
 </script>
 <script src="{{ url_for('static', filename='js/pump_selection_details.js') }}"></script>
 <script>

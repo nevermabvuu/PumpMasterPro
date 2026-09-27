@@ -62,6 +62,34 @@
     color: #38bdf8 !important;
     filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.5));
   }
+  .arr-radio:checked + .arr-btn-single {
+    background: rgba(88, 166, 255, 0.18) !important;
+    border-color: #58a6ff !important;
+    color: #58a6ff !important;
+    box-shadow: 0 0 8px rgba(88, 166, 255, 0.2);
+  }
+  .arr-radio:checked + .arr-btn-parallel {
+    background: rgba(34, 197, 94, 0.18) !important;
+    border-color: #22c55e !important;
+    color: #22c55e !important;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.2);
+  }
+  .arr-radio:checked + .arr-btn-series {
+    background: rgba(168, 85, 247, 0.18) !important;
+    border-color: #a855f7 !important;
+    color: #a855f7 !important;
+    box-shadow: 0 0 8px rgba(168, 85, 247, 0.2);
+  }
+  .arr-btn {
+    border: 1px solid #30363d;
+    cursor: pointer;
+    user-select: none;
+    color: #8b949e;
+  }
+  .arr-btn:hover {
+    color: #c9d1d9;
+    border-color: #484f58;
+  }
 </style>
 
 <!-- ── Tab bar ──────────────────────────────────────────────────────────────── -->
@@ -188,6 +216,110 @@
                   <option value="{{ k }}" {{ 'selected' if unit_static_head == k else '' }}>{{ u.name }}</option>
                 {% endfor %}
               </select>
+            </div>
+          </div>
+
+          <!-- ── Pump Arrangement (Single / Parallel / Series) ── -->
+          <div class="border border-[#30363d] rounded-xl p-2.5 bg-[#0d1117] space-y-2 mt-2">
+            <div class="flex items-center justify-between">
+              <label class="form-label text-xs font-semibold text-[#c9d1d9] flex items-center gap-1.5 mb-0">
+                <i class="bi bi-diagram-3 text-[#58a6ff]"></i>
+                <span>Pump Arrangement</span>
+              </label>
+              <span id="pumpArrangementBadge" class="text-[10px] font-mono px-2 py-0.5 rounded font-bold bg-[#21262d] text-[#8b949e] border border-[#30363d]">
+                1x Single Pump
+              </span>
+            </div>
+
+            <!-- Segmented Radio Buttons for Arrangement -->
+            <div class="grid grid-cols-3 gap-1.5 p-1 rounded-lg bg-[#161b22] border border-[#30363d]">
+              <label class="cursor-pointer mb-0">
+                <input type="radio" name="pump_arrangement" id="arr_single" value="single" class="sr-only arr-radio"
+                       {{ 'checked' if (not form_data.get('pump_arrangement') or form_data.get('pump_arrangement') == 'single') else '' }}
+                       onchange="onPumpArrangementChange('single')">
+                <div class="arr-btn arr-btn-single text-center py-1.5 px-1 rounded-md text-xs font-semibold transition-all">
+                  <i class="bi bi-circle-fill text-[8px] mr-1"></i>Single (1x)
+                </div>
+              </label>
+              <label class="cursor-pointer mb-0">
+                <input type="radio" name="pump_arrangement" id="arr_parallel" value="parallel" class="sr-only arr-radio"
+                       {{ 'checked' if form_data.get('pump_arrangement') == 'parallel' else '' }}
+                       onchange="onPumpArrangementChange('parallel')">
+                <div class="arr-btn arr-btn-parallel text-center py-1.5 px-1 rounded-md text-xs font-semibold transition-all">
+                  <i class="bi bi-distribute-vertical text-xs mr-0.5"></i>Parallel (||)
+                </div>
+              </label>
+              <label class="cursor-pointer mb-0">
+                <input type="radio" name="pump_arrangement" id="arr_series" value="series" class="sr-only arr-radio"
+                       {{ 'checked' if form_data.get('pump_arrangement') == 'series' else '' }}
+                       onchange="onPumpArrangementChange('series')">
+                <div class="arr-btn arr-btn-series text-center py-1.5 px-1 rounded-md text-xs font-semibold transition-all">
+                  <i class="bi bi-distribute-horizontal text-xs mr-0.5"></i>Series (═)
+                </div>
+              </label>
+            </div>
+
+            <!-- Multi-Pump Controls (visible when parallel or series is active) -->
+            <div id="multiPumpControls" style="{{ 'display:none;' if (not form_data.get('pump_arrangement') or form_data.get('pump_arrangement') == 'single') else '' }}" class="space-y-2 pt-2 border-t border-[#30363d]/60">
+              <div class="grid grid-cols-2 gap-2">
+                <!-- Operating Pumps Input Box -->
+                <div>
+                  <label for="pumps_operating" class="text-[10px] text-[#8b949e] font-medium block mb-1">
+                    Operating Pumps (<span id="lblOperatingPumps">Parallel</span>)
+                  </label>
+                  <div class="relative flex items-center">
+                    <input type="number"
+                           name="pumps_operating"
+                           id="pumps_operating"
+                           min="1"
+                           max="20"
+                           step="1"
+                           value="{{ form_data.get('pumps_operating', 2) if (form_data.get('pump_arrangement') in ['parallel', 'series']) else (form_data.get('pumps_operating', 2)) }}"
+                           class="form-control-dark w-full text-xs font-mono py-1.5 px-3 rounded-lg border border-[#30363d] focus:border-[#58a6ff] focus:outline-none"
+                           placeholder="e.g. 2"
+                           oninput="updateMultiPumpCalculations()"
+                           onchange="updateMultiPumpCalculations()">
+                    <span class="absolute right-2.5 text-[10px] text-[#8b949e] font-sans pointer-events-none">Duty</span>
+                  </div>
+                </div>
+
+                <!-- Standby Pumps Input Box -->
+                <div>
+                  <label for="pumps_standby" class="text-[10px] text-[#8b949e] font-medium block mb-1">
+                    Standby Pumps
+                  </label>
+                  <div class="relative flex items-center">
+                    <input type="number"
+                           name="pumps_standby"
+                           id="pumps_standby"
+                           min="0"
+                           max="10"
+                           step="1"
+                           value="{{ form_data.get('pumps_standby', 0) }}"
+                           class="form-control-dark w-full text-xs font-mono py-1.5 px-3 rounded-lg border border-[#30363d] focus:border-[#58a6ff] focus:outline-none"
+                           placeholder="0"
+                           oninput="updateMultiPumpCalculations()"
+                           onchange="updateMultiPumpCalculations()">
+                    <span class="absolute right-2.5 text-[10px] text-[#8b949e] font-sans pointer-events-none">Stby</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Live Engineering Per-Pump Breakdown Callout -->
+              <div id="multiPumpInfoCallout" class="p-2 rounded-lg bg-[#161b22] border border-[#30363d] text-[11px] space-y-1">
+                <div class="flex items-center justify-between text-[#8b949e]">
+                  <span>Per-Pump Design Point:</span>
+                  <span id="perPumpPointBadge" class="font-mono font-bold text-[#58a6ff]">-</span>
+                </div>
+                <div class="text-[10px] text-[#8b949e] flex items-center justify-between">
+                  <span>Station Total:</span>
+                  <span id="totalStationPointBadge" class="font-mono text-white">-</span>
+                </div>
+                <div id="multiPumpNote" class="text-[10px] text-[#22c55e] pt-1 border-t border-[#30363d]/40 flex items-center gap-1">
+                  <i class="bi bi-info-circle"></i>
+                  <span id="multiPumpNoteText">Pumps in parallel share flow equally at full system head.</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -812,18 +944,24 @@
                   <span id="shortlistCountDisplay">{{ results|length }}</span> matching pump{{ 's' if results|length != 1 else '' }}
                 </h5>
                 <span class="text-xs text-[#8b949e]">
-                  (Q={{ form_data.q_duty }}, H={{ form_data.h_duty }})
+                  {% if form_data.pump_arrangement == 'parallel' and (form_data.pumps_operating|int or 2) > 1 %}
+                    <span class="text-[#22c55e] font-semibold"><i class="bi bi-distribute-vertical mr-0.5"></i>{{ form_data.pumps_operating or 2 }}x Parallel:</span> Total Q={{ form_data.q_duty }} {{ unit_q }}, H={{ form_data.h_duty }} {{ unit_h }} <span class="text-white font-mono text-[11px]">(Each Q={{ ((form_data.q_duty|float) / (form_data.pumps_operating|int or 2))|round(1) }} {{ unit_q }})</span>
+                  {% elif form_data.pump_arrangement == 'series' and (form_data.pumps_operating|int or 2) > 1 %}
+                    <span class="text-[#a855f7] font-semibold"><i class="bi bi-distribute-horizontal mr-0.5"></i>{{ form_data.pumps_operating or 2 }}x Series:</span> Total Q={{ form_data.q_duty }} {{ unit_q }}, H={{ form_data.h_duty }} {{ unit_h }} <span class="text-white font-mono text-[11px]">(Each H={{ ((form_data.h_duty|float) / (form_data.pumps_operating|int or 2))|round(1) }} {{ unit_h }})</span>
+                  {% else %}
+                    (Q={{ form_data.q_duty }} {{ unit_q }}, H={{ form_data.h_duty }} {{ unit_h }})
+                  {% endif %}
                 </span>
               </div>
               
               <!-- Quick Navigation to Comparison Tab with active selection parameters -->
               <div class="flex items-center gap-2">
-                <a id="compareLink" href="{{ url_for('pump_comparison', q_duty=form_data.q_duty, h_duty=form_data.h_duty, liquid=form_data.get('liquid', 'water'), operation_mode=form_data.get('operation_mode', 'fixed')) }}"
+                <a id="compareLink" href="{{ url_for('pump_comparison', q_duty=form_data.q_duty, h_duty=form_data.h_duty, liquid=form_data.get('liquid', 'water'), operation_mode=form_data.get('operation_mode', 'fixed'), pump_arrangement=form_data.get('pump_arrangement', 'single'), pumps_operating=form_data.get('pumps_operating', 1)) }}"
                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border border-[#39d3c0]/40 text-[#39d3c0] bg-[#39d3c0]/10 hover:bg-[#39d3c0]/20 transition-colors pointer-events-none opacity-50"
                    title="Compare checked pumps in the Comparison Tab">
                   <i class="bi bi-bar-chart-line"></i>Compare (<span id="compareCount">0</span>)
                 </a>
-                <a href="{{ url_for('pump_comparison', q_duty=form_data.q_duty, h_duty=form_data.h_duty, liquid=form_data.get('liquid', 'water'), operation_mode=form_data.get('operation_mode', 'fixed')) }}"
+                <a href="{{ url_for('pump_comparison', q_duty=form_data.q_duty, h_duty=form_data.h_duty, liquid=form_data.get('liquid', 'water'), operation_mode=form_data.get('operation_mode', 'fixed'), pump_arrangement=form_data.get('pump_arrangement', 'single'), pumps_operating=form_data.get('pumps_operating', 1)) }}"
                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-[#58a6ff]/15 hover:bg-[#58a6ff]/25 text-[#58a6ff] border border-[#58a6ff]/35 transition-colors"
                    title="Open detailed shortlisted comparison page">
                   <span>Detailed View</span>
@@ -917,6 +1055,15 @@
                     {% else %}
                       <span class="shrink-0 inline-flex items-center px-1 py-0.2 rounded text-[8px] font-semibold bg-[#3fb950]/15 text-[#3fb950] border border-[#3fb950]/30">Fixed</span>
                     {% endif %}
+                    {% if r.pump_arrangement == 'parallel' and r.pumps_operating > 1 %}
+                      <span class="shrink-0 inline-flex items-center px-1 py-0.2 rounded text-[8px] font-semibold bg-[#22c55e]/15 text-[#22c55e] border border-[#22c55e]/30" title="{{ r.pumps_operating }} pumps operating in parallel">
+                        <i class="bi bi-distribute-vertical mr-0.5"></i>{{ r.pumps_operating }}x Par
+                      </span>
+                    {% elif r.pump_arrangement == 'series' and r.pumps_operating > 1 %}
+                      <span class="shrink-0 inline-flex items-center px-1 py-0.2 rounded text-[8px] font-semibold bg-[#a855f7]/15 text-[#a855f7] border border-[#a855f7]/30" title="{{ r.pumps_operating }} pumps operating in series">
+                        <i class="bi bi-distribute-horizontal mr-0.5"></i>{{ r.pumps_operating }}x Ser
+                      </span>
+                    {% endif %}
                     {% if r.size and r.size != '0' and r.size|string|trim != '' %}
                       <span class="shrink-0 text-[11px] text-[#8b949e]">({{ r.size }})</span>
                     {% endif %}
@@ -931,7 +1078,7 @@
                     <i class="bi bi-graph-up-arrow"></i>
                     <span>Details</span>
                   </a>
-                  <a href="{{ url_for('reports.view_report', report_id=r.default_report_id, pump_id=r.pump_id, q_duty=form_data.q_duty, h_duty=form_data.h_duty, dia=r.optimal_trim_dia_mm, rpm=r.optimal_speed_rpm, unit_q=unit_q, unit_h=unit_h, unit_pow=unit_pow, unit_npsh=unit_npsh, operation_mode=form_data.get('operation_mode', 'fixed'), source='selection') }}"
+                  <a href="{{ url_for('reports.view_report', report_id=r.default_report_id, pump_id=r.pump_id, q_duty=form_data.q_duty, h_duty=form_data.h_duty, dia=r.optimal_trim_dia_mm, rpm=r.optimal_speed_rpm, unit_q=unit_q, unit_h=unit_h, unit_pow=unit_pow, unit_npsh=unit_npsh, operation_mode=form_data.get('operation_mode', 'fixed'), pump_arrangement=form_data.get('pump_arrangement', 'single'), pumps_operating=form_data.get('pumps_operating', 1), source='selection') }}"
                      target="_blank"
                      class="p-1 px-1.5 rounded text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-[#d29922] hover:text-[#e3b341] border border-[#30363d] transition-colors flex items-center"
                      title="Datasheet PDF Report">
@@ -962,7 +1109,9 @@
                 <div class="flex items-center justify-end gap-1.5 flex-1 flex-wrap">
                   <!-- Speed & Motor kW -->
                   <div class="px-2 py-0.5 rounded bg-[#0d1117] border border-[#30363d] text-center shrink-0">
-                    <div class="text-[8px] font-sans text-[#8b949e] uppercase leading-none">Speed / kW</div>
+                    <div class="text-[8px] font-sans text-[#8b949e] uppercase leading-none">
+                      {{ 'Speed / kW (ea)' if (r.pump_arrangement in ['parallel', 'series'] and r.pumps_operating > 1) else 'Speed / kW' }}
+                    </div>
                     <div class="font-bold text-[11px] text-white font-mono mt-0.5 whitespace-nowrap">
                       {{ r.optimal_speed_rpm|int if r.optimal_speed_rpm else r.speed_rpm|int }}<span class="text-[9px] text-[#8b949e] font-normal">rpm</span>
                       {% if r.motor and not r.motor.error %}
@@ -981,10 +1130,17 @@
 
                   <!-- Power -->
                   <div class="px-2 py-0.5 rounded bg-[#0d1117] border border-[#30363d] text-center shrink-0">
-                    <div class="text-[8px] font-sans text-[#8b949e] uppercase leading-none">Power</div>
+                    <div class="text-[8px] font-sans text-[#8b949e] uppercase leading-none">
+                      {{ 'Power (ea)' if (r.pump_arrangement in ['parallel', 'series'] and r.pumps_operating > 1) else 'Power' }}
+                    </div>
                     <div class="font-bold text-[11px] font-mono text-white mt-0.5 whitespace-nowrap">
                       {{ (r.disp_power|round(1)) if r.disp_power is not none else r.op_power }} <span class="text-[9px] text-[#8b949e] font-normal">{{ r.disp_unit_pow }}</span>
                     </div>
+                    {% if r.pump_arrangement in ['parallel', 'series'] and r.pumps_operating > 1 and r.disp_station_power %}
+                    <div class="text-[9px] font-mono text-[#f0c040] leading-none mt-0.5" title="Total absorbed station shaft power ({{ r.pumps_operating }} pumps operating)">
+                      {{ r.disp_station_power|round(1) }} <span class="text-[8px] text-[#8b949e]">tot</span>
+                    </div>
+                    {% endif %}
                   </div>
 
                   <!-- NPSHr -->
@@ -3887,6 +4043,84 @@
 <script src="{{ url_for('static', filename='js/pump_selection.js') }}?v=20260913_1635"></script>
 <script>
   if (typeof initSparklines === 'function') { initSparklines(); }
+
+  // ── Multi-Pump Selection Calculator & UI Handlers ──
+  function onPumpArrangementChange(arr) {
+    const opInput = document.getElementById('pumps_operating');
+    if (arr !== 'single') {
+      if (opInput && (parseInt(opInput.value) || 1) < 2) {
+        opInput.value = '2';
+      }
+    }
+    updateMultiPumpCalculations();
+  }
+
+  function updateMultiPumpCalculations() {
+    const radio = document.querySelector('input[name="pump_arrangement"]:checked');
+    const arr = radio ? radio.value : 'single';
+    const ctrl = document.getElementById('multiPumpControls');
+    const badge = document.getElementById('pumpArrangementBadge');
+    const perPumpBadge = document.getElementById('perPumpPointBadge');
+    const totalBadge = document.getElementById('totalStationPointBadge');
+    const noteText = document.getElementById('multiPumpNoteText');
+    const noteEl = document.getElementById('multiPumpNote');
+    const lblOperating = document.getElementById('lblOperatingPumps');
+    
+    const qVal = parseFloat(document.getElementById('input_q_duty')?.value) || 0;
+    const hVal = parseFloat(document.getElementById('input_h_duty')?.value) || 0;
+    const unitQEl = document.getElementById('select_unit_q');
+    const unitHEl = document.getElementById('select_unit_h');
+    const unitQ = unitQEl ? (unitQEl.options[unitQEl.selectedIndex]?.text || unitQEl.value) : 'm³/h';
+    const unitH = unitHEl ? (unitHEl.options[unitHEl.selectedIndex]?.text || unitHEl.value) : 'm';
+    
+    const opInput = document.getElementById('pumps_operating');
+    const stbyInput = document.getElementById('pumps_standby');
+    const n = Math.max(1, parseInt(opInput?.value) || (arr === 'single' ? 1 : 2));
+    const s = Math.max(0, parseInt(stbyInput?.value) || 0);
+
+    if (arr === 'single') {
+      if (ctrl) ctrl.style.display = 'none';
+      if (badge) {
+        badge.textContent = '1x Single Pump';
+        badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded font-bold bg-[#21262d] text-[#8b949e] border border-[#30363d]';
+      }
+    } else if (arr === 'parallel') {
+      if (ctrl) ctrl.style.display = 'block';
+      if (lblOperating) lblOperating.textContent = 'Parallel';
+      if (badge) {
+        badge.textContent = n + 'x In Parallel' + (s > 0 ? ' (+' + s + ' Stby)' : '');
+        badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded font-bold bg-[#22c55e]/20 text-[#22c55e] border border-[#22c55e]/40';
+      }
+      const perQ = (qVal > 0) ? (qVal / n).toFixed(1) : '—';
+      if (perPumpBadge) perPumpBadge.textContent = 'Q = ' + perQ + ' ' + unitQ + ' @ H = ' + (hVal || '—') + ' ' + unitH;
+      if (totalBadge) totalBadge.textContent = 'Q_tot = ' + (qVal || '—') + ' ' + unitQ + ' @ H = ' + (hVal || '—') + ' ' + unitH;
+      if (noteEl) noteEl.className = 'text-[10px] text-[#22c55e] pt-1 border-t border-[#30363d]/40 flex items-center gap-1';
+      if (noteText) noteText.textContent = n + ' pumps in parallel share flow (' + perQ + ' ' + unitQ + ' each) at full ' + hVal + ' ' + unitH + ' head.';
+    } else if (arr === 'series') {
+      if (ctrl) ctrl.style.display = 'block';
+      if (lblOperating) lblOperating.textContent = 'Series';
+      if (badge) {
+        badge.textContent = n + 'x In Series' + (s > 0 ? ' (+' + s + ' Stby)' : '');
+        badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded font-bold bg-[#a855f7]/20 text-[#a855f7] border border-[#a855f7]/40';
+      }
+      const perH = (hVal > 0) ? (hVal / n).toFixed(1) : '—';
+      if (perPumpBadge) perPumpBadge.textContent = 'Q = ' + (qVal || '—') + ' ' + unitQ + ' @ H = ' + perH + ' ' + unitH;
+      if (totalBadge) totalBadge.textContent = 'Q = ' + (qVal || '—') + ' ' + unitQ + ' @ H_tot = ' + (hVal || '—') + ' ' + unitH;
+      if (noteEl) noteEl.className = 'text-[10px] text-[#a855f7] pt-1 border-t border-[#30363d]/40 flex items-center gap-1';
+      if (noteText) noteText.textContent = n + ' pumps in series each generate ' + perH + ' ' + unitH + ' head to deliver total ' + hVal + ' ' + unitH + ' at ' + qVal + ' ' + unitQ + '.';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    updateMultiPumpCalculations();
+    ['input_q_duty', 'input_h_duty', 'select_unit_q', 'select_unit_h', 'pumps_operating', 'pumps_standby'].forEach(id => {
+      const el = document.getElementById(id);
+      el?.addEventListener('input', updateMultiPumpCalculations);
+      el?.addEventListener('change', updateMultiPumpCalculations);
+    });
+  });
+  window.updateMultiPumpCalculations = updateMultiPumpCalculations;
+  window.onPumpArrangementChange = onPumpArrangementChange;
 </script>
 
 <script src="{{ url_for('static', filename='js/pipe_network.js') }}?v={{ range(1, 99999) | random }}"></script>

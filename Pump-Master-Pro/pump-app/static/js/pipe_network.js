@@ -1156,6 +1156,8 @@ function getNetworkPayload(extra = {}) {
     pan: state.pan,
     zoom: state.zoom,
     selected: state.selected ? { kind: state.selected.kind, id: state.selected.id } : null,
+    isDemo: Boolean(state.isDemo),
+    orgDefaultsKey: state.orgDefaultsKey || null,
     savedAt: new Date().toISOString(),
     ...extra
   };
@@ -1241,6 +1243,49 @@ function loadNetworkFromStorage() {
   const isOldDemoY = d.nodes && d.nodes.some(n => n.id === 'N-1' && n.y === 320);
   if (isOldDemo || isOldDemoY) {
     return false;
+  }
+
+  // Check if stored network is the stock demo network layout (4 nodes, 3 pipes)
+  const isStockDemo = d.nodes && d.nodes.length === 4
+    && d.pipes && d.pipes.length === 3
+    && d.nodes.some(n => n.id === 'N-1' && n.type === 'reservoir')
+    && d.nodes.some(n => n.id === 'N-2' && n.type === 'pump')
+    && d.nodes.some(n => n.id === 'N-3' && n.type === 'valve')
+    && d.nodes.some(n => n.id === 'N-4' && n.type === 'discharge');
+
+  if (isStockDemo) {
+    const orgDefaults = window.__PMP_PIPE_NETWORK_DEFAULTS || {};
+    const storedSuction = (() => {
+      try { return JSON.parse(localStorage.getItem('pmpro_demo_suction_pipe')); } catch(e){ return null; }
+    })();
+    const storedDischarge = (() => {
+      try { return JSON.parse(localStorage.getItem('pmpro_demo_discharge_pipe')); } catch(e){ return null; }
+    })();
+    const currentOrgKey = [
+      orgDefaults.pn_default_pipe_id,
+      orgDefaults.pn_default_standard,
+      orgDefaults.pn_default_material,
+      orgDefaults.pn_default_schedule_sdr,
+      orgDefaults.pn_default_nb_mm,
+      orgDefaults.pn_suction_pipe_id,
+      orgDefaults.pn_suction_standard,
+      orgDefaults.pn_suction_material,
+      orgDefaults.pn_suction_diameter_mm,
+      orgDefaults.pn_discharge_pipe_id,
+      orgDefaults.pn_discharge_standard,
+      orgDefaults.pn_discharge_material,
+      orgDefaults.pn_discharge_diameter_mm,
+      storedSuction?.standard_pipe_id || '',
+      storedSuction?.diameter_mm || '',
+      storedDischarge?.standard_pipe_id || '',
+      storedDischarge?.diameter_mm || ''
+    ].join('|');
+
+    // If defaults exist and either no key was stored (legacy demo) or defaults key differs from current org defaults,
+    // refresh the demo network so the canvas reflects the current corporate/user defaults!
+    if (currentOrgKey !== '||||||||||||||||' && (!d.orgDefaultsKey || d.orgDefaultsKey !== currentOrgKey)) {
+      return false; // Triggers loadDemoNetwork() with current org defaults
+    }
   }
 
   state.nodes = d.nodes;
@@ -5012,6 +5057,25 @@ function showPipeProps(pipe) {
   setPipeDimensionMode(dimMode, false);
   populateStandardPipeFilters(pipe);
   updatePipeDetailsCard(pipe.props);
+
+  const roleTag = document.getElementById('pp-pipe-role-tag');
+  if (roleTag) {
+    const isSuction = pipe.id === 'P-1' || pipe.pipeRunId === 'Suction Pipe' || (pipe.props.label || '').toLowerCase().includes('suction');
+    const isDischarge = pipe.id === 'P-2' || pipe.id === 'P-3' || pipe.pipeRunId === 'Discharge Pipe' || (pipe.props.label || '').toLowerCase().includes('discharge');
+    if (isSuction) {
+      roleTag.textContent = 'Suction Leg (N-1 → N-2)';
+      roleTag.style.color = '#38bdf8';
+      roleTag.style.borderColor = 'rgba(56,189,248,0.4)';
+    } else if (isDischarge) {
+      roleTag.textContent = 'Discharge End (N-2 → N-4)';
+      roleTag.style.color = '#22c55e';
+      roleTag.style.borderColor = 'rgba(34,197,94,0.4)';
+    } else {
+      roleTag.textContent = 'Pipe Segment';
+      roleTag.style.color = '#94a3b8';
+      roleTag.style.borderColor = '#30363d';
+    }
+  }
 }
 
 function setVal(id, v) {
@@ -6997,6 +7061,22 @@ window.applyTransform = applyTransform;
 window.renderAll = renderAll;
 window.loadDemoNetwork = loadDemoNetwork;
 window.resetToDemo = resetToDemo;
+window.openDemoConfigModal = openDemoConfigModal;
+window.closeDemoConfigModal = closeDemoConfigModal;
+window.applyDemoConfigModal = applyDemoConfigModal;
+window.resetDemoConfigToFactory = resetDemoConfigToFactory;
+window.setPipeAsDefaultRole = setPipeAsDefaultRole;
+window.applySelectedPipeToAllDischarge = applySelectedPipeToAllDischarge;
+window.onDemoSuctionStdChange = onDemoSuctionStdChange;
+window.onDemoSuctionMatChange = onDemoSuctionMatChange;
+window.onDemoSuctionSchChange = onDemoSuctionSchChange;
+window.onDemoSuctionPipeChange = onDemoSuctionPipeChange;
+window.onDemoDischargeStdChange = onDemoDischargeStdChange;
+window.onDemoDischargeMatChange = onDemoDischargeMatChange;
+window.onDemoDischargeSchChange = onDemoDischargeSchChange;
+window.onDemoDischargePipeChange = onDemoDischargePipeChange;
+window.toggleDemoSuctionOverride = toggleDemoSuctionOverride;
+window.toggleDemoDischargeOverride = toggleDemoDischargeOverride;
 window.getHeadLossUnitLabel = getHeadLossUnitLabel;
 window.__pn_get_units = () => Object.assign({}, state.units);
 window.__pn_get_flow_m3h = () => {
@@ -7221,6 +7301,10 @@ function init() {
     } else {
       resetToDemo();
     }
+  });
+
+  document.getElementById('btn-demo-config')?.addEventListener('click', () => {
+    openDemoConfigModal();
   });
 
   document.getElementById('btn-clear')?.addEventListener('click', () => {
@@ -7987,6 +8071,149 @@ function init() {
  * pipe architecture with fittings as attributes.
  */
 function loadDemoNetwork() {
+  const orgDefaults = window.__PMP_PIPE_NETWORK_DEFAULTS || {};
+
+  // 1. Resolve Discharge Pipe defaults
+  const storedDischarge = getStoredDemoPipe('discharge');
+  let defDischarge = null;
+  if (storedDischarge && storedDischarge.standard_pipe_id && Array.isArray(STANDARD_PIPES)) {
+    const pMatch = STANDARD_PIPES.find(p => String(p.id) === String(storedDischarge.standard_pipe_id));
+    if (pMatch) {
+      defDischarge = {
+        ...defaultPipeProps('Discharge Pipe'),
+        dimension_mode: 'standard',
+        standard_pipe_id: pMatch.id,
+        standard: pMatch.standard,
+        schedule_sdr: pMatch.schedule_sdr,
+        nb_mm: pMatch.nb_mm,
+        nb_inch: pMatch.nb_inch,
+        od_mm: pMatch.od_mm,
+        wall_thickness_mm: pMatch.wall_thickness_mm,
+        id_mm: pMatch.id_mm,
+        diameter_mm: pMatch.id_mm,
+        pressure_rating: pMatch.pressure_rating,
+        material: pMatch.material_key || pMatch.material
+      };
+    }
+  }
+  if (!defDischarge && orgDefaults.pn_discharge_pipe_id && Array.isArray(STANDARD_PIPES)) {
+    const pMatch = STANDARD_PIPES.find(p => String(p.id) === String(orgDefaults.pn_discharge_pipe_id));
+    if (pMatch) {
+      defDischarge = {
+        ...defaultPipeProps('Discharge Pipe'),
+        dimension_mode: 'standard',
+        standard_pipe_id: pMatch.id,
+        standard: pMatch.standard,
+        schedule_sdr: pMatch.schedule_sdr,
+        nb_mm: pMatch.nb_mm,
+        nb_inch: pMatch.nb_inch,
+        od_mm: pMatch.od_mm,
+        wall_thickness_mm: pMatch.wall_thickness_mm,
+        id_mm: pMatch.id_mm,
+        diameter_mm: pMatch.id_mm,
+        pressure_rating: pMatch.pressure_rating,
+        material: pMatch.material_key || pMatch.material
+      };
+    }
+  }
+  if (!defDischarge) {
+    defDischarge = defaultPipeProps('Discharge Pipe');
+  }
+
+  // Roughness / Hazen overrides for discharge
+  const dRough = storedDischarge?.roughness_mm || orgDefaults.pn_discharge_roughness_mm || orgDefaults.pn_default_roughness_mm;
+  if (dRough) {
+    const r = parseFloat(dRough);
+    if (!isNaN(r) && r > 0) {
+      defDischarge.use_custom_roughness = true;
+      defDischarge.custom_roughness_mm = r;
+    }
+  }
+  const dHw = storedDischarge?.hw_c || orgDefaults.pn_discharge_hw_c || orgDefaults.pn_default_hw_c;
+  if (dHw) {
+    const c = parseFloat(dHw);
+    if (!isNaN(c) && c > 0) {
+      defDischarge.use_custom_hazen = true;
+      defDischarge.custom_hazen_c = c;
+    }
+  }
+
+  // 2. Resolve Suction Pipe defaults
+  const storedSuction = getStoredDemoPipe('suction');
+  let suctionPipe = null;
+  if (storedSuction && storedSuction.standard_pipe_id && Array.isArray(STANDARD_PIPES)) {
+    suctionPipe = STANDARD_PIPES.find(p => String(p.id) === String(storedSuction.standard_pipe_id));
+  }
+  if (!suctionPipe && orgDefaults.pn_suction_pipe_id && Array.isArray(STANDARD_PIPES)) {
+    suctionPipe = STANDARD_PIPES.find(p => String(p.id) === String(orgDefaults.pn_suction_pipe_id));
+  }
+  if (!suctionPipe && Array.isArray(STANDARD_PIPES) && STANDARD_PIPES.length > 0 && defDischarge.standard) {
+    // Sizing suction pipe fallback: try finding one standard size up in same standard/schedule for low suction velocity
+    const largerInFamily = STANDARD_PIPES.filter(p =>
+      p.standard === defDischarge.standard &&
+      p.schedule_sdr === defDischarge.schedule_sdr &&
+      (p.nb_mm || 0) > (defDischarge.nb_mm || 0)
+    ).sort((a, b) => (a.nb_mm || a.od_mm || 0) - (b.nb_mm || b.od_mm || 0));
+
+    if (largerInFamily.length > 0) {
+      suctionPipe = largerInFamily[0];
+    } else {
+      const largerInMat = STANDARD_PIPES.filter(p =>
+        (p.material_key === defDischarge.material || p.material === defDischarge.material) &&
+        (p.nb_mm || 0) > (defDischarge.nb_mm || 0)
+      ).sort((a, b) => (a.nb_mm || a.od_mm || 0) - (b.nb_mm || b.od_mm || 0));
+      if (largerInMat.length > 0) suctionPipe = largerInMat[0];
+    }
+  }
+
+  const suctionDia = suctionPipe
+    ? (suctionPipe.id_mm || (suctionPipe.od_mm - 2 * suctionPipe.wall_thickness_mm))
+    : (parseFloat(storedSuction?.diameter_mm || orgDefaults.pn_suction_diameter_mm) || defDischarge.diameter_mm);
+
+  const defSuction = {
+    ...defDischarge,
+    label: 'Suction Pipe',
+    dimension_mode: suctionPipe ? 'standard' : (storedSuction?.dimension_mode || defDischarge.dimension_mode),
+    standard_pipe_id: suctionPipe ? suctionPipe.id : (storedSuction?.standard_pipe_id || null),
+    standard: suctionPipe ? suctionPipe.standard : (storedSuction?.standard || defDischarge.standard),
+    schedule_sdr: suctionPipe ? suctionPipe.schedule_sdr : (storedSuction?.schedule_sdr || defDischarge.schedule_sdr),
+    nb_mm: suctionPipe ? suctionPipe.nb_mm : (storedSuction?.nb_mm || defDischarge.nb_mm),
+    nb_inch: suctionPipe ? suctionPipe.nb_inch : (storedSuction?.nb_inch || defDischarge.nb_inch),
+    od_mm: suctionPipe ? suctionPipe.od_mm : (storedSuction?.od_mm || defDischarge.od_mm),
+    wall_thickness_mm: suctionPipe ? suctionPipe.wall_thickness_mm : (storedSuction?.wall_thickness_mm || defDischarge.wall_thickness_mm),
+    id_mm: suctionDia,
+    diameter_mm: suctionDia,
+    pressure_rating: suctionPipe ? suctionPipe.pressure_rating : defDischarge.pressure_rating,
+    material: suctionPipe ? (suctionPipe.material_key || suctionPipe.material) : (storedSuction?.material || defDischarge.material),
+    length_m: parseFloat(storedSuction?.length_m || orgDefaults.pn_suction_length_m) || 4.0,
+    elev_change_m: parseFloat(storedSuction?.elev_change_m || orgDefaults.pn_suction_elev_change_m) || 0.0,
+    fittings: [],
+    routing: 'straight'
+  };
+
+  const sRough = storedSuction?.roughness_mm || orgDefaults.pn_suction_roughness_mm;
+  if (sRough) {
+    const r = parseFloat(sRough);
+    if (!isNaN(r) && r > 0) {
+      defSuction.use_custom_roughness = true;
+      defSuction.custom_roughness_mm = r;
+    }
+  }
+  const sHw = storedSuction?.hw_c || orgDefaults.pn_suction_hw_c;
+  if (sHw) {
+    const c = parseFloat(sHw);
+    if (!isNaN(c) && c > 0) {
+      defSuction.use_custom_hazen = true;
+      defSuction.custom_hazen_c = c;
+    }
+  }
+
+  // Lengths and elevations for discharge segments
+  const disch1Len = parseFloat(storedDischarge?.seg1_length_m) || 12.0;
+  const disch1Elev = parseFloat(storedDischarge?.seg1_elev_m) || 2.0;
+  const disch2Len = parseFloat(storedDischarge?.seg2_length_m) || parseFloat(storedDischarge?.length_m || orgDefaults.pn_discharge_length_m) || 20.0;
+  const disch2Elev = parseFloat(storedDischarge?.seg2_elev_m) || parseFloat(storedDischarge?.elev_change_m || orgDefaults.pn_discharge_elev_change_m) || 8.0;
+
   state.nodes = [
     {
       id: 'N-1', type: 'reservoir', x: 140, y: 220,
@@ -7998,11 +8225,11 @@ function loadDemoNetwork() {
     },
     {
       id: 'N-3', type: 'valve', x: 560, y: 220,
-      props: { label: 'Gate Valve', elevation_m: 2, fitting_key: 'gate_valve_open', quantity: 1 }
+      props: { label: 'Gate Valve', elevation_m: disch1Elev, fitting_key: 'gate_valve_open', quantity: 1 }
     },
     {
       id: 'N-4', type: 'discharge', x: 780, y: 220,
-      props: { label: 'Discharge', elevation_m: 10 }
+      props: { label: 'Discharge', elevation_m: disch1Elev + disch2Elev }
     },
   ];
 
@@ -8010,43 +8237,16 @@ function loadDemoNetwork() {
     {
       id: 'P-1', fromNodeId: 'N-1', toNodeId: 'N-2',
       pipeRunId: 'Suction Pipe',
-      props: {
-        label: 'Suction Pipe',
-        dimension_mode: 'standard',
-        standard: 'ASME B36.10M',
-        schedule_sdr: 'Sch 40 (STD)',
-        nb_mm: 125,
-        nb_inch: '5"',
-        od_mm: 141.3,
-        wall_thickness_mm: 6.55,
-        id_mm: 128.2,
-        pressure_rating: 'PN 63 bar (915 psi)',
-        diameter_mm: 128.2,
-        length_m: 4,
-        material: 'commercial_steel',
-        elev_change_m: 0,
-        fittings: [],
-        routing: 'straight'
-      }
+      props: defSuction
     },
     {
       id: 'P-2', fromNodeId: 'N-2', toNodeId: 'N-3',
       pipeRunId: 'Discharge Pipe',
       props: {
+        ...defDischarge,
         label: 'Discharge Pipe',
-        dimension_mode: 'standard',
-        standard: 'ASME B36.10M',
-        schedule_sdr: 'Sch 40 (STD)',
-        nb_mm: 100,
-        nb_inch: '4"',
-        od_mm: 114.3,
-        wall_thickness_mm: 6.02,
-        id_mm: 102.26,
-        pressure_rating: 'PN 79 bar (1145 psi)',
-        diameter_mm: 102.26,
-        length_m: 12,
-        material: 'commercial_steel',
-        elev_change_m: 2,
+        length_m: disch1Len,
+        elev_change_m: disch1Elev,
         fittings: [],
         routing: 'straight'
       }
@@ -8055,29 +8255,53 @@ function loadDemoNetwork() {
       id: 'P-3', fromNodeId: 'N-3', toNodeId: 'N-4',
       pipeRunId: 'Discharge Pipe',
       props: {
+        ...defDischarge,
         label: 'Discharge Pipe',
-        dimension_mode: 'standard',
-        standard: 'ASME B36.10M',
-        schedule_sdr: 'Sch 40 (STD)',
-        nb_mm: 100,
-        nb_inch: '4"',
-        od_mm: 114.3,
-        wall_thickness_mm: 6.02,
-        id_mm: 102.26,
-        pressure_rating: 'PN 79 bar (1145 psi)',
-        diameter_mm: 102.26,
-        length_m: 20,
-        material: 'commercial_steel',
-        elev_change_m: 8,
+        length_m: disch2Len,
+        elev_change_m: disch2Elev,
         fittings: [],
         routing: 'straight'
       }
     },
   ];
+
   state.nextId = 10;
   state.lastCalculation = null;
   state.pan = { x: 0, y: 0 };
   state.zoom = 1.0;
+
+  // Track the configuration signature
+  state.orgDefaultsKey = [
+    orgDefaults.pn_default_pipe_id,
+    orgDefaults.pn_default_standard,
+    orgDefaults.pn_default_material,
+    orgDefaults.pn_default_schedule_sdr,
+    orgDefaults.pn_default_nb_mm,
+    orgDefaults.pn_suction_pipe_id,
+    orgDefaults.pn_suction_standard,
+    orgDefaults.pn_suction_material,
+    orgDefaults.pn_suction_diameter_mm,
+    orgDefaults.pn_discharge_pipe_id,
+    orgDefaults.pn_discharge_standard,
+    orgDefaults.pn_discharge_material,
+    orgDefaults.pn_discharge_diameter_mm,
+    storedSuction?.standard_pipe_id || '',
+    storedSuction?.diameter_mm || '',
+    storedDischarge?.standard_pipe_id || '',
+    storedDischarge?.diameter_mm || ''
+  ].join('|');
+
+  // Set friction method and solver method from org defaults
+  if (orgDefaults.pn_friction_method) {
+    const fEl = document.getElementById('pn-friction-method');
+    if (fEl) fEl.value = orgDefaults.pn_friction_method;
+    try { localStorage.setItem('pmpro_calc_method', orgDefaults.pn_friction_method); } catch(e){}
+  }
+  if (orgDefaults.pn_solver_method) {
+    const sEl = document.getElementById('pn-solver-method');
+    if (sEl) sEl.value = orgDefaults.pn_solver_method;
+    try { localStorage.setItem('pmpro_solver_method', orgDefaults.pn_solver_method); } catch(e){}
+  }
   const flowEl = document.getElementById('pn-global-flow');
   if (flowEl) {
     const dispFlow = fromBaseSI(20, 'flow', state.units.flow || 'm3h');
@@ -8091,6 +8315,625 @@ function loadDemoNetwork() {
   renderAll();
   applyTransform();
   saveNetworkToStorage();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DEMO CONFIGURATION & DEFAULTS CONTROLLER (Suction & Discharge Ends)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function getStoredDemoPipe(role) {
+  try {
+    const raw = localStorage.getItem(`pmpro_demo_${role}_pipe`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') return parsed;
+    }
+  } catch (e) {}
+
+  const orgDefaults = window.__PMP_PIPE_NETWORK_DEFAULTS || {};
+  if (role === 'suction') {
+    if (orgDefaults.pn_suction_pipe_id || orgDefaults.pn_suction_standard || orgDefaults.pn_suction_diameter_mm) {
+      return {
+        dimension_mode: orgDefaults.pn_suction_pipe_id ? 'standard' : 'custom',
+        standard_pipe_id: orgDefaults.pn_suction_pipe_id ? parseInt(orgDefaults.pn_suction_pipe_id, 10) : null,
+        standard: orgDefaults.pn_suction_standard || 'ASME B36.10M',
+        material: orgDefaults.pn_suction_material || 'commercial_steel',
+        schedule_sdr: orgDefaults.pn_suction_schedule_sdr || 'Sch 40 (STD)',
+        nb_mm: parseInt(orgDefaults.pn_suction_nb_mm, 10) || 150,
+        diameter_mm: parseFloat(orgDefaults.pn_suction_diameter_mm) || 154.1,
+        roughness_mm: parseFloat(orgDefaults.pn_suction_roughness_mm) || 0.046,
+        hw_c: parseFloat(orgDefaults.pn_suction_hw_c) || 140,
+        length_m: parseFloat(orgDefaults.pn_suction_length_m) || 4.0,
+        elev_change_m: parseFloat(orgDefaults.pn_suction_elev_change_m) || 0.0
+      };
+    }
+  } else {
+    const pId = orgDefaults.pn_discharge_pipe_id || orgDefaults.pn_default_pipe_id;
+    if (pId || orgDefaults.pn_discharge_standard || orgDefaults.pn_default_standard) {
+      return {
+        dimension_mode: pId ? 'standard' : 'custom',
+        standard_pipe_id: pId ? parseInt(pId, 10) : null,
+        standard: orgDefaults.pn_discharge_standard || orgDefaults.pn_default_standard || 'ASME B36.10M',
+        material: orgDefaults.pn_discharge_material || orgDefaults.pn_default_material || 'commercial_steel',
+        schedule_sdr: orgDefaults.pn_discharge_schedule_sdr || orgDefaults.pn_default_schedule_sdr || 'Sch 40 (STD)',
+        nb_mm: parseInt(orgDefaults.pn_discharge_nb_mm || orgDefaults.pn_default_nb_mm, 10) || 100,
+        diameter_mm: parseFloat(orgDefaults.pn_discharge_diameter_mm || orgDefaults.pn_default_diameter_mm) || 102.3,
+        roughness_mm: parseFloat(orgDefaults.pn_discharge_roughness_mm || orgDefaults.pn_default_roughness_mm) || 0.046,
+        hw_c: parseFloat(orgDefaults.pn_discharge_hw_c || orgDefaults.pn_default_hw_c) || 140,
+        length_m: parseFloat(orgDefaults.pn_discharge_length_m || orgDefaults.pn_default_length_m) || 20.0,
+        elev_change_m: parseFloat(orgDefaults.pn_discharge_elev_change_m || orgDefaults.pn_default_elev_change_m) || 8.0,
+        seg1_length_m: 12.0,
+        seg1_elev_m: 2.0,
+        seg2_length_m: 20.0,
+        seg2_elev_m: 8.0
+      };
+    }
+  }
+  return null;
+}
+
+function openDemoConfigModal() {
+  const overlay = document.getElementById('demo-config-modal-overlay');
+  if (!overlay) return;
+
+  if (!Array.isArray(STANDARD_PIPES) || STANDARD_PIPES.length === 0) {
+    STANDARD_PIPES = EMBEDDED_STANDARD_PIPES;
+  }
+
+  // Populate cascading standard pipe controls for suction and discharge
+  populateDemoRoleCascade('suction');
+  populateDemoRoleCascade('discharge');
+
+  overlay.style.display = 'block';
+}
+
+function closeDemoConfigModal() {
+  const overlay = document.getElementById('demo-config-modal-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function populateDemoRoleCascade(role) {
+  const stored = getStoredDemoPipe(role);
+  const orgDefaults = window.__PMP_PIPE_NETWORK_DEFAULTS || {};
+
+  const catalog = Array.isArray(STANDARD_PIPES) && STANDARD_PIPES.length > 0 ? STANDARD_PIPES : EMBEDDED_STANDARD_PIPES;
+  const standards = Array.from(new Set(catalog.map(p => p.standard).filter(Boolean))).sort();
+
+  const stdSel = document.getElementById(`demo-${role}-std`);
+  const matSel = document.getElementById(`demo-${role}-mat`);
+  const schSel = document.getElementById(`demo-${role}-sch`);
+  const pipeSel = document.getElementById(`demo-${role}-pipe`);
+  if (!stdSel || !matSel || !schSel || !pipeSel) return;
+
+  // Target values
+  const defStd = stored?.standard || (role === 'suction' ? (orgDefaults.pn_suction_standard || 'ASME B36.10M') : (orgDefaults.pn_discharge_standard || orgDefaults.pn_default_standard || 'ASME B36.10M'));
+  const defMat = stored?.material || (role === 'suction' ? (orgDefaults.pn_suction_material || 'commercial_steel') : (orgDefaults.pn_discharge_material || orgDefaults.pn_default_material || 'commercial_steel'));
+  const defSch = stored?.schedule_sdr || (role === 'suction' ? (orgDefaults.pn_suction_schedule_sdr || 'Sch 40 (STD)') : (orgDefaults.pn_discharge_schedule_sdr || orgDefaults.pn_default_schedule_sdr || 'Sch 40 (STD)'));
+  const defPipeId = stored?.standard_pipe_id || (role === 'suction' ? orgDefaults.pn_suction_pipe_id : (orgDefaults.pn_discharge_pipe_id || orgDefaults.pn_default_pipe_id));
+
+  // 1. Standards
+  stdSel.innerHTML = '';
+  standards.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = s;
+    if (s === defStd) opt.selected = true;
+    stdSel.appendChild(opt);
+  });
+  if (stdSel.selectedIndex === -1 && stdSel.options.length > 0) stdSel.selectedIndex = 0;
+
+  // 2. Materials
+  populateDemoRoleMaterials(role, defMat, defSch, defPipeId);
+
+  // Set Length and Elevation inputs
+  if (role === 'suction') {
+    const lenIn = document.getElementById('demo-suction-len');
+    const elevIn = document.getElementById('demo-suction-elev');
+    if (lenIn) lenIn.value = stored?.length_m || orgDefaults.pn_suction_length_m || '4.0';
+    if (elevIn) elevIn.value = stored?.elev_change_m || orgDefaults.pn_suction_elev_change_m || '0.0';
+    const cDia = document.getElementById('demo-suction-custom-dia');
+    const cRough = document.getElementById('demo-suction-custom-rough');
+    const cHw = document.getElementById('demo-suction-custom-hw');
+    if (cDia) cDia.value = stored?.diameter_mm || orgDefaults.pn_suction_diameter_mm || '';
+    if (cRough) cRough.value = stored?.roughness_mm || orgDefaults.pn_suction_roughness_mm || '';
+    if (cHw) cHw.value = stored?.hw_c || orgDefaults.pn_suction_hw_c || '';
+  } else {
+    const disch1Len = document.getElementById('demo-disch1-len');
+    const disch1Elev = document.getElementById('demo-disch1-elev');
+    const disch2Len = document.getElementById('demo-disch2-len');
+    const disch2Elev = document.getElementById('demo-disch2-elev');
+    if (disch1Len) disch1Len.value = stored?.seg1_length_m || '12.0';
+    if (disch1Elev) disch1Elev.value = stored?.seg1_elev_m || '2.0';
+    if (disch2Len) disch2Len.value = stored?.seg2_length_m || stored?.length_m || orgDefaults.pn_discharge_length_m || orgDefaults.pn_default_length_m || '20.0';
+    if (disch2Elev) disch2Elev.value = stored?.seg2_elev_m || stored?.elev_change_m || orgDefaults.pn_discharge_elev_change_m || orgDefaults.pn_default_elev_change_m || '8.0';
+    const cDia = document.getElementById('demo-discharge-custom-dia');
+    const cRough = document.getElementById('demo-discharge-custom-rough');
+    const cHw = document.getElementById('demo-discharge-custom-hw');
+    if (cDia) cDia.value = stored?.diameter_mm || orgDefaults.pn_discharge_diameter_mm || orgDefaults.pn_default_diameter_mm || '';
+    if (cRough) cRough.value = stored?.roughness_mm || orgDefaults.pn_discharge_roughness_mm || orgDefaults.pn_default_roughness_mm || '';
+    if (cHw) cHw.value = stored?.hw_c || orgDefaults.pn_discharge_hw_c || orgDefaults.pn_default_hw_c || '';
+  }
+}
+
+function populateDemoRoleMaterials(role, targetMat, targetSch, targetPipeId) {
+  const std = document.getElementById(`demo-${role}-std`)?.value;
+  const matSel = document.getElementById(`demo-${role}-mat`);
+  if (!matSel) return;
+
+  const catalog = Array.isArray(STANDARD_PIPES) && STANDARD_PIPES.length > 0 ? STANDARD_PIPES : EMBEDDED_STANDARD_PIPES;
+  const filtered = catalog.filter(p => p.standard === std);
+  const materials = Array.from(new Set(filtered.map(p => p.material_key || p.material).filter(Boolean))).sort();
+
+  matSel.innerHTML = '';
+  materials.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = m.replace(/_/g, ' ').toUpperCase();
+    if (m === targetMat) opt.selected = true;
+    matSel.appendChild(opt);
+  });
+  if (matSel.selectedIndex === -1 && matSel.options.length > 0) matSel.selectedIndex = 0;
+
+  populateDemoRoleSchedules(role, targetSch, targetPipeId);
+}
+
+function populateDemoRoleSchedules(role, targetSch, targetPipeId) {
+  const std = document.getElementById(`demo-${role}-std`)?.value;
+  const mat = document.getElementById(`demo-${role}-mat`)?.value;
+  const schSel = document.getElementById(`demo-${role}-sch`);
+  if (!schSel) return;
+
+  const catalog = Array.isArray(STANDARD_PIPES) && STANDARD_PIPES.length > 0 ? STANDARD_PIPES : EMBEDDED_STANDARD_PIPES;
+  const filtered = catalog.filter(p => p.standard === std && (p.material_key === mat || p.material === mat));
+  const schedules = Array.from(new Set(filtered.map(p => p.schedule_sdr).filter(Boolean))).sort();
+
+  schSel.innerHTML = '';
+  schedules.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = s;
+    if (s === targetSch) opt.selected = true;
+    schSel.appendChild(opt);
+  });
+  if (schSel.selectedIndex === -1 && schSel.options.length > 0) schSel.selectedIndex = 0;
+
+  populateDemoRolePipeItems(role, targetPipeId);
+}
+
+function populateDemoRolePipeItems(role, targetPipeId) {
+  const std = document.getElementById(`demo-${role}-std`)?.value;
+  const mat = document.getElementById(`demo-${role}-mat`)?.value;
+  const sch = document.getElementById(`demo-${role}-sch`)?.value;
+  const pipeSel = document.getElementById(`demo-${role}-pipe`);
+  if (!pipeSel) return;
+
+  const catalog = Array.isArray(STANDARD_PIPES) && STANDARD_PIPES.length > 0 ? STANDARD_PIPES : EMBEDDED_STANDARD_PIPES;
+  const filtered = catalog.filter(p =>
+    p.standard === std &&
+    (p.material_key === mat || p.material === mat) &&
+    p.schedule_sdr === sch
+  ).sort((a, b) => (a.od_mm || a.nb_mm || 0) - (b.od_mm || b.nb_mm || 0));
+
+  pipeSel.innerHTML = '';
+  filtered.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    let label = '';
+    if (p.nb_inch && !String(p.nb_inch).includes('mm')) {
+      label = `${p.nb_inch} (DN${p.nb_mm}) • OD ${p.od_mm}mm → ID ${p.id_mm}mm`;
+    } else if (p.nb_mm) {
+      label = `DN${p.nb_mm} • OD ${p.od_mm}mm → ID ${p.id_mm}mm`;
+    } else {
+      label = `OD ${p.od_mm}mm → ID ${p.id_mm}mm`;
+    }
+    opt.textContent = label;
+    if (targetPipeId && String(p.id) === String(targetPipeId)) {
+      opt.selected = true;
+    }
+    pipeSel.appendChild(opt);
+  });
+
+  if (pipeSel.selectedIndex === -1 && pipeSel.options.length > 0) {
+    const preferredDN = role === 'suction' ? 150 : 100;
+    const match = filtered.find(p => p.nb_mm === preferredDN || (p.od_mm >= preferredDN && p.od_mm <= preferredDN + 30)) || filtered[0];
+    if (match) pipeSel.value = match.id;
+    else pipeSel.selectedIndex = 0;
+  }
+
+  const active = filtered.find(p => String(p.id) === String(pipeSel.value)) || filtered[0];
+  updateDemoRolePipePreview(role, active);
+}
+
+function updateDemoRolePipePreview(role, item) {
+  if (!item) return;
+  const odEl = document.getElementById(`demo-${role}-prev-od`);
+  const wallEl = document.getElementById(`demo-${role}-prev-wall`);
+  const idEl = document.getElementById(`demo-${role}-prev-id`);
+  const roughEl = document.getElementById(`demo-${role}-prev-rough`);
+  const hwEl = document.getElementById(`demo-${role}-prev-hw`);
+
+  const matKey = item.material_key || item.material || 'commercial_steel';
+  const rough = MATERIALS_LOOKUP?.[matKey] || 0.046;
+  const hw = HAZEN_WILLIAMS_C_LOOKUP?.[matKey] || 140;
+
+  if (odEl) odEl.textContent = item.od_mm ? `${item.od_mm} mm` : '—';
+  if (wallEl) wallEl.textContent = item.wall_thickness_mm ? `${item.wall_thickness_mm} mm` : '—';
+  if (idEl) idEl.textContent = item.id_mm ? `${item.id_mm} mm` : '—';
+  if (roughEl) roughEl.textContent = `${rough} mm`;
+  if (hwEl) hwEl.textContent = `${hw}`;
+
+  const cDia = document.getElementById(`demo-${role}-custom-dia`);
+  const cRough = document.getElementById(`demo-${role}-custom-rough`);
+  const cHw = document.getElementById(`demo-${role}-custom-hw`);
+  const isOverride = document.getElementById(`demo-${role}-override-chk`)?.checked;
+  if (!isOverride) {
+    if (cDia && item.id_mm) cDia.value = item.id_mm;
+    if (cRough) cRough.value = rough;
+    if (cHw) cHw.value = hw;
+  }
+}
+
+function onDemoSuctionStdChange(val) {
+  populateDemoRoleMaterials('suction');
+}
+function onDemoSuctionMatChange(val) {
+  populateDemoRoleSchedules('suction');
+}
+function onDemoSuctionSchChange(val) {
+  populateDemoRolePipeItems('suction');
+}
+function onDemoSuctionPipeChange(val) {
+  const item = STANDARD_PIPES.find(p => String(p.id) === String(val));
+  updateDemoRolePipePreview('suction', item);
+}
+
+function onDemoDischargeStdChange(val) {
+  populateDemoRoleMaterials('discharge');
+}
+function onDemoDischargeMatChange(val) {
+  populateDemoRoleSchedules('discharge');
+}
+function onDemoDischargeSchChange(val) {
+  populateDemoRolePipeItems('discharge');
+}
+function onDemoDischargePipeChange(val) {
+  const item = STANDARD_PIPES.find(p => String(p.id) === String(val));
+  updateDemoRolePipePreview('discharge', item);
+}
+
+function toggleDemoSuctionOverride(checked) {
+  const row = document.getElementById('demo-suction-override-row');
+  if (row) row.style.display = checked ? 'grid' : 'none';
+  if (!checked) {
+    const pipeId = document.getElementById('demo-suction-pipe')?.value;
+    const item = STANDARD_PIPES.find(p => String(p.id) === String(pipeId));
+    if (item) updateDemoRolePipePreview('suction', item);
+  }
+}
+
+function toggleDemoDischargeOverride(checked) {
+  const row = document.getElementById('demo-discharge-override-row');
+  if (row) row.style.display = checked ? 'grid' : 'none';
+  if (!checked) {
+    const pipeId = document.getElementById('demo-discharge-pipe')?.value;
+    const item = STANDARD_PIPES.find(p => String(p.id) === String(pipeId));
+    if (item) updateDemoRolePipePreview('discharge', item);
+  }
+}
+
+function applyDemoConfigModal(andSaveDefaults = false) {
+  const suctionPipeId = document.getElementById('demo-suction-pipe')?.value;
+  const dischargePipeId = document.getElementById('demo-discharge-pipe')?.value;
+  const sItem = STANDARD_PIPES.find(p => String(p.id) === String(suctionPipeId));
+  const dItem = STANDARD_PIPES.find(p => String(p.id) === String(dischargePipeId));
+
+  const sOverride = document.getElementById('demo-suction-override-chk')?.checked;
+  const dOverride = document.getElementById('demo-discharge-override-chk')?.checked;
+
+  const sLen = parseFloat(document.getElementById('demo-suction-len')?.value) || 4.0;
+  const sElev = parseFloat(document.getElementById('demo-suction-elev')?.value) || 0.0;
+  const sDia = sOverride ? (parseFloat(document.getElementById('demo-suction-custom-dia')?.value) || sItem?.id_mm || 154.1) : (sItem?.id_mm || 154.1);
+  const sRough = sOverride ? (parseFloat(document.getElementById('demo-suction-custom-rough')?.value) || 0.046) : (MATERIALS_LOOKUP?.[sItem?.material_key] || 0.046);
+  const sHw = sOverride ? (parseFloat(document.getElementById('demo-suction-custom-hw')?.value) || 140) : (HAZEN_WILLIAMS_C_LOOKUP?.[sItem?.material_key] || 140);
+
+  const dLen1 = parseFloat(document.getElementById('demo-disch1-len')?.value) || 12.0;
+  const dElev1 = parseFloat(document.getElementById('demo-disch1-elev')?.value) || 2.0;
+  const dLen2 = parseFloat(document.getElementById('demo-disch2-len')?.value) || 20.0;
+  const dElev2 = parseFloat(document.getElementById('demo-disch2-elev')?.value) || 8.0;
+  const dDia = dOverride ? (parseFloat(document.getElementById('demo-discharge-custom-dia')?.value) || dItem?.id_mm || 102.3) : (dItem?.id_mm || 102.3);
+  const dRough = dOverride ? (parseFloat(document.getElementById('demo-discharge-custom-rough')?.value) || 0.046) : (MATERIALS_LOOKUP?.[dItem?.material_key] || 0.046);
+  const dHw = dOverride ? (parseFloat(document.getElementById('demo-discharge-custom-hw')?.value) || 140) : (HAZEN_WILLIAMS_C_LOOKUP?.[dItem?.material_key] || 140);
+
+  const suctionSpec = {
+    dimension_mode: sOverride ? 'custom' : 'standard',
+    standard_pipe_id: sItem ? sItem.id : null,
+    standard: sItem ? sItem.standard : 'ASME B36.10M',
+    material: sItem ? (sItem.material_key || sItem.material) : 'commercial_steel',
+    schedule_sdr: sItem ? sItem.schedule_sdr : 'Sch 40 (STD)',
+    nb_mm: sItem ? sItem.nb_mm : 150,
+    nb_inch: sItem ? sItem.nb_inch : '6"',
+    od_mm: sItem ? sItem.od_mm : 168.3,
+    wall_thickness_mm: sItem ? sItem.wall_thickness_mm : 7.11,
+    id_mm: sDia,
+    diameter_mm: sDia,
+    pressure_rating: sItem ? sItem.pressure_rating : '',
+    length_m: sLen,
+    elev_change_m: sElev,
+    roughness_mm: sRough,
+    hw_c: sHw,
+    use_custom_roughness: sOverride,
+    custom_roughness_mm: sRough,
+    use_custom_hazen: sOverride,
+    custom_hazen_c: sHw
+  };
+
+  const dischargeSpec = {
+    dimension_mode: dOverride ? 'custom' : 'standard',
+    standard_pipe_id: dItem ? dItem.id : null,
+    standard: dItem ? dItem.standard : 'ASME B36.10M',
+    material: dItem ? (dItem.material_key || dItem.material) : 'commercial_steel',
+    schedule_sdr: dItem ? dItem.schedule_sdr : 'Sch 40 (STD)',
+    nb_mm: dItem ? dItem.nb_mm : 100,
+    nb_inch: dItem ? dItem.nb_inch : '4"',
+    od_mm: dItem ? dItem.od_mm : 114.3,
+    wall_thickness_mm: dItem ? dItem.wall_thickness_mm : 6.02,
+    id_mm: dDia,
+    diameter_mm: dDia,
+    pressure_rating: dItem ? dItem.pressure_rating : '',
+    length_m: dLen1 + dLen2,
+    elev_change_m: dElev1 + dElev2,
+    roughness_mm: dRough,
+    hw_c: dHw,
+    seg1_length_m: dLen1,
+    seg1_elev_m: dElev1,
+    seg2_length_m: dLen2,
+    seg2_elev_m: dElev2,
+    use_custom_roughness: dOverride,
+    custom_roughness_mm: dRough,
+    use_custom_hazen: dOverride,
+    custom_hazen_c: dHw
+  };
+
+  if (andSaveDefaults) {
+    try {
+      localStorage.setItem('pmpro_demo_suction_pipe', JSON.stringify(suctionSpec));
+      localStorage.setItem('pmpro_demo_discharge_pipe', JSON.stringify(dischargeSpec));
+    } catch(e) {}
+
+    window.__PMP_PIPE_NETWORK_DEFAULTS = window.__PMP_PIPE_NETWORK_DEFAULTS || {};
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_standard = suctionSpec.standard;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_material = suctionSpec.material;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_schedule_sdr = suctionSpec.schedule_sdr;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_pipe_id = suctionSpec.standard_pipe_id;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_nb_mm = suctionSpec.nb_mm;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_diameter_mm = suctionSpec.diameter_mm;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_length_m = suctionSpec.length_m;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_elev_change_m = suctionSpec.elev_change_m;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_roughness_mm = suctionSpec.roughness_mm;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_hw_c = suctionSpec.hw_c;
+
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_standard = dischargeSpec.standard;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_material = dischargeSpec.material;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_schedule_sdr = dischargeSpec.schedule_sdr;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_pipe_id = dischargeSpec.standard_pipe_id;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_nb_mm = dischargeSpec.nb_mm;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_diameter_mm = dischargeSpec.diameter_mm;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_length_m = dischargeSpec.length_m;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_elev_change_m = dischargeSpec.elev_change_m;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_roughness_mm = dischargeSpec.roughness_mm;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_hw_c = dischargeSpec.hw_c;
+
+    // Sync fallback generic
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_default_pipe_id = dischargeSpec.standard_pipe_id;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_default_standard = dischargeSpec.standard;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_default_material = dischargeSpec.material;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_default_schedule_sdr = dischargeSpec.schedule_sdr;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_default_diameter_mm = dischargeSpec.diameter_mm;
+
+    fetch('/api/pipe-network/demo-defaults', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(window.__PMP_PIPE_NETWORK_DEFAULTS)
+    }).catch(e => console.warn('Could not persist demo defaults to server:', e));
+  }
+
+  // Update canvas pipes: Suction
+  state.pipes.forEach(p => {
+    if (p.id === 'P-1' || p.pipeRunId === 'Suction Pipe' || (p.props.label || '').toLowerCase().includes('suction')) {
+      p.pipeRunId = 'Suction Pipe';
+      Object.assign(p.props, suctionSpec);
+    }
+  });
+
+  // Update canvas pipes: Discharge end (P-2, P-3)
+  state.pipes.forEach(p => {
+    if (p.id === 'P-2') {
+      p.pipeRunId = 'Discharge Pipe';
+      Object.assign(p.props, {
+        ...dischargeSpec,
+        label: 'Discharge Pipe',
+        length_m: dLen1,
+        elev_change_m: dElev1
+      });
+    } else if (p.id === 'P-3' || (p.pipeRunId === 'Discharge Pipe' && p.id !== 'P-1')) {
+      p.pipeRunId = 'Discharge Pipe';
+      Object.assign(p.props, {
+        ...dischargeSpec,
+        label: 'Discharge Pipe',
+        length_m: dLen2,
+        elev_change_m: dElev2
+      });
+    }
+  });
+
+  // Reconcile node elevations if gate valve and discharge point exist
+  const n3 = state.nodes.find(n => n.id === 'N-3');
+  const n4 = state.nodes.find(n => n.id === 'N-4');
+  if (n3) n3.props.elevation_m = dElev1;
+  if (n4) n4.props.elevation_m = dElev1 + dElev2;
+
+  reconcilePipeRuns();
+  reconcileAllPipesElevation();
+  saveNetworkToStorage();
+  renderAll();
+  closeDemoConfigModal();
+
+  if (andSaveDefaults) {
+    toast('Demo network updated and saved as Default Suction & Discharge pipes!', 'success');
+  } else {
+    toast('Demo suction and discharge pipes applied to canvas!', 'success');
+  }
+}
+
+function resetDemoConfigToFactory() {
+  try {
+    localStorage.removeItem('pmpro_demo_suction_pipe');
+    localStorage.removeItem('pmpro_demo_discharge_pipe');
+  } catch(e) {}
+  populateDemoRoleCascade('suction');
+  populateDemoRoleCascade('discharge');
+  loadDemoNetwork();
+  closeDemoConfigModal();
+  toast('Demo network reset to factory defaults (DN150 suction, DN100 discharge).', 'info');
+}
+
+function setPipeAsDefaultRole(role) {
+  if (!state.selected || state.selected.kind !== 'pipe') {
+    toast('Please click on a pipe in the canvas first.', 'warning');
+    return;
+  }
+  const pipe = state.pipes.find(p => p.id === state.selected.id);
+  if (!pipe) return;
+
+  const props = pipe.props || {};
+  const isCustom = props.dimension_mode === 'custom';
+  const demoSpec = {
+    dimension_mode: props.dimension_mode || 'standard',
+    standard_pipe_id: props.standard_pipe_id || null,
+    standard: props.standard || 'ASME B36.10M',
+    material: props.material || props.material_key || 'commercial_steel',
+    schedule_sdr: props.schedule_sdr || 'Sch 40 (STD)',
+    nb_mm: props.nb_mm || 100,
+    diameter_mm: props.diameter_mm || props.id_mm || 100,
+    length_m: props.length_m || 10.0,
+    elev_change_m: props.elev_change_m || 0.0,
+    roughness_mm: props.use_custom_roughness ? props.custom_roughness_mm : (props.roughness_mm || 0.046),
+    hw_c: props.use_custom_hazen ? props.custom_hazen_c : (props.hw_c || 140),
+    use_custom_roughness: Boolean(props.use_custom_roughness),
+    use_custom_hazen: Boolean(props.use_custom_hazen)
+  };
+
+  try {
+    localStorage.setItem(`pmpro_demo_${role}_pipe`, JSON.stringify(demoSpec));
+  } catch (e) {
+    console.warn('localStorage save failed:', e);
+  }
+
+  // Update window.__PMP_PIPE_NETWORK_DEFAULTS in memory
+  window.__PMP_PIPE_NETWORK_DEFAULTS = window.__PMP_PIPE_NETWORK_DEFAULTS || {};
+  if (role === 'suction') {
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_standard = demoSpec.standard;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_material = demoSpec.material;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_schedule_sdr = demoSpec.schedule_sdr;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_pipe_id = demoSpec.standard_pipe_id;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_nb_mm = demoSpec.nb_mm;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_diameter_mm = demoSpec.diameter_mm;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_roughness_mm = demoSpec.roughness_mm;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_suction_hw_c = demoSpec.hw_c;
+  } else {
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_standard = demoSpec.standard;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_material = demoSpec.material;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_schedule_sdr = demoSpec.schedule_sdr;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_pipe_id = demoSpec.standard_pipe_id;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_nb_mm = demoSpec.nb_mm;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_diameter_mm = demoSpec.diameter_mm;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_roughness_mm = demoSpec.roughness_mm;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_discharge_hw_c = demoSpec.hw_c;
+
+    // Sync to fallback pn_default_*
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_default_pipe_id = demoSpec.standard_pipe_id;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_default_standard = demoSpec.standard;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_default_material = demoSpec.material;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_default_schedule_sdr = demoSpec.schedule_sdr;
+    window.__PMP_PIPE_NETWORK_DEFAULTS.pn_default_diameter_mm = demoSpec.diameter_mm;
+  }
+
+  // Persist to backend server endpoint
+  fetch('/api/pipe-network/demo-defaults', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(window.__PMP_PIPE_NETWORK_DEFAULTS)
+  }).catch(e => console.warn('Could not persist demo defaults to server:', e));
+
+  if (role === 'discharge') {
+    applySelectedPipeToAllDischarge(false);
+    toast(`Saved as Default Discharge Pipe & updated all discharge end pipes!`, 'success');
+  } else {
+    state.pipes.forEach(p => {
+      if (p.id === 'P-1' || p.pipeRunId === 'Suction Pipe' || (p.props.label || '').toLowerCase().includes('suction')) {
+        p.pipeRunId = 'Suction Pipe';
+        Object.assign(p.props, {
+          dimension_mode: demoSpec.dimension_mode,
+          standard_pipe_id: demoSpec.standard_pipe_id,
+          standard: demoSpec.standard,
+          material: demoSpec.material,
+          schedule_sdr: demoSpec.schedule_sdr,
+          nb_mm: demoSpec.nb_mm,
+          diameter_mm: demoSpec.diameter_mm,
+          id_mm: demoSpec.diameter_mm,
+          roughness_mm: demoSpec.roughness_mm,
+          hw_c: demoSpec.hw_c
+        });
+      }
+    });
+    reconcilePipeRuns();
+    saveNetworkToStorage();
+    renderAll();
+    toast(`Saved as Default Suction Pipe & updated suction leg!`, 'success');
+  }
+}
+
+function applySelectedPipeToAllDischarge(showUserToast = true) {
+  if (!state.selected || state.selected.kind !== 'pipe') {
+    if (showUserToast) toast('Please select a pipe first.', 'warning');
+    return;
+  }
+  const sourcePipe = state.pipes.find(p => p.id === state.selected.id);
+  if (!sourcePipe) return;
+
+  const sp = sourcePipe.props;
+  let count = 0;
+  state.pipes.forEach(p => {
+    const isDischarge = p.id === 'P-2' || p.id === 'P-3' || p.pipeRunId === 'Discharge Pipe' || (p.props.label || '').toLowerCase().includes('discharge');
+    if (isDischarge) {
+      p.pipeRunId = 'Discharge Pipe';
+      p.props.dimension_mode = sp.dimension_mode || 'standard';
+      p.props.standard_pipe_id = sp.standard_pipe_id;
+      p.props.standard = sp.standard;
+      p.props.material = sp.material;
+      p.props.material_key = sp.material_key || sp.material;
+      p.props.schedule_sdr = sp.schedule_sdr;
+      p.props.nb_mm = sp.nb_mm;
+      p.props.nb_inch = sp.nb_inch;
+      p.props.od_mm = sp.od_mm;
+      p.props.wall_thickness_mm = sp.wall_thickness_mm;
+      p.props.id_mm = sp.id_mm || sp.diameter_mm;
+      p.props.diameter_mm = sp.diameter_mm || sp.id_mm;
+      p.props.pressure_rating = sp.pressure_rating;
+      p.props.use_custom_roughness = sp.use_custom_roughness;
+      p.props.custom_roughness_mm = sp.custom_roughness_mm;
+      p.props.use_custom_hazen = sp.use_custom_hazen;
+      p.props.custom_hazen_c = sp.custom_hazen_c;
+      count++;
+    }
+  });
+
+  reconcilePipeRuns();
+  saveNetworkToStorage();
+  renderAll();
+  if (showUserToast) {
+    toast(`Applied specification across ${count} discharge end pipes!`, 'success');
+  }
 }
 
 // ============================================================================
@@ -8194,7 +9037,7 @@ const HYDRAULIC_HELP_TOPICS = {
               </tr>
               <tr style="border-bottom:1px solid #21262d;">
                 <td style="padding:4px 8px;font-weight:600;color:#38bdf8;">HDPE / PE100 Polyethylene</td>
-                <td style="padding:4px 8px;font-family:monospace;">0.007</td>
+                <td style="padding:4px 8px;font-family:monospace;">0.0015</td>
                 <td style="padding:4px 8px;font-family:monospace;">140</td>
                 <td style="padding:4px 8px;color:#94a3b8;">Standard C = 140 for continuous extruded PE100</td>
               </tr>

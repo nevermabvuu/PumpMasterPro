@@ -206,7 +206,7 @@
           </span>
         </div>
 
-        <form action="{{ url_for('organisations.save_selection_defaults') }}" method="POST" class="p-4 space-y-4">
+        <form id="orgSelectionDefaultsForm" action="{{ url_for('organisations.save_selection_defaults') }}" method="POST" class="p-4 space-y-4" novalidate>
           <p class="text-xs text-[#8b949e]">
             Set corporate engineering units and initial input parameters for the <strong class="text-white">Pump Selection</strong> suite (<code class="text-[#58a6ff]">/pump-selection</code>) and <strong class="text-white">Pipe Network</strong> designer (<code class="text-[#a78bfa]">/pipe-network</code>).
             When engineers load or reset calculations, these corporate defaults automatically pre-fill all forms.
@@ -313,7 +313,7 @@
 
               <div>
                 <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Temperature (°C)</label>
-                <input type="number" step="0.5" name="temperature_c" value="{{ sd.temperature_c or '20' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#3fb950]">
+                <input type="number" step="any" name="temperature_c" value="{{ sd.temperature_c or '20' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#3fb950]">
               </div>
 
               <div>
@@ -335,7 +335,7 @@
 
               <div>
                 <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Fluid pH</label>
-                <input type="number" step="0.1" min="0" max="14" name="fluid_ph" value="{{ sd.fluid_ph or '7.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#3fb950]">
+                <input type="number" step="any" min="0" max="14" name="fluid_ph" value="{{ sd.fluid_ph or '7.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#3fb950]">
               </div>
 
               <div>
@@ -377,7 +377,7 @@
                     <input type="checkbox" name="cb_L" value="1" id="org_cb_L" class="org-slurry-cb accent-[#58a6ff] w-4 h-4 cursor-pointer" data-param="L" {% if sd.cb_L == '1' or (not sd and True) %}checked{% endif %}>
                     <span>Liquid SG (S<sub>l</sub>)</span>
                   </label>
-                  <input type="number" step="0.01" min="0.1" name="sg_l" id="org_sg_l" value="{{ sd.sg_l or '1.00' }}" class="org-slurry-input w-28 bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-[#58a6ff]" {% if sd.cb_L == '0' %}readonly style="opacity:0.75;"{% endif %}>
+                  <input type="number" step="any" min="0.1" name="sg_l" id="org_sg_l" value="{{ sd.sg_l or '1.00' }}" class="org-slurry-input w-28 bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-[#58a6ff]" {% if sd.cb_L == '0' %}readonly style="opacity:0.75;"{% endif %}>
                 </div>
 
                 <!-- Solid SG (Ss) -->
@@ -386,7 +386,7 @@
                     <input type="checkbox" name="cb_S" value="1" id="org_cb_S" class="org-slurry-cb accent-[#58a6ff] w-4 h-4 cursor-pointer" data-param="S" {% if sd.cb_S == '1' or (not sd and True) %}checked{% endif %}>
                     <span>Solid SG (S<sub>s</sub>)</span>
                   </label>
-                  <input type="number" step="0.01" min="0.1" name="sg_s" id="org_sg_s" value="{{ sd.sg_s or '2.65' }}" class="org-slurry-input w-28 bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-[#58a6ff]" {% if sd.cb_S == '0' %}readonly style="opacity:0.75;"{% endif %}>
+                  <input type="number" step="any" min="0.1" name="sg_s" id="org_sg_s" value="{{ sd.sg_s or '2.65' }}" class="org-slurry-input w-28 bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-[#58a6ff]" {% if sd.cb_S == '0' %}readonly style="opacity:0.75;"{% endif %}>
                 </div>
 
                 <!-- Slurry Mixture SG (Sm) -->
@@ -395,7 +395,7 @@
                     <input type="checkbox" name="cb_M" value="1" id="org_cb_M" class="org-slurry-cb accent-[#58a6ff] w-4 h-4 cursor-pointer" data-param="M" {% if sd.cb_M == '1' %}checked{% endif %}>
                     <span>Slurry SG (S<sub>m</sub>)</span>
                   </label>
-                  <input type="number" step="0.01" min="0.1" name="sg_m" id="org_sg_m" value="{{ sd.sg_m or '1.33' }}" class="org-slurry-input w-28 bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-[#58a6ff]" {% if sd.cb_M != '1' %}readonly style="opacity:0.75;"{% endif %}>
+                  <input type="number" step="any" min="0.1" name="sg_m" id="org_sg_m" value="{{ sd.sg_m or '1.33' }}" class="org-slurry-input w-28 bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-[#58a6ff]" {% if sd.cb_M != '1' %}readonly style="opacity:0.75;"{% endif %}>
                 </div>
 
                 <!-- Volumetric Concentration (Cv) -->
@@ -404,7 +404,7 @@
                     <input type="checkbox" name="cb_Cv" value="1" id="org_cb_Cv" class="org-slurry-cb accent-[#58a6ff] w-4 h-4 cursor-pointer" data-param="Cv" {% if sd.cb_Cv == '1' or (not sd and True) %}checked{% endif %}>
                     <span>Concentration by Volume C<sub>v</sub> (vol. frac)</span>
                   </label>
-                  <input type="number" step="0.001" min="0" max="0.8" name="slurry_cv" id="org_slurry_cv" value="{{ sd.slurry_cv or '0.200' }}" class="org-slurry-input w-28 bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-[#58a6ff]" {% if sd.cb_Cv == '0' %}readonly style="opacity:0.75;"{% endif %}>
+                  <input type="number" step="any" min="0" max="0.8" name="slurry_cv" id="org_slurry_cv" value="{{ sd.slurry_cv or '0.200' }}" class="org-slurry-input w-28 bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-[#58a6ff]" {% if sd.cb_Cv == '0' %}readonly style="opacity:0.75;"{% endif %}>
                 </div>
 
                 <!-- Weight Concentration (Cw) -->
@@ -413,7 +413,7 @@
                     <input type="checkbox" name="cb_Cw" value="1" id="org_cb_Cw" class="org-slurry-cb accent-[#58a6ff] w-4 h-4 cursor-pointer" data-param="Cw" {% if sd.cb_Cw == '1' %}checked{% endif %}>
                     <span>Concentration by Weight C<sub>w</sub> (wt. frac)</span>
                   </label>
-                  <input type="number" step="0.001" min="0" max="0.95" name="slurry_cw" id="org_slurry_cw" value="{{ sd.slurry_cw or '0.400' }}" class="org-slurry-input w-28 bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-[#58a6ff]" {% if sd.cb_Cw != '1' %}readonly style="opacity:0.75;"{% endif %}>
+                  <input type="number" step="any" min="0" max="0.95" name="slurry_cw" id="org_slurry_cw" value="{{ sd.slurry_cw or '0.400' }}" class="org-slurry-input w-28 bg-[#0d1117] border border-[#30363d] rounded px-2.5 py-1 text-xs text-white font-mono text-right focus:outline-none focus:border-[#58a6ff]" {% if sd.cb_Cw != '1' %}readonly style="opacity:0.75;"{% endif %}>
                 </div>
 
                 <!-- Particle Size d50 & Unit -->
@@ -422,7 +422,7 @@
                     Particle Size d<sub>50</sub> (Median Diameter)
                   </label>
                   <div class="flex rounded overflow-hidden border border-[#30363d] bg-[#0d1117] w-44">
-                    <input type="number" step="0.01" name="slurry_d50" value="{{ sd.slurry_d50 or '0.3' }}" class="w-full bg-transparent px-2.5 py-1 text-xs text-white font-mono focus:outline-none text-right">
+                    <input type="number" step="any" name="slurry_d50" value="{{ sd.slurry_d50 or '0.3' }}" class="w-full bg-transparent px-2.5 py-1 text-xs text-white font-mono focus:outline-none text-right">
                     <select name="unit_d50" class="bg-[#161b22] text-[#3fb950] border-l border-[#30363d] px-2 py-0.5 text-xs font-mono focus:outline-none">
                       {% for k, u in units_tables.size.items() %}
                         <option value="{{ k }}" {% if sd.unit_d50 == k %}selected{% endif %}>{{ u.name }}</option>
@@ -459,14 +459,14 @@
 
               <div>
                 <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Manual Pump RPM</label>
-                <input type="number" step="10" name="manual_pump_speed_rpm" value="{{ sd.manual_pump_speed_rpm or '' }}" placeholder="Optional (e.g. 1450)" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#f0883e]">
+                <input type="number" step="any" name="manual_pump_speed_rpm" value="{{ sd.manual_pump_speed_rpm or '' }}" placeholder="Optional (e.g. 1450)" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#f0883e]">
               </div>
 
               <div>
                 <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">VSD Freq Range (Min / Max Hz)</label>
                 <div class="grid grid-cols-2 gap-2">
-                  <input type="number" step="0.5" name="vsd_f_min" value="{{ sd.vsd_f_min or '30.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1.5 text-xs text-white font-mono" placeholder="Min (30.0)">
-                  <input type="number" step="0.5" name="vsd_f_max" value="{{ sd.vsd_f_max or '50.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1.5 text-xs text-white font-mono" placeholder="Max (50.0)">
+                  <input type="number" step="any" name="vsd_f_min" value="{{ sd.vsd_f_min or '30.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1.5 text-xs text-white font-mono" placeholder="Min (30.0)">
+                  <input type="number" step="any" name="vsd_f_max" value="{{ sd.vsd_f_max or '50.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2 py-1.5 text-xs text-white font-mono" placeholder="Max (50.0)">
                 </div>
               </div>
 
@@ -538,7 +538,7 @@
               <div>
                 <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Safety Margin (%)</label>
                 <div class="flex items-center gap-1.5">
-                  <input type="number" step="0.5" min="0" max="100" name="motor_margin_pct" value="{{ sd.motor_margin_pct or '15.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono text-right focus:outline-none focus:border-[#f0883e]">
+                  <input type="number" step="any" min="0" max="100" name="motor_margin_pct" value="{{ sd.motor_margin_pct or '15.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono text-right focus:outline-none focus:border-[#f0883e]">
                   <span class="text-xs text-[#8b949e] font-mono">%</span>
                 </div>
               </div>
@@ -595,7 +595,7 @@
               <div>
                 <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Default Segment Length (m)</label>
                 <div class="flex items-center gap-1.5">
-                  <input type="number" step="0.5" min="0.1" name="pn_default_length_m" id="pn_default_length_m" value="{{ sd.pn_default_length_m or '50.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#a78bfa]">
+                  <input type="number" step="any" min="0.1" name="pn_default_length_m" id="pn_default_length_m" value="{{ sd.pn_default_length_m or '50.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#a78bfa]">
                   <span class="text-xs text-[#8b949e] font-mono">m</span>
                 </div>
               </div>
@@ -604,122 +604,263 @@
               <div>
                 <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Default Elevation Change (Δz)</label>
                 <div class="flex items-center gap-1.5">
-                  <input type="number" step="0.5" name="pn_default_elev_change_m" id="pn_default_elev_change_m" value="{{ sd.pn_default_elev_change_m or '10.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#a78bfa]">
+                  <input type="number" step="any" name="pn_default_elev_change_m" id="pn_default_elev_change_m" value="{{ sd.pn_default_elev_change_m or '10.0' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#a78bfa]">
                   <span class="text-xs text-[#8b949e] font-mono">m</span>
                 </div>
               </div>
             </div>
 
-            <!-- Row 2: Standard Pipe Catalog, SDR, and Dimensions Selector -->
-            <div class="mt-3 p-3.5 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-3">
-              <div class="flex items-center justify-between border-b border-[#30363d]/60 pb-2">
-                <span class="text-xs font-bold text-[#38bdf8] flex items-center gap-1.5">
-                  <i class="bi bi-rulers"></i> Corporate Standard Pipe Specification
-                </span>
-                <span class="text-[11px] text-[#8b949e]">
-                  Internal diameter, wall roughness (ε), and Hazen-Williams (C) are automatically derived from the standard pipe
-                </span>
-              </div>
+            <!-- Row 2: Default Suction Pipe & Default Discharge Pipes Specification -->
+            <div class="mt-4 space-y-4">
+              
+              <!-- 2A: DEFAULT SUCTION PIPE SPECIFICATION -->
+              <div class="p-3.5 bg-[#0d1117] border border-[#38bdf8]/40 border-l-4 border-l-[#38bdf8] rounded-lg space-y-3">
+                <div class="flex items-center justify-between border-b border-[#30363d]/60 pb-2 flex-wrap gap-2">
+                  <span class="text-xs font-bold text-[#38bdf8] flex items-center gap-1.5">
+                    <i class="bi bi-box-arrow-in-right"></i> Default Suction Pipe Specification (Inlet to Pump, N-1 &rarr; N-2)
+                  </span>
+                  <span class="text-[11px] text-[#8b949e]">
+                    Configures default suction line dimensions for demo networks and system calculations
+                  </span>
+                </div>
 
-              <!-- Cascading Standard, Material, Schedule / SDR, and Pipe Size -->
-              <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <!-- 1. Standard Family -->
-                <div>
-                  <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
-                    <i class="bi bi-journal-bookmark text-[#38bdf8] mr-1"></i>1. Standard
+                <!-- Cascading Standard, Material, Schedule / SDR, and Pipe Size -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <!-- 1. Standard Family -->
+                  <div>
+                    <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
+                      <i class="bi bi-journal-bookmark text-[#38bdf8] mr-1"></i>1. Standard
+                    </label>
+                    <select name="pn_suction_standard" id="pn_suction_standard" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8]" onchange="onOrgPipeChange('suction', 'std', this.value)">
+                      <!-- Populated dynamically via JS -->
+                    </select>
+                  </div>
+
+                  <!-- 2. Material -->
+                  <div>
+                    <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
+                      <i class="bi bi-box-seam text-[#58a6ff] mr-1"></i>2. Material
+                    </label>
+                    <select name="pn_suction_material" id="pn_suction_material" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8]" onchange="onOrgPipeChange('suction', 'mat', this.value)">
+                      <!-- Populated dynamically via JS -->
+                    </select>
+                  </div>
+
+                  <!-- 3. Schedule / SDR -->
+                  <div>
+                    <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
+                      <i class="bi bi-layers text-[#a78bfa] mr-1"></i>3. Schedule / SDR
+                    </label>
+                    <select name="pn_suction_schedule_sdr" id="pn_suction_schedule_sdr" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8]" onchange="onOrgPipeChange('suction', 'sch', this.value)">
+                      <!-- Populated dynamically via JS -->
+                    </select>
+                  </div>
+
+                  <!-- 4. Nominal Size (DN / NB) / Catalog Item -->
+                  <div>
+                    <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
+                      <i class="bi bi-arrows-expand text-[#22c55e] mr-1"></i>4. Nominal Size (DN / NB)
+                    </label>
+                    <select name="pn_suction_pipe_id" id="pn_suction_pipe_id" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8]" onchange="onOrgPipeChange('suction', 'pipe', this.value)">
+                      <!-- Populated dynamically via JS -->
+                    </select>
+                    <input type="hidden" name="pn_suction_nb_mm" id="pn_suction_nb_mm" value="{{ sd.pn_suction_nb_mm or '150' }}">
+                  </div>
+                </div>
+
+                <!-- Live Derived Specifications Grid -->
+                <div id="org-suction-preview-card" class="grid grid-cols-2 md:grid-cols-5 gap-2.5 pt-1">
+                  <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5 text-center">
+                    <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Outside Dia (OD)</div>
+                    <div id="org-suction-prev-od" class="text-sm font-extrabold text-[#38bdf8] font-mono mt-0.5">&mdash;</div>
+                  </div>
+                  <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5 text-center">
+                    <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Wall Thickness (t)</div>
+                    <div id="org-suction-prev-wall" class="text-sm font-extrabold text-[#facc15] font-mono mt-0.5">&mdash;</div>
+                  </div>
+                  <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5 text-center">
+                    <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Inside Dia (ID)</div>
+                    <div id="org-suction-prev-id" class="text-sm font-extrabold text-[#22c55e] font-mono mt-0.5">&mdash;</div>
+                  </div>
+                  <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5 text-center">
+                    <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Roughness (&epsilon;)</div>
+                    <div id="org-suction-prev-rough" class="text-sm font-extrabold text-[#e6edf3] font-mono mt-0.5">&mdash;</div>
+                  </div>
+                  <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5 text-center">
+                    <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Hazen-Williams (C)</div>
+                    <div id="org-suction-prev-hw" class="text-sm font-extrabold text-[#a78bfa] font-mono mt-0.5">&mdash;</div>
+                  </div>
+                </div>
+
+                <!-- Length, Elevation, & Override Bar -->
+                <div class="pt-2 border-t border-[#30363d]/40 flex items-center justify-between flex-wrap gap-2">
+                  <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-1.5">
+                      <label class="text-[11px] text-[#8b949e]">Default Length:</label>
+                      <input type="number" step="any" min="0.1" name="pn_suction_length_m" id="pn_suction_length_m" value="{{ sd.pn_suction_length_m or '4.0' }}" class="w-20 bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white font-mono focus:outline-none focus:border-[#38bdf8]">
+                      <span class="text-xs text-[#8b949e]">m</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <label class="text-[11px] text-[#8b949e]">Default &Delta;z:</label>
+                      <input type="number" step="any" name="pn_suction_elev_change_m" id="pn_suction_elev_change_m" value="{{ sd.pn_suction_elev_change_m or '0.0' }}" class="w-20 bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white font-mono focus:outline-none focus:border-[#38bdf8]">
+                      <span class="text-xs text-[#8b949e]">m</span>
+                    </div>
+                  </div>
+                  <label class="flex items-center gap-2 cursor-pointer text-[11px] text-[#8b949e] hover:text-[#c9d1d9] transition-colors">
+                    <input type="checkbox" id="org_pn_suction_manual_override" class="accent-[#38bdf8] rounded" onchange="toggleOrgRoleManualOverride('suction', this.checked)">
+                    <span>Manual Override (ID, &epsilon;, C)</span>
                   </label>
-                  <select name="pn_default_standard" id="pn_default_standard" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8]" onchange="onOrgPipeStandardChange(this.value)">
-                    <!-- Populated dynamically via JS -->
-                  </select>
                 </div>
 
-                <!-- 2. Material -->
-                <div>
-                  <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
-                    <i class="bi bi-box-seam text-[#58a6ff] mr-1"></i>2. Material
+                <div id="org-pipe-suction-manual-fields" class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2" style="display:none;">
+                  <div>
+                    <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Internal Diameter (mm)</label>
+                    <input type="number" step="any" min="1" name="pn_suction_diameter_mm" id="pn_suction_diameter_mm" value="{{ sd.pn_suction_diameter_mm or '154.1' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#38bdf8]">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Pipe Roughness &epsilon; (mm)</label>
+                    <input type="number" step="any" min="0.0001" name="pn_suction_roughness_mm" id="pn_suction_roughness_mm" value="{{ sd.pn_suction_roughness_mm or '0.046' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#38bdf8]">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Hazen-Williams C Coefficient</label>
+                    <input type="number" step="any" min="10" max="200" name="pn_suction_hw_c" id="pn_suction_hw_c" value="{{ sd.pn_suction_hw_c or '140' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#38bdf8]">
+                  </div>
+                </div>
+              </div>
+
+              <!-- 2B: DEFAULT DISCHARGE PIPES SPECIFICATION -->
+              <div class="p-3.5 bg-[#0d1117] border border-[#22c55e]/40 border-l-4 border-l-[#22c55e] rounded-lg space-y-3">
+                <div class="flex items-center justify-between border-b border-[#30363d]/60 pb-2 flex-wrap gap-2">
+                  <span class="text-xs font-bold text-[#22c55e] flex items-center gap-1.5">
+                    <i class="bi bi-box-arrow-right"></i> Default Discharge Pipes Specification (Pipes in Discharge End, N-2 &rarr; N-4)
+                  </span>
+                  <span class="text-[11px] text-[#8b949e]">
+                    Configures default discharge line dimensions for demo networks and pipeline calculation models
+                  </span>
+                </div>
+
+                <!-- Cascading Standard, Material, Schedule / SDR, and Pipe Size -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <!-- 1. Standard Family -->
+                  <div>
+                    <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
+                      <i class="bi bi-journal-bookmark text-[#38bdf8] mr-1"></i>1. Standard
+                    </label>
+                    <select name="pn_discharge_standard" id="pn_discharge_standard" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8]" onchange="onOrgPipeChange('discharge', 'std', this.value)">
+                      <!-- Populated dynamically via JS -->
+                    </select>
+                  </div>
+
+                  <!-- 2. Material -->
+                  <div>
+                    <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
+                      <i class="bi bi-box-seam text-[#58a6ff] mr-1"></i>2. Material
+                    </label>
+                    <select name="pn_discharge_material" id="pn_discharge_material" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8]" onchange="onOrgPipeChange('discharge', 'mat', this.value)">
+                      <!-- Populated dynamically via JS -->
+                    </select>
+                  </div>
+
+                  <!-- 3. Schedule / SDR -->
+                  <div>
+                    <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
+                      <i class="bi bi-layers text-[#a78bfa] mr-1"></i>3. Schedule / SDR
+                    </label>
+                    <select name="pn_discharge_schedule_sdr" id="pn_discharge_schedule_sdr" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8]" onchange="onOrgPipeChange('discharge', 'sch', this.value)">
+                      <!-- Populated dynamically via JS -->
+                    </select>
+                  </div>
+
+                  <!-- 4. Nominal Size (DN / NB) / Catalog Item -->
+                  <div>
+                    <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
+                      <i class="bi bi-arrows-expand text-[#22c55e] mr-1"></i>4. Nominal Size (DN / NB)
+                    </label>
+                    <select name="pn_discharge_pipe_id" id="pn_discharge_pipe_id" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8]" onchange="onOrgPipeChange('discharge', 'pipe', this.value)">
+                      <!-- Populated dynamically via JS -->
+                    </select>
+                    <input type="hidden" name="pn_discharge_nb_mm" id="pn_discharge_nb_mm" value="{{ sd.pn_discharge_nb_mm or sd.pn_default_nb_mm or '100' }}">
+                  </div>
+                </div>
+
+                <!-- Live Derived Specifications Grid -->
+                <div id="org-discharge-preview-card" class="grid grid-cols-2 md:grid-cols-5 gap-2.5 pt-1">
+                  <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5 text-center">
+                    <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Outside Dia (OD)</div>
+                    <div id="org-discharge-prev-od" class="text-sm font-extrabold text-[#38bdf8] font-mono mt-0.5">&mdash;</div>
+                  </div>
+                  <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5 text-center">
+                    <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Wall Thickness (t)</div>
+                    <div id="org-discharge-prev-wall" class="text-sm font-extrabold text-[#facc15] font-mono mt-0.5">&mdash;</div>
+                  </div>
+                  <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5 text-center">
+                    <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Inside Dia (ID)</div>
+                    <div id="org-discharge-prev-id" class="text-sm font-extrabold text-[#22c55e] font-mono mt-0.5">&mdash;</div>
+                  </div>
+                  <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5 text-center">
+                    <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Roughness (&epsilon;)</div>
+                    <div id="org-discharge-prev-rough" class="text-sm font-extrabold text-[#e6edf3] font-mono mt-0.5">&mdash;</div>
+                  </div>
+                  <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5 text-center">
+                    <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Hazen-Williams (C)</div>
+                    <div id="org-discharge-prev-hw" class="text-sm font-extrabold text-[#a78bfa] font-mono mt-0.5">&mdash;</div>
+                  </div>
+                </div>
+
+                <!-- Length, Elevation, & Override Bar -->
+                <div class="pt-2 border-t border-[#30363d]/40 flex items-center justify-between flex-wrap gap-2">
+                  <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-1.5">
+                      <label class="text-[11px] text-[#8b949e]">Default Length:</label>
+                      <input type="number" step="any" min="0.1" name="pn_discharge_length_m" id="pn_discharge_length_m" value="{{ sd.pn_discharge_length_m or sd.pn_default_length_m or '20.0' }}" class="w-20 bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white font-mono focus:outline-none focus:border-[#38bdf8]">
+                      <span class="text-xs text-[#8b949e]">m</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <label class="text-[11px] text-[#8b949e]">Default &Delta;z:</label>
+                      <input type="number" step="any" name="pn_discharge_elev_change_m" id="pn_discharge_elev_change_m" value="{{ sd.pn_discharge_elev_change_m or sd.pn_default_elev_change_m or '8.0' }}" class="w-20 bg-[#161b22] border border-[#30363d] rounded px-2 py-1 text-xs text-white font-mono focus:outline-none focus:border-[#38bdf8]">
+                      <span class="text-xs text-[#8b949e]">m</span>
+                    </div>
+                  </div>
+                  <label class="flex items-center gap-2 cursor-pointer text-[11px] text-[#8b949e] hover:text-[#c9d1d9] transition-colors">
+                    <input type="checkbox" id="org_pn_discharge_manual_override" class="accent-[#38bdf8] rounded" onchange="toggleOrgRoleManualOverride('discharge', this.checked)">
+                    <span>Manual Override (ID, &epsilon;, C)</span>
                   </label>
-                  <select name="pn_default_material" id="pn_default_material" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8]" onchange="onOrgPipeMaterialChange(this.value)">
-                    <!-- Populated dynamically via JS -->
-                  </select>
                 </div>
 
-                <!-- 3. Schedule / SDR -->
-                <div>
-                  <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
-                    <i class="bi bi-layers text-[#a78bfa] mr-1"></i>3. Schedule / SDR
-                  </label>
-                  <select name="pn_default_schedule_sdr" id="pn_default_schedule_sdr" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8]" onchange="onOrgPipeScheduleChange(this.value)">
-                    <!-- Populated dynamically via JS -->
-                  </select>
+                <div id="org-pipe-discharge-manual-fields" class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2" style="display:none;">
+                  <div>
+                    <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Internal Diameter (mm)</label>
+                    <input type="number" step="any" min="1" name="pn_discharge_diameter_mm" id="pn_discharge_diameter_mm" value="{{ sd.pn_discharge_diameter_mm or sd.pn_default_diameter_mm or '102.3' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#38bdf8]">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Pipe Roughness &epsilon; (mm)</label>
+                    <input type="number" step="any" min="0.0001" name="pn_discharge_roughness_mm" id="pn_discharge_roughness_mm" value="{{ sd.pn_discharge_roughness_mm or sd.pn_default_roughness_mm or '0.046' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#38bdf8]">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Hazen-Williams C Coefficient</label>
+                    <input type="number" step="any" min="10" max="200" name="pn_discharge_hw_c" id="pn_discharge_hw_c" value="{{ sd.pn_discharge_hw_c or sd.pn_default_hw_c or '140' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#38bdf8]">
+                  </div>
                 </div>
 
-                <!-- 4. Nominal Size (DN / NB) / Catalog Item -->
-                <div>
-                  <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">
-                    <i class="bi bi-arrows-expand text-[#22c55e] mr-1"></i>4. Nominal Size (DN / NB)
-                  </label>
-                  <select name="pn_default_pipe_id" id="pn_default_pipe_id" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#38bdf8]" onchange="onOrgPipeItemSelect(this.value)">
-                    <!-- Populated dynamically via JS -->
-                  </select>
-                  <input type="hidden" name="pn_default_nb_mm" id="pn_default_nb_mm" value="{{ sd.pn_default_nb_mm or '100' }}">
-                </div>
+                <!-- Hidden inputs for backward compatibility with pn_default_* -->
+                <input type="hidden" name="pn_default_standard" id="pn_default_standard" value="{{ sd.pn_default_standard or sd.pn_discharge_standard or 'ASME B36.10M' }}">
+                <input type="hidden" name="pn_default_material" id="pn_default_material" value="{{ sd.pn_default_material or sd.pn_discharge_material or 'commercial_steel' }}">
+                <input type="hidden" name="pn_default_schedule_sdr" id="pn_default_schedule_sdr" value="{{ sd.pn_default_schedule_sdr or sd.pn_discharge_schedule_sdr or 'Sch 40 (STD)' }}">
+                <input type="hidden" name="pn_default_pipe_id" id="pn_default_pipe_id" value="{{ sd.pn_default_pipe_id or sd.pn_discharge_pipe_id or '' }}">
+                <input type="hidden" name="pn_default_nb_mm" id="pn_default_nb_mm" value="{{ sd.pn_default_nb_mm or sd.pn_discharge_nb_mm or '100' }}">
+                <input type="hidden" name="pn_default_diameter_mm" id="pn_default_diameter_mm" value="{{ sd.pn_default_diameter_mm or sd.pn_discharge_diameter_mm or '102.3' }}">
+                <input type="hidden" name="pn_default_length_m" id="pn_default_length_m" value="{{ sd.pn_default_length_m or sd.pn_discharge_length_m or '10.0' }}">
+                <input type="hidden" name="pn_default_roughness_mm" id="pn_default_roughness_mm" value="{{ sd.pn_default_roughness_mm or sd.pn_discharge_roughness_mm or '0.046' }}">
+                <input type="hidden" name="pn_default_hw_c" id="pn_default_hw_c" value="{{ sd.pn_default_hw_c or sd.pn_discharge_hw_c or '140' }}">
               </div>
 
-              <!-- Live Derived Specifications Grid -->
-              <div id="org-pipe-preview-card" class="grid grid-cols-2 md:grid-cols-5 gap-2.5 pt-1">
-                <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5">
-                  <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Outside Dia (OD)</div>
-                  <div id="org-pipe-prev-od" class="text-sm font-extrabold text-[#38bdf8] font-mono mt-0.5">—</div>
-                </div>
-                <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5">
-                  <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Wall Thickness (t)</div>
-                  <div id="org-pipe-prev-wall" class="text-sm font-extrabold text-[#facc15] font-mono mt-0.5">—</div>
-                </div>
-                <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5">
-                  <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Inside Dia (ID)</div>
-                  <div id="org-pipe-prev-id" class="text-sm font-extrabold text-[#22c55e] font-mono mt-0.5">—</div>
-                </div>
-                <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5">
-                  <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Roughness (ε)</div>
-                  <div id="org-pipe-prev-rough" class="text-sm font-extrabold text-[#e6edf3] font-mono mt-0.5">—</div>
-                </div>
-                <div class="bg-[#161b22] border border-[#30363d] rounded-lg p-2.5">
-                  <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider">Hazen-Williams (C)</div>
-                  <div id="org-pipe-prev-hw" class="text-sm font-extrabold text-[#a78bfa] font-mono mt-0.5">—</div>
-                </div>
-              </div>
-
-              <!-- Manual Override Toggle & Detail Bar -->
-              <div class="pt-2 border-t border-[#30363d]/40 flex items-center justify-between">
-                <label class="flex items-center gap-2 cursor-pointer text-[11px] text-[#8b949e] hover:text-[#c9d1d9] transition-colors">
-                  <input type="checkbox" id="org_pn_manual_override" class="accent-[#38bdf8] rounded" onchange="toggleOrgManualOverride(this.checked)">
-                  <span>Allow manual override of Diameter, Roughness &amp; Hazen-Williams</span>
-                </label>
-                <span class="text-[10px] text-[#64748b] font-mono" id="org-pipe-pressure-rating">Standard Catalog Sizing</span>
-              </div>
-
-              <!-- Manual Override Inputs (Auto-populated and synchronized from standard pipe) -->
-              <div id="org-pipe-manual-fields" class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2" style="display:none;">
-                <div>
-                  <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Internal Diameter (mm)</label>
-                  <input type="number" step="0.1" min="1" name="pn_default_diameter_mm" id="pn_default_diameter_mm" value="{{ sd.pn_default_diameter_mm or '102.3' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#38bdf8]">
-                </div>
-                <div>
-                  <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Pipe Roughness ε (mm)</label>
-                  <input type="number" step="0.001" min="0.0001" name="pn_default_roughness_mm" id="pn_default_roughness_mm" value="{{ sd.pn_default_roughness_mm or '0.046' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#38bdf8]">
-                </div>
-                <div>
-                  <label class="block text-[11px] font-semibold text-[#c9d1d9] mb-1">Hazen-Williams C Coefficient</label>
-                  <input type="number" step="1" min="10" max="200" name="pn_default_hw_c" id="pn_default_hw_c" value="{{ sd.pn_default_hw_c or '140' }}" class="w-full bg-[#161b22] border border-[#30363d] rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#38bdf8]">
-                </div>
-              </div>
             </div>
           </div>
           </fieldset>
 
           <div class="pt-2 flex justify-end">
             {% if can_edit_org %}
-            <button type="submit" class="px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
+            <button type="submit" id="btn-save-selection-defaults" class="px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
               <i class="bi bi-check-lg"></i> Save Selection &amp; Pipe Network Defaults
             </button>
             {% else %}
@@ -2090,26 +2231,90 @@
   // ORGANISATION STANDARD PIPE DEFAULTS CASCADING CONTROLLER
   // ─────────────────────────────────────────────────────────────────────────
   const orgStandardPipes = {{ standard_pipes_json | default('[]', true) | safe }};
+  const dbMaterialsList = {{ materials_json | default('[]', true) | safe }};
 
-  const orgMaterialsLookup = {
-    'commercial_steel': { roughness: 0.046, hw_c: 140, label: 'Commercial Steel' },
-    'stainless_steel':  { roughness: 0.015, hw_c: 150, label: 'Stainless Steel' },
-    'hdpe':             { roughness: 0.007, hw_c: 150, label: 'HDPE / PE100' },
+  const orgMaterialsLookup = {};
+
+  // Dynamically load all materials, roughness factors, and Hazen-Williams coefficients from the database
+  if (Array.isArray(dbMaterialsList) && dbMaterialsList.length > 0) {
+    dbMaterialsList.forEach(m => {
+      orgMaterialsLookup[m.key] = {
+        roughness: m.roughness_mm,
+        hw_c: m.hazen_williams_c || 140,
+        label: m.label || m.key
+      };
+    });
+  }
+
+  // Fallback defaults for any material key not in the database table
+  const fallbackMaterials = {
+    'commercial_steel': { roughness: 0.046,  hw_c: 120, label: 'Commercial Steel' },
+    'stainless_steel':  { roughness: 0.015,  hw_c: 140, label: 'Stainless Steel' },
+    'hdpe':             { roughness: 0.0015, hw_c: 140, label: 'HDPE / PE100' },
     'pvc':              { roughness: 0.0015, hw_c: 150, label: 'uPVC / PVC-U' },
-    'ductile_iron':     { roughness: 0.12,  hw_c: 130, label: 'Ductile Iron' },
-    'copper':           { roughness: 0.0015, hw_c: 150, label: 'Copper / Brass' },
-    'cast_iron':        { roughness: 0.26,  hw_c: 100, label: 'Cast Iron' },
-    'galvanised_steel': { roughness: 0.15,  hw_c: 120, label: 'Galvanised Steel' },
-    'concrete':         { roughness: 1.0,   hw_c: 120, label: 'Concrete' }
+    'ductile_iron':     { roughness: 0.12,   hw_c: 130, label: 'Ductile Iron' },
+    'copper':           { roughness: 0.0015, hw_c: 140, label: 'Copper / Brass' },
+    'cast_iron':        { roughness: 0.26,   hw_c: 100, label: 'Cast Iron' },
+    'galvanised_steel': { roughness: 0.15,   hw_c: 120, label: 'Galvanised Steel' },
+    'concrete':         { roughness: 1.0,    hw_c: 120, label: 'Concrete' }
+  };
+  Object.keys(fallbackMaterials).forEach(k => {
+    if (!orgMaterialsLookup[k]) {
+      orgMaterialsLookup[k] = fallbackMaterials[k];
+    }
+  });
+
+  const orgPipeRoles = {
+    suction: {
+      stdSelId: 'pn_suction_standard',
+      matSelId: 'pn_suction_material',
+      schSelId: 'pn_suction_schedule_sdr',
+      pipeSelId: 'pn_suction_pipe_id',
+      nbInId: 'pn_suction_nb_mm',
+      diaInId: 'pn_suction_diameter_mm',
+      roughInId: 'pn_suction_roughness_mm',
+      hwInId: 'pn_suction_hw_c',
+      manualChkId: 'org_pn_suction_manual_override',
+      manualFieldsId: 'org-pipe-suction-manual-fields',
+      prevOdId: 'org-suction-prev-od',
+      prevWallId: 'org-suction-prev-wall',
+      prevIdId: 'org-suction-prev-id',
+      prevRoughId: 'org-suction-prev-rough',
+      prevHwId: 'org-suction-prev-hw',
+      selectedStd: "{{ sd.pn_suction_standard or 'ASME B36.10M' }}",
+      selectedMat: "{{ sd.pn_suction_material or 'commercial_steel' }}",
+      selectedSch: "{{ sd.pn_suction_schedule_sdr or 'Sch 40 (STD)' }}",
+      selectedPipeId: "{{ sd.pn_suction_pipe_id or '' }}",
+      defaultDN: 150
+    },
+    discharge: {
+      stdSelId: 'pn_discharge_standard',
+      matSelId: 'pn_discharge_material',
+      schSelId: 'pn_discharge_schedule_sdr',
+      pipeSelId: 'pn_discharge_pipe_id',
+      nbInId: 'pn_discharge_nb_mm',
+      diaInId: 'pn_discharge_diameter_mm',
+      roughInId: 'pn_discharge_roughness_mm',
+      hwInId: 'pn_discharge_hw_c',
+      manualChkId: 'org_pn_discharge_manual_override',
+      manualFieldsId: 'org-pipe-discharge-manual-fields',
+      prevOdId: 'org-discharge-prev-od',
+      prevWallId: 'org-discharge-prev-wall',
+      prevIdId: 'org-discharge-prev-id',
+      prevRoughId: 'org-discharge-prev-rough',
+      prevHwId: 'org-discharge-prev-hw',
+      selectedStd: "{{ sd.pn_discharge_standard or sd.pn_default_standard or 'ASME B36.10M' }}",
+      selectedMat: "{{ sd.pn_discharge_material or sd.pn_default_material or 'commercial_steel' }}",
+      selectedSch: "{{ sd.pn_discharge_schedule_sdr or sd.pn_default_schedule_sdr or 'Sch 40 (STD)' }}",
+      selectedPipeId: "{{ sd.pn_discharge_pipe_id or sd.pn_default_pipe_id or '' }}",
+      defaultDN: 100
+    }
   };
 
-  let selectedOrgStd = "{{ sd.pn_default_standard or 'ASME B36.10M' }}";
-  let selectedOrgMat = "{{ sd.pn_default_material or 'commercial_steel' }}";
-  let selectedOrgSch = "{{ sd.pn_default_schedule_sdr or 'Sch 40 (STD)' }}";
-  let selectedOrgPipeId = "{{ sd.pn_default_pipe_id or '' }}";
-
-  function populateOrgStandards() {
-    const stdSel = document.getElementById('pn_default_standard');
+  function populateRoleStandards(role) {
+    const cfg = orgPipeRoles[role];
+    if (!cfg) return;
+    const stdSel = document.getElementById(cfg.stdSelId);
     if (!stdSel) return;
     const standards = Array.from(new Set(orgStandardPipes.map(p => p.standard).filter(Boolean))).sort();
     stdSel.innerHTML = '';
@@ -2117,19 +2322,21 @@
       const opt = document.createElement('option');
       opt.value = std;
       opt.textContent = std;
-      if (std === selectedOrgStd) opt.selected = true;
+      if (std === cfg.selectedStd) opt.selected = true;
       stdSel.appendChild(opt);
     });
     if (stdSel.selectedIndex === -1 && stdSel.options.length > 0) {
       stdSel.selectedIndex = 0;
-      selectedOrgStd = stdSel.value;
+      cfg.selectedStd = stdSel.value;
     }
   }
 
-  function populateOrgMaterials() {
-    const matSel = document.getElementById('pn_default_material');
+  function populateRoleMaterials(role) {
+    const cfg = orgPipeRoles[role];
+    if (!cfg) return;
+    const matSel = document.getElementById(cfg.matSelId);
     if (!matSel) return;
-    const std = document.getElementById('pn_default_standard')?.value || selectedOrgStd;
+    const std = document.getElementById(cfg.stdSelId)?.value || cfg.selectedStd;
     const filtered = orgStandardPipes.filter(p => p.standard === std);
     const materials = Array.from(new Set(filtered.map(p => p.material_key || p.material).filter(Boolean))).sort();
 
@@ -2139,20 +2346,22 @@
       const opt = document.createElement('option');
       opt.value = matKey;
       opt.textContent = `${info.label} (ε = ${info.roughness !== undefined ? info.roughness + 'mm' : '—'})`;
-      if (matKey === selectedOrgMat) opt.selected = true;
+      if (matKey === cfg.selectedMat) opt.selected = true;
       matSel.appendChild(opt);
     });
     if (matSel.selectedIndex === -1 && matSel.options.length > 0) {
       matSel.selectedIndex = 0;
-      selectedOrgMat = matSel.value;
+      cfg.selectedMat = matSel.value;
     }
   }
 
-  function populateOrgSchedules() {
-    const schSel = document.getElementById('pn_default_schedule_sdr');
+  function populateRoleSchedules(role) {
+    const cfg = orgPipeRoles[role];
+    if (!cfg) return;
+    const schSel = document.getElementById(cfg.schSelId);
     if (!schSel) return;
-    const std = document.getElementById('pn_default_standard')?.value || selectedOrgStd;
-    const mat = document.getElementById('pn_default_material')?.value || selectedOrgMat;
+    const std = document.getElementById(cfg.stdSelId)?.value || cfg.selectedStd;
+    const mat = document.getElementById(cfg.matSelId)?.value || cfg.selectedMat;
 
     const filtered = orgStandardPipes.filter(p => {
       const matchStd = (p.standard === std);
@@ -2166,21 +2375,23 @@
       const opt = document.createElement('option');
       opt.value = sch;
       opt.textContent = sch;
-      if (sch === selectedOrgSch) opt.selected = true;
+      if (sch === cfg.selectedSch) opt.selected = true;
       schSel.appendChild(opt);
     });
     if (schSel.selectedIndex === -1 && schSel.options.length > 0) {
       schSel.selectedIndex = 0;
-      selectedOrgSch = schSel.value;
+      cfg.selectedSch = schSel.value;
     }
   }
 
-  function populateOrgPipeItems() {
-    const pipeSel = document.getElementById('pn_default_pipe_id');
+  function populateRolePipeItems(role) {
+    const cfg = orgPipeRoles[role];
+    if (!cfg) return;
+    const pipeSel = document.getElementById(cfg.pipeSelId);
     if (!pipeSel) return;
-    const std = document.getElementById('pn_default_standard')?.value || selectedOrgStd;
-    const mat = document.getElementById('pn_default_material')?.value || selectedOrgMat;
-    const sch = document.getElementById('pn_default_schedule_sdr')?.value || selectedOrgSch;
+    const std = document.getElementById(cfg.stdSelId)?.value || cfg.selectedStd;
+    const mat = document.getElementById(cfg.matSelId)?.value || cfg.selectedMat;
+    const sch = document.getElementById(cfg.schSelId)?.value || cfg.selectedSch;
 
     const filtered = orgStandardPipes.filter(p => {
       const matchStd = (p.standard === std);
@@ -2202,14 +2413,15 @@
         label = `OD ${p.od_mm}mm, t=${p.wall_thickness_mm}mm → ID ${p.id_mm}mm`;
       }
       opt.textContent = label;
-      if (String(p.id) === String(selectedOrgPipeId)) {
+      if (String(p.id) === String(cfg.selectedPipeId)) {
         opt.selected = true;
       }
       pipeSel.appendChild(opt);
     });
 
     if (pipeSel.selectedIndex === -1 && pipeSel.options.length > 0) {
-      const defaultMatch = filtered.find(p => p.nb_mm === 100 || (p.od_mm >= 110 && p.od_mm <= 125)) || filtered[0];
+      const targetDN = cfg.defaultDN || 100;
+      const defaultMatch = filtered.find(p => p.nb_mm === targetDN || (p.od_mm >= targetDN && p.od_mm <= targetDN + 30)) || filtered[0];
       if (defaultMatch) {
         pipeSel.value = defaultMatch.id;
       } else {
@@ -2218,17 +2430,18 @@
     }
 
     const activePipe = filtered.find(p => String(p.id) === String(pipeSel.value)) || filtered[0];
-    updateOrgPipePreview(activePipe);
+    updateRolePipePreview(role, activePipe);
   }
 
-  function updateOrgPipePreview(item) {
-    if (!item) return;
-    const odEl = document.getElementById('org-pipe-prev-od');
-    const wallEl = document.getElementById('org-pipe-prev-wall');
-    const idEl = document.getElementById('org-pipe-prev-id');
-    const roughEl = document.getElementById('org-pipe-prev-rough');
-    const hwEl = document.getElementById('org-pipe-prev-hw');
-    const ratingEl = document.getElementById('org-pipe-pressure-rating');
+  function updateRolePipePreview(role, item) {
+    const cfg = orgPipeRoles[role];
+    if (!cfg || !item) return;
+
+    const odEl = document.getElementById(cfg.prevOdId);
+    const wallEl = document.getElementById(cfg.prevWallId);
+    const idEl = document.getElementById(cfg.prevIdId);
+    const roughEl = document.getElementById(cfg.prevRoughId);
+    const hwEl = document.getElementById(cfg.prevHwId);
 
     const matInfo = orgMaterialsLookup[item.material_key] || { roughness: 0.046, hw_c: 140 };
 
@@ -2237,64 +2450,85 @@
     if (idEl) idEl.textContent = item.id_mm ? `${item.id_mm} mm` : '—';
     if (roughEl) roughEl.textContent = `${matInfo.roughness} mm`;
     if (hwEl) hwEl.textContent = `${matInfo.hw_c}`;
-    if (ratingEl) ratingEl.textContent = item.pressure_rating || `${item.standard} • ${item.schedule_sdr}`;
 
-    const diaIn = document.getElementById('pn_default_diameter_mm');
-    const roughIn = document.getElementById('pn_default_roughness_mm');
-    const hwIn = document.getElementById('pn_default_hw_c');
-    const nbIn = document.getElementById('pn_default_nb_mm');
+    const diaIn = document.getElementById(cfg.diaInId);
+    const roughIn = document.getElementById(cfg.roughInId);
+    const hwIn = document.getElementById(cfg.hwInId);
+    const nbIn = document.getElementById(cfg.nbInId);
 
-    const isManual = document.getElementById('org_pn_manual_override')?.checked;
+    const isManual = document.getElementById(cfg.manualChkId)?.checked;
     if (!isManual) {
       if (diaIn && item.id_mm) diaIn.value = item.id_mm;
       if (roughIn) roughIn.value = matInfo.roughness;
       if (hwIn) hwIn.value = matInfo.hw_c;
     }
     if (nbIn) nbIn.value = item.nb_mm || '';
-    selectedOrgPipeId = String(item.id);
+    cfg.selectedPipeId = String(item.id);
+
+    // If discharge, also sync to legacy pn_default_* fields
+    if (role === 'discharge') {
+      const defStd = document.getElementById('pn_default_standard');
+      const defMat = document.getElementById('pn_default_material');
+      const defSch = document.getElementById('pn_default_schedule_sdr');
+      const defPipe = document.getElementById('pn_default_pipe_id');
+      const defNb = document.getElementById('pn_default_nb_mm');
+      const defDia = document.getElementById('pn_default_diameter_mm');
+      const defRough = document.getElementById('pn_default_roughness_mm');
+      const defHw = document.getElementById('pn_default_hw_c');
+      if (defStd) defStd.value = item.standard || '';
+      if (defMat) defMat.value = item.material_key || item.material || '';
+      if (defSch) defSch.value = item.schedule_sdr || '';
+      if (defPipe) defPipe.value = item.id;
+      if (defNb) defNb.value = item.nb_mm || '';
+      if (defDia && item.id_mm && !isManual) defDia.value = item.id_mm;
+      if (defRough && !isManual) defRough.value = matInfo.roughness;
+      if (defHw && !isManual) defHw.value = matInfo.hw_c;
+    }
   }
 
-  function onOrgPipeStandardChange(stdVal) {
-    selectedOrgStd = stdVal;
-    populateOrgMaterials();
-    populateOrgSchedules();
-    populateOrgPipeItems();
-  }
+  window.onOrgPipeChange = function(role, field, val) {
+    const cfg = orgPipeRoles[role];
+    if (!cfg) return;
+    if (field === 'std') {
+      cfg.selectedStd = val;
+      populateRoleMaterials(role);
+      populateRoleSchedules(role);
+      populateRolePipeItems(role);
+    } else if (field === 'mat') {
+      cfg.selectedMat = val;
+      populateRoleSchedules(role);
+      populateRolePipeItems(role);
+    } else if (field === 'sch') {
+      cfg.selectedSch = val;
+      populateRolePipeItems(role);
+    } else if (field === 'pipe') {
+      cfg.selectedPipeId = val;
+      const item = orgStandardPipes.find(p => String(p.id) === String(val));
+      updateRolePipePreview(role, item);
+    }
+  };
 
-  function onOrgPipeMaterialChange(matVal) {
-    selectedOrgMat = matVal;
-    populateOrgSchedules();
-    populateOrgPipeItems();
-  }
-
-  function onOrgPipeScheduleChange(schVal) {
-    selectedOrgSch = schVal;
-    populateOrgPipeItems();
-  }
-
-  function onOrgPipeItemSelect(pipeId) {
-    selectedOrgPipeId = pipeId;
-    const item = orgStandardPipes.find(p => String(p.id) === String(pipeId));
-    updateOrgPipePreview(item);
-  }
-
-  function toggleOrgManualOverride(checked) {
-    const manualFields = document.getElementById('org-pipe-manual-fields');
+  window.toggleOrgRoleManualOverride = function(role, checked) {
+    const cfg = orgPipeRoles[role];
+    if (!cfg) return;
+    const manualFields = document.getElementById(cfg.manualFieldsId);
     if (manualFields) {
       manualFields.style.display = checked ? 'grid' : 'none';
     }
     if (!checked) {
-      const item = orgStandardPipes.find(p => String(p.id) === String(selectedOrgPipeId));
-      if (item) updateOrgPipePreview(item);
+      const item = orgStandardPipes.find(p => String(p.id) === String(cfg.selectedPipeId));
+      if (item) updateRolePipePreview(role, item);
     }
-  }
+  };
 
-  // Initial standard pipes setup
+  // Initial standard pipes setup for both suction and discharge
   if (Array.isArray(orgStandardPipes) && orgStandardPipes.length > 0) {
-    populateOrgStandards();
-    populateOrgMaterials();
-    populateOrgSchedules();
-    populateOrgPipeItems();
+    ['suction', 'discharge'].forEach(r => {
+      populateRoleStandards(r);
+      populateRoleMaterials(r);
+      populateRoleSchedules(r);
+      populateRolePipeItems(r);
+    });
   }
 
   // Initial slurry state & calculation on load

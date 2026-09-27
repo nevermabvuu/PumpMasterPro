@@ -5,6 +5,7 @@ Beginners Note: Handles Organisation management, profile settings, engineering u
 and SQL filtering rules for controlling which organisations' pumps the active company can view.
 """
 
+import json
 import os
 import sys
 
@@ -13,7 +14,7 @@ if _app_dir not in sys.path:
     sys.path.insert(0, _app_dir)
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from models import db, Organisation, Pump, ReportConfig, Role, PipeMaterial, DEFAULT_FEATURE_FLAGS, clamp_feature_flags
+from models import db, Organisation, Pump, ReportConfig, Role, PipeMaterial, StandardPipe, DEFAULT_FEATURE_FLAGS, clamp_feature_flags
 from utils import CURRENT_ORGANISATION_ID, get_current_organisation, get_visible_pumps_query, UNITS_FLOW, UNITS_HEAD, UNITS_POWER, UNITS_DENSITY, UNITS_SIZE
 from routes.auth import require_access, get_current_user
 
@@ -73,6 +74,7 @@ def settings():
     }
     selection_defaults = current_org.get_selection_defaults() if current_org else {}
     materials = PipeMaterial.query.filter_by(is_active=True).order_by(PipeMaterial.sort_order).all()
+    standard_pipes = StandardPipe.query.filter_by(is_active=True).order_by(StandardPipe.sort_order).all()
 
     return render_template(
         'organisations_settings.html',
@@ -92,7 +94,11 @@ def settings():
         motor_suppliers=motor_suppliers,
         units_tables=units_tables,
         selection_defaults=selection_defaults,
-        materials=materials
+        sd=selection_defaults,
+        materials=materials,
+        materials_json=json.dumps([m.to_dict() for m in materials]),
+        standard_pipes=standard_pipes,
+        standard_pipes_json=json.dumps([p.to_dict() for p in standard_pipes])
     )
 
 
@@ -223,12 +229,22 @@ def save_selection_defaults():
         'drive_type', 'motor_margin_basis', 'motor_margin_pct',
         # Filters
         'filter_manufacturer', 'filter_pump_type',
-        # Pipe Network Defaults
+        # Pipe Network Defaults - General
         'pn_friction_method', 'pn_solver_method', 'pn_topology',
         'pn_default_standard', 'pn_default_material', 'pn_default_schedule_sdr',
         'pn_default_pipe_id', 'pn_default_nb_mm',
         'pn_default_diameter_mm', 'pn_default_length_m',
-        'pn_default_elev_change_m', 'pn_default_roughness_mm', 'pn_default_hw_c'
+        'pn_default_elev_change_m', 'pn_default_roughness_mm', 'pn_default_hw_c',
+        # Pipe Network Defaults - Default Suction Pipe
+        'pn_suction_standard', 'pn_suction_material', 'pn_suction_schedule_sdr',
+        'pn_suction_pipe_id', 'pn_suction_nb_mm', 'pn_suction_diameter_mm',
+        'pn_suction_length_m', 'pn_suction_elev_change_m',
+        'pn_suction_roughness_mm', 'pn_suction_hw_c',
+        # Pipe Network Defaults - Default Discharge Pipe(s)
+        'pn_discharge_standard', 'pn_discharge_material', 'pn_discharge_schedule_sdr',
+        'pn_discharge_pipe_id', 'pn_discharge_nb_mm', 'pn_discharge_diameter_mm',
+        'pn_discharge_length_m', 'pn_discharge_elev_change_m',
+        'pn_discharge_roughness_mm', 'pn_discharge_hw_c'
     ]
 
     new_defaults = {}

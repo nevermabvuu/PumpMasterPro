@@ -336,7 +336,7 @@ def seed_pipe_reference_data(app):
                 PipeMaterial(key='galvanised_steel', label='Galvanised Steel  (e = 0.150 mm)', roughness_mm=0.150,  sort_order=2),
                 PipeMaterial(key='cast_iron',        label='Cast Iron         (e = 0.260 mm)', roughness_mm=0.260,  sort_order=3),
                 PipeMaterial(key='pvc',              label='PVC / Plastic     (e = 0.002 mm)', roughness_mm=0.0015, sort_order=4),
-                PipeMaterial(key='hdpe',             label='HDPE              (e = 0.007 mm)', roughness_mm=0.007,  sort_order=5),
+                PipeMaterial(key='hdpe',             label='HDPE              (e = 0.0015 mm)', roughness_mm=0.0015, sort_order=5),
                 PipeMaterial(key='stainless_steel',  label='Stainless Steel   (e = 0.015 mm)', roughness_mm=0.015,  sort_order=6),
                 PipeMaterial(key='concrete',         label='Concrete          (e = 1.000 mm)', roughness_mm=1.000,  sort_order=7),
                 PipeMaterial(key='smooth',           label='Smooth / Drawn    (e = 0.002 mm)', roughness_mm=0.0015, sort_order=8),

@@ -64,6 +64,17 @@ def inject_standard_pipes_context():
         return {'standard_pipes_json': '[]'}
 
 @app.context_processor
+def inject_materials_context():
+    """Inject materials_json into all template contexts automatically from active database records."""
+    from models import PipeMaterial
+    import json
+    try:
+        materials = PipeMaterial.query.filter_by(is_active=True).order_by(PipeMaterial.sort_order).all()
+        return {'materials_json': json.dumps([m.to_dict() for m in materials])}
+    except Exception:
+        return {'materials_json': '[]'}
+
+@app.context_processor
 def inject_seo_context():
     """
     Beginners Note:

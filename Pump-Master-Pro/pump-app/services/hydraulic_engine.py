@@ -122,12 +122,14 @@ DEFAULT_HAZEN_WILLIAMS_C: Dict[str, float] = {
 DEFAULT_ROUGHNESS_MM: Dict[str, float] = {
     'commercial_steel': 0.046,
     'stainless_steel': 0.015,
-    'pvc': 0.002,
-    'plastic_pe': 0.007,
-    'hdpe': 0.007,
+    'pvc': 0.0015,
+    'plastic_pe': 0.0015,
+    'hdpe': 0.0015,
     'galvanised_steel': 0.150,
     'ductile_iron': 0.250,
     'cast_iron': 0.260,
+    'concrete': 1.000,
+    'copper': 0.0015,
 }
 
 # Pipe Young's elastic modulus E (GPa) for Joukowsky water hammer analysis

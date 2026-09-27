@@ -705,6 +705,8 @@ class SimpleNetworkController {
 
   loadPresetData(presetName) {
     const def = this.getDefaultPipeSpec();
+    const suctionDef = this.getDefaultPipeSpec('suction');
+    const dischargeDef = this.getDefaultPipeSpec('discharge');
     const catalog = this.getStandardPipesList();
 
     // Helper to find standard pipe of similar standard/material for suction (larger) and riser (smaller)
@@ -716,8 +718,8 @@ class SimpleNetworkController {
       return match;
     };
 
-    const p150 = findSizedPipe(150);
-    const dia150 = p150 ? (p150.id_mm || p150.od_mm - 2 * p150.wall_thickness_mm) : 154.1;
+    const p150 = suctionDef.pipe || findSizedPipe(150);
+    const dia150 = suctionDef.diameter_mm || (p150 ? (p150.id_mm || p150.od_mm - 2 * p150.wall_thickness_mm) : 154.1);
     const p80 = findSizedPipe(80);
     const dia80 = p80 ? (p80.id_mm || p80.od_mm - 2 * p80.wall_thickness_mm) : 77.9;
 
@@ -820,37 +822,37 @@ class SimpleNetworkController {
       this.state.pipes = [
         {
           id: 'pipe_suction',
-          label: `1. Suction Line (${p150 ? (p150.nb_inch || '150mm') : '150mm'} ${def.material.replace('_', ' ')})`,
-          catalog_id: p150 ? String(p150.id) : '',
+          label: `1. Suction Line (${suctionDef.pipe ? (suctionDef.pipe.nb_inch || suctionDef.pipe.nb_mm + 'mm') : suctionDef.diameter_mm + 'mm'} ${suctionDef.material.replace('_', ' ')})`,
+          catalog_id: suctionDef.catalog_id,
           diameter_mm: +parseFloat(dia150).toFixed(1),
-          material: def.material,
-          roughness_mm: def.roughness_mm,
-          length_m: 12.0,
-          elevation_m: -1.5,
+          material: suctionDef.material,
+          roughness_mm: suctionDef.roughness_mm,
+          length_m: parseFloat(window.__PMP_PIPE_NETWORK_DEFAULTS?.pn_suction_length_m) || 12.0,
+          elevation_m: parseFloat(window.__PMP_PIPE_NETWORK_DEFAULTS?.pn_suction_elev_change_m) || -1.5,
           fittings: { 'foot_valve_strainer': 1, 'elbow_90_long_radius': 1 },
           custom_k: 0.0,
           flow_pct: 0
         },
         {
           id: 'pipe_discharge',
-          label: `2. Discharge Overland Main (${def.pipe ? (def.pipe.nb_inch || def.pipe.nb_mm + 'mm') : def.diameter_mm + 'mm'} Default Pipe)`,
-          catalog_id: def.catalog_id,
-          diameter_mm: def.diameter_mm,
-          material: def.material,
-          roughness_mm: def.roughness_mm,
-          length_m: parseFloat(window.__PMP_PIPE_NETWORK_DEFAULTS?.pn_default_length_m) || 140.0,
-          elevation_m: 4.5,
+          label: `2. Discharge Overland Main (${dischargeDef.pipe ? (dischargeDef.pipe.nb_inch || dischargeDef.pipe.nb_mm + 'mm') : dischargeDef.diameter_mm + 'mm'} Default Pipe)`,
+          catalog_id: dischargeDef.catalog_id,
+          diameter_mm: dischargeDef.diameter_mm,
+          material: dischargeDef.material,
+          roughness_mm: dischargeDef.roughness_mm,
+          length_m: parseFloat(window.__PMP_PIPE_NETWORK_DEFAULTS?.pn_discharge_length_m || window.__PMP_PIPE_NETWORK_DEFAULTS?.pn_default_length_m) || 140.0,
+          elevation_m: parseFloat(window.__PMP_PIPE_NETWORK_DEFAULTS?.pn_discharge_elev_change_m) || 4.5,
           fittings: { 'swing_check_open': 1, 'gate_valve_open': 1, 'elbow_90_standard': 3 },
           custom_k: 0.0,
           flow_pct: 0
         },
         {
           id: 'pipe_riser',
-          label: `3. Vertical Riser to Storage Tank (${p80 ? (p80.nb_inch || '80mm') : '80mm'} ${def.material.replace('_', ' ')})`,
+          label: `3. Vertical Riser to Storage Tank (${p80 ? (p80.nb_inch || '80mm') : '80mm'} ${dischargeDef.material.replace('_', ' ')})`,
           catalog_id: p80 ? String(p80.id) : '',
           diameter_mm: +parseFloat(dia80).toFixed(1),
-          material: def.material,
-          roughness_mm: def.roughness_mm,
+          material: dischargeDef.material,
+          roughness_mm: dischargeDef.roughness_mm,
           length_m: 35.0,
           elevation_m: 15.0,
           fittings: { 'elbow_90_standard': 2, 'butterfly_valve_open': 1 },
@@ -905,7 +907,7 @@ class SimpleNetworkController {
     }
     return [
       { key: 'commercial_steel', label: 'Commercial Steel (ε=0.046mm)', roughness_mm: 0.046 },
-      { key: 'hdpe', label: 'HDPE / PE100 (ε=0.007mm)', roughness_mm: 0.007 },
+      { key: 'hdpe', label: 'HDPE / PE100 (ε=0.0015mm)', roughness_mm: 0.0015 },
       { key: 'pvc', label: 'uPVC / PVC-U (ε=0.0015mm)', roughness_mm: 0.0015 },
       { key: 'ductile_iron', label: 'Ductile Iron (ε=0.12mm)', roughness_mm: 0.12 },
       { key: 'copper', label: 'Copper / Brass (ε=0.0015mm)', roughness_mm: 0.0015 },
@@ -932,65 +934,96 @@ class SimpleNetworkController {
   }
 
   /**
-   * Retrieves the active organisation's corporate default standard pipe specification.
+   * Retrieves the active organisation's corporate default standard pipe specification,
+   * with specialized support for 'suction' and 'discharge' roles.
    * Resolves catalog pipe item, inside diameter, wall roughness, and Hazen-Williams C.
    */
-  getDefaultPipeSpec() {
+  getDefaultPipeSpec(role = null) {
     const orgDefaults = window.__PMP_PIPE_NETWORK_DEFAULTS || {};
     const catalog = this.getStandardPipesList();
 
+    // Check localStorage overrides if role specified
+    let stored = null;
+    if (role) {
+      try {
+        const raw = localStorage.getItem(`pmpro_demo_${role}_pipe`);
+        if (raw) stored = JSON.parse(raw);
+      } catch (e) {}
+    }
+
     let pipe = null;
     // 1. Match by explicit catalog ID if saved
-    if (orgDefaults.pn_default_pipe_id) {
-      pipe = catalog.find(p => String(p.id) === String(orgDefaults.pn_default_pipe_id));
+    const targetPipeId = stored?.standard_pipe_id ||
+      (role === 'suction' ? orgDefaults.pn_suction_pipe_id : (role === 'discharge' ? (orgDefaults.pn_discharge_pipe_id || orgDefaults.pn_default_pipe_id) : orgDefaults.pn_default_pipe_id));
+
+    if (targetPipeId) {
+      pipe = catalog.find(p => String(p.id) === String(targetPipeId));
     }
+
+    const targetStd = stored?.standard ||
+      (role === 'suction' ? orgDefaults.pn_suction_standard : (role === 'discharge' ? (orgDefaults.pn_discharge_standard || orgDefaults.pn_default_standard) : orgDefaults.pn_default_standard));
+    const targetSch = stored?.schedule_sdr ||
+      (role === 'suction' ? orgDefaults.pn_suction_schedule_sdr : (role === 'discharge' ? (orgDefaults.pn_discharge_schedule_sdr || orgDefaults.pn_default_schedule_sdr) : orgDefaults.pn_default_schedule_sdr));
+    const targetNb = stored?.nb_mm ||
+      (role === 'suction' ? orgDefaults.pn_suction_nb_mm : (role === 'discharge' ? (orgDefaults.pn_discharge_nb_mm || orgDefaults.pn_default_nb_mm) : orgDefaults.pn_default_nb_mm));
+    const targetMat = stored?.material ||
+      (role === 'suction' ? orgDefaults.pn_suction_material : (role === 'discharge' ? (orgDefaults.pn_discharge_material || orgDefaults.pn_default_material) : orgDefaults.pn_default_material));
+
     // 2. Match by standard, schedule, and nominal size (or diameter)
-    if (!pipe && orgDefaults.pn_default_standard) {
+    if (!pipe && targetStd) {
       pipe = catalog.find(p =>
-        p.standard === orgDefaults.pn_default_standard &&
-        (!orgDefaults.pn_default_schedule_sdr || p.schedule_sdr === orgDefaults.pn_default_schedule_sdr) &&
-        (!orgDefaults.pn_default_nb_mm || String(p.nb_mm) === String(orgDefaults.pn_default_nb_mm))
+        p.standard === targetStd &&
+        (!targetSch || p.schedule_sdr === targetSch) &&
+        (!targetNb || String(p.nb_mm) === String(targetNb))
       );
       if (!pipe) {
-        pipe = catalog.find(p => p.standard === orgDefaults.pn_default_standard && (!orgDefaults.pn_default_schedule_sdr || p.schedule_sdr === orgDefaults.pn_default_schedule_sdr));
+        pipe = catalog.find(p => p.standard === targetStd && (!targetSch || p.schedule_sdr === targetSch));
       }
     }
     // 3. Fallback to material match
-    if (!pipe && orgDefaults.pn_default_material) {
-      pipe = catalog.find(p => p.material_key === orgDefaults.pn_default_material && (p.nb_mm === 100 || (p.od_mm >= 110 && p.od_mm <= 125)));
+    if (!pipe && targetMat) {
+      const preferredDN = role === 'suction' ? 150 : 100;
+      pipe = catalog.find(p => p.material_key === targetMat && (p.nb_mm === preferredDN || (p.od_mm >= preferredDN && p.od_mm <= preferredDN + 30)));
     }
-    // 4. Default fallback to 100mm carbon steel
+    // 4. Default fallback
     if (!pipe) {
-      pipe = catalog.find(p => p.standard && p.standard.includes('B36.10M') && p.nb_mm === 100 && p.schedule_sdr && p.schedule_sdr.includes('40'))
-        || catalog.find(p => p.nb_mm === 100)
+      const preferredDN = role === 'suction' ? 150 : 100;
+      pipe = catalog.find(p => p.standard && p.standard.includes('B36.10M') && p.nb_mm === preferredDN && p.schedule_sdr && p.schedule_sdr.includes('40'))
+        || catalog.find(p => p.nb_mm === preferredDN)
         || catalog[0];
     }
 
-    const mat = orgDefaults.pn_default_material || (pipe ? pipe.material_key : 'commercial_steel');
-    let dia = pipe ? (pipe.id_mm || (pipe.od_mm - 2 * (pipe.wall_thickness_mm || 0))) : (parseFloat(orgDefaults.pn_default_diameter_mm) || 102.3);
+    const mat = targetMat || (pipe ? pipe.material_key : 'commercial_steel');
+    const fallbackDia = role === 'suction' ? (parseFloat(orgDefaults.pn_suction_diameter_mm) || 154.1) : (parseFloat(orgDefaults.pn_discharge_diameter_mm || orgDefaults.pn_default_diameter_mm) || 102.3);
+    let dia = stored?.diameter_mm || (pipe ? (pipe.id_mm || (pipe.od_mm - 2 * (pipe.wall_thickness_mm || 0))) : fallbackDia);
     dia = Math.round(dia * 10) / 10;
 
-    let rough = parseFloat(orgDefaults.pn_default_roughness_mm);
+    let rough = stored?.roughness_mm || (role === 'suction' ? parseFloat(orgDefaults.pn_suction_roughness_mm) : parseFloat(orgDefaults.pn_discharge_roughness_mm || orgDefaults.pn_default_roughness_mm));
+    const matObj = this.getMaterialsList().find(m => m.key === mat);
     if (!rough || isNaN(rough)) {
-      if (mat === 'hdpe') rough = 0.007;
-      else if (mat === 'pvc') rough = 0.0015;
-      else if (mat === 'stainless_steel') rough = 0.015;
-      else if (mat === 'ductile_iron') rough = 0.12;
-      else if (mat === 'galvanised_steel') rough = 0.15;
-      else rough = 0.046;
+      if (matObj && matObj.roughness_mm !== undefined && matObj.roughness_mm !== null) {
+        rough = matObj.roughness_mm;
+      } else {
+        if (mat === 'hdpe') rough = 0.0015;
+        else if (mat === 'pvc') rough = 0.0015;
+        else if (mat === 'stainless_steel') rough = 0.015;
+        else if (mat === 'ductile_iron') rough = 0.12;
+        else if (mat === 'galvanised_steel') rough = 0.15;
+        else rough = 0.046;
+      }
     }
 
-    const hw_c = parseFloat(orgDefaults.pn_default_hw_c) || (mat === 'commercial_steel' ? 140 : 150);
+    const hw_c = stored?.hw_c || (role === 'suction' ? parseFloat(orgDefaults.pn_suction_hw_c) : parseFloat(orgDefaults.pn_discharge_hw_c || orgDefaults.pn_default_hw_c)) || (matObj && matObj.hazen_williams_c) || (mat === 'commercial_steel' ? 120 : 140);
 
     return {
-      catalog_id: pipe ? String(pipe.id) : (orgDefaults.pn_default_pipe_id || ''),
-      standard: pipe ? pipe.standard : (orgDefaults.pn_default_standard || 'ASME B36.10M'),
+      catalog_id: pipe ? String(pipe.id) : (targetPipeId || ''),
+      standard: pipe ? pipe.standard : (targetStd || 'ASME B36.10M'),
       material: mat,
-      schedule_sdr: pipe ? pipe.schedule_sdr : (orgDefaults.pn_default_schedule_sdr || 'Sch 40 (STD)'),
+      schedule_sdr: pipe ? pipe.schedule_sdr : (targetSch || 'Sch 40 (STD)'),
       diameter_mm: dia,
       roughness_mm: rough,
       hw_c: hw_c,
-      nb_mm: pipe ? pipe.nb_mm : (parseInt(orgDefaults.pn_default_nb_mm) || 100),
+      nb_mm: pipe ? pipe.nb_mm : (parseInt(targetNb) || (role === 'suction' ? 150 : 100)),
       pipe: pipe
     };
   }

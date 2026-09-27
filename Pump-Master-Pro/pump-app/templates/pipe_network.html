@@ -986,6 +986,9 @@
     <button id="btn-load-demo" class="pn-btn" title="Load sample demo network">
       <i class="bi bi-arrow-counterclockwise"></i> Demo
     </button>
+    <button id="btn-demo-config" class="pn-btn" title="Configure default suction pipe and discharge pipes for Demo" onclick="openDemoConfigModal()">
+      <i class="bi bi-sliders2" style="color:#38bdf8;"></i> Demo Setup
+    </button>
     <button id="btn-export" class="pn-btn" title="Export network as JSON">
       <i class="bi bi-download"></i> Export
     </button>
@@ -1562,6 +1565,25 @@
 
         <div style="font-size:10px;color:#334155;margin-top:6px;">
           Minor loss: h<sub>m</sub> = K &times; V&sup2; / (2g)
+        </div>
+
+        <!-- Quick Demo Pipe Defaults Action -->
+        <div id="pp-demo-defaults-box" style="margin-top:12px;padding:8px;background:rgba(56,189,248,0.04);border:1px solid #30363d;border-radius:6px;">
+          <div style="font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;">
+            <span><i class="bi bi-pin-angle text-[#38bdf8]"></i> Demo Defaults</span>
+            <span id="pp-pipe-role-tag" class="pp-chip" style="font-size:9.5px;padding:1px 5px;">General Pipe</span>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button type="button" id="btn-set-default-suction" class="pn-btn" style="flex:1;font-size:10px;padding:4px 6px;justify-content:center;background:#0d1117;" title="Save this pipe specification as default suction pipe for the demo" onclick="setPipeAsDefaultRole('suction')">
+              <i class="bi bi-box-arrow-in-right" style="color:#38bdf8;"></i> Set Suction Default
+            </button>
+            <button type="button" id="btn-set-default-discharge" class="pn-btn" style="flex:1;font-size:10px;padding:4px 6px;justify-content:center;background:#0d1117;" title="Save this pipe specification as default discharge pipe for the demo" onclick="setPipeAsDefaultRole('discharge')">
+              <i class="bi bi-box-arrow-right" style="color:#22c55e;"></i> Set Discharge Default
+            </button>
+            <button type="button" id="btn-apply-to-discharge-pipes" class="pn-btn" style="width:100%;font-size:10px;padding:4px 6px;justify-content:center;background:#0d1117;color:#a78bfa;" title="Apply this pipe's diameter and material across all pipes in the discharge end" onclick="applySelectedPipeToAllDischarge()">
+              <i class="bi bi-arrow-repeat"></i> Apply Spec to All Discharge End Pipes
+            </button>
+          </div>
         </div>
       </div><!-- end pipe props -->
 
@@ -2745,6 +2767,264 @@
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- =========================================================================
+     DEMO NETWORK CONFIGURATION MODAL (Set Default Suction & Discharge Pipes)
+     ========================================================================= -->
+<div id="demo-config-modal-overlay"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;backdrop-filter:blur(4px);padding:16px;overflow-y:auto;"
+  onclick="if(event.target===this)closeDemoConfigModal()">
+  <div style="max-width:840px;margin:25px auto;background:#161b22;border:1px solid #30363d;border-radius:12px;box-shadow:0 25px 65px rgba(0,0,0,0.7);overflow:hidden;display:flex;flex-direction:column;">
+    
+    <!-- Modal Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #21262d;background:#0d1117;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <i class="bi bi-sliders2" style="color:#38bdf8;font-size:1.2rem;"></i>
+        <div>
+          <h2 style="font-size:1rem;font-weight:700;color:#f0f6fc;margin:0;">Pipe Network Demo Setup</h2>
+          <span style="font-size:11px;color:#8b949e;">Set default suction pipe and default pipes in the discharge end for the demo pumping circuit</span>
+        </div>
+      </div>
+      <button type="button" onclick="closeDemoConfigModal()" style="background:none;border:none;color:#8b949e;cursor:pointer;font-size:1.3rem;line-height:1;" title="Close">&times;</button>
+    </div>
+
+    <!-- Modal Body -->
+    <div style="padding:20px;display:flex;flex-direction:column;gap:18px;max-height:calc(85vh - 120px);overflow-y:auto;">
+      
+      <!-- Circuit Schematic Summary -->
+      <div style="padding:10px 14px;background:#0d1117;border:1px solid #30363d;border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;color:#8b949e;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#38bdf8;"></span>
+          <strong style="color:#e6edf3;">Suction Leg:</strong> Sump (N-1) &rarr; Pump (N-2) [P-1]
+        </div>
+        <div style="color:#484f58;">&bull;</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;"></span>
+          <strong style="color:#e6edf3;">Discharge End:</strong> Pump (N-2) &rarr; Valve (N-3) [P-2] &rarr; Outlet (N-4) [P-3]
+        </div>
+        <div style="margin-left:auto;font-size:10.5px;color:#a78bfa;">Continuous Pipe Run Architecture</div>
+      </div>
+
+      <!-- SECTION 1: DEFAULT SUCTION PIPE -->
+      <div style="background:#0d1117;border:1px solid rgba(56,189,248,0.3);border-left:4px solid #38bdf8;border-radius:8px;padding:14px;" class="space-y-3">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:12.5px;font-weight:700;color:#38bdf8;display:flex;align-items:center;gap:6px;">
+            <i class="bi bi-box-arrow-in-right"></i> 1. Default Suction Pipe (Inlet to Pump, N-1 &rarr; N-2)
+          </div>
+          <span class="pp-chip" style="font-size:10px;background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);">
+            Suction Leg [P-1]
+          </span>
+        </div>
+
+        <!-- Cascading Standard, Material, Schedule / SDR, Size -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+          <div>
+            <label style="display:block;font-size:10.5px;color:#8b949e;margin-bottom:3px;font-weight:600;">Standard Family</label>
+            <select id="demo-suction-std" class="pp-input" style="width:100%;font-size:11px;" onchange="onDemoSuctionStdChange(this.value)">
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:10.5px;color:#8b949e;margin-bottom:3px;font-weight:600;">Material</label>
+            <select id="demo-suction-mat" class="pp-input" style="width:100%;font-size:11px;" onchange="onDemoSuctionMatChange(this.value)">
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:10.5px;color:#8b949e;margin-bottom:3px;font-weight:600;">Schedule / SDR</label>
+            <select id="demo-suction-sch" class="pp-input" style="width:100%;font-size:11px;" onchange="onDemoSuctionSchChange(this.value)">
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:10.5px;color:#8b949e;margin-bottom:3px;font-weight:600;">Nominal Size (DN/NB)</label>
+            <select id="demo-suction-pipe" class="pp-input" style="width:100%;font-size:11px;border-color:#38bdf8;" onchange="onDemoSuctionPipeChange(this.value)">
+            </select>
+          </div>
+        </div>
+
+        <!-- Live Derived Card -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-2 pt-1 text-center">
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:6px;padding:6px;">
+            <div style="font-size:9.5px;color:#8b949e;font-weight:700;text-transform:uppercase;">OD</div>
+            <div id="demo-suction-prev-od" style="font-size:12px;font-weight:700;color:#38bdf8;font-family:monospace;">&mdash;</div>
+          </div>
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:6px;padding:6px;">
+            <div style="font-size:9.5px;color:#8b949e;font-weight:700;text-transform:uppercase;">Wall (t)</div>
+            <div id="demo-suction-prev-wall" style="font-size:12px;font-weight:700;color:#facc15;font-family:monospace;">&mdash;</div>
+          </div>
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:6px;padding:6px;">
+            <div style="font-size:9.5px;color:#8b949e;font-weight:700;text-transform:uppercase;">Inside Dia (ID)</div>
+            <div id="demo-suction-prev-id" style="font-size:12px;font-weight:700;color:#22c55e;font-family:monospace;">&mdash;</div>
+          </div>
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:6px;padding:6px;">
+            <div style="font-size:9.5px;color:#8b949e;font-weight:700;text-transform:uppercase;">Roughness (&epsilon;)</div>
+            <div id="demo-suction-prev-rough" style="font-size:12px;font-weight:700;color:#e6edf3;font-family:monospace;">&mdash;</div>
+          </div>
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:6px;padding:6px;">
+            <div style="font-size:9.5px;color:#8b949e;font-weight:700;text-transform:uppercase;">Hazen-Williams (C)</div>
+            <div id="demo-suction-prev-hw" style="font-size:12px;font-weight:700;color:#a78bfa;font-family:monospace;">&mdash;</div>
+          </div>
+        </div>
+
+        <!-- Length, Elevation, & Custom Override -->
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding-top:4px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <label style="font-size:11px;color:#8b949e;">Length:</label>
+            <input type="number" step="0.5" min="0.1" id="demo-suction-len" value="4.0" class="pp-input" style="width:65px;font-size:11px;padding:3px 6px;">
+            <span style="font-size:11px;color:#6e7681;">m</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <label style="font-size:11px;color:#8b949e;">Elevation Change (&Delta;z):</label>
+            <input type="number" step="0.5" id="demo-suction-elev" value="0.0" class="pp-input" style="width:65px;font-size:11px;padding:3px 6px;">
+            <span style="font-size:11px;color:#6e7681;">m</span>
+          </div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#8b949e;cursor:pointer;margin-left:auto;">
+            <input type="checkbox" id="demo-suction-override-chk" onchange="toggleDemoSuctionOverride(this.checked)">
+            <span>Manual Override (ID / Roughness)</span>
+          </label>
+        </div>
+
+        <div id="demo-suction-override-row" style="display:none;padding-top:4px;" class="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div>
+            <label style="display:block;font-size:10px;color:#8b949e;">Manual ID (mm)</label>
+            <input type="number" step="any" min="1" id="demo-suction-custom-dia" class="pp-input" style="width:100%;font-size:11px;">
+          </div>
+          <div>
+            <label style="display:block;font-size:10px;color:#8b949e;">Roughness &epsilon; (mm)</label>
+            <input type="number" step="0.001" min="0.0001" id="demo-suction-custom-rough" class="pp-input" style="width:100%;font-size:11px;">
+          </div>
+          <div>
+            <label style="display:block;font-size:10px;color:#8b949e;">Hazen-Williams C</label>
+            <input type="number" step="1" min="10" max="200" id="demo-suction-custom-hw" class="pp-input" style="width:100%;font-size:11px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 2: DEFAULT DISCHARGE PIPES -->
+      <div style="background:#0d1117;border:1px solid rgba(34,197,94,0.3);border-left:4px solid #22c55e;border-radius:8px;padding:14px;" class="space-y-3">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:12.5px;font-weight:700;color:#22c55e;display:flex;align-items:center;gap:6px;">
+            <i class="bi bi-box-arrow-right"></i> 2. Default Pipes in Discharge End (Pump &rarr; Valve &rarr; Outlet, N-2 &rarr; N-3 &rarr; N-4)
+          </div>
+          <span class="pp-chip" style="font-size:10px;background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.3);">
+            Discharge Leg [P-2 &amp; P-3]
+          </span>
+        </div>
+
+        <!-- Cascading Standard, Material, Schedule / SDR, Size -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+          <div>
+            <label style="display:block;font-size:10.5px;color:#8b949e;margin-bottom:3px;font-weight:600;">Standard Family</label>
+            <select id="demo-discharge-std" class="pp-input" style="width:100%;font-size:11px;" onchange="onDemoDischargeStdChange(this.value)">
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:10.5px;color:#8b949e;margin-bottom:3px;font-weight:600;">Material</label>
+            <select id="demo-discharge-mat" class="pp-input" style="width:100%;font-size:11px;" onchange="onDemoDischargeMatChange(this.value)">
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:10.5px;color:#8b949e;margin-bottom:3px;font-weight:600;">Schedule / SDR</label>
+            <select id="demo-discharge-sch" class="pp-input" style="width:100%;font-size:11px;" onchange="onDemoDischargeSchChange(this.value)">
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:10.5px;color:#8b949e;margin-bottom:3px;font-weight:600;">Nominal Size (DN/NB)</label>
+            <select id="demo-discharge-pipe" class="pp-input" style="width:100%;font-size:11px;border-color:#22c55e;" onchange="onDemoDischargePipeChange(this.value)">
+            </select>
+          </div>
+        </div>
+
+        <!-- Live Derived Card -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-2 pt-1 text-center">
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:6px;padding:6px;">
+            <div style="font-size:9.5px;color:#8b949e;font-weight:700;text-transform:uppercase;">OD</div>
+            <div id="demo-discharge-prev-od" style="font-size:12px;font-weight:700;color:#38bdf8;font-family:monospace;">&mdash;</div>
+          </div>
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:6px;padding:6px;">
+            <div style="font-size:9.5px;color:#8b949e;font-weight:700;text-transform:uppercase;">Wall (t)</div>
+            <div id="demo-discharge-prev-wall" style="font-size:12px;font-weight:700;color:#facc15;font-family:monospace;">&mdash;</div>
+          </div>
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:6px;padding:6px;">
+            <div style="font-size:9.5px;color:#8b949e;font-weight:700;text-transform:uppercase;">Inside Dia (ID)</div>
+            <div id="demo-discharge-prev-id" style="font-size:12px;font-weight:700;color:#22c55e;font-family:monospace;">&mdash;</div>
+          </div>
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:6px;padding:6px;">
+            <div style="font-size:9.5px;color:#8b949e;font-weight:700;text-transform:uppercase;">Roughness (&epsilon;)</div>
+            <div id="demo-discharge-prev-rough" style="font-size:12px;font-weight:700;color:#e6edf3;font-family:monospace;">&mdash;</div>
+          </div>
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:6px;padding:6px;">
+            <div style="font-size:9.5px;color:#8b949e;font-weight:700;text-transform:uppercase;">Hazen-Williams (C)</div>
+            <div id="demo-discharge-prev-hw" style="font-size:12px;font-weight:700;color:#a78bfa;font-family:monospace;">&mdash;</div>
+          </div>
+        </div>
+
+        <!-- Segments Breakdown -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-[#30363d]/40">
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:6px;padding:8px;">
+            <div style="font-size:10.5px;font-weight:700;color:#c9d1d9;margin-bottom:4px;">Discharge Segment 1: Pump &rarr; Valve (P-2)</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <label style="font-size:10px;color:#8b949e;">Length:</label>
+              <input type="number" step="1" min="0.1" id="demo-disch1-len" value="12.0" class="pp-input" style="width:60px;font-size:11px;padding:2px 4px;">
+              <span style="font-size:10px;color:#6e7681;">m</span>
+              <label style="font-size:10px;color:#8b949e;margin-left:4px;">&Delta;z:</label>
+              <input type="number" step="0.5" id="demo-disch1-elev" value="2.0" class="pp-input" style="width:60px;font-size:11px;padding:2px 4px;">
+              <span style="font-size:10px;color:#6e7681;">m</span>
+            </div>
+          </div>
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:6px;padding:8px;">
+            <div style="font-size:10.5px;font-weight:700;color:#c9d1d9;margin-bottom:4px;">Discharge Segment 2: Valve &rarr; Outlet (P-3)</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <label style="font-size:10px;color:#8b949e;">Length:</label>
+              <input type="number" step="1" min="0.1" id="demo-disch2-len" value="20.0" class="pp-input" style="width:60px;font-size:11px;padding:2px 4px;">
+              <span style="font-size:10px;color:#6e7681;">m</span>
+              <label style="font-size:10px;color:#8b949e;margin-left:4px;">&Delta;z:</label>
+              <input type="number" step="0.5" id="demo-disch2-elev" value="8.0" class="pp-input" style="width:60px;font-size:11px;padding:2px 4px;">
+              <span style="font-size:10px;color:#6e7681;">m</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-top:2px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#8b949e;cursor:pointer;">
+            <input type="checkbox" id="demo-discharge-override-chk" onchange="toggleDemoDischargeOverride(this.checked)">
+            <span>Manual Override (ID / Roughness)</span>
+          </label>
+        </div>
+
+        <div id="demo-discharge-override-row" style="display:none;padding-top:4px;" class="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div>
+            <label style="display:block;font-size:10px;color:#8b949e;">Manual ID (mm)</label>
+            <input type="number" step="any" min="1" id="demo-discharge-custom-dia" class="pp-input" style="width:100%;font-size:11px;">
+          </div>
+          <div>
+            <label style="display:block;font-size:10px;color:#8b949e;">Roughness &epsilon; (mm)</label>
+            <input type="number" step="0.001" min="0.0001" id="demo-discharge-custom-rough" class="pp-input" style="width:100%;font-size:11px;">
+          </div>
+          <div>
+            <label style="display:block;font-size:10px;color:#8b949e;">Hazen-Williams C</label>
+            <input type="number" step="1" min="10" max="200" id="demo-discharge-custom-hw" class="pp-input" style="width:100%;font-size:11px;">
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Modal Footer -->
+    <div style="padding:12px 20px;border-top:1px solid #21262d;background:#0d1117;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+      <button type="button" class="pn-btn" onclick="resetDemoConfigToFactory()" title="Reset to original demo dimensions (DN150 suction, DN100 discharge)">
+        <i class="bi bi-arrow-counterclockwise"></i> Reset to Factory
+      </button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button type="button" class="pn-btn" onclick="closeDemoConfigModal()">Close</button>
+        <button type="button" class="pn-btn pn-btn-primary" onclick="applyDemoConfigModal(false)" title="Apply these suction and discharge pipes to current canvas demo">
+          <i class="bi bi-play-circle"></i> Apply to Demo Canvas
+        </button>
+        <button type="button" class="pn-btn pn-btn-success" onclick="applyDemoConfigModal(true)" title="Apply to canvas and save as permanent defaults for this organisation">
+          <i class="bi bi-check2-circle"></i> Save as Default &amp; Apply
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 

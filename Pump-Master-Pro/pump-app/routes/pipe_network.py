@@ -362,6 +362,63 @@ def get_pipe_network_session():
     })
 
 
+@pipe_network_bp.route('/api/pipe-network/demo-defaults', methods=['GET', 'POST'])
+def manage_demo_defaults():
+    """
+    GET: Return current default suction pipe and default discharge pipes configuration.
+    POST: Save new default suction pipe and default discharge pipes configuration
+          to organisation defaults and active session.
+    """
+    from routes.organisations import get_current_organisation
+    current_org = get_current_organisation()
+    org_defaults = current_org.get_selection_defaults() if current_org else {}
+
+    if request.method == 'POST':
+        data = request.get_json(silent=True) or {}
+        suction_fields = [
+            'pn_suction_standard', 'pn_suction_material', 'pn_suction_schedule_sdr',
+            'pn_suction_pipe_id', 'pn_suction_nb_mm', 'pn_suction_diameter_mm',
+            'pn_suction_roughness_mm', 'pn_suction_hw_c', 'pn_suction_length_m', 'pn_suction_elev_change_m'
+        ]
+        discharge_fields = [
+            'pn_discharge_standard', 'pn_discharge_material', 'pn_discharge_schedule_sdr',
+            'pn_discharge_pipe_id', 'pn_discharge_nb_mm', 'pn_discharge_diameter_mm',
+            'pn_discharge_roughness_mm', 'pn_discharge_hw_c', 'pn_discharge_length_m', 'pn_discharge_elev_change_m'
+        ]
+        for f in suction_fields + discharge_fields:
+            if f in data:
+                org_defaults[f] = str(data[f]) if data[f] is not None else ''
+
+        # Synchronize fallback generic defaults with discharge pipe
+        if data.get('pn_discharge_pipe_id'):
+            org_defaults['pn_default_pipe_id'] = str(data['pn_discharge_pipe_id'])
+        if data.get('pn_discharge_standard'):
+            org_defaults['pn_default_standard'] = str(data['pn_discharge_standard'])
+        if data.get('pn_discharge_material'):
+            org_defaults['pn_default_material'] = str(data['pn_discharge_material'])
+        if data.get('pn_discharge_schedule_sdr'):
+            org_defaults['pn_default_schedule_sdr'] = str(data['pn_discharge_schedule_sdr'])
+        if data.get('pn_discharge_diameter_mm'):
+            org_defaults['pn_default_diameter_mm'] = str(data['pn_discharge_diameter_mm'])
+
+        if current_org:
+            try:
+                current_org.set_selection_defaults(org_defaults)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+        active_sel = session.get('active_selection') or {}
+        active_sel['pipe_network_defaults'] = org_defaults
+        session['active_selection'] = active_sel
+        session.modified = True
+
+        return jsonify({'status': 'ok', 'message': 'Demo defaults updated successfully', 'defaults': org_defaults})
+
+    return jsonify({'status': 'ok', 'defaults': org_defaults})
+
+
+
 # ── Calculation Endpoint ────────────────────────────────────────────────────
 
 @pipe_network_bp.route('/api/pipe-network/calculate', methods=['POST'])

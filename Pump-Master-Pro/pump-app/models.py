@@ -1057,11 +1057,16 @@ class PipeMaterial(db.Model):
     is_active       = db.Column(db.Boolean, default=True)
 
     def to_dict(self):
+        from services.hydraulic_engine import DEFAULT_HAZEN_WILLIAMS_C
+        hw_c = getattr(self, 'hazen_williams_c', None)
+        if hw_c is None:
+            hw_c = DEFAULT_HAZEN_WILLIAMS_C.get(self.key, 140.0)
         return {
             'id': self.id,
             'key': self.key,
             'label': self.label,
             'roughness_mm': self.roughness_mm,
+            'hazen_williams_c': hw_c,
             'sort_order': self.sort_order,
             'is_active': self.is_active,
         }

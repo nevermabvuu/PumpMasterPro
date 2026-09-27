@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pump Master Pro — Product & Solution Brochure</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #090d16;
+      color: #e6edf3;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .gradient-hero {
+      background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.15) 0%, rgba(99, 102, 241, 0.05) 50%, transparent 80%);
+    }
+    .card-glow {
+      background: rgba(22, 27, 34, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(48, 54, 61, 0.8);
+      transition: all 0.25s ease;
+    }
+    .card-glow:hover {
+      border-color: rgba(56, 189, 248, 0.5);
+      box-shadow: 0 12px 24px -10px rgba(56, 189, 248, 0.2);
+    }
+    .screenshot-frame {
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0d1117;
+    }
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #1e293b !important;
+      }
+      .card-glow {
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+      }
+      .screenshot-frame {
+        border: 1px solid #cbd5e1 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen py-10 px-4 sm:px-8">
+
+  <!-- Print Button Bar (Hidden when printing) -->
+  <div class="no-print max-w-5xl mx-auto mb-6 flex items-center justify-between p-3.5 bg-[#161b22] border border-[#30363d] rounded-xl shadow-lg">
+    <div class="flex items-center gap-2">
+      <span class="w-2.5 h-2.5 rounded-full bg-[#22c55e] animate-pulse"></span>
+      <span class="text-xs font-semibold text-[#c9d1d9]">Marketing & Solution Brochure Ready (With Live Screenshots)</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <button onclick="window.print()" class="px-4 py-1.5 text-xs font-bold text-white bg-[#58a6ff] hover:bg-[#79baff] rounded-lg shadow transition flex items-center gap-1.5">
+        <i class="bi bi-printer"></i> Print / Save as PDF
+      </button>
+    </div>
+  </div>
+
+  <div class="max-w-5xl mx-auto space-y-12">
+
+    <!-- ── HEADER / HERO SECTION ── -->
+    <header class="gradient-hero rounded-3xl p-8 sm:p-12 border border-[#30363d]/60 text-center relative overflow-hidden">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#38bdf8]/10 border border-[#38bdf8]/30 text-[#38bdf8] text-xs font-semibold uppercase tracking-wider mb-6">
+        <i class="bi bi-shield-check"></i> Enterprise Hydraulic Engineering Suite
+      </div>
+      
+      <h1 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-4 leading-tight">
+        Precision Pump Sizing,<br/>
+        <span class="bg-clip-text text-transparent bg-gradient-to-r from-[#38bdf8] via-[#818cf8] to-[#c084fc]">
+          Pipe Network CAD &amp; Submittal Automation
+        </span>
+      </h1>
+      
+      <p class="text-base sm:text-lg text-[#8b949e] max-w-2xl mx-auto mb-8 font-normal leading-relaxed">
+        Eliminate disconnected spreadsheets and manual curve interpolation. Select, simulate, and generate publication-ready pump submittal reports in under 3 minutes.
+      </p>
+
+      <div class="flex flex-wrap justify-center items-center gap-3 text-xs font-mono">
+        <span class="px-3 py-1 rounded-lg bg-[#161b22] border border-[#30363d] text-[#e6edf3]">
+          <i class="bi bi-check-circle-fill text-[#3fb950] mr-1"></i> ISO 9906:2012
+        </span>
+        <span class="px-3 py-1 rounded-lg bg-[#161b22] border border-[#30363d] text-[#e6edf3]">
+          <i class="bi bi-check-circle-fill text-[#3fb950] mr-1"></i> ANSI / HI 14.6
+        </span>
+        <span class="px-3 py-1 rounded-lg bg-[#161b22] border border-[#30363d] text-[#e6edf3]">
+          <i class="bi bi-check-circle-fill text-[#3fb950] mr-1"></i> API 610 (11th/12th)
+        </span>
+        <span class="px-3 py-1 rounded-lg bg-[#161b22] border border-[#30363d] text-[#e6edf3]">
+          <i class="bi bi-check-circle-fill text-[#38bdf8] mr-1"></i> Darcy-Weisbach Solvers
+        </span>
+      </div>
+    </header>
+
+    <!-- ── 100% CUSTOMIZABLE HIGHLIGHT BANNER ── -->
+    <section class="card-glow rounded-3xl p-6 sm:p-8 border-l-4 border-l-[#38bdf8] space-y-4">
+      <div class="flex items-center gap-2">
+        <span class="px-2.5 py-1 rounded-md bg-[#38bdf8]/15 text-[#38bdf8] font-bold text-xs uppercase tracking-wider">
+          <i class="bi bi-sliders"></i> Full Customizability
+        </span>
+        <h2 class="text-xl font-bold text-white">Add Your Own Pumps &amp; Brand Your Deliverables</h2>
+      </div>
+      <p class="text-xs sm:text-sm text-[#8b949e] leading-relaxed">
+        Pump Master Pro never restricts you to pre-baked catalogues. Equipment manufacturers, distributors, and engineering teams can register their own pump models, input raw test bench points, define impeller trim diameter ranges, and generate automated regression curves in seconds.
+      </p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs pt-1">
+        <div class="p-3 rounded-xl bg-[#0d1117] border border-[#30363d]">
+          <span class="font-bold text-[#58a6ff] block mb-1">✔ Custom Pumps</span>
+          <span class="text-[#8b949e]">Add models, flange ratings, motor sizes, and multi-speed RPMs.</span>
+        </div>
+        <div class="p-3 rounded-xl bg-[#0d1117] border border-[#30363d]">
+          <span class="font-bold text-[#3fb950] block mb-1">✔ Automated Curve Fit</span>
+          <span class="text-[#8b949e]">Input discrete test points; algorithms fit polynomials with R² > 0.998.</span>
+        </div>
+        <div class="p-3 rounded-xl bg-[#0d1117] border border-[#30363d]">
+          <span class="font-bold text-[#c084fc] block mb-1">✔ Custom Branding</span>
+          <span class="text-[#8b949e]">White-label PDF reports with your corporate logo, theme, and notes.</span>
+        </div>
+        <div class="p-3 rounded-xl bg-[#0d1117] border border-[#30363d]">
+          <span class="font-bold text-[#f59e0b] block mb-1">✔ Custom Fluids</span>
+          <span class="text-[#8b949e]">Configure proprietary slurry SG, particle d50, and viscosities.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SOFTWARE SCREENSHOTS SHOWCASE ── -->
+    <section class="space-y-8">
+      <div class="border-b border-[#30363d] pb-4">
+        <h2 class="text-2xl font-bold text-white">Software Walkthrough &amp; Live Screenshots</h2>
+        <p class="text-xs text-[#8b949e] mt-0.5">High-resolution views from the operational Pump Master Pro engineering environment.</p>
+      </div>
+
+      <!-- Screenshot 1 -->
+      <div class="card-glow p-5 rounded-2xl space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i class="bi bi-bullseye text-[#38bdf8]"></i>
+            Figure 1: Duty Point Matching &amp; BEP Operating Envelope Analysis
+          </h3>
+          <span class="text-[11px] font-mono text-[#38bdf8] bg-[#38bdf8]/10 px-2 py-0.5 rounded">Selection Tool</span>
+        </div>
+        <div class="screenshot-frame">
+          <img src="../../static/screenshots/screenshot_pump_selection.png" alt="Pump Selection Interface" class="w-full h-auto block" onerror="this.src='screenshot_pump_selection.png'">
+        </div>
+        <p class="text-xs text-[#8b949e] leading-relaxed">
+          Displays superimposed Head (H-Q), Efficiency (η-Q), Power (P-Q), and NPSHr curves. Automatically calculates proximity to Best Efficiency Point (BEP) and indicates Preferred Operating Regions (POR).
+        </p>
+      </div>
+
+      <!-- Screenshot 2 -->
+      <div class="card-glow p-5 rounded-2xl space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i class="bi bi-bezier2 text-[#818cf8]"></i>
+            Figure 2: Interactive CAD Pipe Network &amp; Friction Loss Designer
+          </h3>
+          <span class="text-[11px] font-mono text-[#818cf8] bg-[#818cf8]/10 px-2 py-0.5 rounded">CAD Designer</span>
+        </div>
+        <div class="screenshot-frame">
+          <img src="../../static/screenshots/screenshot_pipe_network.png" alt="Pipe Network CAD Canvas" class="w-full h-auto block" onerror="this.src='screenshot_pipe_network.png'">
+        </div>
+        <p class="text-xs text-[#8b949e] leading-relaxed">
+          Full orthogonal pipe routing with integrated elbows, reducers, and inline valves. Computes Darcy-Weisbach head loss using Colebrook-White friction factors and overlays system curves onto pump curves.
+        </p>
+      </div>
+
+      <!-- Screenshot 3 -->
+      <div class="card-glow p-5 rounded-2xl space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i class="bi bi-plus-circle text-[#34d399]"></i>
+            Figure 3: Custom Pump Builder — Add Your Own Proprietary Pumps
+          </h3>
+          <span class="text-[11px] font-mono text-[#34d399] bg-[#34d399]/10 px-2 py-0.5 rounded">Data Entry</span>
+        </div>
+        <div class="screenshot-frame">
+          <img src="../../static/screenshots/screenshot_add_pump.png" alt="Custom Pump Data Entry Form" class="w-full h-auto block" onerror="this.src='screenshot_add_pump.png'">
+        </div>
+        <p class="text-xs text-[#8b949e] leading-relaxed">
+          Easily add new pump models with live interactive curve fitting. Enter manufacturer test bench points, define impeller trim diameters, specify motor ratings, and preview fitted curves in real-time.
+        </p>
+      </div>
+
+      <!-- Screenshot 4 -->
+      <div class="card-glow p-5 rounded-2xl space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i class="bi bi-journal-bookmark-fill text-[#f59e0b]"></i>
+            Figure 4: Centralized Pump Data Catalogue &amp; Fleet Overview
+          </h3>
+          <span class="text-[11px] font-mono text-[#f59e0b] bg-[#f59e0b]/10 px-2 py-0.5 rounded">Catalogue Fleet</span>
+        </div>
+        <div class="screenshot-frame">
+          <img src="../../static/screenshots/screenshot_pump_catalogue.png" alt="Pump Data Catalogue" class="w-full h-auto block" onerror="this.src='screenshot_pump_catalogue.png'">
+        </div>
+        <p class="text-xs text-[#8b949e] leading-relaxed">
+          Searchable inventory of centrifugal and slurry pump models with one-click curve analysis, fleet filtering, multi-pump comparison, and exportable engineering submittals.
+        </p>
+      </div>
+
+      <!-- Screenshot 5 -->
+      <div class="card-glow p-5 rounded-2xl space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i class="bi bi-folder2-open text-[#ec4899]"></i>
+            Figure 5: Projects Directory &amp; Saved Selections Management
+          </h3>
+          <span class="text-[11px] font-mono text-[#ec4899] bg-[#ec4899]/10 px-2 py-0.5 rounded">Projects &amp; Revisions</span>
+        </div>
+        <div class="screenshot-frame">
+          <img src="../../static/screenshots/screenshot_projects.png" alt="Projects Directory" class="w-full h-auto block" onerror="this.src='screenshot_projects.png'">
+        </div>
+        <p class="text-xs text-[#8b949e] leading-relaxed">
+          Comprehensive project repository storing complete snapshots of operating duty points, fluid properties, and full CAD pipe network topologies. Supports up to 10 customizable metadata attributes per organization with 1-click workspace reload.
+        </p>
+      </div>
+
+      <!-- Screenshot 6 -->
+      <div class="card-glow p-5 rounded-2xl space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i class="bi bi-file-earmark-pdf-fill text-[#ef4444]"></i>
+            Figure 6: PDF Report Configuration &amp; Graph Layout Settings
+          </h3>
+          <span class="text-[11px] font-mono text-[#ef4444] bg-[#ef4444]/10 px-2 py-0.5 rounded">PDF Reports</span>
+        </div>
+        <div class="screenshot-frame">
+          <img src="../../static/screenshots/screenshot_reports_settings.png" alt="Report Builder Settings" class="w-full h-auto block" onerror="this.src='screenshot_reports_settings.png'">
+        </div>
+        <p class="text-xs text-[#8b949e] leading-relaxed">
+          Pixel-perfect vector A4 PDF generation via headless Chromium. Configure 1 to 4 stacked performance charts (H-Q, Efficiency, Power, NPSHr) with custom sequence, height splits, and white-label corporate branding.
+        </p>
+      </div>
+
+    </section>
+
+    <!-- ── CALL TO ACTION FOOTER ── -->
+    <footer class="p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-[#1e3a8a]/40 via-[#161b22] to-[#312e81]/40 border border-[#38bdf8]/30 flex flex-col md:flex-row items-center justify-between gap-6">
+      <div class="space-y-2 text-center md:text-left">
+        <h3 class="text-xl sm:text-2xl font-bold text-white">Ready to Modernize Your Pump Sizing?</h3>
+        <p class="text-xs sm:text-sm text-[#8b949e]">
+          Experience automated pump curve fitting, CAD pipe network analysis, and add your own custom pump models today.
+        </p>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center gap-3 shrink-0">
+        <a href="https://pumpmasterpro.com" target="_blank" class="px-6 py-3 rounded-xl font-bold text-xs bg-[#58a6ff] hover:bg-[#79baff] text-[#0d1117] shadow-xl transition-all flex items-center gap-2">
+          <span>Explore pumpmasterpro.com</span>
+          <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+    </footer>
+
+    <div class="text-center text-[11px] text-[#484f58] pb-6">
+      &copy; Pump Master Pro Engineering Suite. All rights reserved. Standards references: ISO 9906, ANSI/HI 14.6, API 610.
+    </div>
+
+  </div>
+
+</body>
+</html>

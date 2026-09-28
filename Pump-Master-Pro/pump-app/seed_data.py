@@ -528,3 +528,219 @@ def seed_pumps(app):
         db.session.add_all(pumps)
         db.session.commit()
         print(f'Seeded {len(pumps)} pumps.')
+
+
+def seed_fire_pumps(app):
+    """
+    Seeds dedicated UL Listed & FM Approved NFPA 20 / EN 12845 Fire Pumps into the catalogue.
+    Ensures characteristic curves strictly conform to NFPA 20 requirements:
+      - Shutoff / Churn: 101% to 140% of rated head
+      - Rated duty point: 100% flow @ >= 100% head
+      - Overload capacity: >= 65% head at 150% rated flow
+    """
+    with app.app_context():
+        # Check if fire pumps already exist in catalogue
+        existing = Pump.query.filter(Pump.app_modules.like('%fire%')).first()
+        if existing:
+            return
+
+        fire_pumps = []
+
+        # ── 1. Patterson 4x3x10.5 High-Pressure Split-Case (500 GPM @ 100 PSI) ──
+        # Rated: 114 m³/h (500 GPM) @ 70.3 m (100 PSI). Churn: 83.0 m (118 PSI = 118%). Q_max = 200 m³/h
+        h0 = 83.0
+        q_rated = 114.0
+        h_rated = 70.3
+        k = (h0 - h_rated) / (q_rated ** 2)
+        q_max = 220.0
+        h = [h0, 0.0, -k, 0.0]
+        e = _eff(78.0, 114.0, q_max)
+        p = _pow(h, e, 114.0, q_max)
+        fire_pumps.append(Pump(
+            name='Patterson 4x3x10.5 Fire Pump',
+            manufacturer='Patterson Pump Company',
+            model_number='4x3x10.5-HSC',
+            size='4x3x10.5',
+            speed_rpm=2950,
+            impeller_dia_mm=267,
+            impeller_diameters='267;250;235;220',
+            hq_a0=h[0], hq_a1=h[1], hq_a2=h[2], hq_a3=h[3],
+            eff_b0=e[0], eff_b1=e[1], eff_b2=e[2], eff_b3=e[3],
+            npsh_c0=2.0, npsh_c1=0.0, npsh_c2=0.00018,
+            pow_p0=p[0], pow_p1=p[1], pow_p2=p[2],
+            q_min=0.0, q_max=q_max, q_bep=114.0,
+            hr=1.0, qr=1.0, er=1.0,
+            pump_type='centrifugal',
+            application='Fire Protection / NFPA 20',
+            app_modules='fire,water',
+            suction_size='125',
+            discharge_size='80',
+            notes='UL/FM Listed Horizontal Split-Case Fire Pump (NFPA 20). Rated 500 GPM (114 m³/h) @ 100 PSI (70 m).'
+        ))
+
+        # ── 2. Aurora 5-481-11 Horizontal Split-Case (750 GPM @ 125 PSI) ────────
+        # Rated: 170.3 m³/h (750 GPM) @ 87.9 m (125 PSI). Churn: 104.0 m (148 PSI = 118%). Q_max = 310 m³/h
+        h0 = 104.0
+        q_rated = 170.3
+        h_rated = 87.9
+        k = (h0 - h_rated) / (q_rated ** 2)
+        q_max = 310.0
+        h = [h0, 0.0, -k, 0.0]
+        e = _eff(81.0, 170.0, q_max)
+        p = _pow(h, e, 170.0, q_max)
+        fire_pumps.append(Pump(
+            name='Aurora 5-481-11 Fire Pump',
+            manufacturer='Aurora Pump / Pentair',
+            model_number='5-481-11-HSC',
+            size='5x4x11',
+            speed_rpm=2950,
+            impeller_dia_mm=280,
+            impeller_diameters='280;265;250;235',
+            hq_a0=h[0], hq_a1=h[1], hq_a2=h[2], hq_a3=h[3],
+            eff_b0=e[0], eff_b1=e[1], eff_b2=e[2], eff_b3=e[3],
+            npsh_c0=2.2, npsh_c1=0.0, npsh_c2=0.000085,
+            pow_p0=p[0], pow_p1=p[1], pow_p2=p[2],
+            q_min=0.0, q_max=q_max, q_bep=170.0,
+            hr=1.0, qr=1.0, er=1.0,
+            pump_type='centrifugal',
+            application='Fire Protection / NFPA 20',
+            app_modules='fire,water',
+            suction_size='150',
+            discharge_size='125',
+            notes='UL/FM Listed Horizontal Split-Case Fire Pump (NFPA 20). Rated 750 GPM (170 m³/h) @ 125 PSI (88 m).'
+        ))
+
+        # ── 3. Armstrong 4300 End-Suction Fire Pump (1000 GPM @ 100 PSI) ────────
+        # Rated: 227.1 m³/h (1000 GPM) @ 70.3 m (100 PSI). Churn: 82.0 m (117 PSI = 117%). Q_max = 420 m³/h
+        h0 = 82.0
+        q_rated = 227.1
+        h_rated = 70.3
+        k = (h0 - h_rated) / (q_rated ** 2)
+        q_max = 420.0
+        h = [h0, 0.0, -k, 0.0]
+        e = _eff(82.0, 230.0, q_max)
+        p = _pow(h, e, 230.0, q_max)
+        fire_pumps.append(Pump(
+            name='Armstrong 4300 End-Suction Fire Pump',
+            manufacturer='Armstrong Fluid Technology',
+            model_number='4300-8x6x13',
+            size='8x6x13',
+            speed_rpm=1780,
+            impeller_dia_mm=330,
+            impeller_diameters='330;310;290;270',
+            hq_a0=h[0], hq_a1=h[1], hq_a2=h[2], hq_a3=h[3],
+            eff_b0=e[0], eff_b1=e[1], eff_b2=e[2], eff_b3=e[3],
+            npsh_c0=2.4, npsh_c1=0.0, npsh_c2=0.000045,
+            pow_p0=p[0], pow_p1=p[1], pow_p2=p[2],
+            q_min=0.0, q_max=q_max, q_bep=230.0,
+            hr=1.0, qr=1.0, er=1.0,
+            pump_type='centrifugal',
+            application='Fire Protection / NFPA 20',
+            app_modules='fire,water',
+            suction_size='200',
+            discharge_size='150',
+            notes='UL/FM Listed End-Suction Fire Pump (NFPA 20 / NFPA 13). Rated 1000 GPM (227 m³/h) @ 100 PSI (70 m).'
+        ))
+
+        # ── 4. Peerless 6AE14 Horizontal Split-Case (1500 GPM @ 130 PSI) ────────
+        # Rated: 340.7 m³/h (1500 GPM) @ 91.4 m (130 PSI). Churn: 106.0 m (151 PSI = 116%). Q_max = 620 m³/h
+        h0 = 106.0
+        q_rated = 340.7
+        h_rated = 91.4
+        k = (h0 - h_rated) / (q_rated ** 2)
+        q_max = 620.0
+        h = [h0, 0.0, -k, 0.0]
+        e = _eff(84.0, 345.0, q_max)
+        p = _pow(h, e, 345.0, q_max)
+        fire_pumps.append(Pump(
+            name='Peerless 6AE14 Split-Case Fire Pump',
+            manufacturer='Peerless Pump Company',
+            model_number='6AE14-HSC',
+            size='8x6x14',
+            speed_rpm=1780,
+            impeller_dia_mm=356,
+            impeller_diameters='356;335;315;295',
+            hq_a0=h[0], hq_a1=h[1], hq_a2=h[2], hq_a3=h[3],
+            eff_b0=e[0], eff_b1=e[1], eff_b2=e[2], eff_b3=e[3],
+            npsh_c0=2.6, npsh_c1=0.0, npsh_c2=0.000022,
+            pow_p0=p[0], pow_p1=p[1], pow_p2=p[2],
+            q_min=0.0, q_max=q_max, q_bep=345.0,
+            hr=1.0, qr=1.0, er=1.0,
+            pump_type='centrifugal',
+            application='Fire Protection / NFPA 20',
+            app_modules='fire,water',
+            suction_size='200',
+            discharge_size='150',
+            notes='UL/FM Listed High-Capacity Split-Case Fire Pump (NFPA 20). Rated 1500 GPM (341 m³/h) @ 130 PSI (91 m).'
+        ))
+
+        # ── 5. SPP Fire Master Multi-Stage Fire Pump (2000 GPM @ 150 PSI) ───────
+        # Rated: 454.2 m³/h (2000 GPM) @ 105.5 m (150 PSI). Churn: 124.0 m (176 PSI = 118%). Q_max = 800 m³/h
+        h0 = 124.0
+        q_rated = 454.2
+        h_rated = 105.5
+        k = (h0 - h_rated) / (q_rated ** 2)
+        q_max = 800.0
+        h = [h0, 0.0, -k, 0.0]
+        e = _eff(83.0, 460.0, q_max)
+        p = _pow(h, e, 460.0, q_max)
+        fire_pumps.append(Pump(
+            name='SPP FireMaster Multi-Stage Pump',
+            manufacturer='SPP Pumps Ltd',
+            model_number='FM-200-150',
+            size='10x8x16',
+            speed_rpm=1480,
+            impeller_dia_mm=420,
+            impeller_diameters='420;395;370;345',
+            hq_a0=h[0], hq_a1=h[1], hq_a2=h[2], hq_a3=h[3],
+            eff_b0=e[0], eff_b1=e[1], eff_b2=e[2], eff_b3=e[3],
+            npsh_c0=2.8, npsh_c1=0.0, npsh_c2=0.000014,
+            pow_p0=p[0], pow_p1=p[1], pow_p2=p[2],
+            q_min=0.0, q_max=q_max, q_bep=460.0,
+            hr=1.0, qr=1.0, er=1.0,
+            pump_type='centrifugal',
+            application='Fire Protection / NFPA 20 / EN 12845',
+            app_modules='fire,water',
+            suction_size='250',
+            discharge_size='200',
+            notes='High-Capacity Industrial Fire Water Pump (NFPA 20 / EN 12845 / AS 2941). Rated 2000 GPM @ 150 PSI.'
+        ))
+
+        # ── 6. Grundfos CR 5-24 Vertical Multistage Jockey Pump ──────────────────
+        # Rated: 5.7 m³/h (25 GPM) @ 98.4 m (140 PSI). Churn: 116.0 m. Q_max = 10 m³/h
+        h0 = 116.0
+        q_rated = 5.7
+        h_rated = 98.4
+        k = (h0 - h_rated) / (q_rated ** 2)
+        q_max = 10.0
+        h = [h0, 0.0, -k, 0.0]
+        e = _eff(64.0, 5.7, q_max)
+        p = _pow(h, e, 5.7, q_max)
+        fire_pumps.append(Pump(
+            name='Grundfos CR 5-24 Jockey Pump',
+            manufacturer='Grundfos',
+            model_number='CR 5-24',
+            size='CR 5',
+            speed_rpm=2900,
+            impeller_dia_mm=120,
+            impeller_diameters='120',
+            hq_a0=h[0], hq_a1=h[1], hq_a2=h[2], hq_a3=h[3],
+            eff_b0=e[0], eff_b1=e[1], eff_b2=e[2], eff_b3=e[3],
+            npsh_c0=1.2, npsh_c1=0.0, npsh_c2=0.015,
+            pow_p0=p[0], pow_p1=p[1], pow_p2=p[2],
+            q_min=0.0, q_max=q_max, q_bep=5.7,
+            hr=1.0, qr=1.0, er=1.0,
+            pump_type='centrifugal',
+            application='Fire Protection / Pressure Maintenance (Jockey)',
+            app_modules='fire,jockey,water',
+            suction_size='32',
+            discharge_size='32',
+            notes='Vertical In-Line Multistage Jockey Pump for Fire System Pressure Maintenance (NFPA 20).'
+        ))
+
+        for p_obj in fire_pumps:
+            p_obj.sync_curve_fields()
+
+        db.session.add_all(fire_pumps)
+        db.session.commit()
+        print(f'Seeded {len(fire_pumps)} certified fire pumps.')

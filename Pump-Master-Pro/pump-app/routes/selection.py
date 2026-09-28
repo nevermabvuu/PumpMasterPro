@@ -643,6 +643,31 @@ def pump_selection_details(pump_id):
     # ── Security & Shortlist Authorization Check ──────────────────────────────
     shortlisted_ids = [r['pump_id'] for r in results if 'pump_id' in r]
 
+    # If the requested pump is the currently active selection (e.g., selected via Fire Pump Module or direct select),
+    # ensure it is authorized and included in the results list so the user can inspect its curves and datasheets
+    if active_sel and active_sel.get('pump_id') == pump_id:
+        if pump_id not in shortlisted_ids:
+            sel_pump = get_visible_pumps_query().filter(Pump.id == pump_id).first()
+            if sel_pump:
+                eval_item = {
+                    'pump_id': sel_pump.id,
+                    'name': sel_pump.name,
+                    'manufacturer': sel_pump.manufacturer,
+                    'model_number': sel_pump.model_number,
+                    'size': sel_pump.size,
+                    'pump_type': sel_pump.pump_type,
+                    'speed_rpm': sel_pump.speed_rpm,
+                    'impeller_dia_mm': sel_pump.impeller_dia_mm,
+                    'op_flow': q_duty or sel_pump.q_bep or 100.0,
+                    'op_head': h_duty or getattr(sel_pump, 'hq_a0', 50.0),
+                    'op_eta': active_sel.get('nfpa20_compliance', {}).get('eff_rated_pct', 75.0),
+                    'op_power': active_sel.get('nfpa20_compliance', {}).get('power_rated_kw', 30.0),
+                    'rating': 100,
+                    'default_report_id': 1
+                }
+                results.insert(0, eval_item)
+                shortlisted_ids.insert(0, pump_id)
+
     if not results or not shortlisted_ids:
         flash("No active pump selection found. Please specify your operating duty point to find matching pumps.", "warning")
         return redirect(url_for('selection.pump_selection'))

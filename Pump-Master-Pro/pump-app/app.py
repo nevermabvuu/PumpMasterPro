@@ -19,8 +19,8 @@ except ImportError:
 from flask import Flask, request, redirect, url_for, jsonify, send_from_directory
 from models import db, Organisation, Supplier, ReportConfig, User, RegistrationRequest, Role, PipeFitting, PipeMaterial
 from motor_models import Motor, seed_motors
-from seed_data import seed_pumps, seed_pipe_reference_data
-from routes import main_bp, pumps_bp, curves_bp, selection_bp, comparison_bp, reports_bp, organisations_bp, debug_bp, auth_bp, pipe_network_bp, projects_bp, calculations_bp
+from seed_data import seed_pumps, seed_pipe_reference_data, seed_fire_pumps
+from routes import main_bp, pumps_bp, curves_bp, selection_bp, comparison_bp, reports_bp, organisations_bp, debug_bp, auth_bp, pipe_network_bp, projects_bp, calculations_bp, fire_pumps_bp
 from routes.auth import get_current_user
 # Secure URL token helper — used to expose encode_pump_id() to Jinja templates.
 from pump_token import encode_pump_id
@@ -585,6 +585,7 @@ with app.app_context():
     seed_pumps(app)
     seed_motors(db)
     seed_pipe_reference_data(app)
+    seed_fire_pumps(app)
 
 # ── Register Modular Blueprints ────────────────────────────────────────────────
 app.register_blueprint(main_bp)
@@ -599,6 +600,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(pipe_network_bp)  # Pipe network friction-loss designer
 app.register_blueprint(projects_bp)      # Projects & saved selections management
 app.register_blueprint(calculations_bp)  # Server-side engineering calculation API
+app.register_blueprint(fire_pumps_bp)    # Fire Protection Pump Sizing & Selection (NFPA 20/13/14)
 
 
 # ── Global Authentication Gatekeeper ──────────────────────────────────────────
@@ -641,8 +643,15 @@ def handle_url_build_error(error, endpoint, values):
     from flask import url_for as flask_url_for
     if endpoint in ('projects', 'project'):
         return flask_url_for('projects.index', **values)
+    if endpoint in ('fire_pumps', 'fire_pump', 'fire_pump_selection'):
+        try:
+            return flask_url_for('fire_pumps.index', **values)
+        except Exception:
+            return '/fire-pumps'
+    if endpoint == 'fire_pumps.index':
+        return '/fire-pumps'
     if '.' not in endpoint:
-        for bp in ['main', 'pumps', 'curves', 'selection', 'comparison', 'reports', 'organisations', 'debug', 'auth', 'pipe_network', 'projects']:
+        for bp in ['main', 'pumps', 'curves', 'selection', 'comparison', 'reports', 'organisations', 'debug', 'auth', 'pipe_network', 'projects', 'fire_pumps']:
             target = f"{bp}.{endpoint}"
             if target in app.view_functions:
                 return flask_url_for(target, **values)

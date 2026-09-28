@@ -1,0 +1,796 @@
+{% extends "base.html" %}
+
+{% block title %}Fire Protection Pump Sizing & Selection — NFPA 20 / EN 12845 / AS 2941 | Pump-Master-Pro{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+  <!-- ── Page Header & Compliance Banner ────────────────────────────────────── -->
+  <div class="bg-[#161b22] border border-[#30363d] rounded-2xl p-5 shadow-lg relative overflow-hidden">
+    <!-- Subtle Fire Protection Background Glow -->
+    <div class="absolute -right-20 -top-20 w-80 h-80 bg-[#f85149]/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative z-10">
+      <div>
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <span class="p-2 rounded-xl bg-[#f85149]/20 text-[#f85149] border border-[#f85149]/40 flex items-center justify-center">
+            <i class="bi bi-fire text-xl"></i>
+          </span>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-xl font-bold text-white tracking-tight">Fire Protection Pump Sizing &amp; Selection</h1>
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#f85149]/20 text-[#f85149] border border-[#f85149]/40">
+                NFPA 20 / EN 12845 / AS 2941
+              </span>
+            </div>
+            <p class="text-xs text-[#8b949e] mt-0.5">
+              Hydraulic demand sizing for automatic sprinklers, standpipe &amp; hose systems, hydrant arrays, and NFPA 20 curve compliance.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Unit System Toggle & Presets -->
+      <div class="flex items-center gap-3">
+        <div class="inline-flex rounded-lg p-0.5 bg-[#0d1117] border border-[#30363d] text-xs font-semibold">
+          <button type="button" id="btnUnitMetric" onclick="setFireUnitSystem('metric')"
+                  class="px-3 py-1 rounded transition-all {{ 'bg-[#21262d] text-[#58a6ff] shadow-sm' if unit_system != 'imperial' else 'text-[#8b949e] hover:text-white' }}">
+            Metric (m³/h, m, bar)
+          </button>
+          <button type="button" id="btnUnitImperial" onclick="setFireUnitSystem('imperial')"
+                  class="px-3 py-1 rounded transition-all {{ 'bg-[#21262d] text-[#58a6ff] shadow-sm' if unit_system == 'imperial' else 'text-[#8b949e] hover:text-white' }}">
+            Imperial (GPM, PSI, ft)
+          </button>
+        </div>
+
+        <a href="{{ url_for('pump_selection') }}"
+           class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#8b949e] hover:text-white rounded-lg border border-[#30363d] transition-colors flex items-center gap-1.5"
+           title="Switch to General Clean Water / Process Pump Selection">
+          <i class="bi bi-arrow-left-right"></i>
+          <span>Process Selection</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Main Grid: Sizing Inputs (Left) & Hydraulic Demand Breakdown (Right) ── -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- ── Left Column: Standard Sizing Inputs Form (7 cols) ───────────────── -->
+    <div class="lg:col-span-7 space-y-4">
+
+      <div class="bg-[#161b22] border border-[#30363d] rounded-2xl p-5 shadow-sm space-y-4">
+        
+        <!-- Standard Selection Tabs -->
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-[#8b949e] mb-2">
+            1. Select Fire Protection Design Standard &amp; Criteria
+          </label>
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 p-1 rounded-xl bg-[#0d1117] border border-[#30363d]">
+            <button type="button" onclick="selectFireStandard('nfpa13')" id="tab_nfpa13"
+                    class="fire-tab-btn px-2 py-2 rounded-lg text-xs font-semibold transition-all text-center flex flex-col items-center justify-center gap-1 active bg-[#f85149]/20 text-[#f85149] border border-[#f85149]/40">
+              <i class="bi bi-droplet-half text-sm"></i>
+              <span>NFPA 13 (Sprinkler)</span>
+            </button>
+            <button type="button" onclick="selectFireStandard('nfpa14')" id="tab_nfpa14"
+                    class="fire-tab-btn px-2 py-2 rounded-lg text-xs font-semibold transition-all text-center flex flex-col items-center justify-center gap-1 text-[#8b949e] hover:text-white">
+              <i class="bi bi-signpost-split text-sm"></i>
+              <span>NFPA 14 (Standpipe)</span>
+            </button>
+            <button type="button" onclick="selectFireStandard('en12845')" id="tab_en12845"
+                    class="fire-tab-btn px-2 py-2 rounded-lg text-xs font-semibold transition-all text-center flex flex-col items-center justify-center gap-1 text-[#8b949e] hover:text-white">
+              <i class="bi bi-shield-check text-sm"></i>
+              <span>EN 12845 (LPC)</span>
+            </button>
+            <button type="button" onclick="selectFireStandard('as2941')" id="tab_as2941"
+                    class="fire-tab-btn px-2 py-2 rounded-lg text-xs font-semibold transition-all text-center flex flex-col items-center justify-center gap-1 text-[#8b949e] hover:text-white">
+              <i class="bi bi-globe-americas text-sm"></i>
+              <span>AS 2941 (Australia)</span>
+            </button>
+            <button type="button" onclick="selectFireStandard('custom')" id="tab_custom"
+                    class="fire-tab-btn px-2 py-2 rounded-lg text-xs font-semibold transition-all text-center flex flex-col items-center justify-center gap-1 text-[#8b949e] hover:text-white">
+              <i class="bi bi-sliders text-sm"></i>
+              <span>Custom Duty</span>
+            </button>
+          </div>
+        </div>
+
+        <form id="fireSizingForm" onsubmit="event.preventDefault(); triggerRecalculate();" class="space-y-4">
+          <input type="hidden" name="standard" id="input_standard" value="nfpa13">
+
+          <!-- Hazard Classification / Preset Selection -->
+          <div id="section_hazard_class">
+            <label for="select_hazard" class="block text-xs font-bold text-[#c9d1d9] mb-1">
+              Building Hazard Classification &amp; Fire Risk Profile
+            </label>
+            <select id="select_hazard" name="hazard_class" onchange="onHazardChange()"
+                    class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#f85149] transition-colors">
+              <!-- Dynamically populated based on active standard -->
+            </select>
+            <p id="hazard_description" class="text-[11px] text-[#8b949e] mt-1 italic leading-relaxed">
+              Standard commercial, manufacturing, or storage fire loading profile.
+            </p>
+          </div>
+
+          <!-- Dynamic Standard Specific Parameters (Density, Area, Hose Stream) -->
+          <div id="section_standard_params" class="p-3 bg-[#0d1117] border border-[#30363d] rounded-xl space-y-3">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-[#8b949e] flex items-center justify-between pb-1 border-b border-[#30363d]/60">
+              <span id="lbl_params_title">Hydraulic Demand Parameters</span>
+              <span class="text-[#38bdf8] text-[10px]"><i class="bi bi-info-circle mr-1"></i>Code Compliant Defaults</span>
+            </div>
+
+            <!-- Sprinkler Density / Area Fields (NFPA 13 & EN 12845) -->
+            <div id="row_density_area" class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] text-[#c9d1d9] mb-1" id="lbl_density">Design Density (GPM/ft²)</label>
+                <input type="number" step="any" id="input_density" name="density" value="0.15"
+                       class="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white font-mono focus:border-[#f85149] focus:outline-none"
+                       oninput="triggerRecalculate()">
+              </div>
+              <div>
+                <label class="block text-[11px] text-[#c9d1d9] mb-1" id="lbl_area">Design Operating Area (ft²)</label>
+                <input type="number" step="any" id="input_area" name="area" value="1500"
+                       class="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white font-mono focus:border-[#f85149] focus:outline-none"
+                       oninput="triggerRecalculate()">
+              </div>
+            </div>
+
+            <!-- Standpipe Risers Count (NFPA 14) -->
+            <div id="row_standpipe_risers" class="hidden grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] text-[#c9d1d9] mb-1">Number of Standpipe Risers</label>
+                <input type="number" min="1" max="10" step="1" id="input_risers_count" name="risers_count" value="1"
+                       class="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white font-mono focus:border-[#f85149] focus:outline-none"
+                       oninput="triggerRecalculate()">
+              </div>
+              <div class="flex items-center pt-5">
+                <label class="inline-flex items-center gap-2 cursor-pointer text-xs text-[#c9d1d9]">
+                  <input type="checkbox" id="input_sprinklered" name="sprinklered" checked
+                         class="rounded bg-[#161b22] border-[#30363d] text-[#f85149] focus:ring-0"
+                         onchange="triggerRecalculate()">
+                  <span>Building is Fully Sprinklered</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Hose Stream Allowance -->
+            <div id="row_hose_stream">
+              <label class="block text-[11px] text-[#c9d1d9] mb-1" id="lbl_hose_stream">Inside &amp; Outside Hose Stream Allowance</label>
+              <div class="relative">
+                <input type="number" step="any" id="input_hose_stream" name="hose_stream" value="250"
+                       class="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white font-mono focus:border-[#f85149] focus:outline-none"
+                       oninput="triggerRecalculate()">
+                <span class="absolute right-3 top-1.5 text-xs font-mono text-[#8b949e]" id="unit_hose_badge">GPM</span>
+              </div>
+            </div>
+
+            <!-- Custom Direct Flow & Head (Visible when standard == 'custom') -->
+            <div id="row_custom_duty" class="hidden grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] text-[#c9d1d9] mb-1">Design Fire Flow Rate *</label>
+                <div class="relative">
+                  <input type="number" step="any" id="input_custom_flow" name="custom_flow_m3h" value="150"
+                         class="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white font-mono focus:border-[#f85149] focus:outline-none"
+                         oninput="triggerRecalculate()">
+                  <span class="absolute right-3 top-1.5 text-xs font-mono text-[#8b949e]" id="unit_custom_flow_badge">m³/h</span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-[11px] text-[#c9d1d9] mb-1">Total Dynamic Head *</label>
+                <div class="relative">
+                  <input type="number" step="any" id="input_custom_head" name="custom_head_m" value="70"
+                         class="w-full bg-[#161b22] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white font-mono focus:border-[#f85149] focus:outline-none"
+                         oninput="triggerRecalculate()">
+                  <span class="absolute right-3 top-1.5 text-xs font-mono text-[#8b949e]" id="unit_custom_head_badge">m</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Hydraulic Installation & Head Calculation Section -->
+          <div class="space-y-3">
+            <label class="block text-xs font-bold uppercase tracking-wider text-[#8b949e]">
+              2. Installation Hydraulics, Elevation &amp; Operating Pressure
+            </label>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <!-- Static Elevation -->
+              <div>
+                <label class="block text-[11px] text-[#c9d1d9] mb-1">Static Elevation (Height)</label>
+                <div class="relative">
+                  <input type="number" step="any" id="input_static_elevation" name="static_elevation_m" value="15.0"
+                         placeholder="0.0"
+                         class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:border-[#f85149] focus:outline-none"
+                         oninput="triggerRecalculate()">
+                  <span class="absolute right-3 top-1.5 text-xs font-mono text-[#8b949e]" id="unit_elevation_badge">m</span>
+                </div>
+                <span class="text-[10px] text-[#8b949e]">To highest sprinkler / valve</span>
+              </div>
+
+              <!-- Piping Friction Loss -->
+              <div>
+                <label class="block text-[11px] text-[#c9d1d9] mb-1">Piping Friction Loss</label>
+                <div class="relative">
+                  <input type="number" step="any" id="input_friction_loss" name="friction_loss_m" value="5.0"
+                         placeholder="0.0"
+                         class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:border-[#f85149] focus:outline-none"
+                         oninput="triggerRecalculate()">
+                  <span class="absolute right-3 top-1.5 text-xs font-mono text-[#8b949e]" id="unit_friction_badge">m</span>
+                </div>
+                <span class="text-[10px] text-[#8b949e]">Or design with <a href="{{ url_for('pipe_network.pipe_network') }}" class="text-[#38bdf8] hover:underline">Pipe Network</a></span>
+              </div>
+
+              <!-- Residual Nozzle Pressure -->
+              <div>
+                <label class="block text-[11px] text-[#c9d1d9] mb-1">Residual Nozzle Pressure</label>
+                <div class="relative">
+                  <input type="number" step="any" id="input_residual_pressure" name="residual_pressure_bar" value="1.0"
+                         placeholder="Auto"
+                         class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:border-[#f85149] focus:outline-none"
+                         oninput="triggerRecalculate()">
+                  <span class="absolute right-3 top-1.5 text-xs font-mono text-[#8b949e]" id="unit_residual_badge">bar</span>
+                </div>
+                <span class="text-[10px] text-[#8b949e]">Min operating pressure at head</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fire Pump Redundancy Arrangement (Main + Standby) -->
+          <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-xl flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="bi bi-shield-fill-check text-[#3fb950] text-base"></i>
+              <div>
+                <div class="text-xs font-bold text-white">NFPA 20 Duty &amp; Standby Redundancy</div>
+                <div class="text-[11px] text-[#8b949e]">Primary Electric Fire Pump + 100% Redundant Diesel Standby Pump</div>
+              </div>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#3fb950]/20 text-[#3fb950] border border-[#3fb950]/40">
+              1 Duty + 1 Standby (100%)
+            </span>
+          </div>
+
+        </form>
+      </div>
+
+    </div>
+
+    <!-- ── Right Column: Calculated Fire Demand & Auxiliaries (5 cols) ────── -->
+    <div class="lg:col-span-5 space-y-4">
+
+      <!-- Main Net Fire Demand Card -->
+      <div class="bg-[#161b22] border border-[#f85149]/40 rounded-2xl p-5 shadow-lg space-y-4 relative overflow-hidden">
+        <div class="flex items-center justify-between pb-3 border-b border-[#30363d]">
+          <span class="text-xs font-bold uppercase tracking-wider text-[#f85149] flex items-center gap-1.5">
+            <i class="bi bi-calculator"></i>
+            <span>Required Fire Pump Design Point</span>
+          </span>
+          <span id="badge_flow_standard" class="text-[10px] font-mono px-2 py-0.5 rounded bg-[#f85149]/20 text-[#f85149] border border-[#f85149]/40 font-bold">
+            NFPA 13
+          </span>
+        </div>
+
+        <!-- Big Metric Callouts -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-3 bg-[#0d1117] rounded-xl border border-[#30363d]">
+            <div class="text-[11px] text-[#8b949e] font-medium">Rated Flow Q</div>
+            <div class="text-xl font-bold font-mono text-white mt-0.5" id="res_flow_primary">114.0 m³/h</div>
+            <div class="text-[11px] font-mono text-[#58a6ff]" id="res_flow_secondary">502 GPM</div>
+          </div>
+          <div class="p-3 bg-[#0d1117] rounded-xl border border-[#30363d]">
+            <div class="text-[11px] text-[#8b949e] font-medium">Total Dynamic Head H</div>
+            <div class="text-xl font-bold font-mono text-white mt-0.5" id="res_head_primary">70.3 m</div>
+            <div class="text-[11px] font-mono text-[#58a6ff]" id="res_head_secondary">100.0 PSI (6.9 bar)</div>
+          </div>
+        </div>
+
+        <!-- NFPA 20 Characteristic Limits Breakdown -->
+        <div class="bg-[#0d1117] p-3 rounded-xl border border-[#30363d] space-y-2 text-xs">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-[#8b949e] pb-1 border-b border-[#30363d]/60">
+            NFPA 20 Curve Verification Criteria
+          </div>
+          <div class="flex items-center justify-between text-[#c9d1d9]">
+            <span>Max Churn / Shutoff Head (0% Q):</span>
+            <span class="font-mono font-bold text-[#facc15]" id="res_max_churn">≤ 98.4 m (140.0 PSI)</span>
+          </div>
+          <div class="flex items-center justify-between text-[#c9d1d9]">
+            <span>150% Overload Test Flow:</span>
+            <span class="font-mono font-bold text-white" id="res_overload_flow">171.0 m³/h (753 GPM)</span>
+          </div>
+          <div class="flex items-center justify-between text-[#c9d1d9]">
+            <span>Min Head at 150% Overload (≥65%):</span>
+            <span class="font-mono font-bold text-[#3fb950]" id="res_min_overload_head">≥ 45.7 m (65.0 PSI)</span>
+          </div>
+          <div class="flex items-center justify-between text-[#c9d1d9] pt-1 border-t border-[#30363d]/40">
+            <span>Est. Driver Power (Motor/Diesel):</span>
+            <span class="font-mono font-bold text-[#58a6ff]" id="res_driver_power">45 kW (60 HP)</span>
+          </div>
+        </div>
+
+        <!-- Auxiliaries: Jockey Pump & Water Storage Tank -->
+        <div class="grid grid-cols-2 gap-3 text-xs">
+          <!-- Jockey Pump Card -->
+          <div class="p-3 bg-[#0d1117] rounded-xl border border-[#30363d] space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-[#38bdf8] flex items-center gap-1">
+                <i class="bi bi-arrow-repeat"></i> Jockey Pump
+              </span>
+              <span class="text-[10px] font-mono text-[#8b949e]">Pressure Maint.</span>
+            </div>
+            <div class="text-sm font-bold font-mono text-white" id="res_jockey_duty">10.0 GPM @ 110 PSI</div>
+            <div class="text-[10px] text-[#8b949e]">
+              Start: <span class="font-mono text-white" id="res_jockey_start">95 PSI</span> |
+              Stop: <span class="font-mono text-white" id="res_jockey_stop">105 PSI</span>
+            </div>
+          </div>
+
+          <!-- Water Storage Tank Card -->
+          <div class="p-3 bg-[#0d1117] rounded-xl border border-[#30363d] space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-[#3fb950] flex items-center gap-1">
+                <i class="bi bi-water"></i> Storage Tank
+              </span>
+              <span class="text-[10px] font-mono text-[#8b949e]" id="res_tank_duration">60 min</span>
+            </div>
+            <div class="text-sm font-bold font-mono text-white" id="res_tank_vol_m3">114 m³</div>
+            <div class="text-[10px] font-mono text-[#8b949e]" id="res_tank_vol_gal">30,115 US Gal</div>
+          </div>
+        </div>
+
+        <!-- NFPA 20 Table 4.27 Pipe Sizing Recommendation -->
+        <div class="p-2.5 bg-[#0d1117] rounded-xl border border-[#30363d] flex items-center justify-between text-xs">
+          <span class="text-[#8b949e] flex items-center gap-1.5">
+            <i class="bi bi-diagram-2 text-[#58a6ff]"></i>
+            <span>NFPA 20 Pipe Sizing:</span>
+          </span>
+          <span class="font-mono text-white font-semibold" id="res_pipe_sizes">
+            Suction: 5" (125mm) | Discharge: 5" (125mm)
+          </span>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ── Section: Candidate Fire Protection Pumps & NFPA 20 Compliance Results ── -->
+  <div class="bg-[#161b22] border border-[#30363d] rounded-2xl p-5 shadow-sm space-y-4">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#30363d]">
+      <div>
+        <h2 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="bi bi-shield-check text-[#3fb950]"></i>
+          <span>Matching Candidate Fire Protection Pumps</span>
+        </h2>
+        <p class="text-xs text-[#8b949e] mt-0.5">
+          Pumps from catalogue evaluated against the NFPA 20 characteristic curve criteria (Rated Head ≥ 100%, Churn ≤ 140%, Overload ≥ 65%).
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span id="candidates_count_badge" class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-[#21262d] text-[#58a6ff] border border-[#30363d]">
+          0 Pumps Found
+        </span>
+      </div>
+    </div>
+
+    <!-- Candidate Pumps Cards Grid -->
+    <div id="candidates_container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <!-- Populated via JavaScript -->
+    </div>
+
+    <!-- No Candidates Fallback Banner -->
+    <div id="no_candidates_banner" class="hidden p-8 text-center bg-[#0d1117] rounded-xl border border-[#30363d] space-y-2">
+      <i class="bi bi-exclamation-triangle text-2xl text-[#facc15]"></i>
+      <div class="text-sm font-bold text-white">No Direct Catalogue Matches for this Duty Point</div>
+      <p class="text-xs text-[#8b949e] max-w-md mx-auto">
+        Try adjusting the static elevation, design density, or residual pressure, or add certified fire pumps in the Pump Catalogue.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Include Save Selection to Project Modal Component ─────────────────── -->
+{% include "components/save_to_project_modal.html" %}
+
+<script>
+/**
+ * Fire Pump Sizing & Selection Controller
+ * Standards: NFPA 20, NFPA 13, NFPA 14, EN 12845, AS 2941
+ */
+let currentStandard = 'nfpa13';
+let currentUnitSystem = '{{ unit_system }}' || 'metric';
+let standardsData = null;
+let currentDemandData = null;
+
+// Conversion Constants
+const GPM_TO_M3H = 0.22712470704;
+const M3H_TO_GPM = 4.40286754;
+const PSI_TO_M = 0.703069578;
+const M_TO_PSI = 1.42233433;
+const BAR_TO_M = 10.197162;
+const M_TO_BAR = 0.0980665;
+
+document.addEventListener('DOMContentLoaded', function() {
+  fetchStandardsData();
+});
+
+function fetchStandardsData() {
+  fetch('/fire-pumps/api/standards-data')
+    .then(r => r.json())
+    .then(data => {
+      standardsData = data;
+      populateHazardDropdown();
+      triggerRecalculate();
+    })
+    .catch(() => {
+      triggerRecalculate();
+    });
+}
+
+function selectFireStandard(std) {
+  currentStandard = std;
+  document.getElementById('input_standard').value = std;
+
+  // Toggle Tab styles
+  document.querySelectorAll('.fire-tab-btn').forEach(btn => {
+    btn.className = 'fire-tab-btn px-2 py-2 rounded-lg text-xs font-semibold transition-all text-center flex flex-col items-center justify-center gap-1 text-[#8b949e] hover:text-white';
+  });
+  const activeTab = document.getElementById('tab_' + std);
+  if (activeTab) {
+    activeTab.className = 'fire-tab-btn px-2 py-2 rounded-lg text-xs font-semibold transition-all text-center flex flex-col items-center justify-center gap-1 active bg-[#f85149]/20 text-[#f85149] border border-[#f85149]/40';
+  }
+
+  // Update Standard Badge
+  const badgeEl = document.getElementById('badge_flow_standard');
+  if (badgeEl) {
+    badgeEl.textContent = std.toUpperCase();
+  }
+
+  // Toggle visible sections based on standard
+  const hazardSec = document.getElementById('section_hazard_class');
+  const densityAreaRow = document.getElementById('row_density_area');
+  const standpipeRow = document.getElementById('row_standpipe_risers');
+  const hoseStreamRow = document.getElementById('row_hose_stream');
+  const customDutyRow = document.getElementById('row_custom_duty');
+  const lblTitle = document.getElementById('lbl_params_title');
+
+  if (std === 'custom') {
+    if (hazardSec) hazardSec.classList.add('hidden');
+    if (densityAreaRow) densityAreaRow.classList.add('hidden');
+    if (standpipeRow) standpipeRow.classList.add('hidden');
+    if (hoseStreamRow) hoseStreamRow.classList.add('hidden');
+    if (customDutyRow) customDutyRow.classList.remove('hidden');
+    if (lblTitle) lblTitle.textContent = 'Custom Direct Duty Specification';
+  } else if (std === 'nfpa14') {
+    if (hazardSec) hazardSec.classList.remove('hidden');
+    if (densityAreaRow) densityAreaRow.classList.add('hidden');
+    if (standpipeRow) standpipeRow.classList.remove('hidden');
+    if (hoseStreamRow) hoseStreamRow.classList.add('hidden');
+    if (customDutyRow) customDutyRow.classList.add('hidden');
+    if (lblTitle) lblTitle.textContent = 'Standpipe Riser Demands (NFPA 14)';
+  } else {
+    if (hazardSec) hazardSec.classList.remove('hidden');
+    if (densityAreaRow) densityAreaRow.classList.remove('hidden');
+    if (standpipeRow) standpipeRow.classList.add('hidden');
+    if (hoseStreamRow) hoseStreamRow.classList.remove('hidden');
+    if (customDutyRow) customDutyRow.classList.add('hidden');
+    if (lblTitle) lblTitle.textContent = 'Hydraulic Demand Parameters';
+  }
+
+  populateHazardDropdown();
+  triggerRecalculate();
+}
+
+function populateHazardDropdown() {
+  const sel = document.getElementById('select_hazard');
+  if (!sel || !standardsData) return;
+
+  sel.innerHTML = '';
+  let profiles = {};
+
+  if (currentStandard === 'nfpa13') {
+    profiles = standardsData.nfpa13 || {};
+  } else if (currentStandard === 'nfpa14') {
+    profiles = standardsData.nfpa14 || {};
+  } else if (currentStandard === 'en12845') {
+    profiles = standardsData.en12845 || {};
+  } else if (currentStandard === 'as2941') {
+    profiles = standardsData.as2941 || {};
+  }
+
+  Object.entries(profiles).forEach(([k, v]) => {
+    const opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = v.name;
+    sel.appendChild(opt);
+  });
+
+  if (sel.options.length > 0) {
+    sel.selectedIndex = 0;
+    onHazardChange();
+  }
+}
+
+function onHazardChange() {
+  const sel = document.getElementById('select_hazard');
+  const descEl = document.getElementById('hazard_description');
+  if (!sel || !standardsData) return;
+
+  const key = sel.value;
+  let profile = null;
+
+  if (currentStandard === 'nfpa13') profile = (standardsData.nfpa13 || {})[key];
+  else if (currentStandard === 'nfpa14') profile = (standardsData.nfpa14 || {})[key];
+  else if (currentStandard === 'en12845') profile = (standardsData.en12845 || {})[key];
+  else if (currentStandard === 'as2941') profile = (standardsData.as2941 || {})[key];
+
+  if (!profile) return;
+
+  if (descEl) descEl.textContent = profile.description || '';
+
+  // Auto populate inputs from preset
+  const densityInput = document.getElementById('input_density');
+  const areaInput = document.getElementById('input_area');
+  const hoseInput = document.getElementById('input_hose_stream');
+  const resInput = document.getElementById('input_residual_pressure');
+
+  if (currentStandard === 'nfpa13') {
+    if (densityInput) densityInput.value = profile.density_gpm_ft2 || 0.15;
+    if (areaInput) areaInput.value = profile.area_ft2 || 1500;
+    if (hoseInput) hoseInput.value = profile.hose_stream_gpm || 250;
+    if (resInput) resInput.value = (profile.min_residual_psi ? (profile.min_residual_psi * 0.0689476).toFixed(2) : 1.0);
+  } else if (currentStandard === 'en12845') {
+    if (densityInput) densityInput.value = profile.design_density_mm_min || 5.0;
+    if (areaInput) areaInput.value = profile.design_area_m2 || 144.0;
+    if (hoseInput) hoseInput.value = 0;
+    if (resInput) resInput.value = profile.nominal_head_bar || 1.5;
+  } else if (currentStandard === 'as2941') {
+    if (resInput) resInput.value = (profile.head_kpa ? (profile.head_kpa / 100.0).toFixed(1) : 6.0);
+  }
+
+  triggerRecalculate();
+}
+
+function setFireUnitSystem(u) {
+  currentUnitSystem = u;
+  const btnMetric = document.getElementById('btnUnitMetric');
+  const btnImperial = document.getElementById('btnUnitImperial');
+
+  if (u === 'imperial') {
+    if (btnMetric) btnMetric.className = 'px-3 py-1 rounded transition-all text-[#8b949e] hover:text-white';
+    if (btnImperial) btnImperial.className = 'px-3 py-1 rounded transition-all bg-[#21262d] text-[#58a6ff] shadow-sm';
+  } else {
+    if (btnMetric) btnMetric.className = 'px-3 py-1 rounded transition-all bg-[#21262d] text-[#58a6ff] shadow-sm';
+    if (btnImperial) btnImperial.className = 'px-3 py-1 rounded transition-all text-[#8b949e] hover:text-white';
+  }
+
+  // Update input badges
+  document.getElementById('unit_elevation_badge').textContent = (u === 'imperial' ? 'ft' : 'm');
+  document.getElementById('unit_friction_badge').textContent = (u === 'imperial' ? 'ft' : 'm');
+  document.getElementById('unit_residual_badge').textContent = (u === 'imperial' ? 'psi' : 'bar');
+  document.getElementById('unit_custom_flow_badge').textContent = (u === 'imperial' ? 'GPM' : 'm³/h');
+  document.getElementById('unit_custom_head_badge').textContent = (u === 'imperial' ? 'ft' : 'm');
+
+  triggerRecalculate();
+}
+
+let calcDebounceTimer = null;
+function triggerRecalculate() {
+  clearTimeout(calcDebounceTimer);
+  calcDebounceTimer = setTimeout(runCalculation, 150);
+}
+
+function runCalculation() {
+  const form = document.getElementById('fireSizingForm');
+  if (!form) return;
+
+  const formData = new FormData(form);
+  const payload = {
+    standard: currentStandard,
+    hazard_class: formData.get('hazard_class'),
+    density: parseFloat(formData.get('density')) || null,
+    area: parseFloat(formData.get('area')) || null,
+    hose_stream: parseFloat(formData.get('hose_stream')) || null,
+    risers_count: parseInt(formData.get('risers_count')) || 1,
+    sprinklered: document.getElementById('input_sprinklered')?.checked ?? true,
+    static_elevation_m: parseFloat(formData.get('static_elevation_m')) || 0.0,
+    friction_loss_m: parseFloat(formData.get('friction_loss_m')) || 0.0,
+    residual_pressure_bar: parseFloat(formData.get('residual_pressure_bar')) || null,
+    custom_flow_m3h: parseFloat(formData.get('custom_flow_m3h')) || null,
+    custom_head_m: parseFloat(formData.get('custom_head_m')) || null,
+    unit_system: currentUnitSystem
+  };
+
+  fetch('/fire-pumps/api/calculate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success && data.demand) {
+      currentDemandData = data.demand;
+      renderDemandResults(data.demand);
+      renderCandidatePumps(data.candidates || []);
+    }
+  })
+  .catch(err => {
+    console.error('Fire pump calculation error:', err);
+  });
+}
+
+function renderDemandResults(d) {
+  // Main Duty Point
+  if (currentUnitSystem === 'imperial') {
+    document.getElementById('res_flow_primary').textContent = `${d.flow_gpm} GPM`;
+    document.getElementById('res_flow_secondary').textContent = `${d.flow_m3h} m³/h`;
+    document.getElementById('res_head_primary').textContent = `${d.head_psi} PSI (${Math.round(d.head_m * 3.28084)} ft)`;
+    document.getElementById('res_head_secondary').textContent = `${d.head_m} m (${d.head_bar} bar)`;
+  } else {
+    document.getElementById('res_flow_primary').textContent = `${d.flow_m3h} m³/h`;
+    document.getElementById('res_flow_secondary').textContent = `${d.flow_gpm} GPM`;
+    document.getElementById('res_head_primary').textContent = `${d.head_m} m (${d.head_bar} bar)`;
+    document.getElementById('res_head_secondary').textContent = `${d.head_psi} PSI`;
+  }
+
+  // NFPA 20 Limits
+  document.getElementById('res_max_churn').textContent = `≤ ${d.max_churn_head_m} m (${d.max_churn_head_psi} PSI)`;
+  document.getElementById('res_overload_flow').textContent = `${d.overload_flow_m3h} m³/h (${d.overload_flow_gpm} GPM)`;
+  document.getElementById('res_min_overload_head').textContent = `≥ ${d.min_overload_head_m} m (${d.min_overload_head_psi} PSI)`;
+  document.getElementById('res_driver_power').textContent = `${d.est_driver_power_kw} kW (${d.est_driver_power_hp} HP)`;
+
+  // Jockey Pump
+  const jp = d.jockey_pump || {};
+  document.getElementById('res_jockey_duty').textContent = `${jp.flow_gpm} GPM @ ${jp.head_psi} PSI`;
+  document.getElementById('res_jockey_start').textContent = `${jp.start_psi} PSI`;
+  document.getElementById('res_jockey_stop').textContent = `${jp.stop_psi} PSI`;
+
+  // Storage Tank
+  const wt = d.water_tank || {};
+  document.getElementById('res_tank_duration').textContent = `${wt.duration_min} min`;
+  document.getElementById('res_tank_vol_m3').textContent = `${wt.volume_m3} m³`;
+  document.getElementById('res_tank_vol_gal').textContent = `${(wt.volume_us_gal || 0).toLocaleString()} US Gal`;
+
+  // NFPA 20 Pipe Sizes
+  const ps = d.pipe_sizing || {};
+  document.getElementById('res_pipe_sizes').textContent = 
+    `Suction: ${ps.suction_in}" (${ps.suction_mm}mm) | Discharge: ${ps.discharge_in}" (${ps.discharge_mm}mm)`;
+}
+
+function renderCandidatePumps(candidates) {
+  const container = document.getElementById('candidates_container');
+  const countBadge = document.getElementById('candidates_count_badge');
+  const noBanner = document.getElementById('no_candidates_banner');
+  if (!container) return;
+
+  container.innerHTML = '';
+  if (countBadge) countBadge.textContent = `${candidates.length} Pumps Evaluated`;
+
+  if (candidates.length === 0) {
+    if (noBanner) noBanner.classList.remove('hidden');
+    return;
+  }
+  if (noBanner) noBanner.classList.add('hidden');
+
+  candidates.forEach(c => {
+    const ev = c.eval || {};
+    const card = document.createElement('div');
+    card.className = 'bg-[#0d1117] border border-[#30363d] hover:border-[#f85149]/60 rounded-xl p-4 transition-all shadow-sm space-y-3 flex flex-col justify-between';
+
+    // Status Badge
+    let statusBadge = '';
+    if (ev.is_compliant) {
+      statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#3fb950]/20 text-[#3fb950] border border-[#3fb950]/40"><i class="bi bi-check-circle-fill mr-1"></i>NFPA 20 Compliant</span>';
+    } else if (!ev.pass_rated) {
+      statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#f85149]/20 text-[#f85149] border border-[#f85149]/40"><i class="bi bi-x-circle-fill mr-1"></i>Head Deficient</span>';
+    } else if (!ev.pass_churn) {
+      statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#facc15]/20 text-[#facc15] border border-[#facc15]/40"><i class="bi bi-exclamation-triangle-fill mr-1"></i>High Churn (&gt;140%)</span>';
+    } else {
+      statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#e06c75]/20 text-[#e06c75] border border-[#e06c75]/40"><i class="bi bi-exclamation-triangle-fill mr-1"></i>Low Overload (&lt;65%)</span>';
+    }
+
+    const fireTag = c.is_dedicated_fire ? '<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#f85149]/15 text-[#f85149] border border-[#f85149]/30">UL/FM Certified</span>' : '';
+
+    card.innerHTML = `
+      <div class="space-y-2">
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <h3 class="text-xs font-bold text-white leading-snug">${c.name}</h3>
+            <div class="text-[10px] text-[#8b949e] font-mono">${c.manufacturer} &bull; ${c.model_number || c.pump_type}</div>
+          </div>
+          <div class="flex flex-col items-end gap-1">
+            ${statusBadge}
+            ${fireTag}
+          </div>
+        </div>
+
+        <!-- NFPA 20 3-Point Check Matrix -->
+        <div class="grid grid-cols-3 gap-1.5 p-2 rounded-lg bg-[#161b22] border border-[#30363d]/60 text-center font-mono text-[10px]">
+          <div>
+            <div class="text-[#8b949e]">0% Churn</div>
+            <div class="font-bold ${ev.pass_churn ? 'text-[#3fb950]' : 'text-[#f85149]'}">${ev.churn_ratio_pct}%</div>
+            <div class="text-[9px] text-[#8b949e]">${ev.h_churn_m}m</div>
+          </div>
+          <div>
+            <div class="text-[#8b949e]">100% Rated</div>
+            <div class="font-bold ${ev.pass_rated ? 'text-[#3fb950]' : 'text-[#f85149]'}">${ev.rated_ratio_pct}%</div>
+            <div class="text-[9px] text-[#8b949e]">${ev.h_rated_m}m</div>
+          </div>
+          <div>
+            <div class="text-[#8b949e]">150% Overload</div>
+            <div class="font-bold ${ev.pass_overload ? 'text-[#3fb950]' : 'text-[#f85149]'}">${ev.overload_ratio_pct}%</div>
+            <div class="text-[9px] text-[#8b949e]">${ev.h_overload_m}m</div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-[11px] text-[#8b949e] pt-1">
+          <span>Speed: <strong class="text-white font-mono">${c.speed_rpm || '—'} RPM</strong></span>
+          <span>Rec. Driver: <strong class="text-[#58a6ff] font-mono">${ev.rec_driver_kw || '—'} kW (${ev.rec_driver_hp || '—'} HP)</strong></span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="pt-2 border-t border-[#30363d]/60 flex items-center justify-between gap-1.5">
+        <button type="button" onclick="selectAndRedirectFirePump(${c.pump_id})"
+                class="flex-1 py-1.5 px-2 bg-[#238636] hover:bg-[#2ea043] text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm">
+          <i class="bi bi-check2-circle"></i>
+          <span>Select Pump</span>
+        </button>
+
+        <a href="/curves/${c.pump_id}?q_duty=${currentDemandData?.flow_m3h || 100}&h_duty=${currentDemandData?.head_m || 70}&app=fire"
+           class="py-1.5 px-2.5 bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] hover:text-white text-xs font-semibold rounded-lg border border-[#30363d] transition-colors"
+           title="View Performance Curves">
+          <i class="bi bi-graph-up"></i>
+        </a>
+
+        <button type="button" onclick="saveFirePumpToProject(${c.pump_id}, '${c.name.replace(/'/g, "\\'")}')"
+                class="py-1.5 px-2.5 bg-[#21262d] hover:bg-[#30363d] text-[#38bdf8] hover:text-white text-xs font-semibold rounded-lg border border-[#30363d] transition-colors"
+                title="Save to Project">
+          <i class="bi bi-bookmark-plus"></i>
+        </button>
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+function selectAndRedirectFirePump(pumpId) {
+  if (!currentDemandData) return;
+  fetch('/fire-pumps/api/select-pump', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      pump_id: pumpId,
+      flow_m3h: currentDemandData.flow_m3h,
+      head_m: currentDemandData.head_m,
+      standard: currentStandard,
+      hazard_class: document.getElementById('select_hazard')?.value || 'ordinary_hazard_1'
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success && data.redirect_url) {
+      window.location.href = data.redirect_url;
+    }
+  });
+}
+
+function saveFirePumpToProject(pumpId, pumpName) {
+  if (typeof openSaveToProjectModal === 'function') {
+    openSaveToProjectModal({
+      pump_id: pumpId,
+      pump_name: pumpName,
+      flow_rate: currentDemandData ? currentDemandData.flow_m3h : 100,
+      flow_unit: 'm3h',
+      head: currentDemandData ? currentDemandData.head_m : 70,
+      pump_arrangement: 'single',
+      pumps_operating: 1,
+      pumps_standby: 0
+    });
+  }
+}
+</script>
+{% endblock %}

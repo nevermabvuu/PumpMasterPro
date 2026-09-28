@@ -1328,6 +1328,7 @@ def compute_power_poly(hq_a, eff_b, q_bep, q_max, rho=1000.0):
     eta_bep = float(np.clip(_poly_array(eff_b, np.array([q_bep])), 0, 100)[0])
     if eta_bep <= 0:
         return 0.0, 0.0, 0.0
-    p0, p1, p2 = _fit_power_from_data(
+    res = _fit_power_from_data(
         None, hq_a, eff_b, q_bep, H_bep, eta_bep, q_max, rho)
+    p0, p1, p2 = res[0], res[1], res[2]
     return round(p0, 4), round(p1, 8), round(p2, 10)

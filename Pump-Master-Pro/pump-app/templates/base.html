@@ -383,6 +383,11 @@
            title="Pump Selection &amp; System Duty">
           <i class="bi bi-bullseye"></i>Pump Selection
         </a>
+        <a class="nav-link-anim {% if request.endpoint and 'fire_pumps' in request.endpoint %}tw-active{% endif %}"
+           href="/fire-pumps"
+           title="Fire Protection Pump Sizing &amp; Selection (NFPA 20, NFPA 13, EN 12845, AS 2941)">
+          <i class="bi bi-fire text-[#f85149]"></i>Fire Pumps
+        </a>
         {% endif %}
 
         {% if not current_user or current_user.can_access('pipe_network') or (current_user and current_user.is_super_admin_user) %}
@@ -627,6 +632,10 @@
     <a href="{{ url_for('pump_selection') }}"
        class="mobile-nav-link {% if request.endpoint and 'pump_selection' in request.endpoint %}tw-active{% endif %}">
       <i class="bi bi-bullseye"></i>Pump Selection
+    </a>
+    <a href="/fire-pumps"
+       class="mobile-nav-link {% if request.endpoint and 'fire_pumps' in request.endpoint %}tw-active{% endif %}">
+      <i class="bi bi-fire text-[#f85149]"></i>Fire Pumps
     </a>
     {% endif %}
 

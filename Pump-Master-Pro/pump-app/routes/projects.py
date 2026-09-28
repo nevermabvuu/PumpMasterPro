@@ -317,10 +317,32 @@ def save_selection():
     else:
         pipe_net_json = '{}'
 
+    # Multi-pump arrangement values
+    pump_arr = data.get('pump_arrangement') or active_sel.get('pump_arrangement') or form_data.get('pump_arrangement') or 'single'
+    try:
+        pumps_op = int(data.get('pumps_operating') or active_sel.get('pumps_operating') or form_data.get('pumps_operating') or (1 if pump_arr == 'single' else 2))
+    except (ValueError, TypeError):
+        pumps_op = 1 if pump_arr == 'single' else 2
+    try:
+        pumps_stby = int(data.get('pumps_standby') or active_sel.get('pumps_standby') or form_data.get('pumps_standby') or 0)
+    except (ValueError, TypeError):
+        pumps_stby = 0
+
+    active_sel['pump_arrangement'] = pump_arr
+    active_sel['pumps_operating'] = pumps_op
+    active_sel['pumps_standby'] = pumps_stby
+
+    form_data['pump_arrangement'] = pump_arr
+    form_data['pumps_operating'] = str(pumps_op)
+    form_data['pumps_standby'] = str(pumps_stby)
+
     # Build full selection state snapshot
     full_snapshot = {
         'active_selection': active_sel,
         'selection_form_data': form_data,
+        'pump_arrangement': pump_arr,
+        'pumps_operating': pumps_op,
+        'pumps_standby': pumps_stby,
         'saved_at': datetime.utcnow().isoformat()
     }
 
@@ -389,7 +411,7 @@ def save_selection():
 def reload_selection(selection_id):
     """
     Reloads a saved selection back into the active workspace / session.
-    Restores duty point, pump parameters, fluid settings, and pipe network.
+    Restores duty point, pump parameters, multi-pump arrangement, fluid settings, and pipe network.
     """
     current_org = get_current_organisation()
     sel = ProjectSelection.query.filter_by(id=selection_id, organisation_id=current_org.id).first_or_404()
@@ -397,6 +419,16 @@ def reload_selection(selection_id):
     snapshot = sel.get_selection_data()
     active_sel = snapshot.get('active_selection') or {}
     form_data = snapshot.get('selection_form_data') or {}
+
+    pump_arr = snapshot.get('pump_arrangement') or active_sel.get('pump_arrangement') or form_data.get('pump_arrangement') or 'single'
+    try:
+        pumps_op = int(snapshot.get('pumps_operating') or active_sel.get('pumps_operating') or form_data.get('pumps_operating') or (1 if pump_arr == 'single' else 2))
+    except (ValueError, TypeError):
+        pumps_op = 1 if pump_arr == 'single' else 2
+    try:
+        pumps_stby = int(snapshot.get('pumps_standby') or active_sel.get('pumps_standby') or form_data.get('pumps_standby') or 0)
+    except (ValueError, TypeError):
+        pumps_stby = 0
 
     # If snapshot is empty, reconstruct state from the ProjectSelection model columns
     if not active_sel:
@@ -432,6 +464,15 @@ def reload_selection(selection_id):
             'unit_h': sel.head_unit or 'm',
             'liquid': sel.liquid_type or 'water'
         }
+
+    # Ensure multi-pump arrangement is consistently populated on both active_sel and form_data
+    active_sel['pump_arrangement'] = pump_arr
+    active_sel['pumps_operating'] = pumps_op
+    active_sel['pumps_standby'] = pumps_stby
+
+    form_data['pump_arrangement'] = pump_arr
+    form_data['pumps_operating'] = str(pumps_op)
+    form_data['pumps_standby'] = str(pumps_stby)
 
     # Write back into session
     session['active_selection'] = active_sel

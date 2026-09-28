@@ -167,6 +167,12 @@
               NPSHr: {{ s.npshr_m|round(1) }} m
             </span>
             {% endif %}
+            {% if s.pump_arrangement and s.pump_arrangement != 'single' %}
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold {{ 'bg-[#22c55e]/20 text-[#22c55e] border border-[#22c55e]/40' if s.pump_arrangement == 'parallel' else 'bg-[#a855f7]/20 text-[#a855f7] border border-[#a855f7]/40' }}">
+              <i class="bi {{ 'bi-distribute-vertical' if s.pump_arrangement == 'parallel' else 'bi-distribute-horizontal' }} mr-0.5"></i>
+              {{ s.pumps_operating or 2 }}x {{ s.pump_arrangement|capitalize }}{% if s.pumps_standby and s.pumps_standby|int > 0 %} (+{{ s.pumps_standby }} Stby){% endif %}
+            </span>
+            {% endif %}
           </div>
 
           {% if s.notes %}

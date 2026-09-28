@@ -261,6 +261,34 @@
     <!-- 2. CORE PUMP SPECIFICATIONS & OPERATING DUTY POINT -->
     <div>
       <div class="section-header">⏱ Technical Summary{% if not (curves and curves.is_from_catalogue) %} &amp; Duty Point{% endif %}</div>
+
+      {# Multi-Pump Configuration Banner when operating multiple pumps in parallel or series #}
+      {% if curves and curves.is_multi_pump %}
+      <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 8pt;">
+        <div>
+          <span style="color: #166534; font-weight: 700; font-size: 8.5pt;">
+            ⚙ Multi-Pump Arrangement: {{ curves.pumps_operating }} Pumps in {{ curves.pump_arrangement|capitalize }}
+          </span>
+          {% if curves.pumps_standby and curves.pumps_standby > 0 %}
+          <span style="color: #64748b; margin-left: 6px; font-size: 7.5pt;">(+{{ curves.pumps_standby }} Standby, {{ curves.pumps_total_count }} Total)</span>
+          {% endif %}
+          <div style="color: #475569; font-size: 7.5pt; margin-top: 1px;">
+            {% if curves.pump_arrangement == 'parallel' %}
+              Flow shared equally: Each pump delivers <strong>{{ curves.q_ind }} {{ curves.rep_unit_q }}</strong> at station head <strong>{{ curves.h_station }} {{ curves.rep_unit_h }}</strong>. Total station delivery: <strong>{{ curves.q_station }} {{ curves.rep_unit_q }}</strong>.
+            {% else %}
+              Head shared equally: Each pump generates <strong>{{ curves.h_ind }} {{ curves.rep_unit_h }}</strong> at station flow <strong>{{ curves.q_station }} {{ curves.rep_unit_q }}</strong>. Total station head: <strong>{{ curves.h_station }} {{ curves.rep_unit_h }}</strong>.
+            {% endif %}
+          </div>
+        </div>
+        {% if curves.disp_station_power %}
+        <div style="text-align: right; background: #ffffff; padding: 3px 8px; border: 1px solid #bbf7d0; border-radius: 4px;">
+          <span style="font-size: 7pt; color: #64748b; text-transform: uppercase; font-weight: 600; display: block;">Combined Station Power</span>
+          <span style="font-weight: 700; color: #166534; font-family: monospace; font-size: 9pt;">{{ curves.disp_station_power|round(1) }} {{ curves.rep_unit_pow }}</span>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
       <div class="grid-4">
         <div class="metric-card">
           <span class="metric-lbl">Base Speed (rpm)</span>
@@ -284,11 +312,26 @@
         </div>
         <div class="metric-card-blue">
           <span class="metric-lbl" style="color: #1e40af;">
-            {% if curves and curves.duty_point and not curves.is_from_catalogue %}🎯 Operating Duty Point{% else %}BEP Flow / Duty{% endif %}
+            {% if curves and curves.is_multi_pump and not curves.is_from_catalogue %}
+              🎯 Station Total Delivery
+            {% elif curves and curves.duty_point and not curves.is_from_catalogue %}
+              🎯 Operating Duty Point
+            {% else %}
+              BEP Flow / Duty
+            {% endif %}
           </span>
-          <span class="metric-val" style="color: #1e3a8a; font-size: 10pt;">
-            {% if curves and curves.duty_point and not curves.is_from_catalogue %}
-              {{ curves.duty_point.q|round(1) }} {{ curves.rep_unit_q }} @ {{ curves.duty_point.h|round(1) }} {{ curves.rep_unit_h }}
+          <span class="metric-val" style="color: #1e3a8a; font-size: 9.5pt;">
+            {% if curves and curves.is_multi_pump and not curves.is_from_catalogue %}
+              {{ curves.q_station }} {{ curves.rep_unit_q }} @ {{ curves.h_station }} {{ curves.rep_unit_h }}
+              <span style="font-size: 7.5pt; color: #d97706; display: block; margin-top: 1px; font-weight: 600;">
+                Each Pump: {{ curves.q_ind }} {{ curves.rep_unit_q }} @ {{ curves.h_ind }} {{ curves.rep_unit_h }}
+              </span>
+            {% elif curves and curves.duty_point and not curves.is_from_catalogue %}
+              {% if curves.duty_point is iterable and curves.duty_point is not mapping %}
+                {{ curves.duty_point[0].q|round(1) }} {{ curves.rep_unit_q }} @ {{ curves.duty_point[0].h|round(1) }} {{ curves.rep_unit_h }}
+              {% else %}
+                {{ curves.duty_point.q|round(1) }} {{ curves.rep_unit_q }} @ {{ curves.duty_point.h|round(1) }} {{ curves.rep_unit_h }}
+              {% endif %}
             {% else %}
               {{ curves.bep_info.q if curves and curves.bep_info else 0.0 }} {{ curves.rep_unit_q }}
             {% endif %}

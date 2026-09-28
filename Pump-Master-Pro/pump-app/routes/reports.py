@@ -905,35 +905,62 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             leg_box.append(f'<text x="{box_x + 28}" y="{ly}" font-size="{9 * f_scale:.1f}" font-weight="{text_weight}" font-family="{font_family}" fill="{text_color}">{l_text}</text>')
         legend_svg = "".join(leg_box)
 
-    # ── Render Operating Duty Point Marker (Target icon + crosshairs) on H-Q chart ──
+    # ── Render Operating Duty Point Marker(s) on H-Q chart ──
+    # Supports both a single duty point (single pump) and multiple duty points (e.g. 1x per-pump duty + station total duty).
+    # Draws engineering dashed crosshairs, custom marker icons (target bullseye or diamond), and non-colliding coordinate badges.
     duty_svg = ""
-    if duty_point and isinstance(duty_point, dict) and chart_type == 'hq':
-        try:
-            dq = float(duty_point.get('q', 0))
-            dh = float(duty_point.get('h', 0))
-            if x_min <= dq <= x_max and y_min <= dh <= y_max:
-                d_px = padding_left + ((dq - x_min) / (x_max - x_min)) * plot_w
-                d_py = padding_top + plot_h - ((dh - y_min) / (y_max - y_min)) * plot_h
+    if duty_point and chart_type == 'hq':
+        pt_list = duty_point if isinstance(duty_point, list) else [duty_point]
+        duty_parts = []
+        for p_idx, pt in enumerate(pt_list):
+            if not isinstance(pt, dict):
+                continue
+            try:
+                dq = float(pt.get('q', 0))
+                dh = float(pt.get('h', 0))
+                if x_min <= dq <= x_max and y_min <= dh <= y_max:
+                    d_px = padding_left + ((dq - x_min) / (x_max - x_min)) * plot_w
+                    d_py = padding_top + plot_h - ((dh - y_min) / (y_max - y_min)) * plot_h
+                    pt_col = pt.get('color') or ('#ef4444' if p_idx == 0 else '#22c55e')
+                    pt_sym = pt.get('symbol') or ('star' if p_idx == 0 else 'diamond')
 
-                # Crosshairs
-                ch_lines = f'<line x1="{padding_left}" y1="{d_py:.1f}" x2="{d_px:.1f}" y2="{d_py:.1f}" stroke="#ef4444" stroke-width="1.2" stroke-dasharray="3,3" />' \
-                           f'<line x1="{d_px:.1f}" y1="{d_py:.1f}" x2="{d_px:.1f}" y2="{padding_top + plot_h}" stroke="#ef4444" stroke-width="1.2" stroke-dasharray="3,3" />'
+                    # 1. Engineering dashed crosshair projections to X and Y axes
+                    duty_parts.append(
+                        f'<line x1="{padding_left}" y1="{d_py:.1f}" x2="{d_px:.1f}" y2="{d_py:.1f}" stroke="{pt_col}" stroke-width="1.1" stroke-dasharray="3,3" opacity="0.85" />'
+                        f'<line x1="{d_px:.1f}" y1="{d_py:.1f}" x2="{d_px:.1f}" y2="{padding_top + plot_h}" stroke="{pt_col}" stroke-width="1.1" stroke-dasharray="3,3" opacity="0.85" />'
+                    )
 
-                # Bullseye Target Icon
-                target_dot = f'<circle cx="{d_px:.1f}" cy="{d_py:.1f}" r="6.5" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="1.5" />' \
-                             f'<circle cx="{d_px:.1f}" cy="{d_py:.1f}" r="2.5" fill="#dc2626" />'
+                    # 2. Geometric marker icon (Diamond for Combined Station, Target/Star for Individual Pump)
+                    if pt_sym == 'diamond':
+                        d_path = f"M {d_px:.1f} {d_py-6:.1f} L {d_px+6:.1f} {d_py:.1f} L {d_px:.1f} {d_py+6:.1f} L {d_px-6:.1f} {d_py:.1f} Z"
+                        duty_parts.append(
+                            f'<path d="{d_path}" fill="{pt_col}" fill-opacity="0.25" stroke="{pt_col}" stroke-width="1.8" />'
+                            f'<circle cx="{d_px:.1f}" cy="{d_py:.1f}" r="2.2" fill="{pt_col}" />'
+                        )
+                    else:
+                        # Circular target with outer halo ring
+                        duty_parts.append(
+                            f'<circle cx="{d_px:.1f}" cy="{d_py:.1f}" r="6.5" fill="{pt_col}" fill-opacity="0.2" stroke="{pt_col}" stroke-width="1.5" />'
+                            f'<circle cx="{d_px:.1f}" cy="{d_py:.1f}" r="2.5" fill="{pt_col}" />'
+                        )
 
-                # Duty Coordinate Badge
-                d_lbl = duty_point.get('label') or f"Duty: {round(dq, 1)} @ {round(dh, 1)}"
-                tw_d = len(d_lbl) * 5.6 + 10
-                badge_x = min(max(float(padding_left + tw_d/2 + 2), float(d_px)), float(VIEW_W - padding_right - tw_d/2 - 2))
-                badge_y = max(float(padding_top + 14), float(d_py - 10))
-                duty_badge = f'<rect x="{badge_x - tw_d/2:.1f}" y="{badge_y - 10:.1f}" width="{tw_d:.1f}" height="13" fill="#ffffff" fill-opacity="0.95" stroke="#ef4444" stroke-width="1.0" rx="3" />' \
-                             f'<text x="{badge_x:.1f}" y="{badge_y - 1.0:.1f}" font-size="8.5" font-weight="700" font-family="{font_family}" fill="#b91c1c" text-anchor="middle">🎯 {d_lbl}</text>'
+                    # 3. High-contrast coordinate badge (dynamically positioned so dual badges do not overlap)
+                    d_lbl = pt.get('label') or f"Duty: {round(dq, 1)} @ {round(dh, 1)}"
+                    tw_d = len(d_lbl) * 5.6 + 12
+                    badge_offset_y = -12 if p_idx == 0 else 16
+                    badge_x = min(max(float(padding_left + tw_d/2 + 2), float(d_px)), float(VIEW_W - padding_right - tw_d/2 - 2))
+                    badge_y = max(float(padding_top + 14), float(d_py + badge_offset_y))
+                    if badge_y > padding_top + plot_h - 4:
+                        badge_y = padding_top + plot_h - 16
 
-                duty_svg = ch_lines + target_dot + duty_badge
-        except Exception as e:
-            print("Duty point render notice:", e)
+                    duty_parts.append(
+                        f'<rect x="{badge_x - tw_d/2:.1f}" y="{badge_y - 10:.1f}" width="{tw_d:.1f}" height="13" fill="#ffffff" fill-opacity="0.95" stroke="{pt_col}" stroke-width="1.0" rx="3" />'
+                        f'<text x="{badge_x:.1f}" y="{badge_y - 1.0:.1f}" font-size="8.5" font-weight="700" font-family="{font_family}" fill="{pt_col}" text-anchor="middle">{d_lbl}</text>'
+                    )
+            except Exception as e:
+                print(f"Duty point {p_idx} render notice:", e)
+
+        duty_svg = "".join(duty_parts)
 
     svg_code = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {VIEW_W} {VIEW_H}" preserveAspectRatio="none" width="100%" height="100%" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" style="background:{chart_bg}; border-radius:4px; display:block; width:100%; height:100%; max-height:{height}px;">
   {''.join(grid_lines)}
@@ -1211,9 +1238,20 @@ def _build_report_curve_context(pump, report, params_override=None):
 
     palette = ['#1e3a8a', '#2563eb', '#3b82f6', '#64748b', '#94a3b8']
 
-    # ── Resolve Operating Duty Point & Optimal Trim / Speed Ratio ──
+    # ── Resolve Multi-Pump Configuration & Operating Duty Point ──
+    # Beginners Note: Multi-pump installations (parallel or series) require performance curves for:
+    #   1) Each individual pump (1 of N) to evaluate operating flow, head, absorbed power, efficiency, and NPSHr.
+    #   2) The combined station total delivery (N pumps combined: N*Q in parallel, N*H in series).
+    session_sel = session.get('active_selection', {}) if session else {}
+    pump_arr = (_param('pump_arrangement') or session_sel.get('pump_arrangement') or 'single').strip().lower()
+    pumps_operating = int(_param('pumps_operating') or session_sel.get('pumps_operating') or 1)
+    pumps_standby = int(_param('pumps_standby') or session_sel.get('pumps_standby') or 0)
+    is_multi_pump = (pumps_operating > 1 and pump_arr in ('parallel', 'series'))
+
     q_duty_val = None
     h_duty_val = None
+    q_ind = None
+    h_ind = None
     r_opt = None
     if not is_from_catalogue:
         try:
@@ -1226,11 +1264,29 @@ def _build_report_curve_context(pump, report, params_override=None):
             if q_d and h_d and q_d > 0 and h_d > 0:
                 q_duty_val = q_d
                 h_duty_val = h_d
-                q_m3h = q_duty_val / fQ_curve
-                h_m = h_duty_val / fH_curve
-                r_opt = _calc_optimal_trim_ratio(pump, q_m3h, h_m)
-        except Exception:
-            pass
+
+                if is_multi_pump:
+                    # In parallel: station total flow Q is divided equally across N operating pumps, head H is identical.
+                    # In series: station total head H is divided equally across N operating pumps, flow Q is identical.
+                    if pump_arr == 'parallel':
+                        q_ind = _safe_float(_param('eval_q_duty')) or _safe_float(session_sel.get('eval_q_duty')) or (q_duty_val / pumps_operating)
+                        h_ind = h_duty_val
+                    else:  # series
+                        q_ind = q_duty_val
+                        h_ind = _safe_float(_param('eval_h_duty')) or _safe_float(session_sel.get('eval_h_duty')) or (h_duty_val / pumps_operating)
+
+                    # Compute optimal impeller trim or speed ratio against the individual pump's duty point (q_ind, h_ind)
+                    q_m3h = q_ind / fQ_curve
+                    h_m = h_ind / fH_curve
+                    r_opt = _calc_optimal_trim_ratio(pump, q_m3h, h_m)
+                else:
+                    q_ind = q_duty_val
+                    h_ind = h_duty_val
+                    q_m3h = q_duty_val / fQ_curve
+                    h_m = h_duty_val / fH_curve
+                    r_opt = _calc_optimal_trim_ratio(pump, q_m3h, h_m)
+        except Exception as e:
+            print("Multi-pump duty resolution notice:", e)
 
 
     # ── 1. Variable Speed Family (Constant Diameter, Varying Speeds) ──
@@ -1292,13 +1348,15 @@ def _build_report_curve_context(pump, report, params_override=None):
                 s_ratio = (rated_rpm / base_spd) if base_spd else 1.0
                 k = float(s_ratio)
                 pct = round(s_ratio * 100) if s_ratio else None
-                lbl = f"{int(round(rated_rpm))} RPM (Rated)"
+                lbl = f"1x Pump Rated ({int(round(rated_rpm))} RPM)" if is_multi_pump else f"{int(round(rated_rpm))} RPM (Rated)"
                 c_q = [round(v * k, 2) for v in q_pts]
                 c_h = [round(v * (k**2), 2) for v in h_pts]
                 c_eta = [round(max(0.0, v), 2) for v in eta_pts]
                 c_pow = [round(v * (k**3), 2) for v in pow_pts]
                 c_npsh = [round(v * (k**2), 2) for v in npsh_pts]
                 rated_color = '#d97706'
+                rated_c_q = c_q
+                rated_c_h = c_h
 
                 if mode == 'rated_only':
                     hq_curves_list = [{'label': lbl, 'x': c_q, 'y': c_h, 'color': rated_color, 'is_secondary': False, 'is_rated': True, 'pct': pct, 'val': rated_rpm, 'rpm': rated_rpm}]
@@ -1400,13 +1458,15 @@ def _build_report_curve_context(pump, report, params_override=None):
                 d_ratio = rated_d / max_d
                 pct = round(d_ratio * 100)
                 d_fmt = f"{round(rated_d)}" if abs(rated_d - round(rated_d)) < 1e-4 else f"{round(rated_d, 1)}"
-                lbl = f"Ø{d_fmt} mm (Rated)"
+                lbl = f"1x Pump Rated (Ø{d_fmt} mm)" if is_multi_pump else f"Ø{d_fmt} mm (Rated)"
                 c_q = [round(v * d_ratio, 2) for v in q_pts]
                 c_h = [round(v * (d_ratio**2), 2) for v in h_pts]
                 c_eta = [round(max(0.0, v), 2) for v in eta_pts]
                 c_pow = [round(v * (d_ratio**3), 2) for v in pow_pts]
                 c_npsh = [round(v * (d_ratio**2), 2) for v in npsh_pts]
                 rated_color = '#d97706'
+                rated_c_q = c_q
+                rated_c_h = c_h
 
                 if mode == 'rated_only':
                     hq_curves_list = [{'label': lbl, 'x': c_q, 'y': c_h, 'color': rated_color, 'is_secondary': False, 'is_rated': True, 'pct': pct, 'val': rated_d, 'dia': rated_d}]
@@ -1447,6 +1507,33 @@ def _build_report_curve_context(pump, report, params_override=None):
             except Exception as e:
                 print("RPM overlay lines calculation notice:", e)
 
+    # ── Multi-Pump Combined Station Curve (Parallel or Series) ──
+    # Synthesizes the overall station performance curve from the rated pump curve:
+    # - Parallel arrangement: station flow Q_tot = N * Q_pump at Head H
+    # - Series arrangement: station head H_tot = N * H_pump at Flow Q
+    if is_multi_pump and ('rated_c_q' in locals() and rated_c_q) and ('rated_c_h' in locals() and rated_c_h):
+        if pump_arr == 'parallel':
+            st_q = [round(qv * pumps_operating, 2) for qv in rated_c_q]
+            st_h = rated_c_h
+            st_lbl = f"Combined Station ({pumps_operating}x Parallel)"
+            st_col = '#22c55e'
+        else:  # series
+            st_q = rated_c_q
+            st_h = [round(hv * pumps_operating, 2) for hv in rated_c_h]
+            st_lbl = f"Combined Station ({pumps_operating}x Series)"
+            st_col = '#a855f7'
+
+        hq_curves_list.append({
+            'label': st_lbl,
+            'x': st_q,
+            'y': st_h,
+            'color': st_col,
+            'is_secondary': False,
+            'is_station': True,
+            'is_rated': False,
+            'dash': 'solid'
+        })
+
     # Read Exact Axis Scales configured for the pump in pump-data (min, max, major, minor)
     x_flow_min = getattr(pump, 'axis_flow_min', None)
     x_flow_max = getattr(pump, 'axis_flow_max', None)
@@ -1457,6 +1544,12 @@ def _build_report_curve_context(pump, report, params_override=None):
         x_flow_min, x_flow_max, x_flow_maj, x_flow_minr,
         conv_factor=fQ_raw, default_min=(pump.q_min or 0.0) * fQ_curve, default_max=q_max * fQ_curve
     )
+
+    # In multi-pump parallel mode, total station flow is N * Q_pump; extend X-axis limit so full curve fits
+    if is_multi_pump and pump_arr == 'parallel' and q_duty_val:
+        req_x_max = q_duty_val * 1.25
+        if x_clean['max'] < req_x_max:
+            x_clean['max'] = float(round(req_x_max, 1))
     
     x_common = {
         'x_min': x_clean['min'],
@@ -1478,6 +1571,12 @@ def _build_report_curve_context(pump, report, params_override=None):
         h_min_val, h_max_val, h_maj_val, h_minr_val,
         conv_factor=fH_raw, default_min=0.0, default_max=(max(h_pts) * 1.12 if max(h_pts) > 0 else 10.0) * fH_curve
     )
+
+    # In multi-pump series mode, total station head is N * H_pump; extend Y-axis limit so full curve fits
+    if is_multi_pump and pump_arr == 'series' and h_duty_val:
+        req_h_max = h_duty_val * 1.25
+        if h_clean['max'] < req_h_max:
+            h_clean['max'] = float(round(req_h_max, 1))
 
     h_custom_range = dict(x_common)
     h_custom_range.update({
@@ -1818,6 +1917,11 @@ def _build_report_curve_context(pump, report, params_override=None):
         pow_curves_list = [c for c in pow_curves_list if not c.get('is_rated') and '(rated)' not in c.get('label', '').lower()]
         npsh_curves_list = [c for c in npsh_curves_list if not c.get('is_rated') and '(rated)' not in c.get('label', '').lower()]
 
+    # Station curve visibility override (for multi-pump arrangements)
+    show_station_effective = bool(_param('show_station', '1') not in ('0', 'false', 'False') and 'station' not in hidden_set)
+    if not show_station_effective or is_from_catalogue:
+        hq_curves_list = [c for c in hq_curves_list if not c.get('is_station')]
+
     graph_styles = report.get_graph_styles() if (report and hasattr(report, 'get_graph_styles')) else {}
 
     # System curve for Proposal report (matching details view)
@@ -1830,7 +1934,10 @@ def _build_report_curve_context(pump, report, params_override=None):
     if not is_from_catalogue and (is_proposal or arg_show_sys == '1') and show_sys_effective and q_duty_val and h_duty_val:
         try:
             k_sys = h_duty_val / (q_duty_val ** 2)
-            sys_q = list(np.linspace(0, max(q_duty_val * 1.3, q_max * fQ_curve), 30))
+            sys_max_q = max(q_duty_val * 1.3, q_max * fQ_curve)
+            if is_multi_pump and pump_arr == 'parallel':
+                sys_max_q = max(sys_max_q, q_duty_val * 1.25)
+            sys_q = list(np.linspace(0, sys_max_q, 30))
             sys_h = [round(k_sys * (qv ** 2), 2) for qv in sys_q]
             hq_curves_list.append({
                 'label': 'System Curve',
@@ -1843,13 +1950,36 @@ def _build_report_curve_context(pump, report, params_override=None):
         except Exception as e:
             print("System curve render notice:", e)
 
+    # ── Operating Duty Point Marker(s) Context ──
+    # For multi-pump installations, both the individual pump duty point (where each pump operates)
+    # and the station total duty point (combined station delivery) are displayed.
     duty_pt_dict = None
     if not is_from_catalogue and q_duty_val and h_duty_val and show_duty_effective:
-        duty_pt_dict = {
-            'q': q_duty_val,
-            'h': h_duty_val,
-            'label': f"Duty: {round(q_duty_val, 1)} {lbl_q} @ {round(h_duty_val, 1)} {lbl_h}"
-        }
+        if is_multi_pump and q_ind and h_ind:
+            duty_pt_dict = [
+                {
+                    'q': q_ind,
+                    'h': h_ind,
+                    'label': f"1x Pump Duty: {round(q_ind, 1)} {lbl_q} @ {round(h_ind, 1)} {lbl_h}",
+                    'color': '#d97706',
+                    'symbol': 'star'
+                },
+                {
+                    'q': q_duty_val,
+                    'h': h_duty_val,
+                    'label': f"Station Total ({pumps_operating}x): {round(q_duty_val, 1)} {lbl_q} @ {round(h_duty_val, 1)} {lbl_h}",
+                    'color': '#22c55e' if pump_arr == 'parallel' else '#a855f7',
+                    'symbol': 'diamond'
+                }
+            ]
+        else:
+            duty_pt_dict = {
+                'q': q_duty_val,
+                'h': h_duty_val,
+                'label': f"Duty: {round(q_duty_val, 1)} {lbl_q} @ {round(h_duty_val, 1)} {lbl_h}",
+                'color': '#ef4444',
+                'symbol': 'target'
+            }
 
     graph_defs = {
         'hq': {
@@ -1999,35 +2129,77 @@ def _build_report_curve_context(pump, report, params_override=None):
             'style': 'solid',
             'type': 'line'
         })
-    if not is_from_catalogue and show_rated_effective and (final_rated_dia or final_rated_rpm):
-        if is_variable_speed and final_rated_rpm:
-            rated_lbl = f"Rated Curve ({int(round(final_rated_rpm))} RPM)"
-        elif final_rated_dia:
-            rated_lbl = f"Rated Curve (Ø {round(final_rated_dia, 1)} mm)"
-        elif final_rated_rpm:
-            rated_lbl = f"Rated Curve ({int(round(final_rated_rpm))} RPM)"
-        else:
-            rated_lbl = "Rated Curve"
-        proposal_legend_items.append({
-            'name': rated_lbl,
-            'color': graph_styles.get('rated_curve_color', '#d97706') or '#d97706',
-            'style': 'dashed',
-            'type': 'line'
-        })
-    if not is_from_catalogue and (is_proposal or (request and request.args.get('show_sys') == '1')) and show_sys_effective and q_duty_val and h_duty_val:
-        proposal_legend_items.append({
-            'name': 'System Curve',
-            'color': graph_styles.get('system_curve_color', '#8b949e') or '#8b949e',
-            'style': 'dotted',
-            'type': 'line'
-        })
-    if not is_from_catalogue and show_duty_effective and q_duty_val and h_duty_val:
-        proposal_legend_items.append({
-            'name': 'Duty Point',
-            'color': '#ef4444',
-            'style': 'solid',
-            'type': 'marker'
-        })
+    if is_multi_pump:
+        if not is_from_catalogue and show_rated_effective and (final_rated_dia or final_rated_rpm):
+            if is_variable_speed and final_rated_rpm:
+                rated_lbl = f"1x Pump Rated ({int(round(final_rated_rpm))} RPM)"
+            elif final_rated_dia:
+                rated_lbl = f"1x Pump Rated (Ø {round(final_rated_dia, 1)} mm)"
+            else:
+                rated_lbl = f"1x Pump Rated (1 of {pumps_operating})"
+            proposal_legend_items.append({
+                'name': rated_lbl,
+                'color': graph_styles.get('rated_curve_color', '#d97706') or '#d97706',
+                'style': 'dashed',
+                'type': 'line'
+            })
+        if not is_from_catalogue and show_station_effective:
+            proposal_legend_items.append({
+                'name': f"Combined Station ({pumps_operating}x {pump_arr.capitalize()})",
+                'color': '#22c55e' if pump_arr == 'parallel' else '#a855f7',
+                'style': 'solid',
+                'type': 'line'
+            })
+        if not is_from_catalogue and (is_proposal or (request and request.args.get('show_sys') == '1')) and show_sys_effective and q_duty_val and h_duty_val:
+            proposal_legend_items.append({
+                'name': 'System Curve',
+                'color': graph_styles.get('system_curve_color', '#8b949e') or '#8b949e',
+                'style': 'dotted',
+                'type': 'line'
+            })
+        if not is_from_catalogue and show_duty_effective and q_ind and h_ind and q_duty_val and h_duty_val:
+            proposal_legend_items.append({
+                'name': '1x Pump Duty Point',
+                'color': '#d97706',
+                'style': 'solid',
+                'type': 'marker'
+            })
+            proposal_legend_items.append({
+                'name': f"Station Total Duty ({pumps_operating}x)",
+                'color': '#22c55e' if pump_arr == 'parallel' else '#a855f7',
+                'style': 'solid',
+                'type': 'marker'
+            })
+    else:
+        if not is_from_catalogue and show_rated_effective and (final_rated_dia or final_rated_rpm):
+            if is_variable_speed and final_rated_rpm:
+                rated_lbl = f"Rated Curve ({int(round(final_rated_rpm))} RPM)"
+            elif final_rated_dia:
+                rated_lbl = f"Rated Curve (Ø {round(final_rated_dia, 1)} mm)"
+            elif final_rated_rpm:
+                rated_lbl = f"Rated Curve ({int(round(final_rated_rpm))} RPM)"
+            else:
+                rated_lbl = "Rated Curve"
+            proposal_legend_items.append({
+                'name': rated_lbl,
+                'color': graph_styles.get('rated_curve_color', '#d97706') or '#d97706',
+                'style': 'dashed',
+                'type': 'line'
+            })
+        if not is_from_catalogue and (is_proposal or (request and request.args.get('show_sys') == '1')) and show_sys_effective and q_duty_val and h_duty_val:
+            proposal_legend_items.append({
+                'name': 'System Curve',
+                'color': graph_styles.get('system_curve_color', '#8b949e') or '#8b949e',
+                'style': 'dotted',
+                'type': 'line'
+            })
+        if not is_from_catalogue and show_duty_effective and q_duty_val and h_duty_val:
+            proposal_legend_items.append({
+                'name': 'Duty Point',
+                'color': '#ef4444',
+                'style': 'solid',
+                'type': 'marker'
+            })
 
     return {
         'q_max': q_max,
@@ -2049,6 +2221,17 @@ def _build_report_curve_context(pump, report, params_override=None):
         'is_proposal': is_proposal,
         'is_from_catalogue': is_from_catalogue,
         'proposal_legend_items': proposal_legend_items,
+        # Multi-pump context attributes for reports
+        'is_multi_pump': is_multi_pump,
+        'pump_arrangement': pump_arr,
+        'pumps_operating': pumps_operating,
+        'pumps_standby': pumps_standby,
+        'pumps_total_count': pumps_operating + pumps_standby,
+        'q_ind': round(q_ind, 1) if q_ind else None,
+        'h_ind': round(h_ind, 1) if h_ind else None,
+        'q_station': round(q_duty_val, 1) if q_duty_val else None,
+        'h_station': round(h_duty_val, 1) if h_duty_val else None,
+        'disp_station_power': session_sel.get('disp_station_power')
     }
 
 

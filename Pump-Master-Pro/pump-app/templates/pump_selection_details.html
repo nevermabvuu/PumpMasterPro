@@ -166,6 +166,74 @@
       </div>
     </div>
 
+    <!-- Curve Visibility Quick-Toggle Toolbar -->
+    <!-- Beginners Note: Allows quick 1-click toggling of curve families and duty markers. Synchronizes with legend clicks. -->
+    <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-[#161b22] border border-[#30363d] rounded-xl text-xs">
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <span class="text-[11px] font-semibold text-[#8b949e] uppercase tracking-wider mr-1 flex items-center gap-1">
+          <i class="bi bi-eye text-[#58a6ff]"></i>
+          <span>Curves:</span>
+        </span>
+
+        <!-- 1x Pump Rated/Evaluated Curve -->
+        <button type="button"
+                id="btn-toggle-rated"
+                onclick="window.toggleCurveGroup('rated')"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-[#58a6ff] bg-[#21262d] text-white hover:bg-[#30363d] transition-all cursor-pointer shadow-sm active"
+                title="Toggle 1x Pump Operating / Rated Curve across all subplots">
+          <span class="w-2 h-2 rounded-full bg-[#f0883e] inline-block shadow-sm"></span>
+          <span>1x Pump Curve</span>
+        </button>
+
+        <!-- Combined Station Curve (Shown when multi-pump is active) -->
+        {% if active_result and active_result.pump_arrangement in ['parallel', 'series'] and (active_result.pumps_operating|int or 1) > 1 %}
+        <button type="button"
+                id="btn-toggle-station"
+                onclick="window.toggleCurveGroup('station')"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-[#58a6ff] bg-[#21262d] text-white hover:bg-[#30363d] transition-all cursor-pointer shadow-sm active"
+                title="Toggle Combined {{ active_result.pumps_operating }}x Station Total Delivery Curve">
+          <span class="w-2 h-2 rounded-full {{ 'bg-[#22c55e]' if active_result.pump_arrangement == 'parallel' else 'bg-[#a855f7]' }} inline-block shadow-sm"></span>
+          <span>Station Curve ({{ active_result.pumps_operating }}x {{ active_result.pump_arrangement|capitalize }})</span>
+        </button>
+        {% endif %}
+
+        <!-- System Head Curve -->
+        <button type="button"
+                id="btn-toggle-system"
+                onclick="window.toggleCurveGroup('system')"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-[#58a6ff] bg-[#21262d] text-white hover:bg-[#30363d] transition-all cursor-pointer shadow-sm active"
+                title="Toggle System Resistance Curve">
+          <span class="w-2 h-2 rounded-full bg-[#8b949e] inline-block shadow-sm"></span>
+          <span>System Curve</span>
+        </button>
+
+        <!-- Duty Points -->
+        <button type="button"
+                id="btn-toggle-duty"
+                onclick="window.toggleDutyPoints()"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-[#58a6ff] bg-[#21262d] text-white hover:bg-[#30363d] transition-all cursor-pointer shadow-sm active"
+                title="Toggle Operating Duty Point Markers and Labels">
+          <i class="bi bi-bullseye text-[#58a6ff]"></i>
+          <span>Duty Points</span>
+        </button>
+
+        <!-- Max Baseline Curves -->
+        <button type="button"
+                id="btn-toggle-max"
+                onclick="window.toggleMaxCurves()"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-[#58a6ff] bg-[#21262d] text-white hover:bg-[#30363d] transition-all cursor-pointer shadow-sm active"
+                title="Toggle Baseline Max Curves (Head, Eff, Power, NPSHr)">
+          <i class="bi bi-sliders text-[#8b949e]"></i>
+          <span>Max Baseline</span>
+        </button>
+      </div>
+
+      <div class="text-[11px] text-[#8b949e] italic hidden sm:flex items-center gap-1">
+        <i class="bi bi-info-circle"></i>
+        <span>Legend items on graph also toggle curves</span>
+      </div>
+    </div>
+
     <!-- Charts Container -->
     <div class="card-dark border border-[#30363d] rounded-xl p-1.5 shadow-md">
       <div id="singleChartPanel">

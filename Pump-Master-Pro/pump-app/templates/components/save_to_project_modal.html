@@ -116,11 +116,20 @@
           <span class="text-[#8b949e]">Operating Duty:</span>
           <span id="stp_prev_duty" class="font-mono font-bold text-white">—</span>
         </div>
+        <div class="flex justify-between text-[#c9d1d9]" id="stp_prev_arr_row">
+          <span class="text-[#8b949e]">Arrangement:</span>
+          <span id="stp_prev_arr" class="font-mono font-bold text-white">1x Single Pump</span>
+        </div>
         <div class="flex justify-between text-[#c9d1d9]">
           <span class="text-[#8b949e]">Pipe Network Circuit:</span>
           <span id="stp_prev_pipenet" class="font-mono text-[#38bdf8]">Checking...</span>
         </div>
       </div>
+
+      <!-- Hidden Pump Arrangement Fields -->
+      <input type="hidden" name="pump_arrangement" id="stp_hidden_pump_arrangement" value="single">
+      <input type="hidden" name="pumps_operating" id="stp_hidden_pumps_operating" value="1">
+      <input type="hidden" name="pumps_standby" id="stp_hidden_pumps_standby" value="0">
 
       <!-- Engineering Notes -->
       <div>
@@ -237,7 +246,67 @@ function openSaveToProjectModal(customContext = {}) {
   const prevPump = document.getElementById('stp_prev_pump');
   const prevDuty = document.getElementById('stp_prev_duty');
   const prevPipe = document.getElementById('stp_prev_pipenet');
+  const prevArr = document.getElementById('stp_prev_arr');
   const selNameInput = document.getElementById('stp_selection_name');
+
+  // Extract and format pump arrangement (Single, Parallel, Series)
+  let pumpArr = customContext.pump_arrangement || '';
+  let pumpsOp = customContext.pumps_operating || '';
+  let pumpsStby = customContext.pumps_standby || '';
+
+  if (!pumpArr && typeof active_sel !== 'undefined' && active_sel) {
+    pumpArr = active_sel.pump_arrangement || '';
+    pumpsOp = active_sel.pumps_operating || '';
+    pumpsStby = active_sel.pumps_standby || '';
+  }
+
+  if (!pumpArr) {
+    const radio = document.querySelector('input[name="pump_arrangement"]:checked');
+    if (radio) pumpArr = radio.value;
+  }
+  if (!pumpsOp) {
+    const opInput = document.getElementById('pumps_operating');
+    if (opInput) pumpsOp = opInput.value;
+  }
+  if (!pumpsStby) {
+    const stbyInput = document.getElementById('pumps_standby');
+    if (stbyInput) pumpsStby = stbyInput.value;
+  }
+
+  if (!pumpArr) {
+    try {
+      pumpArr = localStorage.getItem('pmpro_pump_arrangement') || 'single';
+      pumpsOp = localStorage.getItem('pmpro_pumps_operating') || (pumpArr === 'single' ? '1' : '2');
+      pumpsStby = localStorage.getItem('pmpro_pumps_standby') || '0';
+    } catch(e) {}
+  }
+  pumpArr = pumpArr || 'single';
+  pumpsOp = pumpsOp || (pumpArr === 'single' ? '1' : '2');
+  pumpsStby = pumpsStby || '0';
+
+  currentStpContext.pump_arrangement = pumpArr;
+  currentStpContext.pumps_operating = pumpsOp;
+  currentStpContext.pumps_standby = pumpsStby;
+
+  const hiddenArr = document.getElementById('stp_hidden_pump_arrangement');
+  const hiddenOp = document.getElementById('stp_hidden_pumps_operating');
+  const hiddenStby = document.getElementById('stp_hidden_pumps_standby');
+  if (hiddenArr) hiddenArr.value = pumpArr;
+  if (hiddenOp) hiddenOp.value = pumpsOp;
+  if (hiddenStby) hiddenStby.value = pumpsStby;
+
+  if (prevArr) {
+    if (pumpArr === 'single') {
+      prevArr.textContent = '1x Single Pump';
+      prevArr.className = 'font-mono font-bold text-[#8b949e]';
+    } else if (pumpArr === 'parallel') {
+      prevArr.textContent = `${pumpsOp}x In Parallel` + (parseInt(pumpsStby) > 0 ? ` (+${pumpsStby} Stby)` : '');
+      prevArr.className = 'font-mono font-bold text-[#22c55e]';
+    } else if (pumpArr === 'series') {
+      prevArr.textContent = `${pumpsOp}x In Series` + (parseInt(pumpsStby) > 0 ? ` (+${pumpsStby} Stby)` : '');
+      prevArr.className = 'font-mono font-bold text-[#a855f7]';
+    }
+  }
 
   if (prevPump) prevPump.textContent = pumpName || 'Active Pump';
   if (prevDuty) prevDuty.textContent = dutyStr || 'Specified Duty Point';
@@ -355,13 +424,16 @@ function handleSaveToProjectSubmit(e) {
     } catch(err) {}
   }
 
-  // Merge context properties (e.g. flow_rate, head, pump_id)
+  // Merge context properties (e.g. flow_rate, head, pump_id, arrangement)
   if (currentStpContext) {
     if (currentStpContext.flow_rate && !payload.flow_rate) payload.flow_rate = currentStpContext.flow_rate;
     if (currentStpContext.flow_unit && !payload.flow_unit) payload.flow_unit = currentStpContext.flow_unit;
     if (currentStpContext.head && !payload.head) payload.head = currentStpContext.head;
     if (currentStpContext.pump_id && !payload.pump_id) payload.pump_id = currentStpContext.pump_id;
     if (currentStpContext.pump_name && !payload.pump_name) payload.pump_name = currentStpContext.pump_name;
+    if (!payload.pump_arrangement) payload.pump_arrangement = currentStpContext.pump_arrangement || 'single';
+    if (!payload.pumps_operating) payload.pumps_operating = currentStpContext.pumps_operating || (payload.pump_arrangement === 'single' ? 1 : 2);
+    if (payload.pumps_standby === undefined || payload.pumps_standby === '') payload.pumps_standby = currentStpContext.pumps_standby || 0;
   }
 
   if (btn) {

@@ -971,6 +971,28 @@ document.addEventListener('DOMContentLoaded', () => {
       if (data.slurry_d50_mm)    { const el = document.getElementById('input_slurry_d50'); if (el) el.value = data.slurry_d50_mm; }
     }
 
+    // 5b. Pump Arrangement (single, parallel, series)
+    if (data.pump_arrangement || data.arrangement) {
+      const arr = data.pump_arrangement || data.arrangement;
+      const radio = document.getElementById(`arr_${arr}`);
+      if (radio) {
+        radio.checked = true;
+        if (data.pumps_operating) {
+          const opInp = document.getElementById('pumps_operating');
+          if (opInp) opInp.value = data.pumps_operating;
+        }
+        if (data.pumps_standby !== undefined) {
+          const stbyInp = document.getElementById('pumps_standby');
+          if (stbyInp) stbyInp.value = data.pumps_standby;
+        }
+        if (typeof window.onPumpArrangementChange === 'function') {
+          window.onPumpArrangementChange(arr);
+        } else if (typeof window.updateMultiPumpCalculations === 'function') {
+          window.updateMultiPumpCalculations();
+        }
+      }
+    }
+
     // 6. Trigger reactive input & change events
     [qInp, hInp, staticInp, npshInp].forEach(el => {
       if (el) {
@@ -1061,8 +1083,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const liquid = document.getElementById('liquidSel')?.value || 'water';
         const qDuty  = document.querySelector('[name=q_duty]')?.value || '';
         const hDuty  = document.querySelector('[name=h_duty]')?.value || '';
-        const params = selected.map(id => `ids=${id}`).join('&');
-        compareLink.href = `/pump-comparison?${params}&liquid=${liquid}&q_duty=${qDuty}&h_duty=${hDuty}`;
+        const arrRadio = document.querySelector('input[name="pump_arrangement"]:checked');
+        const pumpArr = arrRadio ? arrRadio.value : 'single';
+        const pumpsOp = document.getElementById('pumps_operating')?.value || '1';
+        const pumpsStby = document.getElementById('pumps_standby')?.value || '0';
+        compareLink.href = `/pump-comparison?${params}&liquid=${liquid}&q_duty=${qDuty}&h_duty=${hDuty}&pump_arrangement=${pumpArr}&pumps_operating=${pumpsOp}&pumps_standby=${pumpsStby}`;
         compareLink.classList.remove('disabled', 'pointer-events-none', 'opacity-50');
         compareLink.style.background = 'rgba(57,211,192,0.15)';
       } else {

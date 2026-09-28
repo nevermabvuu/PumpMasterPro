@@ -400,6 +400,7 @@ def pump_selection():
         form_data = f
     else:
         saved_f = session.get('selection_form_data')
+        active_sel = session.get('active_selection') or {}
         if saved_f:
             # Active working session: retain user's working inputs, with org defaults as fallback for unconfigured keys
             form_data = dict(org_defaults)
@@ -408,6 +409,16 @@ def pump_selection():
             # Initial / fresh visit: pre-populate fully with organisation defaults
             form_data = dict(org_defaults)
             session['selection_form_data'] = form_data
+
+        # Fallback to active_selection for pump arrangement if not in form_data
+        for arr_key in ['pump_arrangement', 'pumps_operating', 'pumps_standby']:
+            if not form_data.get(arr_key) and active_sel.get(arr_key) is not None:
+                form_data[arr_key] = str(active_sel.get(arr_key))
+
+        # Check URL query arguments for overrides (e.g. from comparison, reports, or reload links)
+        for q_key in ['q_duty', 'h_duty', 'npsh_avail', 'liquid', 'operation_mode', 'pump_arrangement', 'pumps_operating', 'pumps_standby']:
+            if request.args.get(q_key) is not None and str(request.args.get(q_key)).strip() != '':
+                form_data[q_key] = request.args.get(q_key)
 
     results, ctx = run_selection_from_form(form_data, all_pumps=all_pumps, current_org=current_org)
     unit_system      = ctx['unit_system']
@@ -495,6 +506,11 @@ def pump_selection():
         if form_data.get(k) is not None:
             active_sel[k] = form_data.get(k)
     session['active_selection'] = active_sel
+
+    # Synchronize resolved form data back to session['selection_form_data']
+    s_form = session.get('selection_form_data') or {}
+    s_form.update(form_data)
+    session['selection_form_data'] = s_form
     session.modified = True
 
     pipe_net_data = active_sel.get('pipe_network')
@@ -589,7 +605,17 @@ def pump_selection_details(pump_id):
     
     # Load session data
     f = session.get('selection_form_data', {})
+    active_sel = session.get('active_selection', {})
+    if 'pump_arrangement' not in f and active_sel.get('pump_arrangement'):
+        f['pump_arrangement'] = active_sel.get('pump_arrangement')
+    if 'pumps_operating' not in f and active_sel.get('pumps_operating'):
+        f['pumps_operating'] = str(active_sel.get('pumps_operating'))
+    if 'pumps_standby' not in f and active_sel.get('pumps_standby') is not None:
+        f['pumps_standby'] = str(active_sel.get('pumps_standby'))
+
     results, ctx = run_selection_from_form(f)
+    session['selection_form_data'] = f
+    session.modified = True
     if results is None:
         results = []
         
@@ -861,6 +887,54 @@ def api_select_pumps():
         pass
 
     return jsonify(results)
+
+
+@selection_bp.route('/papi/update-arrangement', methods=['POST'])
+def api_update_arrangement():
+    """
+    AJAX endpoint to update pump arrangement (single, parallel, series)
+    and operating/standby pump counts in session in real-time.
+    """
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    pump_arr = data.get('pump_arrangement', 'single')
+    if pump_arr not in ('single', 'parallel', 'series'):
+        pump_arr = 'single'
+    try:
+        pumps_op = int(data.get('pumps_operating', 1 if pump_arr == 'single' else 2))
+        if pumps_op < 1:
+            pumps_op = 1
+    except (ValueError, TypeError):
+        pumps_op = 1 if pump_arr == 'single' else 2
+
+    try:
+        pumps_stby = int(data.get('pumps_standby', 0))
+        if pumps_stby < 0:
+            pumps_stby = 0
+    except (ValueError, TypeError):
+        pumps_stby = 0
+
+    if pump_arr == 'single':
+        pumps_op = 1
+
+    s_form = session.get('selection_form_data') or {}
+    s_form['pump_arrangement'] = pump_arr
+    s_form['pumps_operating'] = str(pumps_op)
+    s_form['pumps_standby'] = str(pumps_stby)
+    session['selection_form_data'] = s_form
+
+    s_act = session.get('active_selection') or {}
+    s_act['pump_arrangement'] = pump_arr
+    s_act['pumps_operating'] = pumps_op
+    s_act['pumps_standby'] = pumps_stby
+    session['active_selection'] = s_act
+    session.modified = True
+
+    return jsonify({
+        'success': True,
+        'pump_arrangement': pump_arr,
+        'pumps_operating': pumps_op,
+        'pumps_standby': pumps_stby
+    })
 
 
 

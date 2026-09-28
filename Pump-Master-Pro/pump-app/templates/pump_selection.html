@@ -157,6 +157,7 @@
               </div>
             </div>
             <a href="{{ url_for('selection.pump_selection', reset=1) }}" 
+               onclick="try{localStorage.removeItem('pmpro_pump_arrangement');localStorage.removeItem('pmpro_pumps_operating');localStorage.removeItem('pmpro_pumps_standby');}catch(e){}"
                class="text-[11px] text-[#8b949e] hover:text-[#58a6ff] flex items-center gap-1 transition-colors py-0.5 px-1.5 rounded hover:bg-[#21262d]"
                title="Reset all fields and units to Organisation Defaults">
               <i class="bi bi-arrow-counterclockwise"></i> Reset Defaults
@@ -4045,6 +4046,39 @@
   if (typeof initSparklines === 'function') { initSparklines(); }
 
   // ── Multi-Pump Selection Calculator & UI Handlers ──
+  function persistPumpArrangement(arr, op, stby) {
+    if (!arr) {
+      const radio = document.querySelector('input[name="pump_arrangement"]:checked');
+      arr = radio ? radio.value : 'single';
+    }
+    const opInput = document.getElementById('pumps_operating');
+    const stbyInput = document.getElementById('pumps_standby');
+    const n = (op !== undefined) ? parseInt(op) : (opInput ? (parseInt(opInput.value) || (arr === 'single' ? 1 : 2)) : 1);
+    const s = (stby !== undefined) ? parseInt(stby) : (stbyInput ? (parseInt(stbyInput.value) || 0) : 0);
+
+    try {
+      localStorage.setItem('pmpro_pump_arrangement', arr);
+      localStorage.setItem('pmpro_pumps_operating', String(n));
+      localStorage.setItem('pmpro_pumps_standby', String(s));
+    } catch(e) {}
+
+    // Send async AJAX update to backend session to keep server session in perfect sync
+    try {
+      fetch('/papi/update-arrangement', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          pump_arrangement: arr,
+          pumps_operating: n,
+          pumps_standby: s
+        })
+      }).catch(() => {});
+    } catch(e) {}
+  }
+
   function onPumpArrangementChange(arr) {
     const opInput = document.getElementById('pumps_operating');
     if (arr !== 'single') {
@@ -4052,6 +4086,7 @@
         opInput.value = '2';
       }
     }
+    persistPumpArrangement(arr);
     updateMultiPumpCalculations();
   }
 
@@ -4112,13 +4147,73 @@
   }
 
   document.addEventListener('DOMContentLoaded', function() {
+    const isReset = new URLSearchParams(window.location.search).get('reset') === '1';
+    const serverArr = {{ (form_data.get('pump_arrangement') or '')|tojson }};
+    const serverOp = {{ (form_data.get('pumps_operating') or '')|tojson }};
+    const serverStby = {{ (form_data.get('pumps_standby') or '')|tojson }};
+
+    if (!isReset) {
+      if (serverArr) {
+        // Sync server-backed arrangement to DOM and localStorage
+        const radio = document.getElementById('arr_' + serverArr);
+        if (radio) radio.checked = true;
+        if (serverOp) {
+          const opInp = document.getElementById('pumps_operating');
+          if (opInp) opInp.value = serverOp;
+        }
+        if (serverStby) {
+          const stbyInp = document.getElementById('pumps_standby');
+          if (stbyInp) stbyInp.value = serverStby;
+        }
+        try {
+          localStorage.setItem('pmpro_pump_arrangement', serverArr);
+          if (serverOp) localStorage.setItem('pmpro_pumps_operating', String(serverOp));
+          if (serverStby) localStorage.setItem('pmpro_pumps_standby', String(serverStby));
+        } catch(e) {}
+      } else {
+        // Fallback to localStorage if present
+        try {
+          const storedArr = localStorage.getItem('pmpro_pump_arrangement');
+          if (storedArr && ['single', 'parallel', 'series'].includes(storedArr)) {
+            const radio = document.getElementById('arr_' + storedArr);
+            if (radio) {
+              radio.checked = true;
+              const storedOp = localStorage.getItem('pmpro_pumps_operating');
+              const storedStby = localStorage.getItem('pmpro_pumps_standby');
+              if (storedOp) {
+                const opInp = document.getElementById('pumps_operating');
+                if (opInp) opInp.value = storedOp;
+              }
+              if (storedStby) {
+                const stbyInp = document.getElementById('pumps_standby');
+                if (stbyInp) stbyInp.value = storedStby;
+              }
+              persistPumpArrangement(storedArr, storedOp, storedStby);
+            }
+          }
+        } catch(e) {}
+      }
+    }
+
     updateMultiPumpCalculations();
-    ['input_q_duty', 'input_h_duty', 'select_unit_q', 'select_unit_h', 'pumps_operating', 'pumps_standby'].forEach(id => {
+
+    ['input_q_duty', 'input_h_duty', 'select_unit_q', 'select_unit_h'].forEach(id => {
       const el = document.getElementById(id);
       el?.addEventListener('input', updateMultiPumpCalculations);
       el?.addEventListener('change', updateMultiPumpCalculations);
     });
+
+    ['pumps_operating', 'pumps_standby'].forEach(id => {
+      const el = document.getElementById(id);
+      const onArrInput = () => {
+        persistPumpArrangement();
+        updateMultiPumpCalculations();
+      };
+      el?.addEventListener('input', onArrInput);
+      el?.addEventListener('change', onArrInput);
+    });
   });
+  window.persistPumpArrangement = persistPumpArrangement;
   window.updateMultiPumpCalculations = updateMultiPumpCalculations;
   window.onPumpArrangementChange = onPumpArrangementChange;
 </script>

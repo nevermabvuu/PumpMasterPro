@@ -1610,6 +1610,9 @@ class Organisation(db.Model):
             'h_duty': '',               # e.g. '35' (optional default head)
             'npsh_avail': '',           # e.g. '8.0' (optional default NPSHa)
             'static_head': '0',         # Default static head Hs
+            'pump_arrangement': 'single', # 'single', 'parallel', or 'series'
+            'pumps_operating': '1',       # Operating duty pumps
+            'pumps_standby': '0',         # Standby pumps
 
             # ── 3. Fluid Properties Defaults ──────────────────────────────────
             'liquid': 'water',          # 'water', 'viscous', or 'slurry'
@@ -3092,6 +3095,9 @@ class ProjectSelection(db.Model):
             'power_kw': self.power_kw,
             'npshr_m': self.npshr_m,
             'liquid_type': self.liquid_type,
+            'pump_arrangement': ((self.get_selection_data().get('pump_arrangement') or self.get_selection_data().get('active_selection', {}).get('pump_arrangement') or self.get_selection_data().get('selection_form_data', {}).get('pump_arrangement') or 'single')),
+            'pumps_operating': int(self.get_selection_data().get('pumps_operating') or self.get_selection_data().get('active_selection', {}).get('pumps_operating') or self.get_selection_data().get('selection_form_data', {}).get('pumps_operating') or 1),
+            'pumps_standby': int(self.get_selection_data().get('pumps_standby') or self.get_selection_data().get('active_selection', {}).get('pumps_standby') or self.get_selection_data().get('selection_form_data', {}).get('pumps_standby') or 0),
             'has_pipe_network': bool(self.pipe_network_json and len(self.pipe_network_json) > 10),
             'notes': self.notes,
             'created_at': self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else ''

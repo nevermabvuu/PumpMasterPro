@@ -281,6 +281,12 @@
                 NPSHr: {{ s.npshr_m|round(1) }} m
               </span>
               {% endif %}
+              {% if s.pump_arrangement and s.pump_arrangement != 'single' %}
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold {{ 'bg-[#22c55e]/20 text-[#22c55e] border border-[#22c55e]/40' if s.pump_arrangement == 'parallel' else 'bg-[#a855f7]/20 text-[#a855f7] border border-[#a855f7]/40' }}">
+                <i class="bi {{ 'bi-distribute-vertical' if s.pump_arrangement == 'parallel' else 'bi-distribute-horizontal' }} mr-0.5"></i>
+                {{ s.pumps_operating or 2 }}x {{ s.pump_arrangement|capitalize }}{% if s.pumps_standby and s.pumps_standby|int > 0 %} (+{{ s.pumps_standby }} Stby){% endif %}
+              </span>
+              {% endif %}
             </div>
 
             {% if s.notes %}
@@ -352,6 +358,9 @@
     <!-- Modal Form -->
     <form method="POST" action="{{ url_for('projects.save_selection') }}" class="p-5 space-y-4">
       <input type="hidden" name="project_id" value="{{ project.id }}">
+      <input type="hidden" name="pump_arrangement" value="{{ active_sel.get('pump_arrangement', 'single') }}">
+      <input type="hidden" name="pumps_operating" value="{{ active_sel.get('pumps_operating', 1) }}">
+      <input type="hidden" name="pumps_standby" value="{{ active_sel.get('pumps_standby', 0) }}">
 
       <div>
         <label class="block text-xs font-bold text-[#e6edf3] mb-1">
@@ -383,6 +392,12 @@
           <span>Operating Duty:</span>
           <span class="font-mono font-bold text-white">{{ active_sel.get('q_duty', '—') }} m³/h @ {{ active_sel.get('h_duty', '—') }} m</span>
         </div>
+        {% if active_sel.get('pump_arrangement') and active_sel.get('pump_arrangement') != 'single' %}
+        <div class="flex justify-between text-[#c9d1d9]">
+          <span>Arrangement:</span>
+          <span class="font-mono text-white">{{ active_sel.get('pumps_operating', 2) }}x {{ active_sel.get('pump_arrangement')|capitalize }}{% if active_sel.get('pumps_standby') and active_sel.get('pumps_standby')|int > 0 %} (+{{ active_sel.get('pumps_standby') }} Stby){% endif %}</span>
+        </div>
+        {% endif %}
         <div class="flex justify-between text-[#c9d1d9]">
           <span>Fluid:</span>
           <span class="font-mono text-white">{{ active_sel.get('liquid', 'water')|capitalize }} (SG {{ active_sel.get('sg_l', 1.0) }})</span>

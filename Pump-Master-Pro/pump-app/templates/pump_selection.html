@@ -987,7 +987,7 @@
               <i class="bi bi-eye me-0.5"></i>Read Only (1)
             </span>
             {% endif %}
-            <span class="text-[11px] font-mono text-[#58a6ff] uppercase">{{ form_data.get('operation_mode', 'fixed') }}</span>
+            <span id="opModeBadge" class="text-[11px] font-mono text-[#58a6ff] uppercase">{{ form_data.get('operation_mode', 'fixed') }}</span>
           </div>
         </div>
         <fieldset {% if motor_lvl == 1 and not (current_user and current_user.is_super_admin_user) %}disabled class="contents opacity-85"{% endif %}>

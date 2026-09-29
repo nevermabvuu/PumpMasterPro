@@ -1428,17 +1428,23 @@ window.renderSparkline = renderSparkline;
 // 3. Asynchronously fetches available motors from /papi/motors-by-spec when Frequency or Poles change
 function onOperationModeChange() {
   const isVsd = document.getElementById('opModeVsd')?.checked;
+  const vsdSubOptions = document.getElementById('vsdSubOptions') || document.getElementById('vsdOptionsGroup');
+  const fixedSpeedSubOptions = document.getElementById('fixedSpeedSubOptions') || document.getElementById('fixedSpeedOptionsGroup');
   const vsdFreqGroup = document.getElementById('vsdFrequencyLimitsGroup');
-  const vsdOptionsGroup = document.getElementById('vsdOptionsGroup');
-  const fixedSpeedGroup = document.getElementById('fixedSpeedOptionsGroup');
+
+  if (vsdSubOptions) {
+    vsdSubOptions.style.display = isVsd ? 'block' : 'none';
+  }
+  if (fixedSpeedSubOptions) {
+    fixedSpeedSubOptions.style.display = isVsd ? 'none' : 'block';
+  }
   if (vsdFreqGroup) {
     vsdFreqGroup.style.display = isVsd ? 'block' : 'none';
   }
-  if (vsdOptionsGroup) {
-    vsdOptionsGroup.style.display = isVsd ? 'block' : 'none';
-  }
-  if (fixedSpeedGroup) {
-    fixedSpeedGroup.style.display = isVsd ? 'none' : 'block';
+
+  const opBadge = document.getElementById('opModeBadge');
+  if (opBadge) {
+    opBadge.textContent = isVsd ? 'VSD' : 'FIXED';
   }
 }
 
@@ -1447,7 +1453,7 @@ function onFixedSpeedModeChange() {
   const isManual = document.getElementById('fixedSpeedManual')?.checked;
   const isRange = document.getElementById('fixedSpeedRange')?.checked;
 
-  const manualGroup = document.getElementById('manualPumpSpeedGroup');
+  const manualGroup = document.getElementById('fixedSpeedManualInputGroup') || document.getElementById('manualPumpSpeedGroup');
   if (manualGroup) {
     manualGroup.style.display = isManual ? 'block' : 'none';
     const input = document.getElementById('manualPumpSpeedRpm');
@@ -2330,6 +2336,13 @@ document.addEventListener('DOMContentLoaded', () => {
   onOperationModeChange();
   onFixedSpeedModeChange();
   onVsdTrimModeChange();
+
+  document.querySelectorAll('input[name="operation_mode"]').forEach(r => {
+    r.addEventListener('change', onOperationModeChange);
+  });
+  document.querySelectorAll('input[name="fixed_speed_mode"]').forEach(r => {
+    r.addEventListener('change', onFixedSpeedModeChange);
+  });
 
   // Synchronize initial fire unit system with current application preset
   if (typeof setFireUnitSystem === 'function') {

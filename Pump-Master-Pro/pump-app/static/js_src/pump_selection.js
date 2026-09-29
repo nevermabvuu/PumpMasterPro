@@ -184,7 +184,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const inputEl = document.getElementById(targetInputId);
 
       if (inputEl && inputEl.value !== '') {
-        inputEl.value = convertValue(inputEl.value, prevUnit, newUnit, cat);
+        let valToConvert = inputEl.value;
+        if (cat === 'density') {
+          const numV = parseFloat(valToConvert);
+          if (prevUnit === 'sg' && numV > 50) {
+            valToConvert = numV / 1000.0;
+          } else if (prevUnit === 'kgm3' && numV < 50) {
+            valToConvert = numV * 1000.0;
+          }
+        }
+        inputEl.value = convertValue(valToConvert, prevUnit, newUnit, cat);
       }
 
       sel.dataset.prev = newUnit;
@@ -482,8 +491,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function getPumpSelectionSg() {
     const liquid = document.getElementById('liquidSel')?.value || 'water';
     if (liquid === 'water') {
-      const rho = parseFloat(document.getElementById('input_rho_water')?.value) || 1000;
-      return Math.max(0.5, Math.min(3.0, rho / 1000.0));
+      const rhoRaw = parseFloat(document.getElementById('input_rho_water')?.value) || 1000;
+      const uRho = document.getElementById('select_unit_rho')?.value || 'kgm3';
+      const rhoKgM3 = Number(convertValue(rhoRaw, uRho, 'kgm3', 'density')) || 1000;
+      return Math.max(0.5, Math.min(3.0, rhoKgM3 / 1000.0));
     } else if (liquid === 'viscous') {
       const rho = parseFloat(document.getElementById('input_rho_viscous')?.value || document.querySelector('#viscousParams input[name="rho"]')?.value) || 1000;
       return Math.max(0.5, Math.min(3.0, rho / 1000.0));
@@ -534,8 +545,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (liquid === 'water') {
-      const rho = parseFloat(document.getElementById('input_rho_water')?.value) || 1000.0;
-      details.rho = rho;
+      const rhoRaw = parseFloat(document.getElementById('input_rho_water')?.value) || 1000.0;
+      const uRho = document.getElementById('select_unit_rho')?.value || 'kgm3';
+      const rhoKgM3 = Number(convertValue(rhoRaw, uRho, 'kgm3', 'density')) || 1000.0;
+      details.rho = rhoKgM3;
       details.viscosity_cSt = 1.0;
     } else if (liquid === 'viscous') {
       const rho = parseFloat(document.getElementById('input_rho_viscous')?.value || document.querySelector('#viscousParams input[name="rho"]')?.value) || (sg * 1000.0);
@@ -698,7 +711,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (liquid === 'water') {
       const r = document.getElementById('input_rho_water');
       if (r && document.activeElement !== r) {
-        r.value = (sg * 1000).toFixed(1);
+        const uRho = document.getElementById('select_unit_rho')?.value || 'kgm3';
+        r.value = convertValue(sg * 1000.0, 'kgm3', uRho, 'density');
       }
     } else if (liquid === 'viscous') {
       const r = document.getElementById('input_rho_viscous') || document.querySelector('#viscousParams input[name="rho"]');
@@ -1534,6 +1548,32 @@ async function onMotorSpecChange() {
 // ── Quick Application / Pump Type Filter & Fire Protection Calculator ──
 
 /**
+ * syncDutyInputsLocation(isFire)
+ * Moves usualDutyInputsCard between #fp_custom_duty_slot (in Fire Mode)
+ * and #non_fire_duty_slot (in Standard / Non-Fire Mode).
+ */
+function syncDutyInputsLocation(isFire) {
+  const usualCard = document.getElementById('usualDutyInputsCard');
+  const fireSlot = document.getElementById('fp_custom_duty_slot');
+  const nonFireSlot = document.getElementById('non_fire_duty_slot');
+  if (!usualCard || !fireSlot || !nonFireSlot) return;
+
+  if (isFire) {
+    if (usualCard.parentNode !== fireSlot) {
+      fireSlot.appendChild(usualCard);
+    }
+    nonFireSlot.style.display = 'none';
+  } else {
+    if (usualCard.parentNode !== nonFireSlot) {
+      nonFireSlot.appendChild(usualCard);
+    }
+    nonFireSlot.style.display = '';
+  }
+}
+
+
+
+/**
  * setQuickPumpType(typeVal)
  * Handles clicking the quick segmented buttons:
  *   '' => All Types
@@ -1590,8 +1630,46 @@ function setQuickPumpType(typeVal) {
     selPrompt.style.display = isFire ? 'none' : '';
   }
 
+  // Synchronize placement of duty inputs and Fire Mode UI (header banner & liquid type)
+  syncDutyInputsLocation(isFire);
+  syncFireModeUI(isFire);
+
   if (isFire) {
     calculateFireDemand();
+  }
+}
+
+/**
+ * syncFireModeUI(isFire)
+ * Synchronizes header banner and liquid selector restrictions for Fire Mode.
+ * - In Fire Mode: displays fire header, shows Dedicated View link, disables slurry option and defaults liquid to clean water (NFPA 20).
+ * - In Standard Mode: displays standard header, hides Dedicated View link, re-enables slurry option.
+ */
+function syncFireModeUI(isFire) {
+  // Page Header toggle
+  const defaultHdr = document.getElementById('defaultPageHeader');
+  const fireHdr = document.getElementById('firePageHeader');
+  const fireDedBtn = document.getElementById('fireDedicatedViewBtn');
+  if (defaultHdr) defaultHdr.classList.toggle('hidden', isFire);
+  if (fireHdr) fireHdr.classList.toggle('hidden', !isFire);
+  if (fireDedBtn) fireDedBtn.classList.toggle('hidden', !isFire);
+
+  // Liquid Selection: In fire mode disable slurry and default to clean water
+  const liquidSel = document.getElementById('liquidSel');
+  const fireNotice = document.getElementById('fireLiquidNotice');
+  if (liquidSel) {
+    const slurryOpt = liquidSel.querySelector('option[value="slurry"]');
+    if (isFire) {
+      if (slurryOpt) slurryOpt.disabled = true;
+      if (liquidSel.value === 'slurry') {
+        liquidSel.value = 'water';
+        liquidSel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      if (fireNotice) fireNotice.classList.remove('hidden');
+    } else {
+      if (slurryOpt) slurryOpt.disabled = false;
+      if (fireNotice) fireNotice.classList.add('hidden');
+    }
   }
 }
 
@@ -1628,6 +1706,10 @@ function onPumpTypeFilterChange(typeVal) {
     firePrompt.style.display = isFire ? '' : 'none';
     selPrompt.style.display = isFire ? 'none' : '';
   }
+
+  // Synchronize placement of duty inputs and Fire Mode UI
+  syncDutyInputsLocation(isFire);
+  syncFireModeUI(isFire);
 
   if (isFire) {
     calculateFireDemand();
@@ -1669,18 +1751,29 @@ function selectFireStandardTab(stdKey) {
   currentFireStandard = stdKey;
   const stdInput = document.getElementById('fire_standard');
   if (stdInput) stdInput.value = stdKey;
+  try {
+    localStorage.setItem('pmpro_fire_standard', stdKey);
+  } catch (e) {}
 
-  // Toggle Tab button styles
+  // Toggle Radio buttons and Radio card styles
   const allTabs = ['nfpa13', 'nfpa14', 'en12845', 'as2941', 'custom'];
+  const activeClass = 'fp-std-radio-card flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-all border border-[#f85149]/40 bg-[#f85149]/15 text-[#ff7b72]';
+  const activeCustomClass = 'fp-std-radio-card col-span-2 flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-all border border-[#f85149]/40 bg-[#f85149]/15 text-[#ff7b72]';
+  const inactiveClass = 'fp-std-radio-card flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-all border border-[#30363d] bg-[#161b22] text-[#8b949e] hover:text-white hover:border-[#30363d]';
+  const inactiveCustomClass = 'fp-std-radio-card col-span-2 flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-all border border-[#30363d] bg-[#161b22] text-[#8b949e] hover:text-white hover:border-[#30363d]';
+
   allTabs.forEach(t => {
-    const btn = document.getElementById(`fp_tab_${t}`);
-    if (btn) {
-      const isCustom = (t === 'custom');
-      const baseClass = `fp-tab-btn px-2 py-2 rounded-lg text-xs font-semibold transition-all text-center flex items-center justify-center gap-1.5 ${isCustom ? 'col-span-2' : ''}`;
+    const radio = document.getElementById(`fp_radio_${t}`);
+    const card = document.getElementById(`fp_opt_${t}`);
+    const isCustom = (t === 'custom');
+    if (radio) {
+      radio.checked = (t === stdKey);
+    }
+    if (card) {
       if (t === stdKey) {
-        btn.className = `${baseClass} active bg-[#f85149]/20 text-[#f85149] border border-[#f85149]/40`;
+        card.className = isCustom ? activeCustomClass : activeClass;
       } else {
-        btn.className = `${baseClass} text-[#8b949e] hover:text-white border border-transparent`;
+        card.className = isCustom ? inactiveCustomClass : inactiveClass;
       }
     }
   });
@@ -1688,56 +1781,55 @@ function selectFireStandardTab(stdKey) {
   // Update Standard Badge
   const badgeEl = document.getElementById('fp_badge_flow_standard');
   if (badgeEl) {
-    badgeEl.textContent = (stdKey === 'as2941' ? 'AS 2941' : (stdKey === 'en12845' ? 'EN 12845' : stdKey.toUpperCase()));
+    badgeEl.textContent = (stdKey === 'as2941' ? 'AS 2941' : (stdKey === 'en12845' ? 'EN 12845' : (stdKey === 'custom' ? 'CUSTOM' : stdKey.toUpperCase())));
   }
 
   // Toggle visible sections based on standard
   const hazardSec = document.getElementById('fp_section_hazard');
+  const codeParamsSec = document.getElementById('fp_section_code_params');
+  const hydraulicsSec = document.getElementById('fp_section_hydraulics');
+  const customDutySec = document.getElementById('fp_section_custom_duty');
   const densityAreaRow = document.getElementById('fp_row_density_area');
   const standpipeRow = document.getElementById('fp_row_standpipe_risers');
   const hoseStreamRow = document.getElementById('fp_row_hose_stream');
-  const customDutyRow = document.getElementById('fp_row_custom_duty');
   const lblTitle = document.getElementById('fp_lbl_params_title');
 
   if (stdKey === 'custom') {
     if (hazardSec) hazardSec.classList.add('hidden');
-    if (densityAreaRow) densityAreaRow.classList.add('hidden');
-    if (standpipeRow) standpipeRow.classList.add('hidden');
-    if (hoseStreamRow) hoseStreamRow.classList.add('hidden');
-    if (customDutyRow) customDutyRow.classList.remove('hidden');
-    if (lblTitle) lblTitle.textContent = 'Custom Direct Duty Specification';
-  } else if (stdKey === 'nfpa14') {
-    if (hazardSec) hazardSec.classList.remove('hidden');
-    if (densityAreaRow) densityAreaRow.classList.add('hidden');
-    if (standpipeRow) standpipeRow.classList.remove('hidden');
-    if (hoseStreamRow) hoseStreamRow.classList.add('hidden');
-    if (customDutyRow) customDutyRow.classList.add('hidden');
-    if (lblTitle) lblTitle.textContent = 'Standpipe Riser Demands (NFPA 14)';
-  } else if (stdKey === 'as2941') {
-    if (hazardSec) hazardSec.classList.remove('hidden');
-    if (densityAreaRow) densityAreaRow.classList.add('hidden');
-    if (standpipeRow) standpipeRow.classList.add('hidden');
-    if (hoseStreamRow) hoseStreamRow.classList.add('hidden');
-    if (customDutyRow) customDutyRow.classList.add('hidden');
-    if (lblTitle) lblTitle.textContent = 'Installation Sizing Criteria (AS 2941)';
-  } else if (stdKey === 'en12845') {
-    if (hazardSec) hazardSec.classList.remove('hidden');
-    if (densityAreaRow) densityAreaRow.classList.remove('hidden');
-    if (standpipeRow) standpipeRow.classList.add('hidden');
-    if (hoseStreamRow) hoseStreamRow.classList.add('hidden');
-    if (customDutyRow) customDutyRow.classList.add('hidden');
-    if (lblTitle) lblTitle.textContent = 'EN 12845 Hydraulic Sprinkler Demand';
+    if (codeParamsSec) codeParamsSec.classList.add('hidden');
+    if (hydraulicsSec) hydraulicsSec.classList.add('hidden');
+    if (customDutySec) customDutySec.classList.remove('hidden');
   } else {
-    // NFPA 13
+    if (customDutySec) customDutySec.classList.add('hidden');
     if (hazardSec) hazardSec.classList.remove('hidden');
-    if (densityAreaRow) densityAreaRow.classList.remove('hidden');
-    if (standpipeRow) standpipeRow.classList.add('hidden');
-    if (hoseStreamRow) hoseStreamRow.classList.remove('hidden');
-    if (customDutyRow) customDutyRow.classList.add('hidden');
-    if (lblTitle) lblTitle.textContent = 'Hydraulic Demand Parameters (NFPA 13)';
+    if (codeParamsSec) codeParamsSec.classList.remove('hidden');
+    if (hydraulicsSec) hydraulicsSec.classList.remove('hidden');
+
+    if (stdKey === 'nfpa14') {
+      if (densityAreaRow) densityAreaRow.classList.add('hidden');
+      if (standpipeRow) standpipeRow.classList.remove('hidden');
+      if (hoseStreamRow) hoseStreamRow.classList.add('hidden');
+      if (lblTitle) lblTitle.textContent = 'Standpipe Riser Demands (NFPA 14)';
+    } else if (stdKey === 'as2941') {
+      if (densityAreaRow) densityAreaRow.classList.add('hidden');
+      if (standpipeRow) standpipeRow.classList.add('hidden');
+      if (hoseStreamRow) hoseStreamRow.classList.add('hidden');
+      if (lblTitle) lblTitle.textContent = 'Installation Sizing Criteria (AS 2941)';
+    } else if (stdKey === 'en12845') {
+      if (densityAreaRow) densityAreaRow.classList.remove('hidden');
+      if (standpipeRow) standpipeRow.classList.add('hidden');
+      if (hoseStreamRow) hoseStreamRow.classList.add('hidden');
+      if (lblTitle) lblTitle.textContent = 'EN 12845 Hydraulic Sprinkler Demand';
+    } else {
+      // NFPA 13
+      if (densityAreaRow) densityAreaRow.classList.remove('hidden');
+      if (standpipeRow) standpipeRow.classList.add('hidden');
+      if (hoseStreamRow) hoseStreamRow.classList.remove('hidden');
+      if (lblTitle) lblTitle.textContent = 'Hydraulic Demand Parameters (NFPA 13)';
+    }
+    populateFireHazardDropdown(stdKey);
   }
 
-  populateFireHazardDropdown(stdKey);
   calculateFireDemand();
 }
 
@@ -1872,8 +1964,7 @@ function setFireUnitSystem(u, triggerCalc = true) {
     fp_unit_density: isImp ? 'gpm_ft2' : 'mm_min',
     fp_unit_area: isImp ? 'ft2' : 'm2',
     fp_unit_hose: isImp ? 'gpm' : 'm3h',
-    fp_unit_custom_q: isImp ? 'gpm' : 'm3h',
-    fp_unit_custom_h: isImp ? 'psi' : 'm',
+    fp_custom_unit_residual: isImp ? 'psi' : 'bar',
     fp_unit_static_z: isImp ? 'ft' : 'm',
     fp_unit_friction: isImp ? 'psi' : 'm',
     fp_unit_residual: isImp ? 'psi' : 'bar'
@@ -2020,10 +2111,26 @@ function calculateFireDemand() {
     }
 
   } else if (std === 'custom') {
-    const rawQ = parseFloat(document.getElementById('fp_custom_q')?.value) || 500.0;
-    const unitQ = document.getElementById('fp_unit_custom_q')?.value || 'gpm';
-    flowGpm = Number(convertValue(rawQ, unitQ, 'gpm', 'flow')) || 500.0;
-    durationMin = parseFloat(document.getElementById('fp_duration')?.value) || 60;
+    // Read directly from usual input: Flow Q
+    const rawQ = parseFloat(document.getElementById('input_q_duty')?.value);
+    const unitQ = document.getElementById('select_unit_q')?.value || 'm3h';
+    if (!isNaN(rawQ) && rawQ > 0) {
+      flowGpm = Number(convertValue(rawQ, unitQ, 'gpm', 'flow')) || 500.0;
+    } else {
+      flowGpm = 500.0;
+    }
+
+    // Residual nozzle operation pressure
+    const rawRes = parseFloat(document.getElementById('fp_custom_residual')?.value);
+    if (!isNaN(rawRes) && rawRes > 0) {
+      const unitRes = document.getElementById('fp_custom_unit_residual')?.value || 'psi';
+      residualPsi = Number(convertValue(rawRes, unitRes, 'psi', 'head')) || 65.0;
+    } else {
+      residualPsi = 65.0;
+    }
+
+    // Required fire protection supply duration
+    durationMin = parseFloat(document.getElementById('fp_custom_duration')?.value) || 60;
   }
 
   // 2. Elevation, Piping Friction & Total Head Calculations
@@ -2038,15 +2145,33 @@ function calculateFireDemand() {
 
   let totalHeadPsi = zPsi + frictionPsi + residualPsi;
   if (std === 'custom') {
-    const rawH = parseFloat(document.getElementById('fp_custom_h')?.value) || 100.0;
-    const unitH = document.getElementById('fp_unit_custom_h')?.value || 'psi';
-    totalHeadPsi = Number(convertValue(rawH, unitH, 'psi', 'head')) || 100.0;
+    const rawH = parseFloat(document.getElementById('input_h_duty')?.value);
+    const unitH = document.getElementById('select_unit_h')?.value || 'm';
+    if (!isNaN(rawH) && rawH > 0) {
+      totalHeadPsi = Number(convertValue(rawH, unitH, 'psi', 'head')) || 100.0;
+    } else {
+      totalHeadPsi = (zPsi + frictionPsi > 0) ? (zPsi + frictionPsi + residualPsi) : 100.0;
+    }
   }
 
   const flowM3h = flowGpm * 0.227124707;
   const totalHeadM = totalHeadPsi * 0.703069578;
   const totalHeadFt = totalHeadM * 3.28084;
   const totalHeadBar = totalHeadM * 0.0980665;
+
+  // Sync calculated fire demand into usual duty inputs when on a code-calculated standard
+  if (std !== 'custom') {
+    const curUnitQ = document.getElementById('select_unit_q')?.value || 'm3h';
+    const curUnitH = document.getElementById('select_unit_h')?.value || 'm';
+    const qInput = document.getElementById('input_q_duty');
+    const hInput = document.getElementById('input_h_duty');
+    if (qInput && document.activeElement !== qInput) {
+      qInput.value = parseFloat(Number(convertValue(flowGpm, 'gpm', curUnitQ, 'flow')).toFixed(2));
+    }
+    if (hInput && document.activeElement !== hInput) {
+      hInput.value = parseFloat(Number(convertValue(totalHeadM, 'm', curUnitH, 'head')).toFixed(2));
+    }
+  }
 
   // 3. NFPA 20 Characteristic Limits Breakdown
   const maxChurnHeadPsi = totalHeadPsi * 1.40;
@@ -2213,16 +2338,76 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize Quick Pump Type and Fire Protection UI if active
   const curPt = (document.getElementById('filter_pump_type')?.value || '').trim().toLowerCase();
-  if (curPt === 'fire' || curPt === 'fire pump' || curPt === 'fire_pump') {
+  const isFire = (curPt === 'fire' || curPt === 'fire pump' || curPt === 'fire_pump');
+  syncDutyInputsLocation(isFire);
+  syncFireModeUI(isFire);
+
+  if (isFire) {
     setQuickPumpType('fire pump');
   } else if (curPt) {
     updateQuickPumpTypeUI(curPt);
   }
 
-  // Initialize Fire Protection Hazard Dropdown & Initial Demand
-  if (typeof populateFireHazardDropdown === 'function') {
-    populateFireHazardDropdown('nfpa13');
+  // Restore Fire Protection Standard selection (stored in form_data or localStorage)
+  let savedFireStd = 'nfpa13';
+  const formFireStd = document.getElementById('fire_standard')?.value;
+  if (formFireStd && ['nfpa13', 'nfpa14', 'en12845', 'as2941', 'custom'].includes(formFireStd)) {
+    savedFireStd = formFireStd;
+  } else {
+    try {
+      const lsStd = localStorage.getItem('pmpro_fire_standard');
+      if (lsStd && ['nfpa13', 'nfpa14', 'en12845', 'as2941', 'custom'].includes(lsStd)) {
+        savedFireStd = lsStd;
+      }
+    } catch (e) {}
   }
+  selectFireStandardTab(savedFireStd);
+
+  // Sanitize initial water density input against unit mismatch (e.g. 998 loaded into SG unit)
+  const rInp = document.getElementById('input_rho_water');
+  const uRhoSel = document.getElementById('select_unit_rho');
+  if (rInp && uRhoSel) {
+    const u = uRhoSel.value;
+    const v = parseFloat(rInp.value);
+    if (!isNaN(v) && v > 0) {
+      if (u === 'sg' && v > 50) {
+        rInp.value = Number(convertValue(v, 'kgm3', 'sg', 'density'));
+      } else if (u === 'kgm3' && v < 50) {
+        rInp.value = Number(convertValue(v, 'sg', 'kgm3', 'density'));
+      }
+    }
+  }
+
+  // Wire input listeners for Fire Mode live calculation
+  ['input_q_duty', 'input_h_duty'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', () => {
+        const pt = (document.getElementById('filter_pump_type')?.value || '').trim().toLowerCase();
+        const fireActive = (pt === 'fire' || pt === 'fire pump' || pt === 'fire_pump');
+        if (fireActive) {
+          if (currentFireStandard !== 'custom') {
+            selectFireStandardTab('custom');
+          } else {
+            triggerFireRecalculate();
+          }
+        }
+      });
+    }
+  });
+
+  ['select_unit_q', 'select_unit_h'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('change', () => {
+        const pt = (document.getElementById('filter_pump_type')?.value || '').trim().toLowerCase();
+        const fireActive = (pt === 'fire' || pt === 'fire pump' || pt === 'fire_pump');
+        if (fireActive) {
+          triggerFireRecalculate();
+        }
+      });
+    }
+  });
 });
 
 

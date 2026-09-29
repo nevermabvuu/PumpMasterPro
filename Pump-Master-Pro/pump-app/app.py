@@ -616,9 +616,9 @@ def enforce_login_gatekeeper():
     if request.endpoint == 'static' or request.path.startswith('/static') or request.path == '/favicon.ico':
         return None
 
-    # 2. Allow public authentication endpoints, public catalog APIs, and SEO files
-    public_endpoints = {'auth.login', 'auth.register', 'auth.logout', 'favicon', 'robots_txt', 'sitemap_xml', 'google_verification_file', 'pipe_network.get_standard_pipes'}
-    public_paths = {'/login', '/register', '/request-access', '/logout', '/favicon.ico', '/robots.txt', '/sitemap.xml'}
+    # 2. Allow public authentication endpoints, public catalog APIs, health check, and SEO files
+    public_endpoints = {'auth.login', 'auth.register', 'auth.logout', 'favicon', 'robots_txt', 'sitemap_xml', 'google_verification_file', 'pipe_network.get_standard_pipes', 'main.index', 'healthz'}
+    public_paths = {'/', '/login', '/register', '/request-access', '/logout', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/healthz'}
     if (request.endpoint in public_endpoints or 
         request.path in public_paths or 
         request.path.startswith('/api/pipe-network/standard-pipes') or 
@@ -656,6 +656,13 @@ def handle_url_build_error(error, endpoint, values):
             if target in app.view_functions:
                 return flask_url_for(target, **values)
     raise error
+
+# ── Keep-Alive & Health Check Endpoint ──────────────────────────────────────
+@app.route('/healthz')
+def healthz():
+    """Ultra-lightweight endpoint for Render keep-alive uptime monitors (e.g. UptimeRobot)."""
+    return 'OK', 200, {'Content-Type': 'text/plain; charset=utf-8'}
+
 
 @app.route('/favicon.ico')
 def favicon():

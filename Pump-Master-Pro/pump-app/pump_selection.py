@@ -103,7 +103,9 @@ def select_pumps(pumps, q_duty, h_duty, npsh_avail=None,
     # ── Step 1: Pre-filter pumps by non-hydraulic criteria ────────────────
     # Beginners Note: Apply user-specified filters to narrow down the pump list before
     # expensive hydraulic evaluation. This improves performance and relevance.
-    filtered_pumps = _apply_filters(pumps, filters, operation_mode)
+    filtered_pumps = _apply_filters(pumps, filters, operation_mode,
+                                    fixed_speed_mode=fixed_speed_mode,
+                                    manual_pump_speed_rpm=manual_pump_speed_rpm)
 
     results = []
 
@@ -149,7 +151,7 @@ def select_pumps(pumps, q_duty, h_duty, npsh_avail=None,
 
 # ── Pre-Filtering ─────────────────────────────────────────────────────────────
 
-def _apply_filters(pumps, filters, operation_mode):
+def _apply_filters(pumps, filters, operation_mode, fixed_speed_mode='auto', manual_pump_speed_rpm=None):
     """
     Apply non-hydraulic filters and operation_mode constraint to narrow down the pump list before evaluation.
 
@@ -185,9 +187,20 @@ def _apply_filters(pumps, filters, operation_mode):
 
         # Pump type filter
         if filters and filters.get('pump_type'):
-            type_list = [t.strip().lower() for t in filters['pump_type'].split(',') if t.strip()]
-            if type_list and (pump.pump_type or '').lower() not in type_list:
-                continue
+            pt_raw = filters['pump_type'].strip().lower()
+            apps = ((pump.app_modules or '') + ' ' + (pump.application or '') + ' ' + (pump.pump_type or '')).lower()
+            if pt_raw in ('fire', 'fire pump', 'fire_pump', 'fire protection'):
+                # Match dedicated fire pumps OR clean water centrifugal pumps capable of fire service (never slurry)
+                if 'fire' not in apps and not ((pump.pump_type or '').lower() == 'centrifugal' and 'slurry' not in apps):
+                    continue
+            else:
+                type_list = [t.strip().lower() for t in filters['pump_type'].split(',') if t.strip()]
+                if type_list:
+                    p_type = (pump.pump_type or '').lower()
+                    if 'centrifugal' in type_list and 'centrifugal' in p_type and 'slurry' not in type_list and 'slurry' in p_type:
+                        continue
+                    if not any(t in p_type for t in type_list):
+                        continue
 
         # Speed range filter
         # Beginners Note: When operating in Fixed Speed manual mode, evaluate the speed filter
@@ -647,6 +660,19 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
         vsd_f_max=vsd_f_max
     )
 
+    # Fire Protection Evaluation (NFPA 20 / EN 12845 / AS 2941)
+    pump_apps = ((pump.app_modules or '') + ' ' + (pump.application or '') + ' ' + (pump.pump_type or '')).lower()
+    is_fire_designated = 'fire' in pump_apps
+    is_fire_capable = is_fire_designated or ((pump.pump_type or '').lower() == 'centrifugal' and 'slurry' not in pump_apps)
+
+    nfpa20_eval = None
+    if is_fire_capable and q_duty > 0 and h_duty > 0:
+        try:
+            from services.fire_protection import evaluate_pump_nfpa20_compliance
+            nfpa20_eval = evaluate_pump_nfpa20_compliance(pump, q_duty, h_duty)
+        except Exception:
+            pass
+
     # ── Build result dict ──────────────────────────────────────────────────
     return {
         # Pump identity
@@ -659,6 +685,9 @@ def _evaluate_pump(pump, q_duty, h_duty, npsh_avail,
         'impeller_dia_mm': pump.impeller_dia_mm,
         'pump_type': pump.pump_type or 'centrifugal',
         'family_type': fam_type,
+        'is_fire_pump': is_fire_designated,
+        'is_fire_capable': is_fire_capable,
+        'nfpa20_eval': nfpa20_eval,
 
         # Performance at duty
         'op_q': q_duty,
@@ -936,11 +965,15 @@ def get_filter_options(pumps, enabled_attributes=None):
     speeds = []
     applications = set()
 
+    has_fire = False
     for p in pumps:
         if p.manufacturer:
             manufacturers.add(p.manufacturer.strip())
         if p.pump_type:
             pump_types.add(p.pump_type.strip())
+        apps = ((p.app_modules or '') + ' ' + (p.application or '')).lower()
+        if 'fire' in apps:
+            has_fire = True
         if p.size:
             sizes.add(p.size.strip())
         if p.speed_rpm:
@@ -949,6 +982,9 @@ def get_filter_options(pumps, enabled_attributes=None):
             for app in p.app_modules.split(','):
                 if app.strip():
                     applications.add(app.strip())
+
+    if has_fire:
+        pump_types.add('fire pump')
 
     # ── Extract distinct values for enabled organisation custom attributes ────
     # Beginners Note:

@@ -733,16 +733,19 @@ def evaluate_pump_nfpa20_compliance(
         # NFPA 20 Test Points
         'h_churn_m': round(h_churn, 2),
         'h_churn_psi': round(h_churn * M_TO_PSI, 1),
+        'churn_ratio': round(churn_ratio, 4),
         'churn_ratio_pct': round(churn_ratio * 100.0, 1),
         'pass_churn': pass_churn,
 
         'h_rated_m': round(h_rated, 2),
         'h_rated_psi': round(h_rated * M_TO_PSI, 1),
+        'rated_ratio': round(rated_ratio, 4),
         'rated_ratio_pct': round(rated_ratio * 100.0, 1),
         'pass_rated': pass_rated,
 
         'h_overload_m': round(h_overload, 2),
         'h_overload_psi': round(h_overload * M_TO_PSI, 1),
+        'overload_ratio': round(overload_ratio, 4),
         'overload_ratio_pct': round(overload_ratio * 100.0, 1),
         'pass_overload': pass_overload,
 

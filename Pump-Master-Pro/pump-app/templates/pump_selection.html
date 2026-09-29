@@ -164,6 +164,344 @@
             </a>
           </div>
 
+          <!-- ── Quick Application / Pump Type Switcher ────────────────────────── -->
+          {% set cur_pt = form_data.get('filter_pump_type', '')|lower %}
+          <div class="mb-1 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label class="form-label text-[11px] font-semibold text-[#c9d1d9] flex items-center gap-1.5 mb-0">
+                <i class="bi bi-funnel text-[#58a6ff]"></i>
+                <span>Application / Pump Type</span>
+              </label>
+              <div class="flex items-center gap-1.5">
+                <span id="quickPtFireNotice" class="text-[10px] px-1.5 py-0.2 rounded font-semibold text-[#ff7b72] bg-[#f85149]/15 border border-[#f85149]/30 {{ '' if cur_pt in ['fire', 'fire pump', 'fire_pump'] else 'hidden' }}">
+                  <i class="bi bi-fire text-[#f85149]"></i> Fire Sizing
+                </span>
+                <span class="text-[10px] text-[#8b949e]" id="quickPtLabel">
+                  {{ 'Fire Pump' if cur_pt in ['fire', 'fire pump', 'fire_pump'] else ('Slurry' if cur_pt == 'slurry' else ('Centrifugal' if cur_pt == 'centrifugal' else 'All Types')) }}
+                </span>
+              </div>
+            </div>
+            <div class="grid grid-cols-4 gap-1 p-1 bg-[#0d1117] rounded-lg border border-[#30363d]" id="quickPumpTypeSwitcher">
+              <button type="button" onclick="setQuickPumpType('')" id="qpt-all"
+                      class="px-1.5 py-1 text-[11px] font-medium rounded text-center transition-all {{ 'bg-[#21262d] text-white shadow-sm font-semibold border border-[#30363d]' if (not cur_pt or cur_pt == '') else 'text-[#8b949e] hover:text-white' }}"
+                      title="Show all pump types (Clean water centrifugal, slurry, and fire pumps)">
+                All
+              </button>
+              <button type="button" onclick="setQuickPumpType('centrifugal')" id="qpt-centrifugal"
+                      class="px-1.5 py-1 text-[11px] font-medium rounded text-center transition-all {{ 'bg-[#21262d] text-[#58a6ff] shadow-sm font-semibold border border-[#30363d]' if cur_pt == 'centrifugal' else 'text-[#8b949e] hover:text-white' }}"
+                      title="Clean water centrifugal pumps (Fire-capable centrifugal pumps remain available)">
+                Centrif.
+              </button>
+              <button type="button" onclick="setQuickPumpType('slurry')" id="qpt-slurry"
+                      class="px-1.5 py-1 text-[11px] font-medium rounded text-center transition-all {{ 'bg-[#21262d] text-[#e3b341] shadow-sm font-semibold border border-[#30363d]' if cur_pt == 'slurry' else 'text-[#8b949e] hover:text-white' }}"
+                      title="Centrifugal slurry pumps for solids handling">
+                Slurry
+              </button>
+              <button type="button" onclick="setQuickPumpType('fire pump')" id="qpt-fire"
+                      class="px-1.5 py-1 text-[11px] font-medium rounded text-center transition-all flex items-center justify-center gap-1 {{ 'bg-[#f85149]/20 text-[#ff7b72] border border-[#f85149]/40 shadow-sm font-bold' if cur_pt in ['fire', 'fire pump', 'fire_pump'] else 'text-[#8b949e] hover:text-[#ff7b72]' }}"
+                      title="Fire Protection Pumps (NFPA 20 / 13 / 14 & EN 12845 sizing)">
+                <i class="bi bi-fire text-[11px] text-[#f85149]"></i><span>Fire</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ── Dedicated Fire Protection Engineering & Sizing Panel ───────────── -->
+          <div id="fireProtectionPanel" class="rounded-xl border border-[#f85149]/40 bg-[#161b22] p-4 space-y-4 shadow-xl relative overflow-hidden"
+               style="{{ '' if cur_pt in ['fire', 'fire pump', 'fire_pump'] else 'display:none;' }}">
+            <!-- Background glow -->
+            <div class="absolute -right-16 -top-16 w-60 h-60 bg-[#f85149]/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <!-- Header with Flame Accent & Dedicated View Link (No repeated unit buttons) -->
+            <div class="flex items-center justify-between gap-2 border-b border-[#30363d] pb-2.5 relative z-10">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="p-1.5 rounded-lg bg-[#f85149]/20 text-[#f85149] border border-[#f85149]/40 flex items-center justify-center shrink-0">
+                  <i class="bi bi-fire text-base"></i>
+                </span>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="text-xs font-bold text-white tracking-tight">Fire Protection Pump Sizing</span>
+                    <span class="text-[9px] px-1.5 py-0.2 rounded bg-[#f85149]/20 text-[#ff7b72] font-mono font-bold border border-[#f85149]/40 whitespace-nowrap">
+                      NFPA 20 &bull; 13 &bull; 14 &bull; EN 12845 &bull; AS 2941
+                    </span>
+                  </div>
+                  <p class="text-[10px] text-[#8b949e] truncate">Hydraulic demand sizing, curve limits, storage tank &amp; pipe schedules</p>
+                </div>
+              </div>
+
+              <!-- Dedicated View Link -->
+              <a href="{{ url_for('fire_pumps.index') }}" target="_blank"
+                 class="p-1 px-2 rounded text-[10px] font-semibold bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] hover:text-[#58a6ff] border border-[#30363d] transition-colors flex items-center gap-1 shrink-0 whitespace-nowrap"
+                 title="Open Dedicated Full-Page Fire Pump Sizing View">
+                <i class="bi bi-box-arrow-up-right text-[10px]"></i>
+                <span>Dedicated View</span>
+              </a>
+            </div>
+
+            <!-- Standard Selector Tabs (5 Standards in clean 2-column layout) -->
+            <div class="space-y-1.5 relative z-10">
+              <label class="block text-[10px] font-bold uppercase tracking-wider text-[#8b949e]">
+                1. Fire Protection Design Standard &amp; Criteria
+              </label>
+              <input type="hidden" id="fire_standard" value="nfpa13">
+              <div class="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-[#0d1117] border border-[#30363d]">
+                <button type="button" onclick="selectFireStandardTab('nfpa13')" id="fp_tab_nfpa13"
+                        class="fp-tab-btn px-2 py-2 rounded-lg text-xs font-semibold transition-all text-center flex items-center justify-center gap-1.5 active bg-[#f85149]/20 text-[#f85149] border border-[#f85149]/40">
+                  <i class="bi bi-droplet-half text-sm"></i>
+                  <span>NFPA 13 (Sprinkler)</span>
+                </button>
+                <button type="button" onclick="selectFireStandardTab('nfpa14')" id="fp_tab_nfpa14"
+                        class="fp-tab-btn px-2 py-2 rounded-lg text-xs font-semibold transition-all text-center flex items-center justify-center gap-1.5 text-[#8b949e] hover:text-white border border-transparent">
+                  <i class="bi bi-signpost-split text-sm"></i>
+                  <span>NFPA 14 (Standpipe)</span>
+                </button>
+                <button type="button" onclick="selectFireStandardTab('en12845')" id="fp_tab_en12845"
+                        class="fp-tab-btn px-2 py-2 rounded-lg text-xs font-semibold transition-all text-center flex items-center justify-center gap-1.5 text-[#8b949e] hover:text-white border border-transparent">
+                  <i class="bi bi-shield-check text-sm"></i>
+                  <span>EN 12845 (LPC)</span>
+                </button>
+                <button type="button" onclick="selectFireStandardTab('as2941')" id="fp_tab_as2941"
+                        class="fp-tab-btn px-2 py-2 rounded-lg text-xs font-semibold transition-all text-center flex items-center justify-center gap-1.5 text-[#8b949e] hover:text-white border border-transparent">
+                  <i class="bi bi-globe-americas text-sm"></i>
+                  <span>AS 2941 (AU)</span>
+                </button>
+                <button type="button" onclick="selectFireStandardTab('custom')" id="fp_tab_custom"
+                        class="fp-tab-btn col-span-2 px-2 py-2 rounded-lg text-xs font-semibold transition-all text-center flex items-center justify-center gap-1.5 text-[#8b949e] hover:text-white border border-transparent">
+                  <i class="bi bi-sliders text-sm"></i>
+                  <span>Custom Duty Point (Direct Q &amp; H)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Hazard Classification Profile Selection -->
+            <div id="fp_section_hazard" class="space-y-1 relative z-10">
+              <label for="fp_select_hazard" class="block text-xs font-semibold text-[#c9d1d9]">
+                Building Hazard Classification &amp; Fire Risk Profile
+              </label>
+              <select id="fp_select_hazard" onchange="onFireHazardChange()"
+                      class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#f85149] transition-colors">
+                <!-- Populated dynamically via JS -->
+              </select>
+              <p id="fp_hazard_description" class="text-[11px] text-[#8b949e] italic leading-relaxed pt-0.5">
+                Standard commercial, manufacturing, or storage fire loading profile.
+              </p>
+            </div>
+
+            <!-- Dynamic Standard Specific Hydraulic Demand Parameters -->
+            <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-xl space-y-3 relative z-10">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-[#8b949e] flex items-center justify-between pb-1 border-b border-[#30363d]/60">
+                <span id="fp_lbl_params_title">Hydraulic Demand Parameters</span>
+                <span class="text-[#38bdf8] text-[10px] flex items-center gap-1">
+                  <i class="bi bi-info-circle"></i>
+                  <span>Code Compliant Defaults</span>
+                </span>
+              </div>
+
+              <!-- Sprinkler Density / Area Fields (NFPA 13 & EN 12845) -->
+              <div id="fp_row_density_area" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[11px] text-[#c9d1d9] mb-1 font-medium">Design Density</label>
+                  <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#f85149] bg-[#161b22]">
+                    <input type="number" step="any" id="fp_density" value="0.15"
+                           class="w-full bg-transparent border-0 focus:ring-0 px-2.5 py-1.5 text-xs text-white font-mono"
+                           oninput="triggerFireRecalculate()">
+                    <select id="fp_unit_density" onchange="onFireParamUnitChange(this)"
+                            class="unit-select bg-[#0d1117] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-[11px] font-mono font-semibold focus:outline-none cursor-pointer"
+                            data-target="fp_density" data-unit-cat="density_rate" data-prev="gpm_ft2">
+                      <option value="gpm_ft2">gpm/ft²</option>
+                      <option value="mm_min">mm/min</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-[11px] text-[#c9d1d9] mb-1 font-medium">Operating Design Area</label>
+                  <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#f85149] bg-[#161b22]">
+                    <input type="number" step="any" id="fp_area" value="1500"
+                           class="w-full bg-transparent border-0 focus:ring-0 px-2.5 py-1.5 text-xs text-white font-mono"
+                           oninput="triggerFireRecalculate()">
+                    <select id="fp_unit_area" onchange="onFireParamUnitChange(this)"
+                            class="unit-select bg-[#0d1117] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-[11px] font-mono font-semibold focus:outline-none cursor-pointer"
+                            data-target="fp_area" data-unit-cat="area" data-prev="ft2">
+                      <option value="ft2">ft²</option>
+                      <option value="m2">m²</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Standpipe Risers Count (NFPA 14) -->
+              <div id="fp_row_standpipe_risers" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[11px] text-[#c9d1d9] mb-1 font-medium">Number of Standpipe Risers</label>
+                  <input type="number" min="1" max="12" step="1" id="fp_risers_count" value="1"
+                         class="w-full bg-[#161b22] border border-[#30363d] rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:border-[#f85149] focus:outline-none"
+                         oninput="triggerFireRecalculate()">
+                </div>
+                <div class="flex items-center pt-3 sm:pt-5">
+                  <label class="inline-flex items-center gap-2 cursor-pointer text-xs text-[#c9d1d9]">
+                    <input type="checkbox" id="fp_sprinklered" checked
+                           class="rounded bg-[#161b22] border-[#30363d] text-[#f85149] focus:ring-0 accent-[#f85149]"
+                           onchange="triggerFireRecalculate()">
+                    <span>Building is Fully Sprinklered</span>
+                  </label>
+                </div>
+                <div class="col-span-full text-[10px] text-[#8b949e] bg-[#161b22] p-2 rounded-lg border border-[#30363d]/60">
+                  <i class="bi bi-info-circle mr-1 text-[#58a6ff]"></i>
+                  <span>500 gpm for 1st riser + 250 gpm per extra (Capped at 1,000 gpm unsprinklered / 1,250 gpm sprinklered).</span>
+                </div>
+              </div>
+
+              <!-- Hose Stream Allowance -->
+              <div id="fp_row_hose_stream">
+                <label class="block text-[11px] text-[#c9d1d9] mb-1 font-medium">Inside &amp; Outside Hose Stream Allowance</label>
+                <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#f85149] bg-[#161b22]">
+                  <input type="number" step="any" id="fp_hose_stream" value="250"
+                         class="w-full bg-transparent border-0 focus:ring-0 px-2.5 py-1.5 text-xs text-white font-mono"
+                         oninput="triggerFireRecalculate()">
+                  <select id="fp_unit_hose" onchange="onFireParamUnitChange(this)"
+                          class="unit-select bg-[#0d1117] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-[11px] font-mono font-semibold focus:outline-none cursor-pointer"
+                          data-target="fp_hose_stream" data-unit-cat="flow" data-prev="gpm">
+                    <option value="gpm">GPM</option>
+                    <option value="m3h">m³/h</option>
+                    <option value="ls">L/s</option>
+                    <option value="lmin">L/min</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Custom Direct Flow & Head (Visible when standard == 'custom') -->
+              <div id="fp_row_custom_duty" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[11px] text-[#c9d1d9] mb-1 font-medium">Design Fire Flow Rate *</label>
+                  <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#f85149] bg-[#161b22]">
+                    <input type="number" step="any" id="fp_custom_q" value="500"
+                           class="w-full bg-transparent border-0 focus:ring-0 px-2.5 py-1.5 text-xs text-white font-mono"
+                           oninput="triggerFireRecalculate()">
+                    <select id="fp_unit_custom_q" onchange="onFireParamUnitChange(this)"
+                            class="unit-select bg-[#0d1117] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-[11px] font-mono font-semibold focus:outline-none cursor-pointer"
+                            data-target="fp_custom_q" data-unit-cat="flow" data-prev="gpm">
+                      <option value="gpm">GPM</option>
+                      <option value="m3h">m³/h</option>
+                      <option value="ls">L/s</option>
+                      <option value="lmin">L/min</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-[11px] text-[#c9d1d9] mb-1 font-medium">Total Dynamic Head *</label>
+                  <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#f85149] bg-[#161b22]">
+                    <input type="number" step="any" id="fp_custom_h" value="100"
+                           class="w-full bg-transparent border-0 focus:ring-0 px-2.5 py-1.5 text-xs text-white font-mono"
+                           oninput="triggerFireRecalculate()">
+                    <select id="fp_unit_custom_h" onchange="onFireParamUnitChange(this)"
+                            class="unit-select bg-[#0d1117] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-[11px] font-mono font-semibold focus:outline-none cursor-pointer"
+                            data-target="fp_custom_h" data-unit-cat="head" data-prev="psi">
+                      <option value="psi">PSI</option>
+                      <option value="bar">bar</option>
+                      <option value="m">m</option>
+                      <option value="ft">ft</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Duration Input -->
+              <div>
+                <label class="block text-[11px] text-[#c9d1d9] mb-1 font-medium">Required Fire Protection Supply Duration</label>
+                <div class="relative">
+                  <input type="number" id="fp_duration" value="60" min="15" max="360" step="15"
+                         class="w-full bg-[#161b22] border border-[#30363d] rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:border-[#f85149] focus:outline-none"
+                         oninput="triggerFireRecalculate()">
+                  <span class="absolute right-3 top-1.5 text-xs font-mono text-[#8b949e]">minutes</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Installation Hydraulics, Elevation & Operating Pressure -->
+            <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-xl space-y-3 relative z-10">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-[#8b949e] pb-1 border-b border-[#30363d]/60">
+                2. Installation Hydraulics, Elevation &amp; Operating Pressure
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <!-- Static Elevation -->
+                <div>
+                  <label class="block text-[11px] text-[#c9d1d9] mb-1 font-medium">Static Elevation (Height)</label>
+                  <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#f85149] bg-[#161b22]">
+                    <input type="number" step="any" id="fp_static_z" value="40" placeholder="0.0"
+                           class="w-full bg-transparent border-0 focus:ring-0 px-2.5 py-1.5 text-xs text-white font-mono"
+                           oninput="triggerFireRecalculate()">
+                    <select id="fp_unit_static_z" onchange="onFireParamUnitChange(this)"
+                            class="unit-select bg-[#0d1117] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-[11px] font-mono font-semibold focus:outline-none cursor-pointer"
+                            data-target="fp_static_z" data-unit-cat="head" data-prev="ft">
+                      <option value="ft">ft</option>
+                      <option value="m">m</option>
+                    </select>
+                  </div>
+                  <span class="text-[9px] text-[#8b949e] mt-0.5 block">To highest sprinkler / valve</span>
+                </div>
+
+                <!-- Piping Friction Loss -->
+                <div>
+                  <label class="block text-[11px] text-[#c9d1d9] mb-1 font-medium">Piping Friction Loss</label>
+                  <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#f85149] bg-[#161b22]">
+                    <input type="number" step="any" id="fp_friction" value="25" placeholder="0.0"
+                           class="w-full bg-transparent border-0 focus:ring-0 px-2.5 py-1.5 text-xs text-white font-mono"
+                           oninput="triggerFireRecalculate()">
+                    <select id="fp_unit_friction" onchange="onFireParamUnitChange(this)"
+                            class="unit-select bg-[#0d1117] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-[11px] font-mono font-semibold focus:outline-none cursor-pointer"
+                            data-target="fp_friction" data-unit-cat="head" data-prev="psi">
+                      <option value="psi">PSI</option>
+                      <option value="bar">bar</option>
+                      <option value="m">m</option>
+                      <option value="ft">ft</option>
+                    </select>
+                  </div>
+                  <span class="text-[9px] text-[#8b949e] mt-0.5 block">Piping &amp; valve losses</span>
+                </div>
+
+                <!-- Residual Nozzle Pressure (full width across 2 cols) -->
+                <div class="sm:col-span-2">
+                  <label class="block text-[11px] text-[#c9d1d9] mb-1 font-medium">Residual Nozzle Operating Pressure</label>
+                  <div class="flex rounded-lg overflow-hidden border border-[#30363d] focus-within:border-[#f85149] bg-[#161b22]">
+                    <input type="number" step="any" id="fp_residual" value="65" placeholder="Auto"
+                           class="w-full bg-transparent border-0 focus:ring-0 px-2.5 py-1.5 text-xs text-white font-mono"
+                           oninput="triggerFireRecalculate()">
+                    <select id="fp_unit_residual" onchange="onFireParamUnitChange(this)"
+                            class="unit-select bg-[#0d1117] text-[#58a6ff] border-l border-[#30363d] px-2 py-1 text-[11px] font-mono font-semibold focus:outline-none cursor-pointer"
+                            data-target="fp_residual" data-unit-cat="head" data-prev="psi">
+                      <option value="psi">PSI</option>
+                      <option value="bar">bar</option>
+                      <option value="m">m</option>
+                      <option value="ft">ft</option>
+                    </select>
+                  </div>
+                  <span class="text-[9px] text-[#8b949e] mt-0.5 block">Min required operating head at remote outlet</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Fire Pump Redundancy Arrangement Banner -->
+            <div class="p-2.5 bg-[#0d1117] border border-[#30363d] rounded-xl flex items-center justify-between relative z-10">
+              <div class="flex items-center gap-2">
+                <i class="bi bi-shield-fill-check text-[#3fb950] text-base shrink-0"></i>
+                <div>
+                  <div class="text-xs font-bold text-white leading-tight">NFPA 20 Duty &amp; Standby Redundancy</div>
+                  <div class="text-[10px] text-[#8b949e]">Primary Electric Fire Pump + 100% Redundant Diesel Standby Pump</div>
+                </div>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#3fb950]/20 text-[#3fb950] border border-[#3fb950]/40 shrink-0">
+                1 Duty + 1 Standby (100%)
+              </span>
+            </div>
+
+            <!-- Apply Fire Duty Point Button in Panel 1 -->
+            <button type="button" onclick="applyFireDutyToSelection()"
+                    class="w-full py-2.5 px-3 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-[#da3633] to-[#f85149] hover:from-[#f85149] hover:to-[#ff7b72] shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer relative z-10">
+              <i class="bi bi-bullseye text-sm"></i>
+              <span>Apply Fire Duty &amp; Search Matching Pumps</span>
+            </button>
+          </div>
+
           <!-- Flow Q Input -->
           <div>
             <label class="form-label text-xs font-semibold text-[#c9d1d9] mb-1 block">Flow Rate Q *</label>
@@ -868,11 +1206,16 @@
             </div>
             <div>
               <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Pump Type</label>
-              <select name="filter_pump_type" class="form-select form-control-dark w-full text-xs">
+              <select name="filter_pump_type" id="filter_pump_type" class="form-select form-control-dark w-full text-xs" onchange="onPumpTypeFilterChange(this.value)">
                 <option value="">All Types</option>
+                <option value="centrifugal" {{ 'selected' if form_data.get('filter_pump_type') == 'centrifugal' }}>Centrifugal</option>
+                <option value="slurry" {{ 'selected' if form_data.get('filter_pump_type') == 'slurry' }}>Slurry</option>
+                <option value="fire pump" {{ 'selected' if form_data.get('filter_pump_type') in ['fire', 'fire pump', 'fire_pump'] }}>Fire Pump</option>
                 {% if filter_options and filter_options.pump_types %}
                   {% for pt in filter_options.pump_types %}
-                  <option value="{{ pt }}" {{ 'selected' if form_data.get('filter_pump_type') == pt }}>{{ pt|capitalize }}</option>
+                    {% if pt|lower not in ['centrifugal', 'slurry', 'fire pump', 'fire', 'fire_pump'] %}
+                    <option value="{{ pt }}" {{ 'selected' if form_data.get('filter_pump_type') == pt }}>{{ pt|capitalize }}</option>
+                    {% endif %}
                   {% endfor %}
                 {% endif %}
               </select>
@@ -930,9 +1273,119 @@
     </div>
 
     <!-- ════════════════════════════════════════════════════════════════════
-         PANEL 3: Shortlist Results (Minimal Information) (Cols 9-12 on lg and xl)
+         PANEL 3: Shortlist Results & Fire Demand Output (Cols 9-12 on lg and xl)
          ════════════════════════════════════════════════════════════════════ -->
     <div class="col-span-12 lg:col-span-4 xl:col-span-4 flex flex-col gap-3">
+
+      <!-- ── Required Fire Pump Design Point Card (Right Card) ── -->
+      <div id="fireDesignPointCard" class="card-dark border-[#f85149]/40 p-4 space-y-3.5 relative overflow-hidden shadow-2xl"
+           style="{{ '' if cur_pt in ['fire', 'fire pump', 'fire_pump'] else 'display:none;' }}">
+        <!-- Background subtle flame glow -->
+        <div class="absolute -right-16 -top-16 w-56 h-56 bg-[#f85149]/10 rounded-full blur-2xl pointer-events-none"></div>
+
+        <div class="flex items-center justify-between pb-2.5 border-b border-[#30363d] relative z-10">
+          <div class="flex items-center gap-2">
+            <span class="p-1.5 rounded-lg bg-[#f85149]/20 text-[#f85149] border border-[#f85149]/40 flex items-center justify-center">
+              <i class="bi bi-fire text-base"></i>
+            </span>
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+                Required Fire Pump Design Point
+              </span>
+              <p class="text-[10px] text-[#8b949e]">Sized demand &amp; NFPA 20 auxiliary requirements</p>
+            </div>
+          </div>
+          <span id="fp_badge_flow_standard" class="text-[10px] font-mono px-2 py-0.5 rounded bg-[#f85149]/20 text-[#ff7b72] border border-[#f85149]/40 font-bold shrink-0">
+            NFPA 13
+          </span>
+        </div>
+
+        <!-- Big Primary & Secondary Metrics -->
+        <div class="grid grid-cols-2 gap-2.5 relative z-10">
+          <div class="p-2.5 bg-[#0d1117] rounded-lg border border-[#30363d]">
+            <div class="text-[10px] text-[#8b949e] uppercase font-sans font-semibold">Rated Flow Q</div>
+            <div class="text-lg font-bold font-mono text-white mt-0.5" id="fp_res_flow_primary">500 GPM</div>
+            <div class="text-[11px] font-mono text-[#58a6ff]" id="fp_res_flow_secondary">113.6 m³/h</div>
+          </div>
+          <div class="p-2.5 bg-[#0d1117] rounded-lg border border-[#30363d]">
+            <div class="text-[10px] text-[#8b949e] uppercase font-sans font-semibold">Total Dynamic Head H</div>
+            <div class="text-lg font-bold font-mono text-white mt-0.5" id="fp_res_head_primary">107 PSI</div>
+            <div class="text-[11px] font-mono text-[#58a6ff]" id="fp_res_head_secondary">75.5 m (7.4 bar)</div>
+          </div>
+        </div>
+
+        <!-- NFPA 20 Characteristic Limits Breakdown -->
+        <div class="bg-[#0d1117] p-2.5 rounded-lg border border-[#30363d] space-y-1.5 text-xs relative z-10">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-[#8b949e] pb-1 border-b border-[#30363d]/60 flex items-center justify-between">
+            <span>NFPA 20 Curve Verification Criteria</span>
+            <span class="text-[9px] font-mono text-[#3fb950]">Certified Limits</span>
+          </div>
+          <div class="flex items-center justify-between text-[#c9d1d9]">
+            <span class="text-[11px]">Max Churn / Shutoff Head (0% Q):</span>
+            <span class="font-mono font-bold text-[#facc15] text-[11px]" id="fp_res_max_churn">≤ 150 PSI (105.7 m)</span>
+          </div>
+          <div class="flex items-center justify-between text-[#c9d1d9]">
+            <span class="text-[11px]">150% Overload Test Flow:</span>
+            <span class="font-mono font-bold text-white text-[11px]" id="fp_res_overload_flow">750 GPM (170.3 m³/h)</span>
+          </div>
+          <div class="flex items-center justify-between text-[#c9d1d9]">
+            <span class="text-[11px]">Min Head at 150% Overload (≥65%):</span>
+            <span class="font-mono font-bold text-[#3fb950] text-[11px]" id="fp_res_min_overload_head">≥ 70 PSI (49.1 m)</span>
+          </div>
+          <div class="flex items-center justify-between text-[#c9d1d9] pt-1 border-t border-[#30363d]/40">
+            <span class="text-[11px]">Est. Driver Power (Motor/Diesel):</span>
+            <span class="font-mono font-bold text-[#58a6ff] text-[11px]" id="fp_res_driver_power">45 kW (60 HP)</span>
+          </div>
+        </div>
+
+        <!-- Auxiliaries: Jockey Pump & Water Storage Tank -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs relative z-10">
+          <!-- Jockey Pump Card -->
+          <div class="p-2.5 bg-[#0d1117] rounded-lg border border-[#30363d] space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-[#38bdf8] flex items-center gap-1">
+                <i class="bi bi-arrow-repeat"></i> Jockey Pump
+              </span>
+              <span class="text-[9px] font-mono text-[#8b949e]">Pressure Maint.</span>
+            </div>
+            <div class="text-xs font-bold font-mono text-white" id="fp_res_jockey_duty">10.0 GPM @ 117 PSI</div>
+            <div class="text-[10px] text-[#8b949e]">
+              Start: <span class="font-mono text-white" id="fp_res_jockey_start">102 PSI</span> |
+              Stop: <span class="font-mono text-white" id="fp_res_jockey_stop">112 PSI</span>
+            </div>
+          </div>
+
+          <!-- Water Storage Tank Card -->
+          <div class="p-2.5 bg-[#0d1117] rounded-lg border border-[#30363d] space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-[#3fb950] flex items-center gap-1">
+                <i class="bi bi-water"></i> Storage Tank
+              </span>
+              <span class="text-[10px] font-mono text-[#8b949e]" id="fp_res_tank_duration">60 min</span>
+            </div>
+            <div class="text-xs font-bold font-mono text-white" id="fp_res_tank_vol_m3">113.6 m³</div>
+            <div class="text-[10px] font-mono text-[#8b949e]" id="fp_res_tank_vol_gal">30,000 US Gal</div>
+          </div>
+        </div>
+
+        <!-- NFPA 20 Table 4.27 Pipe Sizing Schedule -->
+        <div class="p-2 bg-[#0d1117] rounded-lg border border-[#30363d] flex items-center justify-between text-xs relative z-10">
+          <span class="text-[#8b949e] flex items-center gap-1 text-[11px]">
+            <i class="bi bi-diagram-2 text-[#58a6ff]"></i>
+            <span>NFPA 20 Pipe Sizing:</span>
+          </span>
+          <span class="font-mono text-white font-semibold text-[11px]" id="fp_res_pipe_sizes">
+            Suction: 5" (125mm) | Discharge: 5" (125mm)
+          </span>
+        </div>
+
+        <!-- Apply Fire Duty Point & Search Compliant Pumps Button -->
+        <button type="button" onclick="applyFireDutyToSelection()"
+                class="w-full py-2.5 px-3 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-[#da3633] to-[#f85149] hover:from-[#f85149] hover:to-[#ff7b72] shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer relative z-10">
+          <i class="bi bi-bullseye text-sm"></i>
+          <span>Apply Fire Duty Point &amp; Search Matching Pumps</span>
+        </button>
+      </div>
 
       {% if results is not none %}
         {% if results %}
@@ -1056,6 +1509,15 @@
                     {% else %}
                       <span class="shrink-0 inline-flex items-center px-1 py-0.2 rounded text-[8px] font-semibold bg-[#3fb950]/15 text-[#3fb950] border border-[#3fb950]/30">Fixed</span>
                     {% endif %}
+                    {% if r.is_fire_pump or (r.nfpa20_eval and r.nfpa20_eval.is_compliant) %}
+                      <span class="shrink-0 inline-flex items-center px-1.5 py-0.2 rounded text-[8px] font-bold bg-[#f85149]/20 text-[#ff7b72] border border-[#f85149]/40" title="UL/FM Listed or NFPA 20 Compliant Fire Pump">
+                        <i class="bi bi-fire mr-0.5 text-[#f85149]"></i>Fire Listed
+                      </span>
+                    {% elif r.is_fire_capable and r.nfpa20_eval %}
+                      <span class="shrink-0 inline-flex items-center px-1.5 py-0.2 rounded text-[8px] font-semibold bg-[#d29922]/20 text-[#e3b341] border border-[#d29922]/40" title="Clean water centrifugal pump evaluated for fire service">
+                        <i class="bi bi-fire mr-0.5 text-[#d29922]"></i>Fire Capable
+                      </span>
+                    {% endif %}
                     {% if r.pump_arrangement == 'parallel' and r.pumps_operating > 1 %}
                       <span class="shrink-0 inline-flex items-center px-1 py-0.2 rounded text-[8px] font-semibold bg-[#22c55e]/15 text-[#22c55e] border border-[#22c55e]/30" title="{{ r.pumps_operating }} pumps operating in parallel">
                         <i class="bi bi-distribute-vertical mr-0.5"></i>{{ r.pumps_operating }}x Par
@@ -1153,6 +1615,78 @@
                   </div>
                 </div>
               </div>
+
+              {% if r.nfpa20_eval %}
+              <!-- NFPA 20 Fire Pump Compliance Breakdown Matrix & Auxiliaries -->
+              <div class="mt-2.5 pt-2 border-t border-[#30363d]/60 space-y-1.5 bg-[#0d1117]/80 p-2 rounded-lg border border-[#f85149]/20">
+                <div class="flex items-center justify-between gap-1 flex-wrap">
+                  <span class="text-[11px] font-bold text-white flex items-center gap-1">
+                    <i class="bi bi-shield-check text-[#3fb950]"></i>
+                    <span>NFPA 20 Characteristic Curve Evaluation</span>
+                  </span>
+                  <div class="flex items-center gap-1">
+                    {% if r.is_fire_pump %}
+                    <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#f85149]/20 text-[#ff7b72] border border-[#f85149]/40">
+                      UL/FM Certified
+                    </span>
+                    {% endif %}
+                    {% if r.nfpa20_eval.is_compliant %}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#3fb950]/20 text-[#3fb950] border border-[#3fb950]/40">
+                      <i class="bi bi-check-circle-fill mr-1"></i>COMPLIANT
+                    </span>
+                    {% elif not r.nfpa20_eval.pass_rated %}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#f85149]/20 text-[#f85149] border border-[#f85149]/40">
+                      <i class="bi bi-x-circle-fill mr-1"></i>Head Deficient
+                    </span>
+                    {% elif not r.nfpa20_eval.pass_churn %}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#facc15]/20 text-[#facc15] border border-[#facc15]/40">
+                      <i class="bi bi-exclamation-triangle-fill mr-1"></i>High Churn (&gt;140%)
+                    </span>
+                    {% else %}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#e06c75]/20 text-[#e06c75] border border-[#e06c75]/40">
+                      <i class="bi bi-exclamation-triangle-fill mr-1"></i>Low Overload (&lt;65%)
+                    </span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <!-- 3-Point Check Matrix Grid -->
+                <div class="grid grid-cols-3 gap-1.5 p-2 rounded-lg bg-[#161b22] border border-[#30363d] text-center font-mono text-[10px]">
+                  <div>
+                    <div class="text-[#8b949e]">0% Churn (≤140%)</div>
+                    <div class="font-bold {{ 'text-[#3fb950]' if r.nfpa20_eval.pass_churn else 'text-[#f85149]' }}">
+                      {{ r.nfpa20_eval.churn_ratio_pct }}%
+                    </div>
+                    <div class="text-[9px] text-[#8b949e]">
+                      {{ (r.nfpa20_eval.disp_h_churn|round(1)) if r.nfpa20_eval.disp_h_churn is not none else r.nfpa20_eval.h_churn_m }} {{ r.nfpa20_eval.disp_unit_h or unit_h }}
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-[#8b949e]">100% Rated (≥100%)</div>
+                    <div class="font-bold {{ 'text-[#3fb950]' if r.nfpa20_eval.pass_rated else 'text-[#f85149]' }}">
+                      {{ r.nfpa20_eval.rated_ratio_pct }}%
+                    </div>
+                    <div class="text-[9px] text-[#8b949e]">
+                      {{ (r.nfpa20_eval.disp_h_rated|round(1)) if r.nfpa20_eval.disp_h_rated is not none else r.nfpa20_eval.h_rated_m }} {{ r.nfpa20_eval.disp_unit_h or unit_h }}
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-[#8b949e]">150% Overload (≥65%)</div>
+                    <div class="font-bold {{ 'text-[#3fb950]' if r.nfpa20_eval.pass_overload else 'text-[#f85149]' }}">
+                      {{ r.nfpa20_eval.overload_ratio_pct }}%
+                    </div>
+                    <div class="text-[9px] text-[#8b949e]">
+                      {{ (r.nfpa20_eval.disp_h_overload|round(1)) if r.nfpa20_eval.disp_h_overload is not none else r.nfpa20_eval.h_overload_m }} {{ r.nfpa20_eval.disp_unit_h or unit_h }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between text-[11px] text-[#8b949e] px-1">
+                  <span>Speed: <strong class="text-white font-mono">{{ r.optimal_speed_rpm or r.nominal_speed_rpm or '—' }} RPM</strong></span>
+                  <span>Rec. Driver: <strong class="text-[#58a6ff] font-mono">{{ r.nfpa20_eval.rec_driver_kw or '—' }} kW ({{ r.nfpa20_eval.rec_driver_hp or '—' }} HP)</strong></span>
+                </div>
+              </div>
+              {% endif %}
             </div>
             {% endfor %}
 
@@ -1184,8 +1718,8 @@
         {% endif %}
 
       {% else %}
-        <!-- Initial state: Ready to search -->
-        <div class="card-dark empty-state p-8 text-center">
+        <!-- Initial state: Ready to search (Regular Pumps) -->
+        <div id="selectionInitialPrompt" class="card-dark empty-state p-8 text-center" style="{{ 'display:none;' if cur_pt in ['fire', 'fire pump', 'fire_pump'] else '' }}">
           <i class="bi bi-bullseye text-4xl text-[#58a6ff] mb-3 block animate-pulse"></i>
           <h4 class="text-white font-bold text-base mb-1">Ready for Selection</h4>
           <p class="text-xs text-[#8b949e] mb-3">
@@ -1195,6 +1729,15 @@
             <i class="bi bi-info-circle text-[#58a6ff]"></i>
             <span>Detailed comparison and side-by-side curves will appear in the Comparison Tab</span>
           </div>
+        </div>
+
+        <!-- Initial state: Ready to search (Fire Pumps) -->
+        <div id="fireInitialPrompt" class="card-dark p-6 text-center border border-[#f85149]/30 bg-[#161b22] space-y-2" style="{{ '' if cur_pt in ['fire', 'fire pump', 'fire_pump'] else 'display:none;' }}">
+          <i class="bi bi-fire text-3xl text-[#f85149] mb-1 block animate-pulse"></i>
+          <h4 class="text-white font-bold text-sm">Fire Protection Pump Sizing</h4>
+          <p class="text-xs text-[#8b949e] max-w-sm mx-auto">
+            Review the calculated design point above. Click <strong class="text-white">Apply Fire Duty Point &amp; Search Matching Pumps</strong> to retrieve code-compliant UL/FM certified fire pumps below.
+          </p>
         </div>
       {% endif %}
 
@@ -4033,6 +4576,7 @@
   window.__PMP_UNIT_H = "{{ unit_h or 'm' }}";
   window.__PMP_UNIT_SYSTEM = "{{ unit_system or 'metric' }}";
   window.__PMP_UNITS_TABLES = {{ units_tables | tojson | safe if units_tables else '{}' }};
+  window.__PMP_FIRE_STANDARDS = {{ fire_standards_json | default('null', true) | safe }};
   window.FEAT_PIPE_CANVAS = {{ 'true' if ((feat_pipe_canvas and (feat_pipe_schematic or feat_pipe_visual)) or (current_user and current_user.is_super_admin_user)) else 'false' }};
   window.FEAT_PIPE_SIMPLE = {{ 'true' if (feat_pipe_simple or (current_user and current_user.is_super_admin_user)) else 'false' }};
   window.FEAT_PIPE_VISUAL = {{ 'true' if (feat_pipe_visual or (current_user and current_user.is_super_admin_user)) else 'false' }};

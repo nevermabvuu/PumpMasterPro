@@ -1,1 +1,1148 @@
-const a0_0x178b1f=a0_0x5ecd;(function(_0x2d25cf,_0x52c486){const _0x15429c=a0_0x5ecd,_0x5a1cd1=_0x2d25cf();while(!![]){try{const _0x5415d3=-parseInt(_0x15429c(0x175,'AQA5'))/0x1+-parseInt(_0x15429c(0x6c0,'rn#Q'))/0x2*(-parseInt(_0x15429c(0x294,'F[]e'))/0x3)+parseInt(_0x15429c(0x62f,'AQA5'))/0x4+parseInt(_0x15429c(0x2e0,'1*R6'))/0x5*(-parseInt(_0x15429c(0x209,'&mk3'))/0x6)+parseInt(_0x15429c(0x2b1,'T)Sm'))/0x7+-parseInt(_0x15429c(0x613,'^B64'))/0x8+parseInt(_0x15429c(0x246,'zpR4'))/0x9;if(_0x5415d3===_0x52c486)break;else _0x5a1cd1['push'](_0x5a1cd1['shift']());}catch(_0x5230bb){_0x5a1cd1['push'](_0x5a1cd1['shift']());}}}(a0_0x4496,0x5ccbb));let pumpData=null;async function fetchPumpData(){const _0x2e44b9=a0_0x5ecd,_0x7d229d=document[_0x2e44b9(0x699,'oojm')+_0x2e44b9(0x151,'A3HS')+_0x2e44b9(0x4f7,'mmCf')](_0x2e44b9(0x383,'thmO')+_0x2e44b9(0x1e0,'mkz0')+'ng');if(_0x7d229d)_0x7d229d[_0x2e44b9(0x64a,'rn#Q')][_0x2e44b9(0x497,'&lJQ')+'ay']=_0x2e44b9(0x66f,'$8@4');if(!window[_0x2e44b9(0x441,'6H#W')+'etail'+_0x2e44b9(0x1ca,'^B64')+'ig']||!window[_0x2e44b9(0x67f,')Jpu')+_0x2e44b9(0x339,'T)Sm')+_0x2e44b9(0x46a,'$fX5')+'ig'][_0x2e44b9(0x69b,'Rbb]')+'ID']){console[_0x2e44b9(0x4c8,'3trC')]('windo'+_0x2e44b9(0x618,')Jpu')+_0x2e44b9(0x5c8,'ME5t')+_0x2e44b9(0x69e,'zBj%')+_0x2e44b9(0x55a,'8uGe')+'is\x20mi'+_0x2e44b9(0x2c8,'&mk3')+'\x20or\x20P'+_0x2e44b9(0x1c7,'^B64')+_0x2e44b9(0x182,'AQA5')+'undef'+_0x2e44b9(0x5a0,'rn#Q'),window[_0x2e44b9(0x28b,')oDU')+_0x2e44b9(0x47e,'IvrV')+'sConf'+'ig']);if(_0x7d229d)_0x7d229d[_0x2e44b9(0x257,'IvrV')][_0x2e44b9(0x585,'^B64')+'ay']='none';return;}const _0x33502c=window[_0x2e44b9(0x33d,'zpR4')+_0x2e44b9(0x513,'^B64')+_0x2e44b9(0x23a,'Bb81')+'ig'],_0x5a5b51=new URLSearchParams({'ids':_0x33502c['PUMP_'+'ID'],'liquid':_0x33502c[_0x2e44b9(0x172,'EQ9Y')+'D_TYP'+'E']||'water','rho':_0x33502c[_0x2e44b9(0x2d2,'sBHL')]!==undefined&&_0x33502c[_0x2e44b9(0x40e,'3trC')]!==null?_0x33502c[_0x2e44b9(0x20b,'mmCf')]:0x3e8,'viscosity_cSt':_0x33502c[_0x2e44b9(0x228,'zpR4')+_0x2e44b9(0x498,'U6RT')]!==undefined&&_0x33502c[_0x2e44b9(0x28e,'zVHu')+_0x2e44b9(0x492,'thmO')]!==null?_0x33502c[_0x2e44b9(0x5ac,'T)Sm')+_0x2e44b9(0x498,'U6RT')]:0x1,'slurry_cv':_0x33502c['SLURR'+_0x2e44b9(0x363,'AbmW')]!==undefined&&_0x33502c[_0x2e44b9(0x2a8,'yHqR')+_0x2e44b9(0x215,'8uGe')]!==null?_0x33502c[_0x2e44b9(0x2af,'$8@4')+_0x2e44b9(0x4f2,'6zqs')]:0x0,'slurry_d50':_0x33502c['SLURR'+'Y_D50']!==undefined&&_0x33502c[_0x2e44b9(0x544,'A3HS')+_0x2e44b9(0x4fe,'mJS4')]!==null?_0x33502c['SLURR'+_0x2e44b9(0x274,')Jpu')]:0.3,'rho_solid':_0x33502c['RHO_S'+'OLID']!==undefined&&_0x33502c[_0x2e44b9(0x1ab,'T)Sm')+_0x2e44b9(0x1fc,'rtGy')]!==null?_0x33502c[_0x2e44b9(0x5ce,'QnBl')+_0x2e44b9(0x5b2,'z$A8')]:0xa5a,'operation_mode':_0x33502c[_0x2e44b9(0x44a,'U6RT')+_0x2e44b9(0x30e,'^B64')+_0x2e44b9(0x27d,'^B64')]||_0x2e44b9(0x4ce,'ME5t')});try{const _0x4d8b12=await fetch(_0x2e44b9(0x5ae,'T)Sm')+_0x2e44b9(0x22c,'yHqR')+_0x2e44b9(0x464,'i#Px')+_0x2e44b9(0x6bd,'Bb81')+_0x5a5b51[_0x2e44b9(0x43a,'5qW1')+_0x2e44b9(0x5bf,'V5p4')]()),_0x3fda39=await _0x4d8b12[_0x2e44b9(0x5b5,'PQS2')]();_0x3fda39&&_0x3fda39[_0x2e44b9(0x59d,'6zqs')+'h']>0x0&&(pumpData=_0x3fda39[0x0],renderAll());}catch(_0x3cd1a3){console[_0x2e44b9(0x1c6,'(Iaf')]('Error'+_0x2e44b9(0x304,'PQS2')+_0x2e44b9(0x50b,'U6RT')+_0x2e44b9(0x287,'F[]e')+_0x2e44b9(0x3cc,'A3HS'),_0x3cd1a3);}finally{document[_0x2e44b9(0x444,'OjaE')+_0x2e44b9(0x65a,'3trC')+_0x2e44b9(0x471,'^B64')](_0x2e44b9(0x3fa,'^B64')+'Loadi'+'ng')['style'][_0x2e44b9(0x3ce,'mmCf')+'ay']=_0x2e44b9(0x1a4,'QnBl');}}const UNIT_FACTORS={'flow':{'m3h':0x1,'ls':3.6,'lmin':0.06,'gpm':0.227124707,'ukgpm':0.2727654,'cfs':101.9406,'mgd':157.7255},'head':{'m':0x1,'ft':0.3048,'kpa':0.1019716,'bar':10.19716,'psi':0.70307},'power':{'kw':0x1,'hp':0.745699872,'w':0.001,'mw':0x3e8}};function normalizeDashStyle(_0x127e4e,_0x33a92f=a0_0x178b1f(0x6a5,'mkz0')){const _0x34c4ee=a0_0x178b1f;if(!_0x127e4e)return _0x33a92f;const _0xe8e2f7=String(_0x127e4e)['toLow'+_0x34c4ee(0x3bb,'i#Px')+'e']()[_0x34c4ee(0x530,'8uGe')]();if(_0xe8e2f7===_0x34c4ee(0x334,'mJS4')+'d'||_0xe8e2f7==='dash')return _0x34c4ee(0x290,'IvrV');if(_0xe8e2f7==='dotte'+'d'||_0xe8e2f7===_0x34c4ee(0x51a,')oDU'))return _0x34c4ee(0x1b9,'Y*Sh');if(_0xe8e2f7==='dashd'+'ot')return _0x34c4ee(0x667,'zpR4')+'ot';if(_0xe8e2f7===_0x34c4ee(0x181,'mJS4')+_0x34c4ee(0x6b6,'F[]e'))return _0x34c4ee(0x5f0,'zBj%')+_0x34c4ee(0x1ad,'^B64');if(_0xe8e2f7===_0x34c4ee(0x299,'oojm'))return _0x34c4ee(0x255,'QnBl');return _0x33a92f;}function getDetailsUnitScaleRatio(_0x60a980,_0x14cb84={}){const _0x438713=a0_0x178b1f;if(_0x60a980===_0x438713(0x5ec,'sBHL'))return 0x1;const _0x179712=window['PumpD'+'etail'+_0x438713(0x315,'$Awu')+'ig']||{},_0x16633e=_0x179712['UNIT_'+'Q']||_0x438713(0x2ca,'zpR4'),_0x47c475=_0x179712[_0x438713(0x234,'3trC')+'H']||'m',_0x20d794=_0x179712[_0x438713(0x500,'AbmW')+_0x438713(0x1a9,'T)Sm')]||'m',_0x54649d=_0x179712[_0x438713(0x479,'ME5t')+'POW']||'kw',_0x3c9b0d=(_0x14cb84[_0x438713(0x162,'6zqs')+'q']||_0x438713(0x5fe,'Y*Sh'))[_0x438713(0x2fe,'$8@4')+_0x438713(0x51c,'AQA5')+'e']()[_0x438713(0x29e,'(Iaf')+'ce']('/','')[_0x438713(0x14d,'AQA5')+'ce']('³','3')[_0x438713(0x475,'V5p4')+'ce']('^','')[_0x438713(0x509,'3trC')+'ce']('\x20',''),_0x1d8a22=(_0x14cb84[_0x438713(0x374,'zVHu')+'h']||'m')[_0x438713(0x459,'OjaE')+_0x438713(0x536,'mJS4')+'e']()[_0x438713(0x17e,'c0k&')+'ce']('/','')[_0x438713(0x5d5,'zpR4')+'ce']('\x20',''),_0x549f54=(_0x14cb84[_0x438713(0x374,'zVHu')+_0x438713(0x3c2,'A3HS')]||_0x14cb84[_0x438713(0x465,'QnBl')+'h']||'m')[_0x438713(0x156,'T)Sm')+_0x438713(0x4d7,'oojm')+'e']()['repla'+'ce']('/','')[_0x438713(0x20a,'rtGy')+'ce']('\x20',''),_0x24013b=(_0x14cb84[_0x438713(0x6a2,'(Iaf')+_0x438713(0x3e3,'&lJQ')]||_0x14cb84['unit_'+_0x438713(0x6ac,'PQS2')]||'kw')[_0x438713(0x2d7,'^B64')+_0x438713(0x461,'zVHu')+'e']()[_0x438713(0x66b,'fQ)]')+'ce']('/','')[_0x438713(0x475,'V5p4')+'ce']('\x20',''),_0x2acb1f=UNIT_FACTORS[_0x438713(0x28d,'AQA5')][_0x3c9b0d]||0x1,_0x5a50ab=UNIT_FACTORS[_0x438713(0x14b,'3trC')][_0x16633e]||0x1,_0x42a49c=UNIT_FACTORS[_0x438713(0x1ae,'$fX5')][_0x1d8a22]||0x1,_0x36aace=UNIT_FACTORS[_0x438713(0x3e7,'oojm')][_0x47c475]||0x1,_0x2ffe74=UNIT_FACTORS[_0x438713(0x21a,'mkz0')][_0x549f54]||0x1,_0x1fc49b=UNIT_FACTORS[_0x438713(0x2e6,'zpR4')][_0x20d794]||0x1,_0x39b910=UNIT_FACTORS[_0x438713(0x5b8,'PQS2')][_0x24013b]||0x1,_0xdb6b5c=UNIT_FACTORS[_0x438713(0x253,'U6RT')][_0x54649d]||0x1;if(_0x60a980===_0x438713(0x6aa,'F[]e'))return _0x2acb1f/_0x5a50ab;else{if(_0x60a980==='head')return _0x42a49c/_0x36aace;else{if(_0x60a980===_0x438713(0x535,'F[]e'))return _0x2ffe74/_0x1fc49b;else{if(_0x60a980===_0x438713(0x58e,'F[]e'))return _0x39b910/_0xdb6b5c;}}}return 0x1;}function getCleanAxisScale(_0x41d44d,_0x5bcbf1,_0x588aaa,_0x36163c){const _0x5cd160=a0_0x178b1f;if(_0x5bcbf1===null||_0x5bcbf1===undefined)return{'min':_0x41d44d,'max':_0x5bcbf1,'dtick':null,'minor':_0x36163c};const _0x18a09d=_0x41d44d!==null&&_0x41d44d!==undefined?Number(_0x41d44d):0x0,_0x4a0706=Number(_0x5bcbf1),_0x26e7b4=_0x4a0706-_0x18a09d;if(_0x26e7b4<=0x0)return{'min':_0x18a09d,'max':_0x4a0706,'dtick':null,'minor':_0x36163c};let _0x429b22=_0x588aaa!==null&&_0x588aaa!==undefined&&Number(_0x588aaa)>0x0?_0x26e7b4/Number(_0x588aaa):_0x26e7b4/0x5;const _0x470ad2=[0x1,1.5,0x2,2.5,0x5,0xa],_0x3adab2=Math[_0x5cd160(0x54d,'3trC')](0xa,Math[_0x5cd160(0x3e8,'8uGe')](Math[_0x5cd160(0x502,'(Iaf')](_0x429b22>0x0?_0x429b22:0x1)));let _0x28d871=[];[0.1,0x1,0xa][_0x5cd160(0x18a,'zBj%')+'ch'](_0x595aa2=>{const _0x487e8e=_0x5cd160;_0x470ad2[_0x487e8e(0x262,'mJS4')+'ch'](_0x374fa6=>{const _0x18d427=_0x487e8e;_0x28d871[_0x18d427(0x5f6,'EQ9Y')](_0x374fa6*_0x3adab2*_0x595aa2);});});let _0x3cca1b=_0x28d871[0x0],_0x2a767d=Math[_0x5cd160(0x5d7,'$Awu')](_0x3cca1b-_0x429b22);return _0x28d871[_0x5cd160(0x372,'F[]e')+'ch'](_0x2861c4=>{const _0x534ed9=_0x5cd160,_0x936498=Math[_0x534ed9(0x47d,'d(em')](_0x2861c4-_0x429b22);_0x936498<_0x2a767d&&(_0x2a767d=_0x936498,_0x3cca1b=_0x2861c4);}),{'min':_0x18a09d,'max':_0x4a0706,'dtick':_0x3cca1b,'minor':_0x36163c};}function applyAxisScale(_0x20922e,_0x20b348,_0x330dae,_0x3748e7,_0x70941f){const _0x5c5837=a0_0x178b1f,_0x2651c7=getDetailsUnitScaleRatio(_0x20b348,_0x330dae),_0xd285c9=_0x330dae[_0x5c5837(0x2a2,'AbmW')+_0x20b348+_0x5c5837(0x422,'(Iaf')],_0x1f8cda=_0x330dae['axis_'+_0x20b348+_0x5c5837(0x5ee,'&lJQ')],_0x383540=_0x330dae['axis_'+_0x20b348+(_0x5c5837(0x360,'EQ9Y')+'r')],_0x4029eb=_0x330dae[_0x5c5837(0x4fd,'mJS4')+_0x20b348+(_0x5c5837(0x476,'oojm')+'r')],_0x56d048=_0xd285c9!==null&&_0xd285c9!==undefined&&_0xd285c9!==''?Number(_0xd285c9)*_0x2651c7:null,_0x1ef4e5=_0x1f8cda!==null&&_0x1f8cda!==undefined&&_0x1f8cda!==''?Number(_0x1f8cda)*_0x2651c7:null,_0x374acc=getCleanAxisScale(_0x56d048,_0x1ef4e5,_0x383540,_0x4029eb);_0x374acc[_0x5c5837(0x5df,'$8@4')]!==null&&_0x374acc['max']!==null?(_0x20922e[_0x5c5837(0x2a5,'3trC')]=[_0x374acc[_0x5c5837(0x58c,')Jpu')],_0x374acc[_0x5c5837(0x50e,'QnBl')]],_0x20922e[_0x5c5837(0x30c,'yHqR')+_0x5c5837(0x4aa,'zpR4')]=![]):(_0x20922e['range'+_0x5c5837(0x23e,'zBj%')]='tozer'+'o',_0x20922e['autor'+_0x5c5837(0x320,'F[]e')]=!![]),_0x374acc[_0x5c5837(0x3f6,'AbmW')]!==null&&(_0x20922e[_0x5c5837(0x430,'Xo4W')]=_0x374acc[_0x5c5837(0x6b8,'$Awu')]),_0x374acc['minor']&&Number(_0x374acc[_0x5c5837(0x41c,'AQA5')])>0x0&&(_0x20922e[_0x5c5837(0x31a,'1*R6')]={'nticks':Number(_0x374acc['minor'])+0x1,'gridcolor':_0x3748e7,'gridwidth':0x1,'showgrid':!![]}),_0x20922e[_0x5c5837(0x2dc,'T)Sm')+_0x5c5837(0x44c,'AbmW')]=!![],_0x20922e['linew'+_0x5c5837(0x212,'XCYk')]=1.5,_0x20922e[_0x5c5837(0x3e0,'mJS4')+'olor']=_0x70941f,_0x20922e[_0x5c5837(0x370,'AQA5')+'r']=!![];}function buildBorderShapes(_0x358848,_0xa5d8d0,_0x19645e){const _0x553e5e=a0_0x178b1f;if(!_0xa5d8d0||_0xa5d8d0[_0x553e5e(0x2b3,'oojm')+'h']===0x0||_0x358848===_0x553e5e(0x305,'yHqR'))return[];const _0x3fcc76=[],_0x2bb42c=_0x19645e||_0x553e5e(0x2ed,'thmO')+'3d',_0xbde7ff=1.5;(_0x358848===_0x553e5e(0x579,'A3HS')+'s'||_0x358848===_0x553e5e(0x3c7,'1*R6'))&&_0xa5d8d0[_0x553e5e(0x3c6,')oDU')+'ch'](_0x1375c7=>{const _0x47a040=_0x553e5e;_0x1375c7['domai'+'n']&&_0x1375c7['domai'+'n'][_0x47a040(0x2de,'zVHu')+'h']===0x2&&_0x3fcc76[_0x47a040(0x5f6,'EQ9Y')]({'type':_0x47a040(0x1fe,'sBHL'),'xref':_0x47a040(0x16f,'i#Px'),'yref':_0x47a040(0x4e0,'zBj%'),'x0':0x0,'x1':0x1,'y0':_0x1375c7[_0x47a040(0x385,'PQS2')+'n'][0x0],'y1':_0x1375c7['domai'+'n'][0x1],'line':{'color':_0x2bb42c,'width':_0xbde7ff},'fillcolor':_0x47a040(0x5ed,'oojm')+_0x47a040(0x3a6,'&mk3')+_0x47a040(0x4cf,')oDU'),'layer':_0x47a040(0x2cb,'fQ)]')});});if(_0x358848===_0x553e5e(0x1fa,'&mk3')+'ne'||_0x358848===_0x553e5e(0x45f,'PQS2')){const _0x1a7302=Math[_0x553e5e(0x32f,'zpR4')](..._0xa5d8d0[_0x553e5e(0x527,'OjaE')](_0x422ed6=>_0x422ed6['domai'+'n'][0x0])),_0x107f3d=Math[_0x553e5e(0x46d,'zVHu')](..._0xa5d8d0[_0x553e5e(0x2e8,'F[]e')](_0x4e47a7=>_0x4e47a7[_0x553e5e(0x609,'fQ)]')+'n'][0x1]));_0x3fcc76[_0x553e5e(0x276,'fQ)]')]({'type':_0x553e5e(0x1bc,'fQ)]'),'xref':_0x553e5e(0x601,'yHqR'),'yref':_0x553e5e(0x643,'1*R6'),'x0':0x0,'x1':0x1,'y0':_0x1a7302,'y1':_0x107f3d,'line':{'color':_0x2bb42c,'width':_0x358848===_0x553e5e(0x19b,'fQ)]')+'ne'?0x2:1.8},'fillcolor':_0x553e5e(0x2d8,'$fX5')+_0x553e5e(0x537,'U6RT')+_0x553e5e(0x1e8,'Y*Sh'),'layer':_0x553e5e(0x1c4,'Bb81')});}return _0x3fcc76;}window[a0_0x178b1f(0x468,'&mk3')+'aphBo'+a0_0x178b1f(0x240,'AQA5')+a0_0x178b1f(0x3ac,'6zqs')]=function(_0x15662c){const _0x3cdb22=a0_0x178b1f;!['both','panel'+'s',_0x3cdb22(0x159,'U6RT')+'ne',_0x3cdb22(0x59e,'XCYk')][_0x3cdb22(0x2f8,'^B64')+_0x3cdb22(0x565,'V5p4')](_0x15662c)&&(_0x15662c='both');try{localStorage[_0x3cdb22(0x569,'AQA5')+'em'](_0x3cdb22(0x5a7,'mJS4')+_0x3cdb22(0x1c1,'zBj%')+_0x3cdb22(0x521,'U6RT')+'er_mo'+'de',_0x15662c);}catch(_0x1bf538){}window[_0x3cdb22(0x525,'8uGe')+'ntGra'+'phBor'+'derMo'+'de']=_0x15662c;const _0x2009ec=document[_0x3cdb22(0x2c5,'rn#Q')+_0x3cdb22(0x580,'$Awu')+_0x3cdb22(0x4f7,'mmCf')]('graph'+_0x3cdb22(0x15b,'Bb81')+_0x3cdb22(0x57d,'F[]e')+'on');_0x2009ec&&_0x2009ec[_0x3cdb22(0x5d2,'mkz0')]!==_0x15662c&&(_0x2009ec[_0x3cdb22(0x518,'AQA5')]=_0x15662c);const _0x30e823=document[_0x3cdb22(0x436,'&mk3')+'ement'+'ById'](_0x3cdb22(0x60d,'A3HS')+_0x3cdb22(0x24b,'oojm'));if(_0x30e823&&_0x30e823[_0x3cdb22(0x595,'QnBl')+'t']&&window[_0x3cdb22(0x35f,'ME5t')+_0x3cdb22(0x63a,'i#Px')+_0x3cdb22(0x5b0,'$Awu')+_0x3cdb22(0x55d,'d(em')]){const _0x570d6f=buildBorderShapes(_0x15662c,window[_0x3cdb22(0x69f,'Xo4W')+'eGrap'+_0x3cdb22(0x1a2,'Y*Sh')+_0x3cdb22(0x501,'1*R6')],window['curre'+_0x3cdb22(0x648,'fQ)]')+_0x3cdb22(0x33f,'zBj%')+_0x3cdb22(0x3ae,'c0k&')]||'#3036'+'3d');Plotly[_0x3cdb22(0x381,'U6RT')+_0x3cdb22(0x281,'ME5t')](_0x30e823,{'shapes':_0x570d6f});}};function addLabel(_0x3092e9,_0x1533b0,_0x4fe6d1,_0x2e27d2,_0x53e7f3,_0x37220d,_0x5b9b63=![],_0xfcbe3f=null){const _0x3e2f9c=a0_0x178b1f;if(_0x1533b0&&_0x1533b0[_0x3e2f9c(0x514,'ME5t')+'h']>0x0){let _0x2388e1=_0x5b9b63?Math[_0x3e2f9c(0x460,'oojm')](_0x1533b0[_0x3e2f9c(0x1d7,'fQ)]')+'h']/0x2):_0x1533b0[_0x3e2f9c(0x3b3,'mmCf')+'h']-0x1;_0x3092e9['push']({'x':_0x1533b0[_0x2388e1],'y':_0x4fe6d1[_0x2388e1],'xref':'x','yref':_0x2e27d2,'text':_0x53e7f3,'showarrow':![],'xanchor':_0x5b9b63?_0x3e2f9c(0x507,'F[]e')+'r':_0x3e2f9c(0x345,'3trC'),'yanchor':_0x5b9b63?_0x3e2f9c(0x3b8,'zVHu')+'m':_0x3e2f9c(0x1f1,'A3HS')+'e','font':{'color':_0x37220d,'size':0xb},'xshift':_0x5b9b63?0x0:0x5,'yshift':_0x5b9b63?0xa:0x0,'curveGroup':_0xfcbe3f});}}function a0_0x4496(){const _0xf0f7ab=['W4ldVSkmzW','bCk3n8oYW4e','W64YWQikW6a','W51bWRpdKmo4','W7KgW7hcN1q','smkIWO8XW6C','abldRfRdOa','ogNcJmotWRe','ttqaWPFdKG','rtbbWR3dIW','auJdQG','W7z8WOWnnW','pmkdW58nW4K','aCoMq8kj','qmopWOjnWPe','WOTwjCov','WO5GW4CsW4m','W5WfySkoW78eW5zkemkhlSo9la','WRjkDG','WPtcImooW4KB','W4BcGmopW78u','WQnAhmkZWQ4','WRJcVmo0oCk1','WPmagq4','o8kgfG','W4LxWQxcP8o3','sSoaW5yiW4C','W7r4W53cU8kn','WOjVkCkcWOm','i8ozW48kWRm','W7FcOCkq','bWrhWO8+','W710WPtcUSok','WPihmHOb','C8oNW7e5W6S','W7lcIfDtvW','WPiHW4hdPaS','W65SW5DrCG','W6nLWOddSmos','jajHb8kQ','WOP0W5e2WOy','W6lcOCoFuSkt','mSo8xCkdmq','tZmAW7tcGG','v8kQWPu7W7e','WPNdRmkcW7RdN1tdM8kQW5WRW6epwa','ESoFWP0C','lcrsiIG','W7nEWRCTW5e','W6RcT8oDsmkD','WRKnW7eH','WQhcOSo+W6uq','gu5b','CSk6iSo7','gb1W','hmoYqa','W6PhWPxdTmom','W6CkW7hdQKm','WPmagq4X','WPNdU8oxjCk6','WOnjy8khnG','leRcI8kL','WPTnECkjlq','WQPHf8oXWPG','WPibda','W6f6eWCv','W5uSW4hcSW','WO8RxSk0iW','fXr/gq','W5dcKmoiW7iY','mNlcOmokWRe','y8oDWPZcLSkh','hfhcN8k5qq','W7tcQSkGW6f2','BmopW5XaWPq','W5f3W6ZdRCkO','ECoMWRZcQmkZ','WQBdVSonomkH','WOXzF8kwjW','g8kgW6OeWRa','E8osW45eWPe','WQbJqZis','mhhcTmkCAq','WPdcJcvxjW','x1ZcHb7dQa','kSkCamoxoW','jW53','W5hcImozW6uz','W4FcRSk2W6zG','WPyPW712','W4O2W4FcOXW','gSomW4azW4y','W4XnnCovDW','br5bWRma','WOfhjCov','W7lcNvazrq','imkjbSotyq','WQRdHCkwsYW','n8kLjCokaG','WPRdOSk7BsC','WQBdTSoqja','nSkjaCoEyq','WQRdPSofe8kV','nr53e1W','W6SxWRObW6W','lMpcKCoEWRK','E8ooW4LnWQi','gvdcOmo+WOC','W5/dRCkEE8oV','e8o/x8kcmW','igG1rXu','pwyW','b8klWPi','WO07W4FdTeu','WPHLW7VcSSo1','pSkbhmotwG','W4NcK8oJn8ks','dqpdQ0ZdJa','W4y8WP8','W7xcL8oUC8o2','A1Ol','WRfiW4RcHCow','x8kIWP9UWQm','kY53WQm1','rM0HW53dLq','WP/dP8ojpmkC','fa/dSf7cRq','WO8BW5BdOSks','WPRcHmoAW5Kk','m2VcG8oBWRy','lgRcHh08','W4C9WOOTW6C','u8k4nSkKWOO','mCkNmCkp','iJRcMhO','W5fjgmk7','W7tcR8kQW4W6','W63cOCohzCoS','uSogW4iiW4y','WP4dW43dT8ov','W5RdPWnmcq','WQnfmCkEiW','W4fumdy','uSoiW4WeW5S','WPTeAmko','WQmUW7i','WRZdPSofomkX','WPhdGSkM','W6hdMMy','hCoeW7WyWQu','z3eJW43dNG','rYfuWPhdIW','hXrKeXK','WQfobCkMWRu','txiNW5VdJG','WOFdJCoGgCkm','WQZcU8o5W58G','WOX2fSk/jW','pNRcOSkaCa','W7TGW41xCG','fH9AWOi+','WOpdOmkFWQhdLW','oGb4','W53dSu91aG','v8oJWRGHW7e','W4yMWP0TWOi','uSoiW6nDW6K','tSkSWR09W7S','WOTTW5Wm','WQeyfW','WP9dEG','W74jW6RcJ1q','WR8Qksi6','WRL/sCk/fG','W6jHWP8','W6hdGHHtra','W5ztW6xdPSkW','WQ/cJIHyjW','WRm8pICX','kmkXi0u','WOXYW5S','bCocW5quWQ4','kx0UtXS','WQPZW5WoW5W','WP5Hg8k6na','g8kInG','tXRcUGRcPG','W5NdO8kpFmkK','W6fUeaO','W7pdNCkVsSoE','xv3cSSkJBtpdJW','W4tcR8k8W78','WPLUW7usW5q','W5JcUCoaWQ/cIa','j8keW7S','qmogW5yzW6S','h1dcLCk9','W7b5WOGrnW','kbpdIJmP','WOmNWPH0','cSkdfSoVka','W7JcNCoKWORcPG','WObJW5NcUmoX','W50fWP8cW5m','WP1ynW','ouTIW7VcRq','WP9Ro8kE','W67dOCknA8o+','W5BcPa0Taa','n8oAAmkKha','eSoYrmkcma','WQTyW4FcNSol','ehDoW5lcGa','WO5dW6NdQW','t8kTWPiGW5W','WP4zbamx','a0dcImkYua','eLOxAtu','WQ9sWRFdMa','pwtcSSkCAW','r2S8W5NdKG','W5mNWOK','oHldSvBdSq','B8ooW45C','eGFdQbCC','gbRdTLBdVa','WPSCaXiD','W79HWPFdSmoo','Bc1tWQa','yuGpW6pdQa','W4ZcTxuPAa','mY/dKhBdNG','jmkIoSo7W4a','WPVdPmkcW7FdKvlcV8kgW7WyW68n','W4jaWRGIW40','oWHUfSkT','WPyFW5tdR8of','W7RdJgProq','aWxcTCkLqq','eX5e','ouKSWRFdOq','WR/dHCkFutW','WQ8DW7u0W7S','aSoNuCkt','W5G8W5VcQxK','W5ypWOuGW5S','W67dVmozWRddIq','W4WcBSoCW7e','WRpcLY1noG','DCk+maddJq','cCo5WRJcQSk3','W4yxWOtdK8oz','WOTzECkz','BSo2W7W4W6a','WQpcUmo4W5KU','FXbYWP3dQG','WOJdO8kHAH0','kmkVFJxdIW','BvSxyvK','WRb4x8kPdW','gXP7hHa','W4/dU8knFCo+','W6pcOSkn','dLdcKSk6','W7T5WOVdSa','WPr2lCkyWP4','WR7cReSlra','WPb4W7ZcTmoT','WRfAW5tcM8oz','x8oiW4aeW4C','W6NcS8oDWRm','m3pcLCoEWRe','g8kIpG','WROJW5q','pCkbkSohfq','kx0V','vqVdL8kZwq','jmokW5qeWRW','hSkhiCoZW4u','W5lcTSkGW6a','aHtdRfO','lGldI1S','WQqzW5W','nL88xmk7','W5tcNmoR','WRPCW4BcNW','WPmGW5tdGIC','WQzeW5RcImov','hfZcLCkHqq','WO5epG','WQJcHI1D','h8k8wSksnW','k8k7mCosaG','ACk3WPOGW6O','W5a8WP8M','WQHYg8o4WOK','pHFdLZW/','WQ9GW5ZdNSkD','cXrsWPi','WQ4bW7ySW78','W77dR8klASo/','eSkSoG','W5ZcH8o7Ea','iCkle8ocCq','lMpcGSog','W4pcSmozWRFcKa','WQzfW5JcImol','WRXPW7tcS8k8','oCo+W7CHWOi','WQlcPCoRW6WN','jSoVW78','WQVdP8oqnCkh','W47dQ8ktymoS','sCoMWRNcU8kS','bGnbWPKt','WRP6bSoIWO4','cSokW44yWRi','emk+BG','WPX0oCotWQe','FCkktmkkzW','W6zXWP8wjG','W4WMW558','W7JcNCoKWOBcRq','jtHRWRmL','WPOXW5VdUIa','ob1WvW','DqWKW7tdSq','WQb0dmkJma','WOCahH8','W7RdNCk7umop','WPlcGmoQz8k5','mgpcJ8ovWQW','WR54W4FdHCoj','ebjsWOiv','WOCAgG','jqb0fSk6','tCoXdG','W5DDibyw','WQDZsCk1fG','W415oSoiWR4','W6ldSuj4dW','W5H1WPu','BSk+oHhdLG','W4f0faCv','W47dOCklzW','WO5vjq','gmk3d8oMW40','mvNcGSohWQO','wSoZzW','W6dcSwi','vSo+WQ7cSG','W4i6W5tcVNq','W4HUWQVcLmoP','W5C+WQFcTmkZ','W57cS8o2WQRcKq','ghW8WPhdTa','WPBcH8opW5Kl','W7H9WOKBlW','BmosW5ntWPe','p27cGmoaWQW','W7GdW6yTW6K','BJxcGgDS','WODsW7ZdPSkJ','WRn+W7RcOSo2','WR51W5ipW4u','WO85W5erW5u','DSkIkGNdLW','WOVdR8kHDG','jSoNW7m1','c8ohW5usWRy','vmoUWR7cRG','W5BcR2aJDq','vSkIWO8XW6C','W4pdVePYaW','hcfyWQddLq','smkigJddQG','WPXyDmkmjW','W7rSWOqmha','WRJdTCk/BG','hGVdRW','hWldSuVdTG','k8oJAfBcI8ktvX7cSSkJEmk7','g8ooW4ODWRW','W6/cUSoa','W5FcVGS','W7bGWOW','oGbW','WOLdF8kLiW','WP7cOCkHWRzC','nmkJnSodaW','WPldVSkMDG','WOCAW5FdQW','nCknbSoZAq','WQ8lW7BdIW','BmocW45aWPG','W5ySWPiBW7e','W4PaWR82dG','WOuGW5tdQt0','W4BdU0j4','W4i2W5NcO2q','pmosFSk0gq','x307W5ZdGW','W75aW6DHWQ4','W4DvWRK6bW','W4eSW4BcOG','ESkIlbpdMW','rtbb','Fc7cRmotWQa','taNdP0/dVa','wmkSWO8GW6W','m1rx','W6BcGqq','bmkHiCo1sG','DCk+maddOq','fvf7W7xcRq','c2uOw1a','WOWRWPe5W4G','Ax82','W5ToWR3dGSk3','bCooW5qwWQK','WP9GW4CEW4G','WP1/W5tcPCo0','WOW/WO9uW4K','FmkJpZRdNq','W7FcJCkAW5Xl','lrrHeG4','WRe8ntiQ','W5XOpmkxWP4','W57cH8o9yCkZ','WPDyF8kbFa','W5/dJCkqyCo9','W791WPtdVq','W5JdV08','fvVdKLddUG','WQJcUmoUW7K','W6ddOmobpmk3','W5JcUmovWRhcPa','WRBcRSo5W6GQ','bb7dO1S','W6ddKCkSx8oE','pYldNxjX','WRLfFSkjia','y8oqrSkcmSkgWQNcKdpcG287vq','W4yMWPO3W5q','WPXdn8ojWQ4','zmoqW7ej','WQTtdG','yYTnWQq','mHvH','WOrgW67dUG','ACkKp8kg','WRXtW5hcGSos','aSkhbCotDW','W7WBWQ4rW70','WOSxbCojWQy','jLfHW7lcTG','W47cMSoGymk6','hXtdRLBdTW','kgNcM8oxWQO','v2O3W4pdKG','afldNmo1aq','WPvOWQ/dT8kJ','caLGeG8','W60LWRKyW7q','geNcRmoXWRC','WO8wWRvkW6i','pWjFeW','W5hcT8kQW6rX','aH1FWPmn','FcZcMbyS','W5WpWPKcW54','WO4oW5ZdQSoF','mqDPemk3','WO8zW6S/W78','ALXKWQNcGq','qeqlWPDx','AbTKWOhdSW','qSo+WQNcOW','oSkSl8o6W4e','WOrJW6lcSSo0','W4e2W4i','WRPqmmkjgG','gSolWOy','WP3cRbCVxGZdHmoDt8oFWRpdKbi','aGvAWPKp','WP/cVKX6rG','jLC5W6tcOq','WQzEgSkPWQe','WPBdJCoGECoO','WRvuW7hdS8kS','lhpcKSoA','WO/dU8kjlIu','W6tcQSoR','cH9x','WO5tmSo4WRe','s8oiW4G','WPOnWOzU','WQj4eSo4','W7L9WOmAma','WQ3cHY1nmG','WO07W4FdTeG','n8k3nG','WRBdS8oCjCkR','aGVdSvC','W7b6WO4gEq','q8o/WRW','dCklWPi','WP10W54lWOW','dCkFg8osCq','nCkJoG','W57cS8okWQBcMW','W5CgWRS+W6e','cqj6eG','W4ZcSmoFWRq','WQe8pJqH','bvydEsq','qh89W4C','kSkjcSoFDG','mfBcKSkSsa','CwVcGmok','W5W3WOnlWPTzwSoChSkKvmk6BG','W7X6gW','vgS9W4C','WQ8zW7e9W74','hCo8r8oBEa','uYTmWR3dGW','fvf6W7JcTG','a8osW5SyW4C','W7r9bq','WQ3cGJ5snG','errdWPOa','W6v7WPOGma','W6KwWRjUW7y','W4NcI8kVr8k5','W5aHW5ZcUv8','W5VdImkcuW','WOqaW4JdQSoi','W5dcOSk9W69X','qx8QWPxcLW','WRFcQmkkFCk+','W7aeWQSgW6O','W7CgWQuM','g8kIimoRW4u','bsbunSkA','mNBcKSoA','WOfUo8kE','W43dQ1fQaW','iSoFzCkZcG','WRHBk8kcdG','W4i9WQddRSk2W5jED1hcTmkiW70','WRexW7C','tcfoWRpdKW','W7hcHtez','gSkMimo5W5a','BSkrWRizW5W','W4BcTxW5zq','cM/cKSoBWRO','WPjQWOxdUty','pSkbhmotDG','W4yPWPPUWPG','WPr6lmomW4O','WOPdnW','uSoKWPVcS8kG','jXrZgW','WQ15evWH','vSoRa8o/W5W','W5G1W5ZcVNK','gCoEW4Kz','W5GStCo3','cedcKSkqsa','W5NcLCkCW48y','W5JcK8oRlCo2','ASkKnWVdMq','W6ntW74','p8oBgG','pMpcJCoDWQ8','WObbACkbnG','W7X4WOqloG','g1fJWPCt','dW1Zv1q','W4tcK8o3FSkL','acLn','DmodWPi','W7lcNuOBra','hCoeW50wWRe','WOLAW7ZdOCkX','p8kEWOfwWO8','WPTygSosWRa','WRlcHc5yEW','ixxcTCkD','eKTIW64','br7dTq','WODKW7RcOmoQ','W5qqWPGV','WPSqaXaA','D8ouWPNcJ8km','WQyUbsWUWPBcOYK','kCkxhmoxW6K','WOzjFG','aqHZgSk8','lSohySkOfq','vSoCW4Sf','oSkne8os','gmkMkSk+W7C','WObGW4m','W7WCWQWDW7u','pSknhmorCq','W6tcTSo0W7Lx','aSk9p8oMwG','bCkAWOHEWOi','ySouWPdcLCkC','E0hdMfm','WRBdNCkw','v8kIWOS','W54fWPKkW5a','lXvYeSoG','W4fHW5pdKX1vxh8','WO5zECkp','W6XVWOVdUSoo','jY5+WRKL','WOzznCorWRi','WQVdS8oqlq','wCkSWPC7W7e','FSooW5fa','WRZdK0zchq','W7pdSmowCSkq','bCo8FmkolW','WP9cjCov','lmozW4GEWQ8','WRxcUmo9','W5BcISoiW6m','mYr+WQy+','W49kAmkuiq','W40NWPaX','WPuYWQNdUmoJ','WQpdHezffq','bfOyEIm','dHbl','pZVdJtW9','xSkLmrddJG','W4i9WOO7W4O','W73dKCk7wSop','WRT+gCoZWPG','WOqBW5BdQSoc','W7dcK1m','W7mCWPaNW50','W5JcGmosW6Wz','WOy4W5RdQtG','W4yLWPS6W4W','pKOOqHy','W5f3emoOgq','CmomWOCuW5G','WQznW4hcKSoc','W74EWRu7WQO','W7XYdq0v','WQGbWRm+W4O','WPddQ8khE8oP','W6/cUSoPlCkG','bCooW5y','fSkseCoUfq','WOXVW5qE','W71qWOisiG','WO50W4enW4K','WOTzECkzhq','W4RdQ1DL','W5LecWPo','tSkMWP8','WQNdM8kgwZW','u8kTWO8','W41UW5vB','dmoFW5S','W49nW6tcQmoS','W5/dUSkEE8oY','BCkgWQKlW4G','p3pcK8oeWR0','p8kbha','lYddLN8T','gq5IdIm','eCkXl8oUW4W','WPRcG8oyW5uc','W54bWPGVW5O','WPXyo8oy','W7uHWO09W5O','sSk2WOG8','W5lcVxa5zq','WPf4W7tcVSoQ','WQ3cPSovW6SM','CwS1eIm','W7X0WOBdOCov','aSkDh8ogqq','bmokW4i','WRBcM8oJW7iQ','WP51W5ipW4u','W4BcHmoiW64j','mKTIW67cMW','W404WO08','WR/dR8kMz1G','W47cPSk1W7W','Dmk2lG','WRumjbm','W5/cR3q5za','W6BcRSkllSoM','W63cH8oIz8o2','eCkSnSodfq','W4/cOSkJ','h1dcI8kL','WRtdISknwYW','W5mTW5VdP3q','bHXwWPGv','bSkSoCobW4C','W6ZdQ8kLW75X','r8okW4WeW4i','W5dcK8o/','jabqW7VcQW','ASkJmqJdMG','WRu7W5JdRq','W5CbWPS','eWraWP4','aCo8rW','o19U','fCoYrmka','WP7cOCkHWRzv','W4/cR8odWQRcHG','oCkHnSopeq','W5/cKuuwtG','oCo8FSkjaG','W6nPWONdSmop','W6GgW7BcNa','WPD5W6FcOCoJ','WPGyWP7cO8kj','W6GdWRmG','fJSAuva','tITuWRxdKW','WOKQW4WvW4u','wZ0AW7RcLG','WQ3dOmkAcSk0','sSkSWOW','WRZcTSoYW7u8','ubNdSahdLG','W77dI25moq','W4FcTCocWRhcHG','dvhcImo4ua','WOTUW4e+W40','W6eoW7y','WOiBbamX','r8oOWQNcS8kU','W7RdNCk7l8kZ','jCk1lfVdTG','W7bauJ8A','WP7dRSkZ','W4FcKCozW6zn','WOvAW7ldOa','xh82W4BdHa','lGjLaXK','WRzEbCkZWQq','W6/cIeuqaq','WOqkW5BdQSoj','jfT6W7BcVq','WRXkjSkdbq','rCobW5KFW4a','mYj7WOrB','WOTdymkbkW','ucvsWRxdIW','ja5SgSk6','WRlcGJHCnW','neWOW5hcQa','hCo2xSkgla','W53cICovW78u','WRdcLJ9r','mCkSmq','WPuHW4FdQZe','bqVdVaCn','BCk4oqldKG','WQNcHJS','kwaM','rSkWlaZdMG','DHSQW7lcVa','W7zHWP4lla','qvO7W5VdJG','WP/dPGnmeW','l3lcHmoCWR0','udftWRW','WRJcLZ5yBq','W5SuWOiOW5e','WPXun8ojWRm','gCoeW40UWQO','WPdcGCo2zmkI','WQTKW4/dK8km','W7uqWO41W54','W7q/W5pdQG','W6ZcOmkwl8oT','kSkDlCoteW','aWtdQXOR','WP1IW7e','kCo7BKNcJG','f2XeW5BcIG','nwNcJW','W5ifWOiGW5C','ghW8WPhdSG','WPS7W5hdUa','vCkNWP4','WPddHSo2bCkv','WP4xW6K3W6G','WOb+W7ZcUSoz','WQ5igmkZWQ8','A04rW7/dUa','uSoIWRpcVCo4','W5hcL8oHCmkI','m0P3','WPTyemouWR8','BCk4gaZdHG','WPSKWPxdMse','WPuAgqmb','owy9sqi','ghW8WPhdSq','W6PYWQtdTmop','WO3dUbSPvW','W5pcIeuisa','WRKnW7eHW4u','WPW7W5ZdSW','iCo0W74KWOK','W4O2W4FcOXO','W7TKWP4x','WOrJW6i','B8ouW4O','vIf/WRFdIa','W6eCWQqlW4q','W7n0fWO','mtbNWR8U','WPLTW6u','WQqNW6K9W70','WP0ss8kmlq','W7f1WPKEEq','W4ddQ8krAmoV','W5NcM8o8z8k6','ihLNBWu','W5m9WO08','W5ZdSvzYaG','zIBdHmojWQa','aSkSi8o6W4u','aCo8r8kekG','icKewqi','WPKZW5ldSte','ihxcUCkfAW','WObTW47dP8oB','W7fHWPKgha','W51jWQRdISoX','A8kJluRdNW','rI1oWRa','WPtcSqv0da','WOn6jSkrWO8','fCk2pmoOW4e','W5yjWOuIW5W','W54zW5tdPx0','W4bJAmkKWOS','jW53fSkS','WQLxW7hdSCk3','CwT5FWq','WPuoW5y','scfbWRa','WPa4W5RdSIy','uCo+xq','sSoIWRpcV8kR','ESolW5jgWOK','kJ5ekdC','W4/cS8oZWQa','EmkLkItdKa','oLfHWQ3dPa','vCo/WRZcRSkX','ucTx','WQHPqmkLda','dXrDWPev','WOzFW7pdT8kX','WOqBW4xdT8of','W5uTW5ZcQwS','WPflW6FcUmoZ','WOmmsCkvnG','WOuqhGmx','WOXFn8opWRm','W5NcH8o7BG','W6T1WPpdRmoJ','c8kLWOz0','g0tcKSk8sW','f8kmhCo2ka','cvykyZq','g1OdCYq','eb5EWPm','dCoEW44iWOi','W67cJfCu','WOyHW4BdTq','WQGHpZ4J','dXX0fLq','x8oNWRG','WOHLWPmRW4m','WRxcOSo5W7q','WOf6ea','WPLcW7ZdPSkR','W5nvAmoTWQi','W7dcI8kC','WQXDW7NdVSkm','WOeoW4JdTSoj','dgtdUa','WQmAW7ZdIqS','WPBdS8osW73dLq','WONdR8kaW7ddNW','W4ZcS8kGW6a','fSk3p8o5qq','mhBcTSkqyq','W4ldU017eG','mCkhhSozDW','WQ8LWPZdTSoj','W4DdWPtcR8kC','W4FcTCoEWQZcMW','W6BcMH5Cba','W70RW7u9W78','W7hdVe99ca','W4FcT8kY','tgrKWQhdKW','pbXAWPG','W7ejWQOrW7W','aqxdJG','iYKtqWq','WQbNcCoTWOG','WQldOSkecmkT','WRerW6S9W6K','qCoBW5KDW5W','WOi7W5ldUJG','W5dcQwKSFG','W5aXWO0GW50','uSo5W5KdW5e','vhDHW5ZdKG','WPuBW4RcRSoy','WOLHc8k1oG','mXr0cSkb','WPldTmk1pHK','lZVdIJy8','jqzIeSo2','eCoFW4GqW6m','FSkYkIddKG','W4NdU1DzcG','W7r1fY4o','haLInHi','A8ouW65aWO8','W5xdM8kaWQqi','z8o9W7eJW7m','WPXdyCkjjG','W7H3cHyE','WOj4kCkcWP4','ogFcLCot','lq57bZG','WOq1W4hdUda','W4dcRmkNW6a','WO1tW6NdL8kU','W6NdT1i','WOFcRSodW7G','WRGmW6q','hbpdGfddOq','W6jVaHyo','gw5tW4xcHq','iKX3WQNdUa','W5G3W5a','W7VcN1epvq','W5ZdU8kmzW','fX5EWPia','W4DLWOBdSCkC','W4pcT8kYW5mN','lH5fW7lcTG','WQlcVSoSW6u','WO7dNvzUea','g8oDW59rW7u','W5mPWOW1W5q','WPtdR8kM','mLfI','WP5zW5hdVCk1','uHKOsX4','W7zHWP8jjG','WOLnymkjlG','WPHsjmkhW6C','WPS1W40','WO1dECki','rIHpWRVdLq','WPihlHyD','WPagW4ldUG','FCkJnWBdLq','W65YWOlcUmom','grxdQ0VdJa','W43dHCoSW6qe','CHP4sCoW','ASkYkIldJa','p2RcJSobWR0','WRpcOcnxnq','W5RcQCodWQS','DSoFW4LC','WPOufq','oCk6k8ovoa','W5KvWPGZW5a','WRiObqbE','WQ1oh8oz','nSkDbSopwG','lYBcHHq1','iLtdGW','W4BcGmomW6Cm','FYLjWRRdIa','W40WgCk1ja','pxSIwHu','dCkmc8oYoa','sCkGWPOGW7C','W5iSW4FcVgu','WOi7W7pdTcW','WPynW5C','qwOVW4BdMW','dH5xWPm','WQuoW5ddPSoi','W4KuWOqQW5S','imkjhmorya','WRT8eCk/mW','W5hcKCoD','erj4eIm','W454da4i','W4VdQKi','WOemjq','aSoNsCknpq','pshdIZO','WOmlWOSMW44','BmoyW5XaWOK','kbFdJsaV','WPb5W6hcRSoz','jSkSoCo7W5y','WOVdUmol','qX7dUKVdOq','DCoGW6W0','W6VcTSoSW44O','FmoxW5XhWO4','W7NcHmoe','hCk4lCoZuq','mWHZa8kY','bxDcW44','W6dcT8o1W4yY','W4OvWPGV','W65SWOVdSmoq','s8oIWRpcTCkQ','WQJcTSo6','v30VW5VdGW','hbD6eHa','bZtcVmopW7G','k8kVcHpdT8o3vW','W5KvWPKXW5O','imk3hCodCq','W4RdQmofl8k+','W51lWQKQfW','vSoKWQRcV8kQ','u0FcLmoRBa','W5ePWOOXW5W','WOm6cmkLpG','m8kgfCot','o8k3mmoqaG','WP1GeCk+','W57cTmoF','W7JcUSoVW5SO','W48SWPiBW7e','A8kylHhdLW','ebPU','WP/dR8kMzW','W5FdV1T1fq','W6jIebyc','iCooW5SvW70','WOddOSoOmeK','W43cH8o8FW','CCkYpWhdOq','vSkfgtRdRq','umkeatpdRq','txeGW5W','W61GWP8EFq','W408W558WOK','owVcHmoCWQW','ACo6Cmksx8oqpSoTW7XGw2q','a8oqx8knnW','s8kwcIddUG','WRazW7CZW78','WRBcO8oRW64','W5r/W7dcO8oY','WP1womoAWQi','W5CHWPe6WPG','dHH3aWG','W5xcOSkHW6y','u0FdMmkruq','meBcICk5sW','emkDbSoZmW','WPRdTSk+xra','iLfqW77cVa','pSkRoSodaW','WQTdW78','F8kAe8ocya','W6NdT8o5W70H','WQjldCkZWQ4','W5JcV8oUB8kv','W6WEW7H4','W4PxDmoABa','hCo6xSkekW','rtzJWRxdLa','WOLBoCokWPG','W6v0jqSF','W6SAWRGRW5y','iJrgmI4','W5NcPCodWRFcJa','W77dH8kYumow','W4m4W5VcRwu','W5lcVCoiWQRcMG','WRxcTSo6W7K9','ACk4kqddJa','W7i2W5JcUG','W6tcIvafFG','dGetWRuu','WRb/xCkLbW','WOnLeCk+','kfFcICkGva','WRiPuqfs','WPlcOHH8fW','WQtdGSof','WO3dLCkmW7Sv','udfnWQtdUa','W7xcJ8oGWOBcRa','W4iKWPiXW5q','WQRcUCkQW4GG','W4FcISoqW6ij','W7NcKee','y8kCWRGc','W4FdSeC','eavsWOii','pG9K','W79VWPddSmoo','W7/cI8ogCW','lcZdKseg','W5btWRFdKmo5','W6FcKCoDW78e','iKtcNG','WOlcKmkJW61X','W5SyWOi0W6a','W6m/WQ9YWO8','WQRdOSolpSkS','W6qxW7ZcNL8','W7H1ea','dX5uW4Dr','oSoVpfZcIG','WORcP8oVW64U','zHKGi8kR','WOqWWOqWW5O','WO5KW50pW4K','lXPIeHG','W5dcPSkJW6r1','gGb4wG','pLD4W7ddPa','W4vbWQaVea','WR9unSktfq','arRdUG','mKP/W7tcRW','WPmGW5q','qmoOW61XWRG','WOfOW50EW58','WOPdn8ouWQS','nmkNlmobeW','d8onW5msWRq','dmokW55lW70','WOdcSCoSWRXN','W5ZcVCoCWRBcJa','W6S/WQ8sW6S','W6mCWQi','FSkfWOeBWPG','W4/cRSoZWQlcMG','W6DIWOHFAW','W6FcLCksW4rl','eCkDamoaya','pG5Uaa','cvX5W6xcOa','WOjny8kviW','WOnyja','WQ3dS8kHDXO','WPuHW4FdRZe','W5quvujB','WODxW60','WQZdUSofpSkS','s8oiW4OgW5e','dq5LhW','W6BdU0j4rG','bCo8DSkiia','WPmAW5ddUG','heBcH8kHua','W5DLWP83W4W','WOiMW5ZdSa','r8kLm8k+','WOqSW5hcOSoY','W5CqW4SeW4O','WQnLW4ldHmkr','WOnXW4at','W58sWQGMW4W','zHiMWRVdTa','WPHcW67cVCkJ','WOTfBmknlq','lMFcLCoxWRW','WQ8LW5VdT8oo','t8oFW51aW4y','W6mHq0CC','Cmk4mby','D8oEW5Xq','kKpcGmk8rW','WP8XW4BcTgG','W7/cVSoZ','jdRdNa','W4zyWRGTeq','WOJdRSkZAHe','ubNcVgZdQG','D1CAW6RdQa','F8khWQqgW5m','gq9/fbC','WQ4mW7CXW7q','W7rVaG','o2WyxWq','W5lcRmkK','tZrfWRO','gSosW4KfWRG','emokW4iyWQ4','jCk1lfVdRq','W6f7WQSwoW','WOqbdamh','W4/cQmor','WRL+kCksW4O','WQvyW5y9W6G','W6mgWQi3','WO7dJhnr','ofTYWRFcLW','WPGYW5ZdUNq','WOrTW5OpW5u','pJFdMsyT','WP4bW5C','W5NcHmom','DqPPWOddUa','W5X6gW','W6/dGmo0aq','WPTfy8khyG','WRboySksjG','WQZcU8oJW6G2','W5dcGmop','WRRdOmoskCo4','W4ZdQK0XeG','m8kyaSoABa','W5NcUCoeWORcNq','jbvHb8k3','xSkSWPu4W7O','ACkIlq0','WOb0cmk5iW','W4zaWQWRcG','bYX8W4ZcGG','W7pdT8oComkQ','afxcG8k7DW','WO7dS041','W6XaWRfSWQ0YrZPYrtWDW4C','WPTymCoAWQS','WRqAabuh','AmkkWRylW44','hSoJuCkcmq','W6nLWONdSSoi','W6v1WOmAlW','D8kJoWVdIG','WPCxbSoCWRu','WR9aW6C+W6G','WP9oW4mpW4u','W5qTW5q','i8kqBSo5W5q','kgqIqGq','z8ozWO/cM8kw','WPBdU8kGDr0','W4FcNmopW78i','W5xcL8oUC8kj','WOTEjConWQS','DmokWONcK8kx','WP10W4at','W5WDW4S','W6D1WOmyjG','W64DWRi','lCo0W7C+WPK','WQldU8ok','WOzcAq','WP1UW4qEW54','W4GbWP8IW5S','W6JdKCkYqmoF','WQm6iW','keOYxGy','fc5ni8kr','W5nom8kJlq','abRdU1ddPG','WP4bW4a','WOb8dmk5iW','jv13W6pcSa','W7tcNvavtG','g8oGx8kp','WQZdG2q','WOa/W4JdQG','vSkMWPuZW7C','WPxdTCk8EW','gmo2q8oi','bKVcG8kXhG','ga93','W5NcQmorWRFcGa','WRO0iYiV','WOy7W4i','W4FdQeyXfa','pxW0ra','W4OvWOy3W6a','W4pcSSoe','W7lcOSoqr8kz','aCkZDmkula','bmkfWPC7W7q','WQjfW4BcLmoj','vSoKWQO','W5T8W7tcP8oV','WRNdTCkGEH0','ju0Oqre','s8ouWR7cR8kQ','aHJdSry','WRnIaCks','ygtdN8oHWQW','WOvFySko','z38IW4ZdGG','WOLaySkxhq','WP9dESkfma','W7pdNCoo','W6tcIvaf','BSkncSocDW','aKtcJmk6vG','W6iuWRmGW4e','WOZcPSkYBSoJ','W53cI8oB','ldJcMbO8','WPtdTmoYsHC','WQdcRNqXca','W5GpWPKJW5O','W4xcPSkNW414','W6hcIvat','W5VcV8kPFq0','xmkQWPuW','kmkgj8osbG','s8oPWRtcTmk9','DL8AW6RdSW','W6n6fWCd','iSkDaCoE','W7WTWPtdSmoo','pJpdJwddGa','aSkScmo3W5W','WPLvorGA','W7rHWPKq','W5JdV09PaW','vmomW5qmW40','W7VcG8o0WPBcVq','imknaSoAza','zCkqWQSrW4y','lgS0','exTBW5lcIG','WReMW5RdQcq','WPjxW6xdU8kX','sM49W4C','WQZcIIjCia','WRruW5bVW54','vSkhasddQG','hmo6xG','WOnWbSo2aG','WRBcO8oRW6GM','WO5PW5ijW5G','W6L0vmk6W48','W71DWRK9W6i','W4/cL8oIEmkG','WR7cR8kWWRj+','ub9JaWu','WRLcW7ZdPSkR','W4NdUSkE','WQb8uSkWdq','dKFcTCo7WPC','q8oTWRS','uIncWRxcJW','caXHcW','cdldNNjX','WQNcUmoKW7SR','vCojW4HpWPm','W7n7WP86iG','zG14WPhdOW','zrNdMsP5','WQ0nW7yW','W7dcIvCu','WPFcLSoEW5Kl','W5VcM8oJy8kZ','cdjqnSkB','WOblASkmjW','WOqwdamA','WP16fq','nrHaWP8d','g8oWjG','W7ayWRSrW7W','WPBcVSkoWPpcJa','W5mPWO4XW4O'];a0_0x4496=function(){return _0xf0f7ab;};return a0_0x4496();}function a0_0x5ecd(_0x533e31,_0x397b3c){_0x533e31=_0x533e31-0x14b;const _0x44965d=a0_0x4496();let _0x5ecd78=_0x44965d[_0x533e31];if(a0_0x5ecd['NWtWiK']===undefined){var _0x17d697=function(_0x1de468){const _0x4d3417='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=';let _0x7d229d='',_0x33502c='';for(let _0x5a5b51=0x0,_0x4d8b12,_0x3fda39,_0x3cd1a3=0x0;_0x3fda39=_0x1de468['charAt'](_0x3cd1a3++);~_0x3fda39&&(_0x4d8b12=_0x5a5b51%0x4?_0x4d8b12*0x40+_0x3fda39:_0x3fda39,_0x5a5b51++%0x4)?_0x7d229d+=String['fromCharCode'](0xff&_0x4d8b12>>(-0x2*_0x5a5b51&0x6)):0x0){_0x3fda39=_0x4d3417['indexOf'](_0x3fda39);}for(let _0x127e4e=0x0,_0x33a92f=_0x7d229d['length'];_0x127e4e<_0x33a92f;_0x127e4e++){_0x33502c+='%'+('00'+_0x7d229d['charCodeAt'](_0x127e4e)['toString'](0x10))['slice'](-0x2);}return decodeURIComponent(_0x33502c);};const _0x4f7a8a=function(_0xe8e2f7,_0x60a980){let _0x14cb84=[],_0x179712=0x0,_0x16633e,_0x47c475='';_0xe8e2f7=_0x17d697(_0xe8e2f7);let _0x20d794;for(_0x20d794=0x0;_0x20d794<0x100;_0x20d794++){_0x14cb84[_0x20d794]=_0x20d794;}for(_0x20d794=0x0;_0x20d794<0x100;_0x20d794++){_0x179712=(_0x179712+_0x14cb84[_0x20d794]+_0x60a980['charCodeAt'](_0x20d794%_0x60a980['length']))%0x100,_0x16633e=_0x14cb84[_0x20d794],_0x14cb84[_0x20d794]=_0x14cb84[_0x179712],_0x14cb84[_0x179712]=_0x16633e;}_0x20d794=0x0,_0x179712=0x0;for(let _0x54649d=0x0;_0x54649d<_0xe8e2f7['length'];_0x54649d++){_0x20d794=(_0x20d794+0x1)%0x100,_0x179712=(_0x179712+_0x14cb84[_0x20d794])%0x100,_0x16633e=_0x14cb84[_0x20d794],_0x14cb84[_0x20d794]=_0x14cb84[_0x179712],_0x14cb84[_0x179712]=_0x16633e,_0x47c475+=String['fromCharCode'](_0xe8e2f7['charCodeAt'](_0x54649d)^_0x14cb84[(_0x14cb84[_0x20d794]+_0x14cb84[_0x179712])%0x100]);}return _0x47c475;};a0_0x5ecd['ylZVAf']=_0x4f7a8a,a0_0x5ecd['qozzOQ']={},a0_0x5ecd['NWtWiK']=!![];}const _0x385487=_0x44965d[0x0];a0_0x5ecd['vZivYO']!==_0x385487&&(a0_0x5ecd['qozzOQ']={},a0_0x5ecd['vZivYO']=_0x385487);const _0x520b2a=a0_0x5ecd['qozzOQ'][_0x533e31];return _0x520b2a===undefined?(a0_0x5ecd['nAsMkJ']===undefined&&(a0_0x5ecd['nAsMkJ']=!![]),_0x5ecd78=a0_0x5ecd['ylZVAf'](_0x5ecd78,_0x397b3c),a0_0x5ecd['qozzOQ'][_0x533e31]=_0x5ecd78):_0x5ecd78=_0x520b2a,_0x5ecd78;}function renderAll(){const _0x16398e=a0_0x178b1f;if(!pumpData)return;const _0x4c70ae=pumpData[_0x16398e(0x190,'6H#W')+'y'],_0x2387e3=pumpData[_0x16398e(0x322,'F[]e')+'s'],_0x2bdb42=pumpData[_0x16398e(0x34d,'rn#Q')]||{};if(!_0x2387e3||!_0x2387e3['q'])return;const _0x565d39=window['PumpD'+_0x16398e(0x60b,'oojm')+_0x16398e(0x1b4,'z$A8')+'ig'],_0x49e146=_0x565d39[_0x16398e(0x4b9,'&mk3')+'TYLES']||{},_0x1b4fea=_0x49e146['hq_co'+_0x16398e(0x40b,'Xo4W')]||_0x16398e(0x183,'^B64')+'ff',_0x4f62d7=parseFloat(_0x49e146[_0x16398e(0x33a,'zBj%')+_0x16398e(0x19f,'$Awu')])||2.5,_0x427c9e=normalizeDashStyle(_0x49e146['hq_st'+_0x16398e(0x4f1,'EQ9Y')],_0x16398e(0x43d,'PQS2')),_0xdafa19=_0x49e146[_0x16398e(0x233,'&mk3')+_0x16398e(0x37b,'OjaE')]||_0x16398e(0x470,'1*R6')+'50',_0x37d71f=parseFloat(_0x49e146[_0x16398e(0x668,')Jpu')+_0x16398e(0x666,')Jpu')])||2.5,_0x5def6e=normalizeDashStyle(_0x49e146[_0x16398e(0x1aa,'8uGe')+_0x16398e(0x194,'i#Px')],_0x16398e(0x2a4,'d(em')),_0x303be1=_0x49e146[_0x16398e(0x351,'Y*Sh')+'olor']||_0x16398e(0x319,'c0k&')+'40',_0x5d52a2=parseFloat(_0x49e146[_0x16398e(0x39d,'rtGy')+_0x16398e(0x46c,'5qW1')])||2.5,_0x3c7a71=normalizeDashStyle(_0x49e146[_0x16398e(0x29f,'A3HS')+_0x16398e(0x28c,'6H#W')],_0x16398e(0x43d,'PQS2')),_0x3ae211=_0x49e146['npsh_'+_0x16398e(0x419,'zpR4')]||'#bc8c'+'ff',_0x50575f=parseFloat(_0x49e146['npsh_'+_0x16398e(0x1e2,'&mk3')])||2.5,_0x2501ce=normalizeDashStyle(_0x49e146['npsh_'+_0x16398e(0x603,'Y*Sh')],_0x16398e(0x21b,'AbmW')),_0x17694b=_0x49e146['rated'+_0x16398e(0x64e,'sBHL')+'er_co'+_0x16398e(0x523,'^B64')]||_0x16398e(0x3bc,'mkz0')+'49',_0x4b8e11=parseFloat(_0x49e146['trim_'+_0x16398e(0x650,'PQS2')+_0x16398e(0x288,'zpR4')+'h'])||2.5,_0x546939=normalizeDashStyle(_0x49e146[_0x16398e(0x3af,'T)Sm')+_0x16398e(0x32e,'fQ)]')+_0x16398e(0x292,'rn#Q')+'e'],_0x16398e(0x611,'^B64')),_0x5b3f2d=_0x49e146[_0x16398e(0x1b0,'ME5t')+_0x16398e(0x5b1,'sBHL')+_0x16398e(0x3c5,'oojm')+_0x16398e(0x2b2,'c0k&')]||_0x16398e(0x60e,'5qW1')+'9e',_0xd30b56=normalizeDashStyle(_0x49e146[_0x16398e(0x42c,'yHqR')+_0x16398e(0x1e7,'fQ)]')+_0x16398e(0x54c,'$Awu')+_0x16398e(0x408,'sBHL')],_0x16398e(0x458,'U6RT')),_0x117ab2=_0x49e146[_0x16398e(0x14f,'thmO')+_0x16398e(0x45c,'PQS2')+'y']||_0x16398e(0x34b,'ME5t')+_0x16398e(0x4d1,'zBj%')+_0x16398e(0x5cd,'i#Px')+'if',_0x5165fd=_0x49e146[_0x16398e(0x56d,'Xo4W')+_0x16398e(0x393,'&mk3')+_0x16398e(0x486,'1*R6')+'r']||'#3036'+'3d',_0x5dcd89=_0x49e146[_0x16398e(0x62e,'6zqs')+'_grid'+_0x16398e(0x4ca,'rn#Q')+'r']||'#2126'+'2d',_0xbfba26=_0x49e146[_0x16398e(0x4f8,'z$A8')+_0x16398e(0x229,'&mk3')+'color']||_0x16398e(0x2b9,'AbmW')+'3d',_0x37a687=_0x565d39[_0x16398e(0x412,'8uGe')+'Q']||_0x16398e(0x60c,'QnBl'),_0x454de4=_0x565d39[_0x16398e(0x2b0,'Xo4W')+'H']||'m',_0x1d26a1=_0x565d39[_0x16398e(0x624,'thmO')+_0x16398e(0x278,'V5p4')]||'kw',_0x2dc1b1=_0x565d39[_0x16398e(0x55f,'oojm')+_0x16398e(0x2d9,'rn#Q')]||'m',_0x384a36=0x1/(UNIT_FACTORS['flow'][_0x37a687]||0x1),_0x3273e1=0x1/(UNIT_FACTORS[_0x16398e(0x53f,'5qW1')][_0x454de4]||0x1),_0x47c2e9=0x1/(UNIT_FACTORS[_0x16398e(0x4f6,'i#Px')][_0x1d26a1]||0x1),_0x230cb3=0x1/(UNIT_FACTORS[_0x16398e(0x242,'QnBl')][_0x2dc1b1]||0x1),_0x3ab5e9={'m3h':_0x16398e(0x65b,'XCYk'),'ls':'l/s','lmin':'l/min','gpm':_0x16398e(0x57f,'Y*Sh')+'m','ukgpm':'UK\x20gp'+'m','cfs':_0x16398e(0x5e3,'i#Px'),'mgd':_0x16398e(0x2f0,'XCYk'),'m':'m','ft':'ft','kpa':_0x16398e(0x4ea,')Jpu'),'bar':_0x16398e(0x3e6,'d(em'),'psi':'psi','kw':'kW','hp':'hp','w':'W','mw':'MW'},_0x16b4e7=_0x3ab5e9[_0x37a687]||_0x37a687,_0x2aae4d=_0x3ab5e9[_0x454de4]||_0x454de4,_0x21289b=_0x3ab5e9[_0x1d26a1]||_0x1d26a1,_0x18a0e9=_0x3ab5e9[_0x2dc1b1]||_0x2dc1b1;let _0x1355fd=[],_0x24b8c6=[];const _0x159767=_0x2387e3['q'][_0x16398e(0x49d,'zBj%')](_0x4d6654=>_0x4d6654*_0x384a36),_0x215be0=_0x2387e3['h'][_0x16398e(0x27b,'thmO')](_0x5d4900=>_0x5d4900*_0x3273e1),_0x403e0c=_0x2387e3[_0x16398e(0x4a6,'sBHL')]['map'](_0x1c13a7=>_0x1c13a7*_0x47c2e9),_0x5015b6=_0x2387e3['npsh']?_0x2387e3[_0x16398e(0x3c2,'A3HS')][_0x16398e(0x3c9,'T)Sm')](_0x5cf417=>_0x5cf417*_0x230cb3):[],_0xbfe4c5=_0x1b11f6=>Array[_0x16398e(0x231,'T)Sm')+'ay'](_0x1b11f6)&&_0x1b11f6[_0x16398e(0x335,'^B64')](_0x5b9d1b=>Math[_0x16398e(0x1e5,'^B64')](_0x5b9d1b)>0.0001),_0x1ec2e6=_0xbfe4c5(_0x2387e3[_0x16398e(0x343,'yHqR')])||_0x4c70ae&&_0x4c70ae[_0x16398e(0x402,'(Iaf')](_0x10a986=>_0xbfe4c5(_0x10a986[_0x16398e(0x24d,'OjaE')])),_0x3bf152=parseInt(_0x565d39[_0x16398e(0x50c,'A3HS')+_0x16398e(0x4db,'6H#W')+_0x16398e(0x43c,'thmO')])||0x1,_0x2ddddd=_0x3bf152>0x1&&(_0x565d39[_0x16398e(0x1c0,'rtGy')+_0x16398e(0x581,'sBHL')+_0x16398e(0x3f2,'PQS2')+'T']===_0x16398e(0x386,'oojm')+_0x16398e(0x31e,'rtGy')||_0x565d39[_0x16398e(0x303,'(Iaf')+_0x16398e(0x3a7,'U6RT')+_0x16398e(0x1b3,'^B64')+'T']===_0x16398e(0x1cc,'A3HS')+'s'),_0x35449f=_0x565d39['PUMP_'+_0x16398e(0x39f,'OjaE')+_0x16398e(0x5d8,'U6RT')+'T']===_0x16398e(0x456,'yHqR')+'lel'&&_0x3bf152>0x1,_0x5b11af=_0x565d39['PUMP_'+'ARRAN'+_0x16398e(0x37e,'Rbb]')+'T']===_0x16398e(0x380,'d(em')+'s'&&_0x3bf152>0x1,_0x39096c=_0x565d39[_0x16398e(0x593,'&lJQ')+_0x16398e(0x547,'IvrV')+_0x16398e(0x5eb,'fQ)]')]||_0x565d39[_0x16398e(0x369,'c0k&')+_0x16398e(0x1f9,'c0k&')]||0x1,_0x133d19=_0x159767[_0x16398e(0x354,'mmCf')](_0x337f49=>_0x337f49*_0x39096c),_0xf13b60=_0x215be0[_0x16398e(0x346,'&mk3')](_0x1f69b7=>_0x1f69b7*Math[_0x16398e(0x17b,'(Iaf')](_0x39096c,0x2)),_0x54f3b5=_0x403e0c['map'](_0x13e908=>_0x13e908*Math[_0x16398e(0x3c4,'5qW1')](_0x39096c,0x3)),_0x77bfd8=_0x5015b6[_0x16398e(0x2b5,'Y*Sh')+'h']?_0x5015b6[_0x16398e(0x55e,'V5p4')](_0x4a4b0d=>_0x4a4b0d*Math['pow'](_0x39096c,0x2)):[];if(_0x4c70ae&&_0x4c70ae[_0x16398e(0x312,'V5p4')+'h']>0x0)_0x4c70ae[_0x16398e(0x5f2,'A3HS')+'ch']((_0x910b8,_0x1909eb)=>{const _0x1ff03e=_0x16398e;let _0x4a5f1c=_0x565d39[_0x1ff03e(0x4ba,'&mk3')+'D']?(_0x910b8[_0x1ff03e(0x207,'QnBl')]||_0x910b8[_0x1ff03e(0x23c,'mkz0')])+_0x1ff03e(0x561,')Jpu'):'Ø\x20'+_0x910b8[_0x1ff03e(0x392,'$Awu')]+_0x1ff03e(0x2d1,'oojm'),_0x28c251=_0x1909eb===_0x4c70ae[_0x1ff03e(0x2ea,'zpR4')+'h']-0x1,_0x5bc8cb=_0x28c251?_0x4f62d7:Math[_0x1ff03e(0x295,'1*R6')](1.2,_0x4f62d7*0.7);const _0x278a37=_0x910b8['q'][_0x1ff03e(0x19c,'Y*Sh')](_0x1a0e16=>_0x1a0e16*_0x384a36),_0x3a8c29=_0x910b8['h'][_0x1ff03e(0x20e,'&lJQ')](_0x43cdd2=>_0x43cdd2*_0x3273e1),_0x314520=_0x910b8[_0x1ff03e(0x4e1,'&mk3')][_0x1ff03e(0x34c,'3trC')](_0x4f6828=>_0x4f6828*_0x47c2e9),_0x4ca688=_0x910b8['npsh']?_0x910b8[_0x1ff03e(0x415,'3trC')][_0x1ff03e(0x20e,'&lJQ')](_0x2fdc43=>_0x2fdc43*_0x230cb3):[];let _0x333a80=_0x278a37[_0x1ff03e(0x358,'mJS4')]((_0x1ee79f,_0x29f871)=>[_0x3a8c29[_0x29f871]!=null?_0x3a8c29[_0x29f871][_0x1ff03e(0x47c,'8uGe')+'ed'](0x1):_0x1ff03e(0x5b9,'mmCf'),_0x910b8[_0x1ff03e(0x379,'XCYk')][_0x29f871]!=null?_0x910b8[_0x1ff03e(0x510,'8uGe')][_0x29f871][_0x1ff03e(0x4cd,'U6RT')+'ed'](0x1):_0x1ff03e(0x693,'F[]e'),_0x314520[_0x29f871]!=null?_0x314520[_0x29f871][_0x1ff03e(0x5cf,'Y*Sh')+'ed'](0x1):_0x1ff03e(0x14e,'rtGy'),_0x4ca688&&_0x4ca688[_0x29f871]!=null?_0x4ca688[_0x29f871][_0x1ff03e(0x2be,'sBHL')+'ed'](0x1):_0x1ff03e(0x474,'QnBl')]),_0x30d787=_0x1ff03e(0x26e,'thmO')+_0x4a5f1c+('</b><'+_0x1ff03e(0x36b,')Jpu')+_0x1ff03e(0x17c,'U6RT')+_0x1ff03e(0x4b6,'XCYk')+_0x1ff03e(0x227,'EQ9Y'))+_0x16b4e7+(_0x1ff03e(0x2fd,')Jpu')+_0x1ff03e(0x2c7,'mmCf')+'%{cus'+'tomda'+_0x1ff03e(0x6a8,'thmO')+'}\x20')+_0x2aae4d+(_0x1ff03e(0x673,'AbmW')+_0x1ff03e(0x41d,'EQ9Y')+'{cust'+_0x1ff03e(0x1c5,'sBHL')+'a[1]}'+'\x20%<br'+_0x1ff03e(0x196,'EQ9Y')+'r:\x20%{'+'custo'+'mdata'+_0x1ff03e(0x4a0,'fQ)]'))+_0x21289b+(_0x1ff03e(0x61f,'5qW1')+_0x1ff03e(0x68b,'mmCf')+_0x1ff03e(0x5c6,'XCYk')+_0x1ff03e(0x481,'mJS4')+_0x1ff03e(0x451,'3trC')+_0x1ff03e(0x542,'3trC'))+_0x18a0e9+(_0x1ff03e(0x570,')Jpu')+_0x1ff03e(0x1a7,'&lJQ')+_0x1ff03e(0x657,'zpR4'));_0x1355fd['push']({'x':_0x278a37,'y':_0x3a8c29,'name':_0x1ff03e(0x450,'i#Px')+_0x4a5f1c,'type':_0x1ff03e(0x4c7,'6H#W')+'er','mode':_0x1ff03e(0x61c,'thmO'),'line':{'color':_0x1b4fea,'width':_0x5bc8cb,'dash':_0x427c9e},'yaxis':'y4','opacity':_0x28c251?0x1:0.55,'showlegend':![],'customdata':_0x333a80,'hovertemplate':_0x30d787,'curveGroup':'hq','legendgroup':'hq'}),addLabel(_0x24b8c6,_0x278a37,_0x3a8c29,'y4',_0x4a5f1c,_0x1b4fea,![],'hq'),_0x1355fd[_0x1ff03e(0x2ff,'^B64')]({'x':_0x278a37,'y':_0x910b8[_0x1ff03e(0x487,'mkz0')],'name':_0x1ff03e(0x1d1,'6H#W')+_0x4a5f1c,'type':_0x1ff03e(0x52e,'rn#Q')+'er','mode':'lines','line':{'color':_0xdafa19,'width':_0x28c251?_0x37d71f:Math['max'](1.2,_0x37d71f*0.7),'dash':_0x5def6e},'yaxis':'y3','opacity':_0x28c251?0x1:0.55,'showlegend':![],'customdata':_0x333a80,'hovertemplate':_0x30d787,'curveGroup':_0x1ff03e(0x484,'V5p4'),'legendgroup':_0x1ff03e(0x20d,'A3HS')}),addLabel(_0x24b8c6,_0x278a37,_0x910b8['eta'],'y3',_0x4a5f1c,_0xdafa19,![],_0x1ff03e(0x5e9,'Bb81')),_0x1355fd[_0x1ff03e(0x46b,'AQA5')]({'x':_0x278a37,'y':_0x314520,'name':_0x1ff03e(0x1e3,'1*R6')+'\x20'+_0x4a5f1c,'type':'scatt'+'er','mode':_0x1ff03e(0x185,'&mk3'),'line':{'color':_0x303be1,'width':_0x28c251?_0x5d52a2:Math[_0x1ff03e(0x4b1,'6H#W')](1.2,_0x5d52a2*0.7),'dash':_0x3c7a71},'yaxis':'y2','opacity':_0x28c251?0x1:0.55,'showlegend':![],'customdata':_0x333a80,'hovertemplate':_0x30d787,'curveGroup':_0x1ff03e(0x3c4,'5qW1'),'legendgroup':_0x1ff03e(0x3f1,'oojm')}),addLabel(_0x24b8c6,_0x278a37,_0x314520,'y2',_0x4a5f1c,_0x303be1,![],_0x1ff03e(0x5ad,'sBHL')),_0x1ec2e6&&_0x4ca688&&_0x4ca688['lengt'+'h']&&(_0x1355fd[_0x1ff03e(0x399,'oojm')]({'x':_0x278a37,'y':_0x4ca688,'name':'NPSHr'+'\x20'+_0x4a5f1c,'type':_0x1ff03e(0x39c,'^B64')+'er','mode':_0x1ff03e(0x2ba,'zpR4'),'line':{'color':_0x3ae211,'width':_0x28c251?_0x50575f:Math[_0x1ff03e(0x6a4,'&lJQ')](1.2,_0x50575f*0.7),'dash':_0x2501ce},'yaxis':'y','opacity':_0x28c251?0x1:0.55,'showlegend':![],'customdata':_0x333a80,'hovertemplate':_0x30d787,'curveGroup':_0x1ff03e(0x602,'Bb81'),'legendgroup':_0x1ff03e(0x283,'QnBl')}),addLabel(_0x24b8c6,_0x278a37,_0x4ca688,'y',_0x4a5f1c,_0x3ae211,![],_0x1ff03e(0x4e6,'Xo4W')));});else{let _0x31f9ac=_0x16398e(0x22d,'IvrV'),_0x183ef9=_0x159767[_0x16398e(0x639,'$8@4')]((_0x140d83,_0x136f2f)=>[_0x215be0[_0x136f2f]!=null?_0x215be0[_0x136f2f][_0x16398e(0x4cd,'U6RT')+'ed'](0x1):_0x16398e(0x1a6,'OjaE'),_0x2387e3[_0x16398e(0x24c,'&lJQ')][_0x136f2f]!=null?_0x2387e3[_0x16398e(0x642,'zVHu')][_0x136f2f]['toFix'+'ed'](0x1):'N/A',_0x403e0c[_0x136f2f]!=null?_0x403e0c[_0x136f2f]['toFix'+'ed'](0x1):_0x16398e(0x474,'QnBl'),_0x5015b6&&_0x5015b6[_0x136f2f]!=null?_0x5015b6[_0x136f2f][_0x16398e(0x697,'rtGy')+'ed'](0x1):_0x16398e(0x226,'6H#W')]),_0x52c5ad=_0x16398e(0x1dc,'$8@4')+_0x31f9ac+('</b><'+'br>Fl'+_0x16398e(0x258,'rn#Q')+_0x16398e(0x61d,'i#Px')+_0x16398e(0x373,')oDU'))+_0x16b4e7+('<br>H'+_0x16398e(0x2a6,'IvrV')+_0x16398e(0x1f4,'c0k&')+_0x16398e(0x3d3,'Y*Sh')+_0x16398e(0x3d8,'T)Sm')+'}\x20')+_0x2aae4d+(_0x16398e(0x3aa,'IvrV')+_0x16398e(0x610,'thmO')+_0x16398e(0x44d,'EQ9Y')+_0x16398e(0x2cc,'PQS2')+'a[1]}'+_0x16398e(0x53b,'i#Px')+'>Powe'+'r:\x20%{'+_0x16398e(0x395,'A3HS')+_0x16398e(0x1f6,'OjaE')+_0x16398e(0x367,'$Awu'))+_0x21289b+(_0x16398e(0x3c1,'8uGe')+_0x16398e(0x2eb,'V5p4')+_0x16398e(0x41a,'i#Px')+_0x16398e(0x356,'&mk3')+_0x16398e(0x451,'3trC')+_0x16398e(0x614,'^B64'))+_0x18a0e9+(_0x16398e(0x5bb,'zpR4')+_0x16398e(0x306,'T)Sm')+_0x16398e(0x680,'QnBl'));_0x1355fd[_0x16398e(0x2ad,'Rbb]')]({'x':_0x159767,'y':_0x215be0,'name':_0x2ddddd?'Pump\x20'+_0x16398e(0x555,'Rbb]')+_0x16398e(0x5f4,'z$A8')+_0x16398e(0x656,')oDU')+')':_0x16398e(0x4b5,'rtGy')+_0x16398e(0x3e1,'8uGe'),'type':_0x16398e(0x66e,'Bb81')+'er','mode':_0x16398e(0x428,'c0k&'),'line':{'color':_0x1b4fea,'width':_0x4f62d7,'dash':_0x427c9e},'yaxis':'y4','showlegend':![],'customdata':_0x183ef9,'hovertemplate':_0x52c5ad,'curveGroup':'hq','legendgroup':'hq'}),addLabel(_0x24b8c6,_0x159767,_0x215be0,'y4',_0x16398e(0x560,'1*R6'),_0x1b4fea,![],'hq'),_0x1355fd[_0x16398e(0x40a,'zBj%')]({'x':_0x159767,'y':_0x2387e3[_0x16398e(0x3b4,'U6RT')],'name':_0x16398e(0x5ef,'z$A8')+_0x16398e(0x50a,'&lJQ'),'type':_0x16398e(0x1d9,'(Iaf')+'er','mode':_0x16398e(0x16e,'zVHu'),'line':{'color':_0xdafa19,'width':_0x37d71f,'dash':_0x5def6e},'yaxis':'y3','showlegend':![],'customdata':_0x183ef9,'hovertemplate':_0x52c5ad,'curveGroup':_0x16398e(0x510,'8uGe'),'legendgroup':_0x16398e(0x32a,'rtGy')}),addLabel(_0x24b8c6,_0x159767,_0x2387e3['eta'],'y3',_0x16398e(0x4fb,'rn#Q'),_0xdafa19,![],'eta'),_0x1355fd[_0x16398e(0x5f5,'c0k&')]({'x':_0x159767,'y':_0x403e0c,'name':_0x16398e(0x48f,'Y*Sh')+_0x16398e(0x223,'fQ)]')+')','type':'scatt'+'er','mode':_0x16398e(0x177,'&lJQ'),'line':{'color':_0x303be1,'width':_0x5d52a2,'dash':_0x3c7a71},'yaxis':'y2','showlegend':![],'customdata':_0x183ef9,'hovertemplate':_0x52c5ad,'curveGroup':_0x16398e(0x3c3,'T)Sm'),'legendgroup':_0x16398e(0x17b,'(Iaf')}),addLabel(_0x24b8c6,_0x159767,_0x403e0c,'y2',_0x16398e(0x1e1,'A3HS'),_0x303be1,![],_0x16398e(0x1da,'zVHu')),_0x5015b6[_0x16398e(0x3f3,'(Iaf')+'h']&&(_0x1355fd[_0x16398e(0x46b,'AQA5')]({'x':_0x159767,'y':_0x5015b6,'name':_0x16398e(0x31f,'ME5t')+_0x16398e(0x1dd,'zVHu')+')','type':'scatt'+'er','mode':_0x16398e(0x3ea,'sBHL'),'line':{'color':_0x3ae211,'width':_0x50575f,'dash':_0x2501ce},'yaxis':'y','showlegend':![],'customdata':_0x183ef9,'hovertemplate':_0x52c5ad,'curveGroup':'npsh','legendgroup':_0x16398e(0x404,'EQ9Y')}),addLabel(_0x24b8c6,_0x159767,_0x5015b6,'y',_0x16398e(0x495,'V5p4'),_0x3ae211,![],_0x16398e(0x2ac,'fQ)]')));}let _0x2d61e9=_0x2ddddd?_0x16398e(0x1d8,'i#Px')+_0x16398e(0x60a,'oojm')+_0x16398e(0x244,'z$A8')+_0x16398e(0x271,'mkz0')+_0x3bf152+')':_0x16398e(0x480,'d(em')+_0x16398e(0x454,'mkz0')+'e';if(_0x565d39[_0x16398e(0x534,'OjaE')+'D']){const _0x17004e=(_0x565d39[_0x16398e(0x2ab,'&lJQ')+_0x16398e(0x348,'EQ9Y')+'D']||Math['round'](_0x565d39[_0x16398e(0x36f,'mkz0')+_0x16398e(0x1f0,'zBj%')]*_0x565d39['TRIM_'+_0x16398e(0x3c8,'(Iaf')]))+_0x16398e(0x558,'mkz0'),_0x173d54=_0x565d39[_0x16398e(0x1d5,'Bb81')+_0x16398e(0x3da,'i#Px')+_0x16398e(0x67a,'IvrV')]&&_0x565d39[_0x16398e(0x1ff,'EQ9Y')+_0x16398e(0x4dd,'Bb81')+_0x16398e(0x1c2,'rtGy')]!==_0x16398e(0x5d1,'A3HS')&&_0x565d39[_0x16398e(0x4e9,'$fX5')+_0x16398e(0x173,'QnBl')]?_0x16398e(0x445,'zBj%')+_0x565d39[_0x16398e(0x2ab,'&lJQ')+_0x16398e(0x18f,'PQS2')]+'mm':'';_0x2d61e9=_0x2ddddd?_0x16398e(0x68a,'zBj%')+_0x16398e(0x4e4,'(Iaf')+_0x16398e(0x2cf,'6H#W')+_0x17004e+_0x173d54+')':_0x16398e(0x63b,'AbmW')+_0x16398e(0x566,')Jpu')+'('+_0x17004e+_0x173d54+')';}else{if(_0x565d39[_0x16398e(0x2b7,'EQ9Y')+_0x16398e(0x3b0,'Rbb]')+_0x16398e(0x58b,'rtGy')+'E']===_0x16398e(0x2f5,'PQS2'))_0x2d61e9=_0x2ddddd?_0x16398e(0x397,'mkz0')+_0x16398e(0x533,'mJS4')+_0x16398e(0x51d,'A3HS')+(_0x565d39['RATED'+_0x16398e(0x6bf,'Bb81')+'D']||Math[_0x16398e(0x30a,'z$A8')](_0x565d39[_0x16398e(0x2ec,'zpR4')+_0x16398e(0x5ff,'yHqR')]*_0x565d39[_0x16398e(0x179,'mkz0')+_0x16398e(0x154,'ME5t')]))+'\x20RPM)':_0x16398e(0x5b6,'IvrV')+_0x16398e(0x200,'6zqs')+_0x16398e(0x41e,'c0k&')+_0x16398e(0x286,'rtGy')+(_0x565d39[_0x16398e(0x2ab,'&lJQ')+_0x16398e(0x62b,'mmCf')+'D']||Math[_0x16398e(0x3d1,'mkz0')](_0x565d39[_0x16398e(0x42b,'EQ9Y')+_0x16398e(0x4d2,'Rbb]')]*_0x565d39[_0x16398e(0x3dd,'$fX5')+_0x16398e(0x586,'sBHL')]))+_0x16398e(0x18e,'$Awu');else{if(_0x565d39[_0x16398e(0x1cf,'(Iaf')+_0x16398e(0x493,'V5p4')+_0x16398e(0x590,'Bb81')+'E']===_0x16398e(0x2aa,'Y*Sh')+'l'){const _0x1001df=(_0x565d39['RATED'+_0x16398e(0x5d6,'6zqs')+'D']||_0x565d39[_0x16398e(0x21c,'$8@4')+_0x16398e(0x243,'Bb81')+_0x16398e(0x67b,'T)Sm')+'M'])+_0x16398e(0x689,'Rbb]'),_0x3d27e4=_0x565d39[_0x16398e(0x2b6,'6zqs')+'RATIO']<0.995&&_0x565d39[_0x16398e(0x327,'XCYk')+_0x16398e(0x2e9,'yHqR')]?_0x16398e(0x411,'oojm')+_0x565d39[_0x16398e(0x21f,'A3HS')+_0x16398e(0x18b,'oojm')]+'mm':'';_0x2d61e9=_0x2ddddd?_0x16398e(0x187,'d(em')+_0x16398e(0x3cf,'$Awu')+_0x16398e(0x455,'rtGy')+_0x1001df+_0x3d27e4+')':_0x16398e(0x1a1,'rtGy')+_0x16398e(0x17a,'rn#Q')+_0x16398e(0x630,'5qW1')+_0x1001df+_0x3d27e4+')';}else{if(_0x565d39[_0x16398e(0x15d,'$8@4')+'_SPEE'+'D_MOD'+'E']===_0x16398e(0x2d3,'EQ9Y')){const _0x4bf510=_0x565d39[_0x16398e(0x617,'Rbb]')+_0x16398e(0x5f9,'&lJQ')+'D']+'\x20RPM',_0x29625a=_0x565d39[_0x16398e(0x604,'mJS4')+_0x16398e(0x5eb,'fQ)]')]<0.995&&_0x565d39[_0x16398e(0x4c1,'&mk3')+_0x16398e(0x654,'rn#Q')]?_0x16398e(0x24a,')oDU')+_0x565d39[_0x16398e(0x423,'yHqR')+'_TRIM']+'mm':'';_0x2d61e9=_0x2ddddd?_0x16398e(0x18d,'&mk3')+'mp\x20Cu'+_0x16398e(0x244,'z$A8')+_0x4bf510+_0x29625a+')':_0x16398e(0x265,'c0k&')+_0x16398e(0x4fc,'3trC')+_0x16398e(0x2c9,')oDU')+_0x4bf510+_0x29625a+')';}else _0x565d39[_0x16398e(0x499,'V5p4')+_0x16398e(0x155,'AQA5')]<0x1&&(_0x2d61e9=_0x2ddddd?_0x16398e(0x22e,'OjaE')+'mp\x20Cu'+_0x16398e(0x2cf,'6H#W')+'Ø\x20'+_0x565d39['RATED'+_0x16398e(0x218,'A3HS')]+_0x16398e(0x27c,'mJS4'):_0x16398e(0x508,'6H#W')+_0x16398e(0x48b,'yHqR')+_0x16398e(0x25d,'OjaE')+_0x565d39['RATED'+_0x16398e(0x3ad,')Jpu')]+'\x20mm)');}}}let _0x56d127=_0x159767,_0x31a504=_0x215be0;if(_0x39096c<0.999||_0x565d39['IS_VS'+'D']||_0x565d39[_0x16398e(0x160,'U6RT')+_0x16398e(0x417,'rn#Q')+_0x16398e(0x416,'zpR4')+'E']===_0x16398e(0x1ba,'mmCf')||_0x565d39['FIXED'+_0x16398e(0x251,'yHqR')+_0x16398e(0x2ee,'sBHL')+'E']==='manua'+'l'||_0x565d39[_0x16398e(0x236,'zVHu')+_0x16398e(0x682,'zBj%')+_0x16398e(0x2f7,'(Iaf')+'E']===_0x16398e(0x589,'A3HS')||_0x565d39['TRIM_'+_0x16398e(0x167,'rn#Q')]<0x1){let _0x5c561b=_0x565d39[_0x16398e(0x308,'$Awu')+'D']?_0x16398e(0x376,'Bb81')+_0x565d39['RATED'+'_SPEE'+'D']+_0x16398e(0x166,'i#Px')+(_0x565d39[_0x16398e(0x401,'$Awu')+_0x16398e(0x1be,'T)Sm')+'ODE']&&_0x565d39[_0x16398e(0x6af,'PQS2')+_0x16398e(0x576,'6zqs')+_0x16398e(0x696,'mkz0')]!==_0x16398e(0x5c5,'EQ9Y')&&_0x565d39[_0x16398e(0x50d,'Xo4W')+_0x16398e(0x333,'zBj%')]?_0x16398e(0x2ef,'&lJQ')+_0x565d39[_0x16398e(0x57c,'F[]e')+_0x16398e(0x2e4,'$8@4')]+'\x20mm':'')+')':_0x565d39['FIXED'+_0x16398e(0x4f9,'i#Px')+'D_MOD'+'E']===_0x16398e(0x193,'rn#Q')?_0x16398e(0x3e4,'OjaE')+_0x16398e(0x211,'ME5t')+'\x20('+_0x565d39[_0x16398e(0x1ce,'AQA5')+_0x16398e(0x4ed,'AQA5')+'D']+_0x16398e(0x5c2,'EQ9Y'):_0x565d39[_0x16398e(0x5f3,'oojm')+_0x16398e(0x165,'$Awu')+_0x16398e(0x17d,'XCYk')+'E']===_0x16398e(0x522,'PQS2')+'l'?_0x16398e(0x1d3,'Xo4W')+_0x16398e(0x59b,'$fX5')+(_0x565d39[_0x16398e(0x617,'Rbb]')+_0x16398e(0x511,'5qW1')+'D']||_0x565d39[_0x16398e(0x5a3,'zVHu')+_0x16398e(0x4ae,'V5p4')+_0x16398e(0x548,'6zqs')+'M'])+_0x16398e(0x2a3,'XCYk')+(_0x565d39[_0x16398e(0x5f7,'zBj%')+_0x16398e(0x333,'zBj%')]?_0x16398e(0x2c4,'T)Sm')+_0x565d39[_0x16398e(0x318,'T)Sm')+_0x16398e(0x2e1,'Y*Sh')]+_0x16398e(0x3e9,'$8@4'):'')+')':_0x565d39[_0x16398e(0x5f3,'oojm')+_0x16398e(0x4e5,'PQS2')+_0x16398e(0x400,'$Awu')+'E']===_0x16398e(0x482,'zpR4')?_0x16398e(0x1b8,'Bb81')+'\x20('+_0x565d39[_0x16398e(0x5ca,'IvrV')+_0x16398e(0x16c,'z$A8')+'D']+_0x16398e(0x637,'zpR4')+(_0x565d39[_0x16398e(0x5f7,'zBj%')+_0x16398e(0x406,'zVHu')]?',\x20Ø\x20'+_0x565d39[_0x16398e(0x338,'EQ9Y')+_0x16398e(0x15f,'T)Sm')]+'\x20mm':'')+')':_0x16398e(0x174,'Y*Sh')+'\x20(Ø\x20'+_0x565d39[_0x16398e(0x605,'i#Px')+_0x16398e(0x218,'A3HS')]+_0x16398e(0x572,'mkz0');_0x2ddddd&&(_0x5c561b=_0x16398e(0x505,'&lJQ')+_0x16398e(0x3ed,'3trC')+_0x5c561b+')');const _0x236f1c=[],_0x1b0980=[],_0x28b8cf=[],_0x22a45d=[],_0x17029f=[],_0x33e776=[];for(let _0x69c8bd=0x0;_0x69c8bd<_0x133d19[_0x16398e(0x164,'rn#Q')+'h'];_0x69c8bd++){const _0x189b81=_0x133d19[_0x69c8bd],_0x3015b9=_0xf13b60[_0x69c8bd];if(_0x3015b9!=null&&_0x3015b9>=0x0){_0x236f1c['push'](_0x189b81),_0x1b0980[_0x16398e(0x399,'oojm')](_0x3015b9);const _0x3959c4=_0x2387e3[_0x16398e(0x5a1,'6H#W')]?_0x2387e3[_0x16398e(0x554,'AQA5')][_0x69c8bd]:null,_0x46cbb6=_0x54f3b5?_0x54f3b5[_0x69c8bd]:null,_0xaaf3a2=_0x77bfd8&&_0x77bfd8[_0x16398e(0x164,'rn#Q')+'h']?_0x77bfd8[_0x69c8bd]:null;if(_0x3959c4!=null)_0x28b8cf[_0x16398e(0x52a,'6H#W')](_0x3959c4);if(_0x46cbb6!=null)_0x22a45d[_0x16398e(0x150,'rn#Q')](_0x46cbb6);if(_0xaaf3a2!=null)_0x17029f['push'](_0xaaf3a2);_0x33e776[_0x16398e(0x2e5,'thmO')]([_0x3015b9[_0x16398e(0x4cd,'U6RT')+'ed'](0x1),_0x3959c4!=null?_0x3959c4[_0x16398e(0x3b5,'^B64')+'ed'](0x1):_0x16398e(0x1e9,'mkz0'),_0x46cbb6!=null?_0x46cbb6[_0x16398e(0x14c,'F[]e')+'ed'](0x1):_0x16398e(0x591,'Xo4W'),_0xaaf3a2!=null?_0xaaf3a2[_0x16398e(0x311,')oDU')+'ed'](0x1):_0x16398e(0x636,'&lJQ')]);}}const _0xfc2114=_0x2ddddd?_0x35449f?_0x565d39[_0x16398e(0x663,'XCYk')+'Y']/_0x3bf152:_0x565d39[_0x16398e(0x5d4,'AQA5')+'Y']:_0x565d39[_0x16398e(0x2df,'sBHL')+'Y'],_0x106b22=_0x2ddddd?_0x5b11af?_0x565d39[_0x16398e(0x1b5,'OjaE')+_0x16398e(0x69d,')Jpu')+'Y']!=null&&_0x565d39[_0x16398e(0x1b5,'OjaE')+_0x16398e(0x6ae,'zVHu')+'Y']!==''?_0x565d39[_0x16398e(0x641,'^B64')+_0x16398e(0x69d,')Jpu')+'Y']:_0x565d39['H_DUT'+'Y']/_0x3bf152:_0x565d39[_0x16398e(0x69d,')Jpu')+'Y']:_0x565d39[_0x16398e(0x268,'oojm')+'Y'];if(_0xfc2114&&_0x106b22&&_0x236f1c[_0x16398e(0x2de,'zVHu')+'h']>0x0&&_0x236f1c[_0x236f1c['lengt'+'h']-0x1]<_0xfc2114){const _0x57ed2=_0x236f1c[_0x236f1c[_0x16398e(0x22f,'rtGy')+'h']-0x1],_0x5ad614=_0x1b0980[_0x1b0980[_0x16398e(0x514,'ME5t')+'h']-0x1],_0x2bbb1e=(_0x106b22-_0x5ad614)/(_0xfc2114-_0x57ed2);_0x236f1c[_0x16398e(0x1d4,'zVHu')](_0xfc2114),_0x1b0980['push'](_0x106b22),_0x33e776[_0x16398e(0x5f6,'EQ9Y')]([_0x106b22[_0x16398e(0x6a9,'6zqs')+'ed'](0x1),_0x565d39[_0x16398e(0x496,'zpR4')+'A']?_0x565d39[_0x16398e(0x6ad,'AbmW')+'A']['toFix'+'ed'](0x1):'N/A',_0x565d39[_0x16398e(0x3b1,'IvrV')+_0x16398e(0x26d,'Xo4W')+'W']?_0x565d39['OP_PO'+_0x16398e(0x32d,'6zqs')+'W'][_0x16398e(0x52c,'$8@4')+'ed'](0x1):_0x16398e(0x19d,'T)Sm'),_0x16398e(0x1a6,'OjaE')]);const _0x1a2d86=_0xfc2114*1.06,_0x5d8a94=_0x106b22+_0x2bbb1e*(_0x1a2d86-_0xfc2114);_0x5d8a94>=0x0&&(_0x236f1c[_0x16398e(0x296,'IvrV')](_0x1a2d86),_0x1b0980[_0x16398e(0x2a9,')oDU')](_0x5d8a94),_0x33e776[_0x16398e(0x4b7,'mmCf')]([_0x5d8a94[_0x16398e(0x3b6,'&mk3')+'ed'](0x1),_0x565d39[_0x16398e(0x34e,'XCYk')+'A']?_0x565d39[_0x16398e(0x5de,'&mk3')+'A']['toFix'+'ed'](0x1):'N/A',_0x565d39[_0x16398e(0x5ea,'PQS2')+_0x16398e(0x273,'Rbb]')+'W']?_0x565d39[_0x16398e(0x5a9,'mmCf')+'WER_K'+'W'][_0x16398e(0x4d9,'1*R6')+'ed'](0x1):_0x16398e(0x6ab,'^B64'),_0x16398e(0x490,'zBj%')]));}_0x56d127=_0x236f1c,_0x31a504=_0x1b0980;const _0x533e98='<b>'+_0x5c561b+(_0x16398e(0x2fc,'EQ9Y')+_0x16398e(0x473,'z$A8')+_0x16398e(0x365,'d(em')+_0x16398e(0x5e6,'zBj%')+'f}\x20')+_0x16b4e7+(_0x16398e(0x377,'&mk3')+_0x16398e(0x2a6,'IvrV')+_0x16398e(0x29b,'thmO')+_0x16398e(0x44f,'(Iaf')+_0x16398e(0x277,'XCYk')+'}\x20')+_0x2aae4d+(_0x16398e(0x266,'U6RT')+_0x16398e(0x4a4,'Bb81')+_0x16398e(0x21d,'IvrV')+_0x16398e(0x6b3,'$fX5')+_0x16398e(0x378,'1*R6')+_0x16398e(0x2d6,'5qW1')+_0x16398e(0x506,'mJS4')+_0x16398e(0x53d,'1*R6')+_0x16398e(0x46f,'mJS4')+_0x16398e(0x27f,'$fX5')+_0x16398e(0x40f,'d(em'))+_0x21289b+(_0x16398e(0x5f1,'rtGy')+_0x16398e(0x384,'(Iaf')+_0x16398e(0x477,'Xo4W')+'stomd'+'ata[3'+_0x16398e(0x620,'AQA5'))+_0x18a0e9+('<extr'+_0x16398e(0x232,'F[]e')+_0x16398e(0x239,'PQS2'));_0x1355fd[_0x16398e(0x405,'8uGe')]({'x':_0x236f1c,'y':_0x1b0980,'name':_0x16398e(0x679,'mmCf')+_0x5c561b,'type':_0x16398e(0x49e,'IvrV')+'er','mode':_0x16398e(0x27e,'A3HS'),'line':{'color':_0x17694b,'width':_0x4b8e11,'dash':_0x546939},'yaxis':'y4','showlegend':![],'customdata':_0x33e776,'hovertemplate':_0x533e98,'curveGroup':_0x16398e(0x53a,'fQ)]'),'legendgroup':_0x16398e(0x4a8,'yHqR')}),addLabel(_0x24b8c6,_0x236f1c,_0x1b0980,'y4',_0x2ddddd?_0x16398e(0x3e2,'Rbb]')+_0x16398e(0x326,'6zqs'):'Rated',_0x17694b,![],'rated'),_0x1355fd[_0x16398e(0x2a9,')oDU')]({'x':_0x236f1c,'y':_0x28b8cf,'name':_0x16398e(0x3a1,'AbmW')+_0x5c561b,'type':'scatt'+'er','mode':'lines','line':{'color':_0x17694b,'width':_0x4b8e11,'dash':_0x546939},'yaxis':'y3','showlegend':![],'customdata':_0x33e776,'hovertemplate':_0x533e98,'curveGroup':_0x16398e(0x5cb,'1*R6'),'legendgroup':'rated'}),_0x1355fd[_0x16398e(0x359,'(Iaf')]({'x':_0x236f1c,'y':_0x22a45d,'name':'Power'+'\x20'+_0x5c561b,'type':_0x16398e(0x5fb,'zVHu')+'er','mode':_0x16398e(0x512,'F[]e'),'line':{'color':_0x17694b,'width':_0x4b8e11,'dash':_0x546939},'yaxis':'y2','showlegend':![],'customdata':_0x33e776,'hovertemplate':_0x533e98,'curveGroup':_0x16398e(0x661,'EQ9Y'),'legendgroup':'rated'}),_0x1ec2e6&&_0x17029f[_0x16398e(0x3cd,'Bb81')+'h']&&_0x1355fd['push']({'x':_0x236f1c,'y':_0x17029f,'name':_0x16398e(0x3a4,'z$A8')+'\x20'+_0x5c561b,'type':_0x16398e(0x1eb,'AbmW')+'er','mode':_0x16398e(0x185,'&mk3'),'line':{'color':_0x17694b,'width':_0x4b8e11,'dash':_0x546939},'yaxis':'y','showlegend':![],'customdata':_0x33e776,'hovertemplate':_0x533e98,'curveGroup':_0x16398e(0x607,'6zqs'),'legendgroup':'rated'});}if(_0x35449f){const _0x5b0460=_0x56d127[_0x16398e(0x346,'&mk3')](_0x44e2f0=>_0x44e2f0*_0x3bf152),_0x55f43f=_0x31a504,_0x4415c4=_0x16398e(0x594,'PQS2')+_0x16398e(0x5c9,'sBHL')+_0x16398e(0x252,'^B64')+'tion\x20'+'('+_0x3bf152+('x\x20Par'+_0x16398e(0x49f,'6H#W')+_0x16398e(0x62a,'yHqR')+_0x16398e(0x33b,'$Awu')+'tatio'+_0x16398e(0x5d0,'zVHu')+'al\x20Fl'+_0x16398e(0x317,'5qW1')+_0x16398e(0x627,'A3HS')+'f}\x20')+_0x16b4e7+(_0x16398e(0x65c,'8uGe')+'ead:\x20'+_0x16398e(0x32b,'OjaE')+_0x16398e(0x6b5,'&mk3'))+_0x2aae4d+(_0x16398e(0x65d,'thmO')+_0x16398e(0x684,'z$A8')+_0x16398e(0x435,'rtGy'));_0x1355fd[_0x16398e(0x2e5,'thmO')]({'x':_0x5b0460,'y':_0x55f43f,'name':_0x16398e(0x22a,'U6RT')+_0x16398e(0x559,'U6RT')+_0x16398e(0x3fe,'rn#Q')+_0x16398e(0x672,'rtGy')+_0x3bf152+('x\x20Par'+'allel'+')'),'type':_0x16398e(0x52e,'rn#Q')+'er','mode':'lines','line':{'color':_0x16398e(0x3a2,')Jpu')+'5e','width':Math['max'](2.8,_0x4b8e11+0.8),'dash':_0x16398e(0x387,'&lJQ')},'yaxis':'y4','showlegend':![],'hovertemplate':_0x4415c4,'curveGroup':_0x16398e(0x64c,'5qW1')+'on','legendgroup':_0x16398e(0x248,'^B64')+'on'}),addLabel(_0x24b8c6,_0x5b0460,_0x55f43f,'y4',_0x3bf152+('x\x20Par'+_0x16398e(0x260,'(Iaf')),_0x16398e(0x1ed,'T)Sm')+'5e',![],_0x16398e(0x56a,'&lJQ')+'on');}else{if(_0x5b11af){const _0x555b3d=[],_0x4a730b=[];for(let _0x2426c4=0x0;_0x2426c4<_0x56d127[_0x16398e(0x38a,'$8@4')+'h'];_0x2426c4++){const _0xe7b8f4=_0x56d127[_0x2426c4],_0x371490=_0x31a504[_0x2426c4]*_0x3bf152;_0x371490>=0x0&&(_0x555b3d[_0x16398e(0x405,'8uGe')](_0xe7b8f4),_0x4a730b[_0x16398e(0x587,'F[]e')](_0x371490));}const _0x1df8ad=_0x16398e(0x1ec,'T)Sm')+_0x16398e(0x201,'mkz0')+'d\x20Sta'+_0x16398e(0x4c6,'yHqR')+'('+_0x3bf152+('x\x20Ser'+_0x16398e(0x541,'8uGe')+_0x16398e(0x1cb,'zpR4')+_0x16398e(0x3cb,'PQS2')+'w:\x20%{'+_0x16398e(0x2a7,')Jpu')+'}\x20')+_0x16b4e7+(_0x16398e(0x551,'&mk3')+_0x16398e(0x640,'PQS2')+_0x16398e(0x425,'$Awu')+_0x16398e(0x5c0,'z$A8')+_0x16398e(0x259,'T)Sm')+_0x16398e(0x36a,'oojm')+_0x16398e(0x588,'mJS4'))+_0x2aae4d+(_0x16398e(0x202,'oojm')+_0x16398e(0x51b,'5qW1')+_0x16398e(0x2f3,'&lJQ'));_0x1355fd['push']({'x':_0x555b3d,'y':_0x4a730b,'name':_0x16398e(0x575,'zVHu')+_0x16398e(0x5e0,'Xo4W')+_0x16398e(0x599,'EQ9Y')+_0x16398e(0x488,'PQS2')+_0x3bf152+('x\x20Ser'+_0x16398e(0x687,'ME5t')),'type':_0x16398e(0x52e,'rn#Q')+'er','mode':'lines','line':{'color':_0x16398e(0x526,'zVHu')+'f7','width':Math['max'](2.8,_0x4b8e11+0.8),'dash':_0x16398e(0x4f0,'V5p4')},'yaxis':'y4','showlegend':![],'hovertemplate':_0x1df8ad,'curveGroup':'stati'+'on','legendgroup':_0x16398e(0x4f4,'(Iaf')+'on'}),addLabel(_0x24b8c6,_0x555b3d,_0x4a730b,'y4',_0x3bf152+(_0x16398e(0x452,'U6RT')+_0x16398e(0x2e2,'PQS2')),'#a855'+'f7',![],'stati'+'on');}}if(_0x565d39[_0x16398e(0x631,'6H#W')+'Y']&&_0x565d39[_0x16398e(0x38f,'z$A8')+'Y']){const _0x4c194f=_0x565d39[_0x16398e(0x268,'oojm')+'Y']/Math[_0x16398e(0x310,'EQ9Y')](_0x565d39[_0x16398e(0x615,'zBj%')+'Y'],0x2),_0x33bab1=Math[_0x16398e(0x33e,'rtGy')](..._0x215be0),_0x39ea71=_0x5b11af?_0x33bab1*_0x3bf152:_0x33bab1,_0x1849a4=Math[_0x16398e(0x289,'ME5t')](_0x565d39[_0x16398e(0x1de,'PQS2')+'Y']*1.25,Math['min'](_0x39ea71*1.05,_0x565d39['H_DUT'+'Y']*1.6)),_0x22f133=_0x35449f?_0x159767[_0x16398e(0x2f1,'6zqs')](_0x41ec48=>_0x41ec48*_0x3bf152):_0x159767,_0x57556d=[],_0x3a4b69=[];for(let _0x2d1b9c=0x0;_0x2d1b9c<_0x22f133[_0x16398e(0x578,'i#Px')+'h'];_0x2d1b9c++){const _0xccd18=_0x22f133[_0x2d1b9c],_0xb280e3=_0x4c194f*Math[_0x16398e(0x301,'zBj%')](_0xccd18,0x2);_0xb280e3<=_0x1849a4&&(_0x57556d[_0x16398e(0x1fb,'XCYk')](_0xccd18),_0x3a4b69[_0x16398e(0x16b,'5qW1')](_0xb280e3));}(_0x57556d[_0x16398e(0x1d0,'8uGe')+'h']===0x0||_0x57556d[_0x57556d['lengt'+'h']-0x1]<_0x565d39['Q_DUT'+'Y'])&&(_0x57556d['push'](_0x565d39[_0x16398e(0x30d,'Bb81')+'Y']),_0x3a4b69[_0x16398e(0x276,'fQ)]')](_0x565d39['H_DUT'+'Y']));let _0x34a658=_0x16398e(0x546,'QnBl')+_0x16398e(0x37a,'V5p4')+_0x16398e(0x51f,'zpR4')+_0x16398e(0x413,'AQA5')+_0x16398e(0x389,'U6RT')+_0x16398e(0x62d,'oojm')+'{x:.1'+_0x16398e(0x1c9,'Y*Sh')+_0x16b4e7+(_0x16398e(0x280,'AbmW')+_0x16398e(0x2bc,'Rbb]')+_0x16398e(0x64d,'T)Sm')+_0x16398e(0x24e,'ME5t'))+_0x2aae4d+('<extr'+_0x16398e(0x6b1,'EQ9Y')+_0x16398e(0x39a,'$fX5'));_0x1355fd[_0x16398e(0x2ff,'^B64')]({'x':_0x57556d,'y':_0x3a4b69,'name':_0x16398e(0x37d,'6H#W')+_0x16398e(0x6a6,'6zqs')+'ve','type':_0x16398e(0x43f,'Rbb]')+'er','mode':_0x16398e(0x4da,')oDU'),'line':{'color':_0x5b3f2d,'width':2.2,'dash':_0xd30b56},'yaxis':'y4','showlegend':![],'hovertemplate':_0x34a658,'curveGroup':_0x16398e(0x1ac,'rn#Q')+'m','legendgroup':_0x16398e(0x4dc,'AQA5')+'m'});}_0x1355fd[_0x16398e(0x296,'IvrV')]({'x':[null],'y':[null],'name':_0x2ddddd?_0x16398e(0x34a,'mmCf')+'Head\x20'+'(Max\x20'+_0x16398e(0x5dd,'QnBl')+')':_0x16398e(0x52b,'mkz0')+'(Max)','type':_0x16398e(0x1d9,'(Iaf')+'er','mode':_0x16398e(0x6b7,'rtGy'),'line':{'color':_0x1b4fea,'width':_0x4f62d7,'dash':_0x427c9e},'showlegend':!![],'curveGroup':'hq','legendgroup':'hq'}),_0x1355fd[_0x16398e(0x3d0,'yHqR')]({'x':[null],'y':[null],'name':_0x16398e(0x540,'rn#Q')+_0x16398e(0x180,'AbmW')+_0x16398e(0x5be,'Bb81')+')','type':_0x16398e(0x629,'&lJQ')+'er','mode':_0x16398e(0x3f4,'OjaE'),'line':{'color':_0xdafa19,'width':_0x37d71f,'dash':_0x5def6e},'showlegend':!![],'curveGroup':_0x16398e(0x2bd,'^B64'),'legendgroup':'eta'}),_0x1355fd[_0x16398e(0x60f,'$8@4')]({'x':[null],'y':[null],'name':_0x16398e(0x250,'zpR4')+_0x16398e(0x2c1,'Y*Sh')+')','type':_0x16398e(0x48c,'5qW1')+'er','mode':_0x16398e(0x674,'T)Sm'),'line':{'color':_0x303be1,'width':_0x5d52a2,'dash':_0x3c7a71},'showlegend':!![],'curveGroup':_0x16398e(0x5a4,'8uGe'),'legendgroup':_0x16398e(0x17b,'(Iaf')});_0x1ec2e6&&_0x1355fd[_0x16398e(0x48a,'z$A8')]({'x':[null],'y':[null],'name':_0x16398e(0x68f,'Xo4W')+_0x16398e(0x31d,')Jpu')+')','type':_0x16398e(0x1bb,'zpR4')+'er','mode':_0x16398e(0x608,'QnBl'),'line':{'color':_0x3ae211,'width':_0x50575f,'dash':_0x2501ce},'showlegend':!![],'curveGroup':_0x16398e(0x660,'^B64'),'legendgroup':_0x16398e(0x15a,'Rbb]')});_0x1355fd[_0x16398e(0x49a,'mJS4')]({'x':[null],'y':[null],'name':_0x2d61e9,'type':'scatt'+'er','mode':_0x16398e(0x5dc,'$fX5'),'line':{'color':_0x17694b,'width':_0x4b8e11,'dash':_0x546939},'showlegend':!![],'curveGroup':_0x16398e(0x662,'zpR4'),'legendgroup':'rated'});_0x2ddddd&&_0x1355fd['push']({'x':[null],'y':[null],'name':_0x35449f?_0x16398e(0x62c,'$8@4')+_0x16398e(0x2a0,')oDU')+_0x16398e(0x691,'thmO')+_0x16398e(0x424,'rn#Q')+_0x3bf152+(_0x16398e(0x57b,'^B64')+_0x16398e(0x4ee,'yHqR')+')'):_0x16398e(0x698,'IvrV')+_0x16398e(0x2e7,'Y*Sh')+_0x16398e(0x16d,'QnBl')+'n\x20('+_0x3bf152+(_0x16398e(0x556,'c0k&')+_0x16398e(0x59f,'$8@4')),'type':_0x16398e(0x598,'U6RT')+'er','mode':_0x16398e(0x362,'i#Px'),'line':{'color':_0x35449f?_0x16398e(0x56f,'IvrV')+'5e':_0x16398e(0x6bc,'QnBl')+'f7','width':2.8,'dash':'solid'},'showlegend':!![],'curveGroup':_0x16398e(0x219,'8uGe')+'on','legendgroup':'stati'+'on'});_0x1355fd[_0x16398e(0x23b,'i#Px')]({'x':[null],'y':[null],'name':'Syste'+_0x16398e(0x3d5,'$Awu')+'ve','type':'scatt'+'er','mode':_0x16398e(0x4d6,'$8@4'),'line':{'color':_0x5b3f2d,'width':2.2,'dash':_0xd30b56},'showlegend':!![],'curveGroup':_0x16398e(0x4dc,'AQA5')+'m','legendgroup':_0x16398e(0x4b4,'1*R6')+'m'});_0x565d39[_0x16398e(0x382,'Xo4W')+'Y']&&_0x565d39[_0x16398e(0x606,'AbmW')+'Y']&&(_0x2ddddd?(_0x1355fd[_0x16398e(0x276,'fQ)]')]({'x':[null],'y':[null],'name':'1x\x20Pu'+_0x16398e(0x427,')Jpu')+_0x16398e(0x2a1,'mmCf')+_0x16398e(0x5a8,'AQA5'),'type':_0x16398e(0x55c,'z$A8')+'er','mode':'marke'+'rs','marker':{'color':_0x17694b,'size':0xa,'symbol':'star'},'showlegend':!![],'curveGroup':_0x16398e(0x66c,'5qW1')+_0x16398e(0x61a,'zpR4'),'legendgroup':_0x16398e(0x323,'PQS2')+_0x16398e(0x279,'(Iaf')}),_0x1355fd[_0x16398e(0x1a3,'3trC')]({'x':[null],'y':[null],'name':_0x16398e(0x1b1,'6zqs')+'on\x20To'+_0x16398e(0x676,'mmCf')+'uty\x20('+_0x3bf152+'x)','type':_0x16398e(0x47a,'6zqs')+'er','mode':'marke'+'rs','marker':{'color':_0x35449f?_0x16398e(0x4e8,'1*R6')+'5e':_0x16398e(0x65e,'PQS2')+'f7','size':0xb,'symbol':_0x16398e(0x539,'PQS2')+'nd'},'showlegend':!![],'curveGroup':_0x16398e(0x685,'yHqR')+_0x16398e(0x694,')Jpu')+'on','legendgroup':_0x16398e(0x3d9,'A3HS')+_0x16398e(0x449,'1*R6')+'on'})):_0x1355fd[_0x16398e(0x359,'(Iaf')]({'x':[null],'y':[null],'name':_0x16398e(0x3a0,'mJS4')+_0x16398e(0x3b2,'sBHL')+_0x16398e(0x344,'XCYk')+_0x16398e(0x655,'$fX5'),'type':'scatt'+'er','mode':_0x16398e(0x582,'XCYk')+'rs','marker':{'color':_0x17694b,'size':0xb,'symbol':_0x16398e(0x1b2,'yHqR')},'showlegend':!![],'curveGroup':'duty','legendgroup':_0x16398e(0x634,'c0k&')}));if(_0x565d39[_0x16398e(0x663,'XCYk')+'Y']&&_0x565d39[_0x16398e(0x4af,')oDU')+'Y']){if(_0x35449f){const _0x73f4ad=_0x565d39[_0x16398e(0x51e,'3trC')+_0x16398e(0x519,'mJS4')+'Y']!=null&&_0x565d39[_0x16398e(0x649,'sBHL')+'Q_DUT'+'Y']!==''?_0x565d39['EVAL_'+_0x16398e(0x631,'6H#W')+'Y']:_0x565d39['Q_DUT'+'Y']/_0x3bf152,_0x592c14=_0x565d39[_0x16398e(0x28f,'$Awu')+'Y'];_0x1355fd[_0x16398e(0x2ad,'Rbb]')]({'x':[_0x73f4ad],'y':[_0x592c14],'name':'1x\x20Pu'+_0x16398e(0x2c6,'V5p4')+'ty\x20Po'+_0x16398e(0x328,'6zqs'),'type':'scatt'+'er','mode':_0x16398e(0x529,'thmO')+'rs','marker':{'color':_0x17694b,'size':0xc,'symbol':'star'},'yaxis':'y4','showlegend':![],'curveGroup':'duty_'+_0x16398e(0x61a,'zpR4'),'legendgroup':_0x16398e(0x647,'V5p4')+_0x16398e(0x1a8,'mmCf'),'hovertemplate':_0x16398e(0x40d,'^B64')+'r-Pum'+_0x16398e(0x532,'T)Sm')+_0x16398e(0x466,'V5p4')+_0x16398e(0x4bd,'yHqR')+_0x16398e(0x153,'yHqR')+_0x3bf152+(_0x16398e(0x349,')Jpu')+_0x16398e(0x2c0,'1*R6')+_0x16398e(0x3ef,'U6RT')+_0x16398e(0x686,'Y*Sh')+_0x16398e(0x59c,'AbmW'))+_0x16b4e7+(_0x16398e(0x4a7,'rn#Q')+_0x16398e(0x2bb,'yHqR')+_0x16398e(0x64d,'T)Sm')+'1f}\x20')+_0x2aae4d+(_0x16398e(0x35d,'3trC')+_0x16398e(0x67e,'IvrV')+_0x16398e(0x409,'F[]e')+_0x16398e(0x45d,'^B64'))+(_0x565d39[_0x16398e(0x3d7,'rn#Q')+_0x16398e(0x633,'mmCf')+'W']||0x0)[_0x16398e(0x6a9,'6zqs')+'ed'](0x1)+'\x20'+_0x21289b+('<br>E'+_0x16398e(0x264,'&lJQ')+_0x16398e(0x6a7,'yHqR')+'\x20')+(_0x565d39[_0x16398e(0x496,'zpR4')+'A']||0x0)[_0x16398e(0x4d9,'1*R6')+'ed'](0x1)+(_0x16398e(0x5e4,'c0k&')+_0x16398e(0x44b,'U6RT')+'/extr'+'a>')}),_0x24b8c6[_0x16398e(0x1ea,'sBHL')]({'x':_0x73f4ad,'y':_0x592c14,'xref':'x','yref':'y4','text':'1x\x20Du'+'ty','showarrow':!![],'arrowcolor':_0x17694b,'ax':0x14,'ay':-0x14,'font':{'color':_0x17694b,'size':0xa},'curveGroup':'duty_'+_0x16398e(0x1a8,'mmCf')}),_0x1355fd[_0x16398e(0x5f6,'EQ9Y')]({'x':[_0x565d39[_0x16398e(0x519,'mJS4')+'Y']],'y':[_0x565d39[_0x16398e(0x24f,'T)Sm')+'Y']],'name':_0x16398e(0x5e8,'OjaE')+_0x16398e(0x5c1,'XCYk')+'tal\x20D'+'uty\x20('+_0x3bf152+'x)','type':_0x16398e(0x48c,'5qW1')+'er','mode':_0x16398e(0x29d,'$fX5')+'rs','marker':{'color':'#22c5'+'5e','size':0xd,'symbol':'diamo'+'nd'},'yaxis':'y4','showlegend':![],'curveGroup':_0x16398e(0x3be,'c0k&')+'stati'+'on','legendgroup':'duty_'+_0x16398e(0x340,'F[]e')+'on','hovertemplate':_0x16398e(0x3e5,'$Awu')+_0x16398e(0x39b,'mJS4')+'\x20Tota'+_0x16398e(0x421,'oojm')+_0x16398e(0x20c,'mkz0')+_0x3bf152+(_0x16398e(0x2ce,'(Iaf')+_0x16398e(0x49b,'i#Px')+_0x16398e(0x352,'zBj%')+'<br>T'+_0x16398e(0x37f,'EQ9Y')+'Flow:'+'\x20%{x:'+'.1f}\x20')+_0x16b4e7+(_0x16398e(0x316,'Xo4W')+_0x16398e(0x67c,'6zqs')+'%{y:.'+_0x16398e(0x531,'Y*Sh'))+_0x2aae4d+(_0x16398e(0x1ef,'IvrV')+_0x16398e(0x683,'fQ)]')+'ed\x20St'+'ation'+'\x20Powe'+_0x16398e(0x4ad,'Bb81'))+(_0x565d39[_0x16398e(0x6b4,'zVHu')+_0x16398e(0x56e,'A3HS')+_0x16398e(0x3ff,'ME5t')+'WER']||_0x565d39[_0x16398e(0x426,'^B64')+_0x16398e(0x25b,'mJS4')+'W']*_0x3bf152||0x0)[_0x16398e(0x14c,'F[]e')+'ed'](0x1)+'\x20'+_0x21289b+(_0x16398e(0x6b2,'OjaE')+_0x16398e(0x361,'ME5t')+_0x16398e(0x2f3,'&lJQ'))}),_0x24b8c6[_0x16398e(0x4b7,'mmCf')]({'x':_0x565d39[_0x16398e(0x6a0,'rn#Q')+'Y'],'y':_0x565d39[_0x16398e(0x189,'thmO')+'Y'],'xref':'x','yref':'y4','text':_0x16398e(0x4fa,'V5p4')+_0x16398e(0x1cd,'yHqR')+_0x3bf152+'x)','showarrow':!![],'arrowcolor':_0x16398e(0x1d2,'U6RT')+'5e','ax':0x19,'ay':-0x19,'font':{'color':'#22c5'+'5e','size':0xb},'curveGroup':_0x16398e(0x331,'6H#W')+'stati'+'on'});}else{if(_0x5b11af){const _0x26a74f=_0x565d39[_0x16398e(0x615,'zBj%')+'Y'],_0xc7e001=_0x565d39[_0x16398e(0x66d,'fQ)]')+_0x16398e(0x4cb,'ME5t')+'Y']!=null&&_0x565d39[_0x16398e(0x171,'IvrV')+_0x16398e(0x3c0,'rtGy')+'Y']!==''?_0x565d39[_0x16398e(0x198,'T)Sm')+_0x16398e(0x28f,'$Awu')+'Y']:_0x565d39[_0x16398e(0x4cb,'ME5t')+'Y']/_0x3bf152;_0x1355fd[_0x16398e(0x5cc,'zpR4')]({'x':[_0x26a74f],'y':[_0xc7e001],'name':_0x16398e(0x653,'1*R6')+_0x16398e(0x3b7,'8uGe')+'ty\x20Po'+'int','type':_0x16398e(0x5fb,'zVHu')+'er','mode':_0x16398e(0x4c2,'c0k&')+'rs','marker':{'color':_0x17694b,'size':0xc,'symbol':_0x16398e(0x17f,'$8@4')},'yaxis':'y4','showlegend':![],'curveGroup':'duty_'+_0x16398e(0x58a,')oDU'),'legendgroup':_0x16398e(0x4e3,'EQ9Y')+'ind','hovertemplate':_0x16398e(0x600,'AQA5')+_0x16398e(0x651,'rtGy')+_0x16398e(0x5aa,'$8@4')+_0x16398e(0x23d,'QnBl')+_0x16398e(0x6a1,'A3HS')+_0x16398e(0x329,'F[]e')+_0x3bf152+(_0x16398e(0x6a3,'AQA5')+_0x16398e(0x3ba,'IvrV')+_0x16398e(0x298,'$8@4')+_0x16398e(0x467,'&lJQ')+_0x16398e(0x2b4,'$fX5'))+_0x16b4e7+('<br>H'+'ead:\x20'+_0x16398e(0x4d5,'PQS2')+_0x16398e(0x4d4,'c0k&'))+_0x2aae4d+('<br>A'+_0x16398e(0x67e,'IvrV')+'ed\x20Po'+'wer:\x20')+(_0x565d39['OP_PO'+_0x16398e(0x3ec,'6H#W')+'W']||0x0)[_0x16398e(0x1ee,'AQA5')+'ed'](0x1)+'\x20'+_0x21289b+(_0x16398e(0x36e,'QnBl')+_0x16398e(0x515,'rtGy')+_0x16398e(0x284,'A3HS')+'\x20')+(_0x565d39['OP_ET'+'A']||0x0)[_0x16398e(0x552,'A3HS')+'ed'](0x1)+(_0x16398e(0x394,'U6RT')+_0x16398e(0x44b,'U6RT')+_0x16398e(0x491,'QnBl')+'a>')}),_0x24b8c6[_0x16398e(0x40a,'zBj%')]({'x':_0x26a74f,'y':_0xc7e001,'xref':'x','yref':'y4','text':_0x16398e(0x261,'z$A8')+'ty','showarrow':!![],'arrowcolor':_0x17694b,'ax':0x14,'ay':-0x14,'font':{'color':_0x17694b,'size':0xa},'curveGroup':_0x16398e(0x63c,'zVHu')+'ind'}),_0x1355fd[_0x16398e(0x220,'AbmW')]({'x':[_0x565d39[_0x16398e(0x519,'mJS4')+'Y']],'y':[_0x565d39[_0x16398e(0x66a,'yHqR')+'Y']],'name':_0x16398e(0x3bd,'EQ9Y')+_0x16398e(0x4ef,'zBj%')+'tal\x20D'+'uty\x20('+_0x3bf152+'x)','type':_0x16398e(0x1d9,'(Iaf')+'er','mode':_0x16398e(0x670,'$Awu')+'rs','marker':{'color':_0x16398e(0x1f5,'z$A8')+'f7','size':0xd,'symbol':'diamo'+'nd'},'yaxis':'y4','showlegend':![],'curveGroup':_0x16398e(0x472,'zpR4')+_0x16398e(0x3f5,'d(em')+'on','legendgroup':'duty_'+_0x16398e(0x3f0,'sBHL')+'on','hovertemplate':_0x16398e(0x5b4,'fQ)]')+_0x16398e(0x270,'(Iaf')+'\x20Tota'+_0x16398e(0x3f8,'PQS2')+'y\x20('+_0x3bf152+(_0x16398e(0x176,'mJS4')+'ies)<'+_0x16398e(0x45a,'6H#W')+_0x16398e(0x355,'U6RT')+'w:\x20%{'+_0x16398e(0x15c,'mkz0')+'}\x20')+_0x16b4e7+(_0x16398e(0x1df,'Rbb]')+'otal\x20'+_0x16398e(0x1bf,'T)Sm')+'\x20%{y:'+_0x16398e(0x325,'zVHu'))+_0x2aae4d+(_0x16398e(0x31c,'Bb81')+_0x16398e(0x684,'z$A8')+_0x16398e(0x681,'d(em'))}),_0x24b8c6[_0x16398e(0x6be,'1*R6')]({'x':_0x565d39[_0x16398e(0x203,'&mk3')+'Y'],'y':_0x565d39[_0x16398e(0x4af,')oDU')+'Y'],'xref':'x','yref':'y4','text':_0x16398e(0x1f8,'F[]e')+_0x16398e(0x688,'z$A8')+_0x3bf152+'x)','showarrow':!![],'arrowcolor':_0x16398e(0x61b,'OjaE')+'f7','ax':0x19,'ay':-0x19,'font':{'color':'#a855'+'f7','size':0xb},'curveGroup':'duty_'+'stati'+'on'});}else _0x1355fd[_0x16398e(0x38c,'$fX5')]({'x':[_0x565d39['Q_DUT'+'Y']],'y':[_0x565d39[_0x16398e(0x67d,'(Iaf')+'Y']],'name':_0x16398e(0x504,'zBj%')+_0x16398e(0x562,'PQS2')+'Duty\x20'+'Point','type':_0x16398e(0x629,'&lJQ')+'er','mode':'marke'+'rs','marker':{'color':_0x17694b,'size':0xc,'symbol':_0x16398e(0x4c3,'zBj%')},'yaxis':'y4','showlegend':![],'curveGroup':_0x16398e(0x644,'AbmW'),'legendgroup':_0x16398e(0x3fb,'mmCf'),'hovertemplate':_0x16398e(0x4c9,'rn#Q')+_0x16398e(0x68e,'mkz0')+'int</'+_0x16398e(0x645,'Xo4W')+_0x16398e(0x5ab,'6zqs')+_0x16398e(0x3d2,'fQ)]')+_0x16398e(0x1a0,'rn#Q')+'\x20'+_0x16b4e7+(_0x16398e(0x210,'3trC')+_0x16398e(0x516,'rtGy')+_0x16398e(0x64d,'T)Sm')+_0x16398e(0x3fd,'6zqs'))+_0x2aae4d+('<extr'+_0x16398e(0x43b,'V5p4')+_0x16398e(0x4bc,'A3HS'))}),_0x24b8c6[_0x16398e(0x44e,'Bb81')]({'x':_0x565d39[_0x16398e(0x519,'mJS4')+'Y'],'y':_0x565d39[_0x16398e(0x4a5,'A3HS')+'Y'],'xref':'x','yref':'y4','text':_0x16398e(0x2da,'U6RT'),'showarrow':!![],'arrowcolor':_0x17694b,'ax':0x14,'ay':-0x14,'font':{'color':_0x17694b,'size':0xb},'curveGroup':_0x16398e(0x324,'mkz0')});}}const _0x2bf833=_0x1ec2e6?[0x0,0.2]:null,_0x3749c1=_0x1ec2e6?[0.25,0.45]:[0x0,0.32],_0x437d9b=_0x1ec2e6?[0.5,0.7]:[0.36,0.65],_0x282811=_0x1ec2e6?[0.75,0x1]:[0.69,0x1],_0x52e651=[{'key':'head','domain':_0x282811},{'key':_0x16398e(0x638,'6H#W'),'domain':_0x437d9b},{'key':_0x16398e(0x26b,'T)Sm'),'domain':_0x3749c1}];_0x1ec2e6&&_0x2bf833&&_0x52e651[_0x16398e(0x213,'d(em')]({'key':_0x16398e(0x5db,'IvrV'),'domain':_0x2bf833});let _0x5c0590=_0x16398e(0x1e4,'Bb81');try{_0x5c0590=localStorage['getIt'+'em'](_0x16398e(0x4ec,'oojm')+_0x16398e(0x332,'Y*Sh')+_0x16398e(0x563,'PQS2')+_0x16398e(0x623,'zVHu')+'de')||_0x49e146[_0x16398e(0x433,'z$A8')+_0x16398e(0x4a3,'zpR4')+_0x16398e(0x675,'zpR4')+_0x16398e(0x47f,'(Iaf')]||_0x16398e(0x443,'3trC');}catch(_0x305ab8){_0x5c0590=_0x49e146[_0x16398e(0x69a,'6H#W')+_0x16398e(0x3a3,'ME5t')+_0x16398e(0x485,'6H#W')+_0x16398e(0x3ab,'8uGe')]||_0x16398e(0x302,'V5p4');}window['curre'+'ntGra'+_0x16398e(0x448,'QnBl')+_0x16398e(0x2f2,'mJS4')+'de']=_0x5c0590,window[_0x16398e(0x35f,'ME5t')+_0x16398e(0x152,'z$A8')+_0x16398e(0x321,'A3HS')+_0x16398e(0x38d,'ME5t')]=_0x52e651,window[_0x16398e(0x191,'Bb81')+_0x16398e(0x1e6,'Y*Sh')+_0x16398e(0x33f,'zBj%')+_0x16398e(0x29a,'U6RT')]=_0xbfba26;const _0x197cb5=document[_0x16398e(0x214,'zpR4')+_0x16398e(0x195,'Rbb]')+_0x16398e(0x446,'zBj%')](_0x16398e(0x429,'thmO')+_0x16398e(0x5af,'XCYk')+_0x16398e(0x4b0,'&mk3')+'on');_0x197cb5&&(_0x197cb5[_0x16398e(0x410,'d(em')]=_0x5c0590);const _0x40d7cb=buildBorderShapes(_0x5c0590,_0x52e651,_0xbfba26),_0x29c688={'paper_bgcolor':_0x16398e(0x434,'&lJQ')+'0,0,0'+_0x16398e(0x695,'mmCf'),'plot_bgcolor':_0x16398e(0x407,'6H#W')+_0x16398e(0x41b,'d(em')+_0x16398e(0x192,')Jpu'),'font':{'color':_0x16398e(0x503,'&mk3')+'9e','family':_0x117ab2},'margin':{'t':0x5f,'r':0x50,'l':0x3c,'b':0x28},'hovermode':_0x16398e(0x469,'fQ)]')+'st','xaxis':{'title':_0x16398e(0x22b,'$Awu')+'('+_0x16b4e7+')','gridcolor':_0x5165fd,'zerolinecolor':_0xbfba26,'rangemode':_0x16398e(0x68c,'thmO')+'o'},'yaxis':_0x1ec2e6?{'title':'NPSHr'+'\x20('+_0x18a0e9+')','domain':_0x2bf833,'titlefont':{'color':_0x3ae211},'tickfont':{'color':_0x3ae211},'gridcolor':_0x5165fd,'zerolinecolor':_0xbfba26,'rangemode':_0x16398e(0x3b9,'$Awu')+'o'}:{'visible':![],'domain':[0x0,0x0]},'yaxis2':{'title':_0x16398e(0x235,'6H#W')+'\x20('+_0x21289b+')','domain':_0x3749c1,'titlefont':{'color':_0x303be1},'tickfont':{'color':_0x303be1},'gridcolor':_0x5165fd,'zerolinecolor':_0xbfba26,'rangemode':'tozer'+'o'},'yaxis3':{'title':_0x16398e(0x517,'zBj%')+'%)','domain':_0x437d9b,'titlefont':{'color':_0xdafa19},'tickfont':{'color':_0xdafa19},'gridcolor':_0x5165fd,'zerolinecolor':_0xbfba26,'rangemode':_0x16398e(0x28a,'AQA5')+'o'},'yaxis4':{'title':_0x16398e(0x669,'6H#W')+'('+_0x2aae4d+')','domain':_0x282811,'titlefont':{'color':_0x1b4fea},'tickfont':{'color':_0x1b4fea},'gridcolor':_0x5165fd,'zerolinecolor':_0xbfba26,'rangemode':_0x16398e(0x256,'fQ)]')+'o'},'legend':{'orientation':'h','yanchor':_0x16398e(0x225,'6zqs')+'m','y':1.02,'xanchor':'left','x':0x0,'font':{'size':0xb,'color':_0x16398e(0x21e,'c0k&')+'9e'}},'height':0x384,'annotations':_0x24b8c6,'shapes':_0x40d7cb};applyAxisScale(_0x29c688[_0x16398e(0x37c,'IvrV')],'flow',_0x2bdb42,_0x5dcd89,_0xbfba26),applyAxisScale(_0x29c688[_0x16398e(0x36d,'zBj%')+'4'],_0x16398e(0x1b6,'(Iaf'),_0x2bdb42,_0x5dcd89,_0xbfba26),applyAxisScale(_0x29c688['yaxis'+'3'],_0x16398e(0x29c,'1*R6'),_0x2bdb42,_0x5dcd89,_0xbfba26),applyAxisScale(_0x29c688[_0x16398e(0x550,'rtGy')+'2'],_0x16398e(0x3d4,'$8@4'),_0x2bdb42,_0x5dcd89,_0xbfba26);if(_0x1ec2e6)applyAxisScale(_0x29c688[_0x16398e(0x263,'d(em')],_0x16398e(0x5db,'IvrV'),_0x2bdb42,_0x5dcd89,_0xbfba26);if(_0x35449f){const _0x1b97ba=_0x1355fd[_0x16398e(0x5c7,'6zqs')](_0x35d2e4=>_0x35d2e4[_0x16398e(0x4ab,'ME5t')+_0x16398e(0x1f7,'T)Sm')]==='stati'+'on'),_0x394fad=_0x1b97ba&&_0x1b97ba['x']&&_0x1b97ba['x'][_0x16398e(0x418,'mkz0')+'h']?Math[_0x16398e(0x35b,'U6RT')](..._0x1b97ba['x']):0x0,_0x225d9a=Math['max']((_0x565d39[_0x16398e(0x217,')oDU')+'Y']||0x0)*1.25,_0x394fad*1.08);if(_0x29c688[_0x16398e(0x5da,'OjaE')]['range']&&_0x29c688[_0x16398e(0x4df,'AQA5')]['range'][0x1]<_0x225d9a){const _0xe2da8=getCleanAxisScale(0x0,_0x225d9a,_0x2bdb42[_0x16398e(0x665,'XCYk')+_0x16398e(0x5b7,'PQS2')+_0x16398e(0x5bc,'rn#Q')],_0x2bdb42[_0x16398e(0x205,'A3HS')+_0x16398e(0x4d8,'^B64')+_0x16398e(0x49c,'sBHL')]);_0x29c688['xaxis'][_0x16398e(0x3de,'Rbb]')]=[0x0,_0xe2da8[_0x16398e(0x45e,'8uGe')]];if(_0xe2da8[_0x16398e(0x463,'&mk3')])_0x29c688[_0x16398e(0x291,'zpR4')]['dtick']=_0xe2da8['dtick'];}}else{if(_0x5b11af){const _0x320ff6=_0x1355fd[_0x16398e(0x3dc,'oojm')](_0x1b3528=>_0x1b3528[_0x16398e(0x4a2,'mJS4')+_0x16398e(0x30b,'&mk3')]===_0x16398e(0x5e1,'zBj%')+'on'),_0x53beb3=_0x320ff6&&_0x320ff6['y']&&_0x320ff6['y'][_0x16398e(0x63e,'PQS2')+'h']?Math[_0x16398e(0x6bb,'Y*Sh')](..._0x320ff6['y']):0x0,_0x3acd18=Math[_0x16398e(0x309,'(Iaf')]((_0x565d39[_0x16398e(0x28f,'$Awu')+'Y']||0x0)*1.25,_0x53beb3*1.08);if(_0x29c688[_0x16398e(0x2d0,'mmCf')+'4'][_0x16398e(0x4de,'AbmW')]&&_0x29c688[_0x16398e(0x199,'thmO')+'4'][_0x16398e(0x4c5,'^B64')][0x1]<_0x3acd18){const _0x26de11=getCleanAxisScale(0x0,_0x3acd18,_0x2bdb42[_0x16398e(0x677,'QnBl')+_0x16398e(0x584,'mmCf')+'major'],_0x2bdb42[_0x16398e(0x46e,'ME5t')+_0x16398e(0x4b8,'&mk3')+_0x16398e(0x597,'Xo4W')]);_0x29c688[_0x16398e(0x4b3,'mkz0')+'4'][_0x16398e(0x589,'A3HS')]=[0x0,_0x26de11[_0x16398e(0x6b0,'i#Px')]];if(_0x26de11[_0x16398e(0x50f,'U6RT')])_0x29c688[_0x16398e(0x282,')Jpu')+'4'][_0x16398e(0x549,'6H#W')]=_0x26de11[_0x16398e(0x197,'T)Sm')];}}}const _0x34b6c1=_0x1ec2e6?_0x1355fd:_0x1355fd['filte'+'r'](_0x422a83=>_0x422a83[_0x16398e(0x45b,'A3HS')+'Group']!==_0x16398e(0x2dd,'mJS4'));document['getEl'+_0x16398e(0x314,'yHqR')+'ById']('chart'+_0x16398e(0x63f,'rn#Q'))[_0x16398e(0x25f,'3trC')][_0x16398e(0x3a9,'mJS4')+'t']=_0x16398e(0x4eb,'V5p4'),document[_0x16398e(0x437,'mkz0')+_0x16398e(0x659,'V5p4')+_0x16398e(0x1a5,'QnBl')](_0x16398e(0x1f2,'5qW1')+_0x16398e(0x19e,'ME5t')+_0x16398e(0x42d,'thmO')+'l')[_0x16398e(0x204,'PQS2')][_0x16398e(0x652,'5qW1')+'ay']=_0x16398e(0x1fd,'rtGy'),Plotly['newPl'+'ot'](_0x16398e(0x528,')Jpu')+_0x16398e(0x206,'XCYk'),_0x34b6c1,_0x29c688,{'responsive':!![]}),window['allCh'+_0x16398e(0x439,'6H#W')+'notat'+_0x16398e(0x53e,'&mk3')]=_0x24b8c6['slice'](),window[_0x16398e(0x2ae,'mkz0')+_0x16398e(0x483,'Xo4W')+_0x16398e(0x2cd,'A3HS')]={'hq':!![],'eta':!![],'pow':!![],'npsh':_0x1ec2e6,'rated':!![],'station':!![],'system':!![],'duty_ind':!![],'duty_station':!![],'duty':!![]};const _0x4b31f6=document[_0x16398e(0x157,'mJS4')+_0x16398e(0x350,'(Iaf')+_0x16398e(0x25e,'6H#W')](_0x16398e(0x5e2,'F[]e')+_0x16398e(0x4e2,'AbmW'));_0x4b31f6['on'](_0x16398e(0x313,'8uGe')+_0x16398e(0x3ca,'c0k&')+_0x16398e(0x247,'yHqR')+'ick',function(_0x2f11ff){const _0xecd42d=_0x16398e,_0x4d4b0a=_0x2f11ff[_0xecd42d(0x2f9,')Jpu')][_0x2f11ff[_0xecd42d(0x2ae,'mkz0')+'Numbe'+'r']],_0x3519ee=_0x4d4b0a?_0x4d4b0a['curve'+_0xecd42d(0x4e7,'rn#Q')]:null;if(!_0x3519ee)return!![];return window[_0xecd42d(0x42a,'8uGe')+_0xecd42d(0x592,'$Awu')+'eGrou'+'p'](_0x3519ee),![];}),updateToolbarButtonsState(),updateReportLinks();}function updateChartAnnotations(){const _0x2cab2=a0_0x178b1f,_0x28416f=document[_0x2cab2(0x5c4,'3trC')+_0x2cab2(0x65a,'3trC')+_0x2cab2(0x249,'thmO')](_0x2cab2(0x383,'thmO')+_0x2cab2(0x357,'8uGe'));if(!_0x28416f||!window['allCh'+_0x2cab2(0x3ee,'&mk3')+_0x2cab2(0x368,'oojm')+_0x2cab2(0x4bb,'IvrV')])return;const _0x516c32=window[_0x2cab2(0x4ab,'ME5t')+_0x2cab2(0x336,'yHqR')+_0x2cab2(0x38b,'V5p4')]||{},_0x71159a=window[_0x2cab2(0x4cc,'XCYk')+_0x2cab2(0x439,'6H#W')+'notat'+_0x2cab2(0x520,'&lJQ')][_0x2cab2(0x5f8,'mmCf')+'r'](_0x59bcc8=>{const _0x4a0e24=_0x2cab2;if(!_0x59bcc8[_0x4a0e24(0x650,'PQS2')+_0x4a0e24(0x5d9,'8uGe')])return!![];return _0x516c32[_0x59bcc8[_0x4a0e24(0x238,'mmCf')+_0x4a0e24(0x6b9,'F[]e')]]!==![];});Plotly[_0x2cab2(0x5d3,'thmO')+_0x2cab2(0x457,'XCYk')](_0x28416f,{'annotations':_0x71159a});}function setGroupVisibility(_0x5643bb,_0x52f3f7){const _0x1dfdff=a0_0x178b1f,_0x2c9ec1=document[_0x1dfdff(0x5c4,'3trC')+_0x1dfdff(0x4be,'fQ)]')+_0x1dfdff(0x5b3,'Rbb]')](_0x1dfdff(0x1f3,'fQ)]')+_0x1dfdff(0x19a,'AQA5'));if(!_0x2c9ec1||!_0x2c9ec1[_0x1dfdff(0x35c,'$8@4')])return;if(!window[_0x1dfdff(0x45b,'A3HS')+_0x1dfdff(0x16a,'QnBl')+_0x1dfdff(0x64f,')Jpu')])window[_0x1dfdff(0x2ae,'mkz0')+_0x1dfdff(0x2b8,'fQ)]')+_0x1dfdff(0x55b,'F[]e')]={};window['curve'+_0x1dfdff(0x5fd,'(Iaf')+_0x1dfdff(0x2c2,'AbmW')][_0x5643bb]=_0x52f3f7;const _0x12c2db=[],_0x272eac=[];_0x2c9ec1[_0x1dfdff(0x440,'fQ)]')]['forEa'+'ch']((_0x36727a,_0xa606e3)=>{const _0xd066d7=_0x1dfdff;if(_0x36727a[_0xd066d7(0x221,'&mk3')+'Group']===_0x5643bb){if(_0x36727a[_0xd066d7(0x254,'mmCf')+_0xd066d7(0x5bd,')oDU')])_0x12c2db[_0xd066d7(0x4ac,'Xo4W')](_0xa606e3);else _0x272eac[_0xd066d7(0x4ac,'Xo4W')](_0xa606e3);}}),_0x12c2db['lengt'+'h']>0x0&&Plotly[_0x1dfdff(0x616,'V5p4')+'le'](_0x2c9ec1,{'visible':_0x52f3f7?!![]:_0x1dfdff(0x628,'i#Px')+_0x1dfdff(0x56b,'6zqs')},_0x12c2db),_0x272eac[_0x1dfdff(0x2b3,'oojm')+'h']>0x0&&Plotly[_0x1dfdff(0x3f9,'zVHu')+'le'](_0x2c9ec1,{'visible':_0x52f3f7?!![]:![]},_0x272eac);}window[a0_0x178b1f(0x574,'^B64')+a0_0x178b1f(0x48d,'z$A8')+a0_0x178b1f(0x3f7,'T)Sm')+'p']=function(_0x15f4ee){const _0x5877dd=a0_0x178b1f;if(!window[_0x5877dd(0x364,'T)Sm')+_0x5877dd(0x245,'PQS2')+_0x5877dd(0x43e,'1*R6')])window[_0x5877dd(0x4ab,'ME5t')+_0x5877dd(0x2e3,'&lJQ')+_0x5877dd(0x1bd,'AQA5')]={};const _0x247516=window[_0x5877dd(0x3df,'Y*Sh')+'Visib'+_0x5877dd(0x43e,'1*R6')][_0x15f4ee]!==![];setGroupVisibility(_0x15f4ee,!_0x247516),updateChartAnnotations(),updateToolbarButtonsState(),updateReportLinks();},window[a0_0x178b1f(0x2d4,'rtGy')+a0_0x178b1f(0x396,'IvrV')+'Point'+'s']=function(){const _0x39e254=a0_0x178b1f,_0x5de163=window[_0x39e254(0x38e,'8uGe')+'Visib'+_0x39e254(0x68d,'d(em')]||{},_0x2de78a=_0x5de163[_0x39e254(0x557,')oDU')]!==![]||_0x5de163['duty_'+_0x39e254(0x543,'z$A8')]!==![]||_0x5de163[_0x39e254(0x431,'&lJQ')+_0x39e254(0x40c,'OjaE')+'on']!==![],_0x1b49d2=!_0x2de78a;[_0x39e254(0x161,'OjaE'),'duty_'+_0x39e254(0x4f3,'mkz0'),_0x39e254(0x342,'U6RT')+'stati'+'on'][_0x39e254(0x65f,'(Iaf')+'ch'](_0x225069=>{setGroupVisibility(_0x225069,_0x1b49d2);}),updateChartAnnotations(),updateToolbarButtonsState(),updateReportLinks();},window[a0_0x178b1f(0x390,'&mk3')+a0_0x178b1f(0x4d3,'mmCf')+a0_0x178b1f(0x25a,'6H#W')]=function(){const _0x5eb5eb=a0_0x178b1f,_0x2abcd6=window[_0x5eb5eb(0x168,'IvrV')+_0x5eb5eb(0x524,'XCYk')+_0x5eb5eb(0x69c,'IvrV')]||{},_0x284ed7=_0x2abcd6['hq']!==![]||_0x2abcd6[_0x5eb5eb(0x510,'8uGe')]!==![]||_0x2abcd6[_0x5eb5eb(0x1da,'zVHu')]!==![]||_0x2abcd6['npsh']!==![],_0x4bf575=!_0x284ed7;['hq',_0x5eb5eb(0x222,'oojm'),_0x5eb5eb(0x35a,'$8@4'),'npsh'][_0x5eb5eb(0x20f,'PQS2')+'ch'](_0x5c6158=>{setGroupVisibility(_0x5c6158,_0x4bf575);}),updateChartAnnotations(),updateToolbarButtonsState(),updateReportLinks();};function updateToolbarButtonsState(){const _0x55abf4=a0_0x178b1f,_0x132259=window[_0x55abf4(0x32e,'fQ)]')+_0x55abf4(0x64b,'3trC')+'ility']||{};function _0x20541a(_0x30a8c1,_0x1b9b33){const _0x260dba=_0x55abf4,_0x443813=document['getEl'+'ement'+_0x260dba(0x347,'zVHu')](_0x30a8c1);if(!_0x443813)return;_0x1b9b33?(_0x443813[_0x260dba(0x494,'5qW1')+_0x260dba(0x170,'oojm')]['add'](_0x260dba(0x353,'thmO')+'e'),_0x443813[_0x260dba(0x6ba,'Xo4W')][_0x260dba(0x577,'$8@4')+'ty']='1',_0x443813[_0x260dba(0x204,'PQS2')]['borde'+_0x260dba(0x4c0,'$8@4')+'r']=_0x260dba(0x267,'(Iaf')+'ff',_0x443813['style'][_0x260dba(0x2fa,'6zqs')]='#ffff'+'ff'):(_0x443813[_0x260dba(0x2d5,'OjaE')+'List'][_0x260dba(0x5e5,'mmCf')+'e'](_0x260dba(0x375,'sBHL')+'e'),_0x443813['style']['opaci'+'ty']='0.45',_0x443813[_0x260dba(0x489,'$8@4')][_0x260dba(0x5c3,'mJS4')+'rColo'+'r']=_0x260dba(0x414,'AQA5')+'3d',_0x443813['style'][_0x260dba(0x2f6,'i#Px')]=_0x260dba(0x307,'EQ9Y')+'9e');}_0x20541a(_0x55abf4(0x34f,'AbmW')+_0x55abf4(0x3d6,'8uGe')+_0x55abf4(0x4d0,'zpR4')+'d',_0x132259[_0x55abf4(0x341,'V5p4')]!==![]),_0x20541a(_0x55abf4(0x42f,'d(em')+'oggle'+_0x55abf4(0x237,'Rbb]')+_0x55abf4(0x3a8,'fQ)]'),_0x132259[_0x55abf4(0x61e,'Rbb]')+'on']!==![]),_0x20541a(_0x55abf4(0x371,'rn#Q')+'oggle'+_0x55abf4(0x39e,'mmCf')+'em',_0x132259[_0x55abf4(0x54f,'rtGy')+'m']!==![]);const _0x5d40fc=_0x132259[_0x55abf4(0x188,'PQS2')]!==![]&&_0x132259[_0x55abf4(0x1c3,')Jpu')+_0x55abf4(0x279,'(Iaf')]!==![]&&_0x132259[_0x55abf4(0x48e,'T)Sm')+_0x55abf4(0x33c,'i#Px')+'on']!==![];_0x20541a(_0x55abf4(0x567,'mkz0')+_0x55abf4(0x664,'ME5t')+_0x55abf4(0x5e7,'6H#W'),_0x5d40fc);const _0x45a1b0=_0x132259['hq']!==![]||_0x132259[_0x55abf4(0x32a,'rtGy')]!==![]||_0x132259[_0x55abf4(0x671,'$Awu')]!==![];_0x20541a(_0x55abf4(0x330,'z$A8')+_0x55abf4(0x5fa,'PQS2')+_0x55abf4(0x293,'fQ)]'),_0x45a1b0);}window[a0_0x178b1f(0x571,'rn#Q')+a0_0x178b1f(0x35e,'AQA5')+'nRepo'+'rt']=function(_0x55423f,_0x2a1155){const _0x3f2a7f=a0_0x178b1f;if(_0x55423f)_0x55423f[_0x3f2a7f(0x478,'$Awu')+'ntDef'+_0x3f2a7f(0x2fb,'5qW1')]();const _0x5e598c=window[_0x3f2a7f(0x322,'F[]e')+_0x3f2a7f(0x245,'PQS2')+_0x3f2a7f(0x564,'zBj%')]||{},_0x4a05bf=[];if(_0x5e598c['hq']===![])_0x4a05bf['push']('hq');if(_0x5e598c[_0x3f2a7f(0x54b,'1*R6')]===![])_0x4a05bf[_0x3f2a7f(0x44e,'Bb81')](_0x3f2a7f(0x447,'c0k&'));if(_0x5e598c[_0x3f2a7f(0x5fc,'Xo4W')]===![])_0x4a05bf['push'](_0x3f2a7f(0x658,'&lJQ'));if(_0x5e598c['npsh']===![])_0x4a05bf[_0x3f2a7f(0x213,'d(em')](_0x3f2a7f(0x415,'3trC'));if(_0x5e598c[_0x3f2a7f(0x297,'c0k&')]===![])_0x4a05bf[_0x3f2a7f(0x5a6,'$Awu')](_0x3f2a7f(0x1db,'&lJQ'));if(_0x5e598c[_0x3f2a7f(0x3f0,'sBHL')+'on']===![])_0x4a05bf['push'](_0x3f2a7f(0x449,'1*R6')+'on');if(_0x5e598c[_0x3f2a7f(0x1b7,'c0k&')+'m']===![])_0x4a05bf[_0x3f2a7f(0x2c3,'rtGy')](_0x3f2a7f(0x208,'QnBl')+'m');if(_0x5e598c[_0x3f2a7f(0x619,'zVHu')]===![])_0x4a05bf[_0x3f2a7f(0x2e5,'thmO')](_0x3f2a7f(0x4b2,'XCYk'));if(_0x5e598c[_0x3f2a7f(0x48e,'T)Sm')+_0x3f2a7f(0x58a,')oDU')]===![])_0x4a05bf[_0x3f2a7f(0x587,'F[]e')](_0x3f2a7f(0x323,'PQS2')+_0x3f2a7f(0x4f5,'&lJQ'));if(_0x5e598c[_0x3f2a7f(0x626,'8uGe')+_0x3f2a7f(0x184,'$fX5')+'on']===![])_0x4a05bf['push'](_0x3f2a7f(0x3fc,'i#Px')+'stati'+'on');const _0x588bcb={'show_hq':_0x5e598c['hq']!==![]?'1':'0','show_eta':_0x5e598c[_0x3f2a7f(0x678,'yHqR')]!==![]?'1':'0','show_pow':_0x5e598c[_0x3f2a7f(0x26c,'AbmW')]!==![]?'1':'0','show_npsh':_0x5e598c[_0x3f2a7f(0x3c2,'A3HS')]!==![]?'1':'0','show_rated':_0x5e598c[_0x3f2a7f(0x388,'$fX5')]!==![]?'1':'0','show_station':_0x5e598c[_0x3f2a7f(0x5a2,'AQA5')+'on']!==![]?'1':'0','show_sys':_0x5e598c[_0x3f2a7f(0x216,'5qW1')+'m']!==![]?'1':'0','show_duty':_0x5e598c['duty']!==![]?'1':'0','show_duty_ind':_0x5e598c[_0x3f2a7f(0x626,'8uGe')+_0x3f2a7f(0x58d,'PQS2')]!==![]?'1':'0','show_duty_station':_0x5e598c[_0x3f2a7f(0x621,'(Iaf')+_0x3f2a7f(0x32c,'Bb81')+'on']!==![]?'1':'0','hidden_curves':_0x4a05bf[_0x3f2a7f(0x3bf,'8uGe')](',')};return fetch(_0x3f2a7f(0x23f,')Jpu')+_0x3f2a7f(0x538,'OjaE')+_0x3f2a7f(0x42e,'IvrV')+_0x3f2a7f(0x632,')oDU')+_0x3f2a7f(0x5a5,'mkz0')+_0x3f2a7f(0x3eb,'5qW1'),{'method':'POST','headers':{'Content-Type':_0x3f2a7f(0x568,'zpR4')+_0x3f2a7f(0x612,'F[]e')+_0x3f2a7f(0x4a9,'Xo4W')+'n'},'body':JSON[_0x3f2a7f(0x30f,'d(em')+_0x3f2a7f(0x453,'zBj%')]({'report_id':_0x2a1155,'params':_0x588bcb})})['then'](_0x290136=>_0x290136[_0x3f2a7f(0x59a,'$8@4')]())[_0x3f2a7f(0x692,'PQS2')](_0x4fc0de=>{const _0x5cb7c8=_0x3f2a7f;window[_0x5cb7c8(0x366,')oDU')](_0x5cb7c8(0x31b,')oDU')+_0x5cb7c8(0x622,'i#Px')+_0x5cb7c8(0x391,'$fX5'),_0x5cb7c8(0x275,'OjaE')+'k');})[_0x3f2a7f(0x15e,'$8@4')](_0x367f46=>{const _0xfcc0ee=_0x3f2a7f;console['error'](_0xfcc0ee(0x300,'rtGy')+_0xfcc0ee(0x4c4,'T)Sm')+_0xfcc0ee(0x432,'XCYk')+'ctive'+_0xfcc0ee(0x224,'QnBl')+_0xfcc0ee(0x158,'PQS2'),_0x367f46),window[_0xfcc0ee(0x54e,'oojm')](_0xfcc0ee(0x186,'sBHL')+_0xfcc0ee(0x625,'EQ9Y')+_0xfcc0ee(0x2db,'QnBl'),_0xfcc0ee(0x41f,'mkz0')+'k');}),![];};function updateReportLinks(){const _0x44eab2=a0_0x178b1f,_0x271420=window[_0x44eab2(0x47b,'AbmW')+_0x44eab2(0x63d,')Jpu')+_0x44eab2(0x163,'zVHu')]||{},_0x127ab1=[];if(_0x271420['hq']===![])_0x127ab1[_0x44eab2(0x6be,'1*R6')]('hq');if(_0x271420[_0x44eab2(0x420,'3trC')]===![])_0x127ab1[_0x44eab2(0x2bf,'&lJQ')](_0x44eab2(0x285,'sBHL'));if(_0x271420[_0x44eab2(0x169,'yHqR')]===![])_0x127ab1[_0x44eab2(0x56c,'&mk3')](_0x44eab2(0x169,'yHqR'));if(_0x271420['npsh']===![])_0x127ab1[_0x44eab2(0x150,'rn#Q')]('npsh');if(_0x271420[_0x44eab2(0x230,'F[]e')]===![])_0x127ab1[_0x44eab2(0x44e,'Bb81')](_0x44eab2(0x442,'8uGe'));if(_0x271420[_0x44eab2(0x553,'zVHu')+'on']===![])_0x127ab1[_0x44eab2(0x337,'6zqs')]('stati'+'on');if(_0x271420[_0x44eab2(0x18c,'XCYk')+'m']===![])_0x127ab1['push'](_0x44eab2(0x583,'V5p4')+'m');if(_0x271420[_0x44eab2(0x52d,'d(em')]===![])_0x127ab1['push'](_0x44eab2(0x5ba,'EQ9Y'));if(_0x271420[_0x44eab2(0x403,'rtGy')+_0x44eab2(0x3a5,'T)Sm')]===![])_0x127ab1[_0x44eab2(0x23b,'i#Px')](_0x44eab2(0x635,'zBj%')+_0x44eab2(0x596,'d(em'));if(_0x271420['duty_'+_0x44eab2(0x545,'XCYk')+'on']===![])_0x127ab1['push']('duty_'+_0x44eab2(0x4f4,'(Iaf')+'on');const _0x8511ce={'show_hq':_0x271420['hq']!==![]?'1':'0','show_eta':_0x271420[_0x44eab2(0x57e,'AbmW')]!==![]?'1':'0','show_pow':_0x271420[_0x44eab2(0x36c,'6zqs')]!==![]?'1':'0','show_npsh':_0x271420['npsh']!==![]?'1':'0','show_rated':_0x271420[_0x44eab2(0x58f,'mJS4')]!==![]?'1':'0','show_station':_0x271420['stati'+'on']!==![]?'1':'0','show_sys':_0x271420[_0x44eab2(0x241,'zBj%')+'m']!==![]?'1':'0','show_duty':_0x271420[_0x44eab2(0x269,'sBHL')]!==![]?'1':'0','show_duty_ind':_0x271420[_0x44eab2(0x48e,'T)Sm')+_0x44eab2(0x1a8,'mmCf')]!==![]?'1':'0','show_duty_station':_0x271420[_0x44eab2(0x323,'PQS2')+'stati'+'on']!==![]?'1':'0','hidden_curves':_0x127ab1[_0x44eab2(0x646,'6H#W')](',')};fetch(_0x44eab2(0x1d6,'mmCf')+_0x44eab2(0x3db,'&mk3')+_0x44eab2(0x272,'U6RT')+_0x44eab2(0x52f,'yHqR')+_0x44eab2(0x53c,'thmO')+_0x44eab2(0x4ff,')Jpu'),{'method':_0x44eab2(0x690,'1*R6'),'headers':{'Content-Type':_0x44eab2(0x178,'d(em')+_0x44eab2(0x1c8,'rtGy')+_0x44eab2(0x1af,'$8@4')+'n'},'body':JSON[_0x44eab2(0x54a,'c0k&')+_0x44eab2(0x462,'d(em')]({'params':_0x8511ce})})['catch'](()=>{});}document[a0_0x178b1f(0x27a,'^B64')+a0_0x178b1f(0x438,'1*R6')+a0_0x178b1f(0x398,'fQ)]')+'r'](a0_0x178b1f(0x25c,'fQ)]')+a0_0x178b1f(0x57a,'&mk3')+a0_0x178b1f(0x26a,'Y*Sh')+'d',fetchPumpData);
+let pumpData = null;
+
+async function fetchPumpData() {
+  const loadingEl = document.getElementById('chartLoading');
+  if (loadingEl) loadingEl.style.display = 'block';
+
+  if (!window.PumpDetailsConfig || !window.PumpDetailsConfig.PUMP_ID) {
+    console.warn("window.PumpDetailsConfig is missing or PUMP_ID is undefined:", window.PumpDetailsConfig);
+    if (loadingEl) loadingEl.style.display = 'none';
+    return;
+  }
+
+  const cfg = window.PumpDetailsConfig;
+  const params = new URLSearchParams({
+    ids: cfg.PUMP_ID,
+    liquid: cfg.LIQUID_TYPE || 'water',
+    rho: (cfg.RHO !== undefined && cfg.RHO !== null) ? cfg.RHO : 1000,
+    viscosity_cSt: (cfg.VISCOSITY !== undefined && cfg.VISCOSITY !== null) ? cfg.VISCOSITY : 1.0,
+    slurry_cv: (cfg.SLURRY_CV !== undefined && cfg.SLURRY_CV !== null) ? cfg.SLURRY_CV : 0.0,
+    slurry_d50: (cfg.SLURRY_D50 !== undefined && cfg.SLURRY_D50 !== null) ? cfg.SLURRY_D50 : 0.3,
+    rho_solid: (cfg.RHO_SOLID !== undefined && cfg.RHO_SOLID !== null) ? cfg.RHO_SOLID : 2650.0,
+    operation_mode: cfg.OPERATION_MODE || 'fixed'
+  });
+
+  try {
+    const res = await fetch(`/papi/compare-pumps?${params.toString()}`);
+    const data = await res.json();
+    if (data && data.length > 0) {
+      pumpData = data[0];
+      renderAll();
+    }
+  } catch (e) {
+    console.error("Error fetching pump data:", e);
+  } finally {
+    document.getElementById('chartLoading').style.display = 'none';
+  }
+}
+
+// ── Universal Unit Conversion Factors ────────────────────────────────────────
+const UNIT_FACTORS = {
+  flow: {
+    m3h: 1.0, ls: 3.6, lmin: 0.06, gpm: 0.227124707, ukgpm: 0.2727654, cfs: 101.9406, mgd: 157.7255
+  },
+  head: {
+    m: 1.0, ft: 0.3048, kpa: 0.1019716, bar: 10.19716, psi: 0.70307
+  },
+  power: {
+    kw: 1.0, hp: 0.745699872, w: 0.001, mw: 1000.0
+  }
+};
+
+function normalizeDashStyle(styleStr, fallback = 'solid') {
+  if (!styleStr) return fallback;
+  const s = String(styleStr).toLowerCase().trim();
+  if (s === 'dashed' || s === 'dash') return 'dash';
+  if (s === 'dotted' || s === 'dot') return 'dot';
+  if (s === 'dashdot') return 'dashdot';
+  if (s === 'longdash') return 'longdash';
+  if (s === 'solid') return 'solid';
+  return fallback;
+}
+
+function getDetailsUnitScaleRatio(axisName, pumpObj = {}) {
+  if (axisName === 'eff') return 1.0;
+
+  const cfg = window.PumpDetailsConfig || {};
+  const unitQ = cfg.UNIT_Q || 'm3h';
+  const unitH = cfg.UNIT_H || 'm';
+  const unitNpsh = cfg.UNIT_NPSH || 'm';
+  const unitPow = cfg.UNIT_POW || 'kw';
+
+  // Standardize pump native units
+  const nativeQ = (pumpObj.unit_q || 'm3h').toLowerCase().replace('/', '').replace('³', '3').replace('^', '').replace(' ', '');
+  const nativeH = (pumpObj.unit_h || 'm').toLowerCase().replace('/', '').replace(' ', '');
+  const nativeNpsh = (pumpObj.unit_npsh || pumpObj.unit_h || 'm').toLowerCase().replace('/', '').replace(' ', '');
+  const nativePow = (pumpObj.unit_power || pumpObj.unit_pow || 'kw').toLowerCase().replace('/', '').replace(' ', '');
+
+  const factorNativeQ = UNIT_FACTORS.flow[nativeQ] || 1.0;
+  const factorTargetQ = UNIT_FACTORS.flow[unitQ] || 1.0;
+
+  const factorNativeH = UNIT_FACTORS.head[nativeH] || 1.0;
+  const factorTargetH = UNIT_FACTORS.head[unitH] || 1.0;
+
+  const factorNativeNpsh = UNIT_FACTORS.head[nativeNpsh] || 1.0;
+  const factorTargetNpsh = UNIT_FACTORS.head[unitNpsh] || 1.0;
+
+  const factorNativePow = UNIT_FACTORS.power[nativePow] || 1.0;
+  const factorTargetPow = UNIT_FACTORS.power[unitPow] || 1.0;
+
+  // Ratio converts stored axis numbers from pump's native unit into target display unit
+  if (axisName === 'flow') {
+    return factorNativeQ / factorTargetQ;
+  } else if (axisName === 'head') {
+    return factorNativeH / factorTargetH;
+  } else if (axisName === 'npsh') {
+    return factorNativeNpsh / factorTargetNpsh;
+  } else if (axisName === 'power') {
+    return factorNativePow / factorTargetPow;
+  }
+  return 1.0;
+}
+
+function getCleanAxisScale(rawMin, rawMax, majorDivisions, minorSubticks) {
+  if (rawMax === null || rawMax === undefined) {
+    return { min: rawMin, max: rawMax, dtick: null, minor: minorSubticks };
+  }
+
+  const minVal = (rawMin !== null && rawMin !== undefined) ? Number(rawMin) : 0;
+  const maxVal = Number(rawMax);
+  const span = maxVal - minVal;
+
+  if (span <= 0) {
+    return { min: minVal, max: maxVal, dtick: null, minor: minorSubticks };
+  }
+
+  let targetStep = (majorDivisions !== null && majorDivisions !== undefined && Number(majorDivisions) > 0) ? span / Number(majorDivisions) : span / 5.0;
+
+  const multipliers = [1.0, 1.5, 2.0, 2.5, 5.0, 10.0];
+  const mag = Math.pow(10, Math.floor(Math.log10(targetStep > 0 ? targetStep : 1.0)));
+
+  let candidates = [];
+  [0.1, 1.0, 10.0].forEach(decade => {
+    multipliers.forEach(m => {
+      candidates.push(m * mag * decade);
+    });
+  });
+
+  let bestStep = candidates[0];
+  let minDiff = Math.abs(bestStep - targetStep);
+  candidates.forEach(step => {
+    const diff = Math.abs(step - targetStep);
+    if (diff < minDiff) {
+      minDiff = diff;
+      bestStep = step;
+    }
+  });
+
+  return {
+    min: minVal,
+    max: maxVal,
+    dtick: bestStep,
+    minor: minorSubticks
+  };
+}
+
+function applyAxisScale(axisConfig, axisKey, pumpObj, minorGridColor, axisLineColor) {
+  const scaleRatio = getDetailsUnitScaleRatio(axisKey, pumpObj);
+  const rawMin = pumpObj[`axis_${axisKey}_min`];
+  const rawMax = pumpObj[`axis_${axisKey}_max`];
+  const majorDiv = pumpObj[`axis_${axisKey}_major`];
+  const minorSub = pumpObj[`axis_${axisKey}_minor`];
+
+  const scaledMin = (rawMin !== null && rawMin !== undefined && rawMin !== '') ? Number(rawMin) * scaleRatio : null;
+  const scaledMax = (rawMax !== null && rawMax !== undefined && rawMax !== '') ? Number(rawMax) * scaleRatio : null;
+
+  const clean = getCleanAxisScale(scaledMin, scaledMax, majorDiv, minorSub);
+
+  if (clean.min !== null && clean.max !== null) {
+    axisConfig.range = [clean.min, clean.max];
+    axisConfig.autorange = false;
+  } else {
+    axisConfig.rangemode = 'tozero';
+    axisConfig.autorange = true;
+  }
+
+  if (clean.dtick !== null) {
+    axisConfig.dtick = clean.dtick;
+  }
+
+  if (clean.minor && Number(clean.minor) > 0) {
+    axisConfig.minor = {
+      nticks: Number(clean.minor) + 1,
+      gridcolor: minorGridColor,
+      gridwidth: 1,
+      showgrid: true
+    };
+  }
+
+  axisConfig.showline = true;
+  axisConfig.linewidth = 1.5;
+  axisConfig.linecolor = axisLineColor;
+  axisConfig.mirror = true;
+}
+
+/**
+ * Constructs Plotly layout shapes for subplot panel borders (including top borders)
+ * and/or a single enclosing outer outline border for the entire graph area.
+ *
+ * @param {string} mode - 'both' | 'panels' | 'outline' | 'none'
+ * @param {Array<{key: string, domain: number[]}>} activeDomains - Active subplot domains
+ * @param {string} color - Border line color (hex or rgba)
+ * @returns {Array} List of Plotly shape objects
+ */
+function buildBorderShapes(mode, activeDomains, color) {
+  if (!activeDomains || activeDomains.length === 0 || mode === 'none') {
+    return [];
+  }
+
+  const shapes = [];
+  const borderColor = color || '#30363d';
+  const borderWidth = 1.5;
+
+  // 1. Individual Subplot Panel Borders (crisp top border + complete bounding box for each panel)
+  if (mode === 'panels' || mode === 'both') {
+    activeDomains.forEach(d => {
+      if (d.domain && d.domain.length === 2) {
+        shapes.push({
+          type: 'rect',
+          xref: 'paper',
+          yref: 'paper',
+          x0: 0,
+          x1: 1,
+          y0: d.domain[0],
+          y1: d.domain[1],
+          line: {
+            color: borderColor,
+            width: borderWidth
+          },
+          fillcolor: 'rgba(0,0,0,0)',
+          layer: 'below'
+        });
+      }
+    });
+  }
+
+  // 2. Single Outline Border for the entire Graph Area
+  if (mode === 'outline' || mode === 'both') {
+    const minY = Math.min(...activeDomains.map(d => d.domain[0]));
+    const maxY = Math.max(...activeDomains.map(d => d.domain[1]));
+    shapes.push({
+      type: 'rect',
+      xref: 'paper',
+      yref: 'paper',
+      x0: 0,
+      x1: 1,
+      y0: minY,
+      y1: maxY,
+      line: {
+        color: borderColor,
+        width: mode === 'outline' ? 2.0 : 1.8
+      },
+      fillcolor: 'rgba(0,0,0,0)',
+      layer: 'below'
+    });
+  }
+
+  return shapes;
+}
+
+/**
+ * Updates the graph border mode interactively on the live Plotly chart
+ * and persists the user preference in localStorage.
+ *
+ * @param {string} mode - 'both' | 'panels' | 'outline' | 'none'
+ */
+window.setGraphBorderMode = function(mode) {
+  if (!['both', 'panels', 'outline', 'none'].includes(mode)) {
+    mode = 'both';
+  }
+  try {
+    localStorage.setItem('pump_graph_border_mode', mode);
+  } catch (e) {}
+
+  window.currentGraphBorderMode = mode;
+  const selectEl = document.getElementById('graphBorderOption');
+  if (selectEl && selectEl.value !== mode) {
+    selectEl.value = mode;
+  }
+
+  const chartEl = document.getElementById('chartComp');
+  if (chartEl && chartEl.layout && window.activeGraphDomains) {
+    const shapes = buildBorderShapes(mode, window.activeGraphDomains, window.currentAxisLineColor || '#30363d');
+    Plotly.relayout(chartEl, { shapes: shapes });
+  }
+};
+
+function addLabel(annotations, x, y, yref, text, color, isMid = false, curveGroup = null) {
+  if (x && x.length > 0) {
+    let idx = isMid ? Math.floor(x.length / 2) : x.length - 1;
+    annotations.push({
+      x: x[idx],
+      y: y[idx],
+      xref: 'x', yref: yref,
+      text: text,
+      showarrow: false,
+      xanchor: isMid ? 'center' : 'left',
+      yanchor: isMid ? 'bottom' : 'middle',
+      font: { color: color, size: 11 },
+      xshift: isMid ? 0 : 5,
+      yshift: isMid ? 10 : 0,
+      curveGroup: curveGroup
+    });
+  }
+}
+
+function renderAll() {
+  if (!pumpData) return;
+  const fam = pumpData.family;
+  const maxCurve = pumpData.curves;
+  const pumpObj = pumpData.pump || {};
+  if (!maxCurve || !maxCurve.q) return;
+
+  const cfg = window.PumpDetailsConfig;
+  const org = cfg.ORG_STYLES || {};
+
+  const hqColor = org.hq_color || '#58a6ff';
+  const hqWidth = parseFloat(org.hq_width) || 2.5;
+  const hqStyle = normalizeDashStyle(org.hq_style, 'solid');
+
+  const etaColor = org.eta_color || '#3fb950';
+  const etaWidth = parseFloat(org.eta_width) || 2.5;
+  const etaStyle = normalizeDashStyle(org.eta_style, 'solid');
+
+  const powColor = org.pow_color || '#f0c040';
+  const powWidth = parseFloat(org.pow_width) || 2.5;
+  const powStyle = normalizeDashStyle(org.pow_style, 'solid');
+
+  const npshColor = org.npsh_color || '#bc8cff';
+  const npshWidth = parseFloat(org.npsh_width) || 2.5;
+  const npshStyle = normalizeDashStyle(org.npsh_style, 'solid');
+
+  const ratedColor = org.rated_marker_color || '#f85149';
+  const trimWidth = parseFloat(org.trim_curve_width) || 2.5;
+  const trimStyle = normalizeDashStyle(org.trim_curve_style, 'dash');
+
+  const sysColor = org.system_curve_color || '#8b949e';
+  const sysStyle = normalizeDashStyle(org.system_curve_style, 'dot');
+
+  const fontFamily = org.font_family || 'Inter, sans-serif';
+  const majorGridColor = org.major_grid_color || '#30363d';
+  const minorGridColor = org.minor_grid_color || '#21262d';
+  const axisLineColor = org.axis_line_color || '#30363d';
+
+  const unitQ = cfg.UNIT_Q || 'm3h';
+  const unitH = cfg.UNIT_H || 'm';
+  const unitPow = cfg.UNIT_POW || 'kw';
+  const unitNpsh = cfg.UNIT_NPSH || 'm';
+
+  const multQ = 1.0 / (UNIT_FACTORS.flow[unitQ] || 1.0);
+  const multH = 1.0 / (UNIT_FACTORS.head[unitH] || 1.0);
+  const multPow = 1.0 / (UNIT_FACTORS.power[unitPow] || 1.0);
+  const multNpsh = 1.0 / (UNIT_FACTORS.head[unitNpsh] || 1.0);
+
+  const unitLabels = {
+    m3h: 'm³/h', ls: 'l/s', lmin: 'l/min', gpm: 'US gpm', ukgpm: 'UK gpm', cfs: 'ft³/s', mgd: 'MGD',
+    m: 'm', ft: 'ft', kpa: 'kPa', bar: 'bar', psi: 'psi',
+    kw: 'kW', hp: 'hp', w: 'W', mw: 'MW'
+  };
+  const lblQ = unitLabels[unitQ] || unitQ;
+  const lblH = unitLabels[unitH] || unitH;
+  const lblPow = unitLabels[unitPow] || unitPow;
+  const lblNpsh = unitLabels[unitNpsh] || unitNpsh;
+
+  let traces = [];
+  let annotations = [];
+
+  const scaledMaxQ = maxCurve.q.map(q => q * multQ);
+  const scaledMaxH = maxCurve.h.map(h => h * multH);
+  const scaledMaxPow = maxCurve.power.map(p => p * multPow);
+  const scaledMaxNpsh = maxCurve.npsh ? maxCurve.npsh.map(n => n * multNpsh) : [];
+
+  // Compute hasNpsh early — before any trace loop — from ALL available curve sources.
+  // The backend returns npsh: null when the pump has no NPSH polynomial, so we check
+  // both the single base curve (maxCurve.npsh) and any family curves (fam[*].npsh).
+  // We also reject all-zero arrays (1e-4 tolerance) in case of stale cached data.
+  const _npshHasValues = arr => Array.isArray(arr) && arr.some(v => Math.abs(v) > 1e-4);
+  const hasNpsh = _npshHasValues(maxCurve.npsh) ||
+    (fam && fam.some(c => _npshHasValues(c.npsh)));
+
+  // ── Multi-Pump Arrangement Detection ──
+  // When multiple pumps operate in parallel or series, curves and operating markers are needed for both:
+  // 1) The individual pump (1 of N) to evaluate operating flow, head, absorbed power, efficiency, and NPSHr.
+  // 2) The combined station total delivery (N pumps combined: N*Q in parallel, N*H in series).
+  const stationN = parseInt(cfg.PUMPS_OPERATING) || 1;
+  const isMultiPump = stationN > 1 && (cfg.PUMP_ARRANGEMENT === 'parallel' || cfg.PUMP_ARRANGEMENT === 'series');
+  const isParallel = (cfg.PUMP_ARRANGEMENT === 'parallel' && stationN > 1);
+  const isSeries = (cfg.PUMP_ARRANGEMENT === 'series' && stationN > 1);
+
+  const dutyScaleRatio = cfg.COMPOSITE_RATIO || cfg.TRIM_RATIO || 1.0;
+  const qDutyCurve = scaledMaxQ.map(q => q * dutyScaleRatio);
+  const hDutyCurve = scaledMaxH.map(h => h * Math.pow(dutyScaleRatio, 2));
+  const pDutyCurve = scaledMaxPow.map(p => p * Math.pow(dutyScaleRatio, 3));
+  const npshDutyCurve = scaledMaxNpsh.length ? scaledMaxNpsh.map(n => n * Math.pow(dutyScaleRatio, 2)) : [];
+
+  if (fam && fam.length > 0) {
+    fam.forEach((c, idx) => {
+      let lbl = cfg.IS_VSD ? `${c.rpm || c.val} RPM` : `Ø ${c.dia} mm`;
+      let isMax = idx === fam.length - 1;
+      let curveWidth = isMax ? hqWidth : Math.max(1.2, hqWidth * 0.7);
+
+      const scQ = c.q.map(q => q * multQ);
+      const scH = c.h.map(h => h * multH);
+      const scPow = c.power.map(p => p * multPow);
+      const scNpsh = c.npsh ? c.npsh.map(n => n * multNpsh) : [];
+
+      let cdata = scQ.map((q, i) => [
+        scH[i] != null ? scH[i].toFixed(1) : 'N/A',
+        c.eta[i] != null ? c.eta[i].toFixed(1) : 'N/A',
+        scPow[i] != null ? scPow[i].toFixed(1) : 'N/A',
+        (scNpsh && scNpsh[i] != null) ? scNpsh[i].toFixed(1) : 'N/A'
+      ]);
+      let hoverTmpl = `<b>${lbl}</b><br>Flow: %{x:.1f} ${lblQ}<br>Head: %{customdata[0]} ${lblH}<br>Eff: %{customdata[1]} %<br>Power: %{customdata[2]} ${lblPow}<br>NPSHr: %{customdata[3]} ${lblNpsh}<extra></extra>`;
+
+      traces.push({ x: scQ, y: scH, name: `Head ${lbl}`, type: 'scatter', mode: 'lines', line: { color: hqColor, width: curveWidth, dash: hqStyle }, yaxis: 'y4', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'hq', legendgroup: 'hq' });
+      addLabel(annotations, scQ, scH, 'y4', lbl, hqColor, false, 'hq');
+
+      traces.push({ x: scQ, y: c.eta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines', line: { color: etaColor, width: isMax ? etaWidth : Math.max(1.2, etaWidth * 0.7), dash: etaStyle }, yaxis: 'y3', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'eta', legendgroup: 'eta' });
+      addLabel(annotations, scQ, c.eta, 'y3', lbl, etaColor, false, 'eta');
+
+      traces.push({ x: scQ, y: scPow, name: `Power ${lbl}`, type: 'scatter', mode: 'lines', line: { color: powColor, width: isMax ? powWidth : Math.max(1.2, powWidth * 0.7), dash: powStyle }, yaxis: 'y2', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'pow', legendgroup: 'pow' });
+      addLabel(annotations, scQ, scPow, 'y2', lbl, powColor, false, 'pow');
+
+      if (hasNpsh && scNpsh && scNpsh.length) {
+        traces.push({ x: scQ, y: scNpsh, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines', line: { color: npshColor, width: isMax ? npshWidth : Math.max(1.2, npshWidth * 0.7), dash: npshStyle }, yaxis: 'y', opacity: isMax ? 1 : 0.55, showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'npsh', legendgroup: 'npsh' });
+        addLabel(annotations, scQ, scNpsh, 'y', lbl, npshColor, false, 'npsh');
+      }
+    });
+  } else {
+    let lbl = 'Max';
+    let cdata = scaledMaxQ.map((q, i) => [
+      scaledMaxH[i] != null ? scaledMaxH[i].toFixed(1) : 'N/A',
+      maxCurve.eta[i] != null ? maxCurve.eta[i].toFixed(1) : 'N/A',
+      scaledMaxPow[i] != null ? scaledMaxPow[i].toFixed(1) : 'N/A',
+      (scaledMaxNpsh && scaledMaxNpsh[i] != null) ? scaledMaxNpsh[i].toFixed(1) : 'N/A'
+    ]);
+    let hoverTmpl = `<b>${lbl}</b><br>Flow: %{x:.1f} ${lblQ}<br>Head: %{customdata[0]} ${lblH}<br>Eff: %{customdata[1]} %<br>Power: %{customdata[2]} ${lblPow}<br>NPSHr: %{customdata[3]} ${lblNpsh}<extra></extra>`;
+
+    traces.push({ x: scaledMaxQ, y: scaledMaxH, name: isMultiPump ? 'Pump Head (Max Ø/RPM)' : 'Head (Max)', type: 'scatter', mode: 'lines', line: { color: hqColor, width: hqWidth, dash: hqStyle }, yaxis: 'y4', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'hq', legendgroup: 'hq' });
+    addLabel(annotations, scaledMaxQ, scaledMaxH, 'y4', 'Max', hqColor, false, 'hq');
+
+    traces.push({ x: scaledMaxQ, y: maxCurve.eta, name: 'Eff (Max)', type: 'scatter', mode: 'lines', line: { color: etaColor, width: etaWidth, dash: etaStyle }, yaxis: 'y3', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'eta', legendgroup: 'eta' });
+    addLabel(annotations, scaledMaxQ, maxCurve.eta, 'y3', 'Max', etaColor, false, 'eta');
+
+    traces.push({ x: scaledMaxQ, y: scaledMaxPow, name: 'Power (Max)', type: 'scatter', mode: 'lines', line: { color: powColor, width: powWidth, dash: powStyle }, yaxis: 'y2', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'pow', legendgroup: 'pow' });
+    addLabel(annotations, scaledMaxQ, scaledMaxPow, 'y2', 'Max', powColor, false, 'pow');
+
+    if (scaledMaxNpsh.length) {
+      traces.push({ x: scaledMaxQ, y: scaledMaxNpsh, name: 'NPSHr (Max)', type: 'scatter', mode: 'lines', line: { color: npshColor, width: npshWidth, dash: npshStyle }, yaxis: 'y', showlegend: false, customdata: cdata, hovertemplate: hoverTmpl, curveGroup: 'npsh', legendgroup: 'npsh' });
+      addLabel(annotations, scaledMaxQ, scaledMaxNpsh, 'y', 'Max', npshColor, false, 'npsh');
+    }
+  }
+
+  // ── Rated Curve Legend Label ──
+  let ratedLegendName = isMultiPump ? `1x Pump Curve (1 of ${stationN})` : 'Rated Curve';
+  if (cfg.IS_VSD) {
+    const spdStr = `${cfg.RATED_SPEED || Math.round(cfg.PUMP_SPEED * cfg.TRIM_RATIO)} RPM`;
+    const trimStr = (cfg.VSD_TRIM_MODE && cfg.VSD_TRIM_MODE !== 'auto' && cfg.RATED_TRIM) ? `, Ø${cfg.RATED_TRIM}mm` : '';
+    ratedLegendName = isMultiPump ? `1x Pump Curve (${spdStr}${trimStr})` : `VSD Curve (${spdStr}${trimStr})`;
+  } else if (cfg.FIXED_SPEED_MODE === 'auto') {
+    ratedLegendName = isMultiPump ? `1x Pump Curve (${cfg.RATED_SPEED || Math.round(cfg.PUMP_SPEED * cfg.TRIM_RATIO)} RPM)` : `Calculated Speed (${cfg.RATED_SPEED || Math.round(cfg.PUMP_SPEED * cfg.TRIM_RATIO)} RPM)`;
+  } else if (cfg.FIXED_SPEED_MODE === 'manual') {
+    const spdStr = `${cfg.RATED_SPEED || cfg.MANUAL_SPEED_RPM} RPM`;
+    const trimStr = (cfg.TRIM_RATIO < 0.995 && cfg.RATED_TRIM) ? `, Ø${cfg.RATED_TRIM}mm` : '';
+    ratedLegendName = isMultiPump ? `1x Pump Curve (${spdStr}${trimStr})` : `Manual Speed (${spdStr}${trimStr})`;
+  } else if (cfg.FIXED_SPEED_MODE === 'range') {
+    const spdStr = `${cfg.RATED_SPEED} RPM`;
+    const trimStr = (cfg.TRIM_RATIO < 0.995 && cfg.RATED_TRIM) ? `, Ø${cfg.RATED_TRIM}mm` : '';
+    ratedLegendName = isMultiPump ? `1x Pump Curve (${spdStr}${trimStr})` : `Range Speed (${spdStr}${trimStr})`;
+  } else if (cfg.TRIM_RATIO < 1.0) {
+    ratedLegendName = isMultiPump ? `1x Pump Curve (Ø ${cfg.RATED_TRIM} mm)` : `Rated Curve (Ø ${cfg.RATED_TRIM} mm)`;
+  }
+
+  // ── Individual Rated Performance Curves (1x Pump) ──
+  let active1xQ = scaledMaxQ;
+  let active1xH = scaledMaxH;
+
+  if (dutyScaleRatio < 0.999 || cfg.IS_VSD || cfg.FIXED_SPEED_MODE === 'auto' || cfg.FIXED_SPEED_MODE === 'manual' || cfg.FIXED_SPEED_MODE === 'range' || cfg.TRIM_RATIO < 1.0) {
+    let lbl = cfg.IS_VSD ? `VSD (${cfg.RATED_SPEED} RPM${(cfg.VSD_TRIM_MODE && cfg.VSD_TRIM_MODE !== 'auto' && cfg.RATED_TRIM) ? ', Ø ' + cfg.RATED_TRIM + ' mm' : ''})` :
+              (cfg.FIXED_SPEED_MODE === 'auto' ? `Calculated (${cfg.RATED_SPEED} RPM)` :
+              (cfg.FIXED_SPEED_MODE === 'manual' ? `Manual (${cfg.RATED_SPEED || cfg.MANUAL_SPEED_RPM} RPM${cfg.RATED_TRIM ? ', Ø ' + cfg.RATED_TRIM + ' mm' : ''})` :
+              (cfg.FIXED_SPEED_MODE === 'range' ? `Rated (${cfg.RATED_SPEED} RPM${cfg.RATED_TRIM ? ', Ø ' + cfg.RATED_TRIM + ' mm' : ''})` :
+              `Rated (Ø ${cfg.RATED_TRIM} mm)`)));
+
+    if (isMultiPump) {
+      lbl = `1x Pump (${lbl})`;
+    }
+
+    // Filter all points where head is non-negative (H >= 0).
+    // Beginners Note: Do NOT arbitrarily slice by dutyScaleRatio! Slicing cuts off the right-hand
+    // operating range and prevents the curve from reaching the rated duty point.
+    const ratedQ = [];
+    const ratedH = [];
+    const ratedEta = [];
+    const ratedPow = [];
+    const ratedNpsh = [];
+    const cdataRated = [];
+
+    for (let i = 0; i < qDutyCurve.length; i++) {
+      const qVal = qDutyCurve[i];
+      const hVal = hDutyCurve[i];
+      if (hVal != null && hVal >= 0) {
+        ratedQ.push(qVal);
+        ratedH.push(hVal);
+        const etaVal = maxCurve.eta ? maxCurve.eta[i] : null;
+        const powVal = pDutyCurve ? pDutyCurve[i] : null;
+        const npshVal = (npshDutyCurve && npshDutyCurve.length) ? npshDutyCurve[i] : null;
+        if (etaVal != null) ratedEta.push(etaVal);
+        if (powVal != null) ratedPow.push(powVal);
+        if (npshVal != null) ratedNpsh.push(npshVal);
+
+        cdataRated.push([
+          hVal.toFixed(1),
+          etaVal != null ? etaVal.toFixed(1) : 'N/A',
+          powVal != null ? powVal.toFixed(1) : 'N/A',
+          npshVal != null ? npshVal.toFixed(1) : 'N/A'
+        ]);
+      }
+    }
+
+    // Beginners Note: Safety extension to ensure the rated curve always reaches and passes
+    // cleanly through the duty point, even when speed reduction or trim lowers the maximum
+    // flow below the target operating point.
+    const targetDutyQ = isMultiPump ? (isParallel ? (cfg.Q_DUTY / stationN) : cfg.Q_DUTY) : cfg.Q_DUTY;
+    const targetDutyH = isMultiPump ? (isSeries ? ((cfg.EVAL_H_DUTY != null && cfg.EVAL_H_DUTY !== '') ? cfg.EVAL_H_DUTY : (cfg.H_DUTY / stationN)) : cfg.H_DUTY) : cfg.H_DUTY;
+    if (targetDutyQ && targetDutyH && ratedQ.length > 0 && ratedQ[ratedQ.length - 1] < targetDutyQ) {
+      const lastQ = ratedQ[ratedQ.length - 1];
+      const lastH = ratedH[ratedH.length - 1];
+      const slope = (targetDutyH - lastH) / (targetDutyQ - lastQ);
+      ratedQ.push(targetDutyQ);
+      ratedH.push(targetDutyH);
+      cdataRated.push([
+        targetDutyH.toFixed(1),
+        cfg.OP_ETA ? cfg.OP_ETA.toFixed(1) : 'N/A',
+        cfg.OP_POWER_KW ? cfg.OP_POWER_KW.toFixed(1) : 'N/A',
+        'N/A'
+      ]);
+      const postQ = targetDutyQ * 1.06;
+      const postH = targetDutyH + slope * (postQ - targetDutyQ);
+      if (postH >= 0) {
+        ratedQ.push(postQ);
+        ratedH.push(postH);
+        cdataRated.push([
+          postH.toFixed(1),
+          cfg.OP_ETA ? cfg.OP_ETA.toFixed(1) : 'N/A',
+          cfg.OP_POWER_KW ? cfg.OP_POWER_KW.toFixed(1) : 'N/A',
+          'N/A'
+        ]);
+      }
+    }
+
+    active1xQ = ratedQ;
+    active1xH = ratedH;
+
+    const hoverTmplRated = `<b>${lbl}</b><br>Flow: %{x:.1f} ${lblQ}<br>Head: %{customdata[0]} ${lblH}<br>Eff: %{customdata[1]} %<br>Power: %{customdata[2]} ${lblPow}<br>NPSHr: %{customdata[3]} ${lblNpsh}<extra></extra>`;
+
+    traces.push({
+      x: ratedQ, y: ratedH, name: `Head ${lbl}`, type: 'scatter', mode: 'lines',
+      line: { color: ratedColor, width: trimWidth, dash: trimStyle },
+      yaxis: 'y4', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated,
+      curveGroup: 'rated', legendgroup: 'rated'
+    });
+    addLabel(annotations, ratedQ, ratedH, 'y4', isMultiPump ? '1x Rated' : 'Rated', ratedColor, false, 'rated');
+
+    traces.push({
+      x: ratedQ, y: ratedEta, name: `Eff ${lbl}`, type: 'scatter', mode: 'lines',
+      line: { color: ratedColor, width: trimWidth, dash: trimStyle },
+      yaxis: 'y3', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated,
+      curveGroup: 'rated', legendgroup: 'rated'
+    });
+    traces.push({
+      x: ratedQ, y: ratedPow, name: `Power ${lbl}`, type: 'scatter', mode: 'lines',
+      line: { color: ratedColor, width: trimWidth, dash: trimStyle },
+      yaxis: 'y2', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated,
+      curveGroup: 'rated', legendgroup: 'rated'
+    });
+    if (hasNpsh && ratedNpsh.length) {
+      traces.push({
+        x: ratedQ, y: ratedNpsh, name: `NPSHr ${lbl}`, type: 'scatter', mode: 'lines',
+        line: { color: ratedColor, width: trimWidth, dash: trimStyle },
+        yaxis: 'y', showlegend: false, customdata: cdataRated, hovertemplate: hoverTmplRated,
+        curveGroup: 'rated', legendgroup: 'rated'
+      });
+    }
+  }
+
+  // ── Multi-Pump Combined Station Curve (Parallel or Series) ──
+  // Evaluates and plots the combined station curve for multiple pumps:
+  // - In Parallel: Total Flow is shared (N * Q_pump at Head H)
+  // - In Series: Total Head is shared (Flow Q at N * H_pump)
+  // Note: Only plot points where head is non-negative and within valid operating range.
+  if (isParallel) {
+    const stationQ = active1xQ.map(q => q * stationN);
+    const stationH = active1xH;
+    const hoverTmplStation = `<b>Combined Station (${stationN}x Parallel)</b><br>Station Total Flow: %{x:.1f} ${lblQ}<br>Head: %{y:.1f} ${lblH}<extra></extra>`;
+    traces.push({
+      x: stationQ,
+      y: stationH,
+      name: `Combined Station (${stationN}x Parallel)`,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#22c55e', width: Math.max(2.8, trimWidth + 0.8), dash: 'solid' },
+      yaxis: 'y4',
+      showlegend: false,
+      hovertemplate: hoverTmplStation,
+      curveGroup: 'station',
+      legendgroup: 'station'
+    });
+    addLabel(annotations, stationQ, stationH, 'y4', `${stationN}x Parallel`, '#22c55e', false, 'station');
+  } else if (isSeries) {
+    const stationQ = [];
+    const stationH = [];
+    for (let i = 0; i < active1xQ.length; i++) {
+      const qVal = active1xQ[i];
+      const hVal = active1xH[i] * stationN;
+      if (hVal >= 0) {
+        stationQ.push(qVal);
+        stationH.push(hVal);
+      }
+    }
+    const hoverTmplStation = `<b>Combined Station (${stationN}x Series)</b><br>Flow: %{x:.1f} ${lblQ}<br>Station Total Head: %{y:.1f} ${lblH}<extra></extra>`;
+    traces.push({
+      x: stationQ,
+      y: stationH,
+      name: `Combined Station (${stationN}x Series)`,
+      type: 'scatter',
+      mode: 'lines',
+      line: { color: '#a855f7', width: Math.max(2.8, trimWidth + 0.8), dash: 'solid' },
+      yaxis: 'y4',
+      showlegend: false,
+      hovertemplate: hoverTmplStation,
+      curveGroup: 'station',
+      legendgroup: 'station'
+    });
+    addLabel(annotations, stationQ, stationH, 'y4', `${stationN}x Series`, '#a855f7', false, 'station');
+  }
+
+  // ── System Head Curve ──
+  // Beginners Note: The system curve (H = k * Q²) intersects the duty point. We bound
+  // limitH so the curve extends pleasantly past the operating point without breaking off
+  // the top or side border of the chart.
+  if (cfg.Q_DUTY && cfg.H_DUTY) {
+    const k = cfg.H_DUTY / Math.pow(cfg.Q_DUTY, 2);
+    const maxPumpH = Math.max(...scaledMaxH);
+    const stationPeakH = isSeries ? (maxPumpH * stationN) : maxPumpH;
+    const limitH = Math.max(cfg.H_DUTY * 1.25, Math.min(stationPeakH * 1.05, cfg.H_DUTY * 1.6));
+
+    // Use extended flow range in parallel mode so system curve covers total station flow
+    const baseFlowArr = isParallel ? scaledMaxQ.map(q => q * stationN) : scaledMaxQ;
+
+    const sysQ = [];
+    const sysH = [];
+    for (let i = 0; i < baseFlowArr.length; i++) {
+      const q = baseFlowArr[i];
+      const h = k * Math.pow(q, 2);
+      if (h <= limitH) {
+        sysQ.push(q);
+        sysH.push(h);
+      }
+    }
+    if (sysQ.length === 0 || sysQ[sysQ.length - 1] < cfg.Q_DUTY) {
+      sysQ.push(cfg.Q_DUTY);
+      sysH.push(cfg.H_DUTY);
+    }
+    let hoverTmplSys = `<b>System Curve</b><br>Flow: %{x:.1f} ${lblQ}<br>Head: %{y:.1f} ${lblH}<extra></extra>`;
+    traces.push({ x: sysQ, y: sysH, name: 'System Curve', type: 'scatter', mode: 'lines', line: { color: sysColor, width: 2.2, dash: sysStyle }, yaxis: 'y4', showlegend: false, hovertemplate: hoverTmplSys, curveGroup: 'system', legendgroup: 'system' });
+  }
+
+  // ── Interactive Legend Proxies ──
+  // Beginners Note: Each curve group has a distinct entry on the Plotly legend.
+  // Clicking an item toggles its entire curve group across all subplots simultaneously!
+  traces.push({ x: [null], y: [null], name: isMultiPump ? 'Pump Head (Max Ø/RPM)' : 'Head (Max)', type: 'scatter', mode: 'lines', line: { color: hqColor, width: hqWidth, dash: hqStyle }, showlegend: true, curveGroup: 'hq', legendgroup: 'hq' });
+  traces.push({ x: [null], y: [null], name: 'Efficiency (Max)', type: 'scatter', mode: 'lines', line: { color: etaColor, width: etaWidth, dash: etaStyle }, showlegend: true, curveGroup: 'eta', legendgroup: 'eta' });
+  traces.push({ x: [null], y: [null], name: 'Power (Max)', type: 'scatter', mode: 'lines', line: { color: powColor, width: powWidth, dash: powStyle }, showlegend: true, curveGroup: 'pow', legendgroup: 'pow' });
+  if (hasNpsh) {
+    traces.push({ x: [null], y: [null], name: 'NPSHr (Max)', type: 'scatter', mode: 'lines', line: { color: npshColor, width: npshWidth, dash: npshStyle }, showlegend: true, curveGroup: 'npsh', legendgroup: 'npsh' });
+  }
+
+  traces.push({ x: [null], y: [null], name: ratedLegendName, type: 'scatter', mode: 'lines', line: { color: ratedColor, width: trimWidth, dash: trimStyle }, showlegend: true, curveGroup: 'rated', legendgroup: 'rated' });
+
+  if (isMultiPump) {
+    traces.push({ x: [null], y: [null], name: isParallel ? `Combined Station (${stationN}x Parallel)` : `Combined Station (${stationN}x Series)`, type: 'scatter', mode: 'lines', line: { color: isParallel ? '#22c55e' : '#a855f7', width: 2.8, dash: 'solid' }, showlegend: true, curveGroup: 'station', legendgroup: 'station' });
+  }
+
+  traces.push({ x: [null], y: [null], name: 'System Curve', type: 'scatter', mode: 'lines', line: { color: sysColor, width: 2.2, dash: sysStyle }, showlegend: true, curveGroup: 'system', legendgroup: 'system' });
+
+  if (cfg.Q_DUTY && cfg.H_DUTY) {
+    if (isMultiPump) {
+      traces.push({ x: [null], y: [null], name: '1x Pump Duty Point', type: 'scatter', mode: 'markers', marker: { color: ratedColor, size: 10, symbol: 'star' }, showlegend: true, curveGroup: 'duty_ind', legendgroup: 'duty_ind' });
+      traces.push({ x: [null], y: [null], name: `Station Total Duty (${stationN}x)`, type: 'scatter', mode: 'markers', marker: { color: isParallel ? '#22c55e' : '#a855f7', size: 11, symbol: 'diamond' }, showlegend: true, curveGroup: 'duty_station', legendgroup: 'duty_station' });
+    } else {
+      traces.push({ x: [null], y: [null], name: 'Operating Duty Point', type: 'scatter', mode: 'markers', marker: { color: ratedColor, size: 11, symbol: 'star' }, showlegend: true, curveGroup: 'duty', legendgroup: 'duty' });
+    }
+  }
+
+  // ── Operating Duty Points (Geometry & Annotations) ──
+  if (cfg.Q_DUTY && cfg.H_DUTY) {
+    if (isParallel) {
+      const perQ = (cfg.EVAL_Q_DUTY != null && cfg.EVAL_Q_DUTY !== '') ? cfg.EVAL_Q_DUTY : (cfg.Q_DUTY / stationN);
+      const perH = cfg.H_DUTY;
+
+      // 1. Single Pump Operating Duty Point
+      traces.push({
+        x: [perQ], y: [perH], name: '1x Pump Duty Point',
+        type: 'scatter', mode: 'markers',
+        marker: { color: ratedColor, size: 12, symbol: 'star' },
+        yaxis: 'y4', showlegend: false, curveGroup: 'duty_ind', legendgroup: 'duty_ind',
+        hovertemplate: `<b>Per-Pump Duty Point (1 of ${stationN})</b><br>Flow: %{x:.1f} ${lblQ}<br>Head: %{y:.1f} ${lblH}<br>Absorbed Power: ${(cfg.OP_POWER_KW || 0).toFixed(1)} ${lblPow}<br>Efficiency: ${(cfg.OP_ETA || 0).toFixed(1)} %<extra></extra>`
+      });
+      annotations.push({
+        x: perQ, y: perH, xref: 'x', yref: 'y4',
+        text: '1x Duty', showarrow: true, arrowcolor: ratedColor,
+        ax: 20, ay: -20, font: { color: ratedColor, size: 10 },
+        curveGroup: 'duty_ind'
+      });
+
+      // 2. Station Total Duty Point
+      traces.push({
+        x: [cfg.Q_DUTY], y: [cfg.H_DUTY], name: `Station Total Duty (${stationN}x)`,
+        type: 'scatter', mode: 'markers',
+        marker: { color: '#22c55e', size: 13, symbol: 'diamond' },
+        yaxis: 'y4', showlegend: false, curveGroup: 'duty_station', legendgroup: 'duty_station',
+        hovertemplate: `<b>Station Total Duty (${stationN}x Parallel)</b><br>Total Flow: %{x:.1f} ${lblQ}<br>Head: %{y:.1f} ${lblH}<br>Combined Station Power: ${(cfg.DISP_STATION_POWER || (cfg.OP_POWER_KW * stationN) || 0).toFixed(1)} ${lblPow}<extra></extra>`
+      });
+      annotations.push({
+        x: cfg.Q_DUTY, y: cfg.H_DUTY, xref: 'x', yref: 'y4',
+        text: `Station (${stationN}x)`, showarrow: true, arrowcolor: '#22c55e',
+        ax: 25, ay: -25, font: { color: '#22c55e', size: 11 },
+        curveGroup: 'duty_station'
+      });
+
+    } else if (isSeries) {
+      const perQ = cfg.Q_DUTY;
+      const perH = (cfg.EVAL_H_DUTY != null && cfg.EVAL_H_DUTY !== '') ? cfg.EVAL_H_DUTY : (cfg.H_DUTY / stationN);
+
+      // 1. Single Pump Operating Duty Point
+      traces.push({
+        x: [perQ], y: [perH], name: '1x Pump Duty Point',
+        type: 'scatter', mode: 'markers',
+        marker: { color: ratedColor, size: 12, symbol: 'star' },
+        yaxis: 'y4', showlegend: false, curveGroup: 'duty_ind', legendgroup: 'duty_ind',
+        hovertemplate: `<b>Per-Pump Duty Point (1 of ${stationN})</b><br>Flow: %{x:.1f} ${lblQ}<br>Head: %{y:.1f} ${lblH}<br>Absorbed Power: ${(cfg.OP_POWER_KW || 0).toFixed(1)} ${lblPow}<br>Efficiency: ${(cfg.OP_ETA || 0).toFixed(1)} %<extra></extra>`
+      });
+      annotations.push({
+        x: perQ, y: perH, xref: 'x', yref: 'y4',
+        text: '1x Duty', showarrow: true, arrowcolor: ratedColor,
+        ax: 20, ay: -20, font: { color: ratedColor, size: 10 },
+        curveGroup: 'duty_ind'
+      });
+
+      // 2. Station Total Duty Point
+      traces.push({
+        x: [cfg.Q_DUTY], y: [cfg.H_DUTY], name: `Station Total Duty (${stationN}x)`,
+        type: 'scatter', mode: 'markers',
+        marker: { color: '#a855f7', size: 13, symbol: 'diamond' },
+        yaxis: 'y4', showlegend: false, curveGroup: 'duty_station', legendgroup: 'duty_station',
+        hovertemplate: `<b>Station Total Duty (${stationN}x Series)</b><br>Flow: %{x:.1f} ${lblQ}<br>Total Head: %{y:.1f} ${lblH}<extra></extra>`
+      });
+      annotations.push({
+        x: cfg.Q_DUTY, y: cfg.H_DUTY, xref: 'x', yref: 'y4',
+        text: `Station (${stationN}x)`, showarrow: true, arrowcolor: '#a855f7',
+        ax: 25, ay: -25, font: { color: '#a855f7', size: 11 },
+        curveGroup: 'duty_station'
+      });
+
+    } else {
+      // Standard single pump duty point
+      traces.push({
+        x: [cfg.Q_DUTY], y: [cfg.H_DUTY], name: 'Operating Duty Point',
+        type: 'scatter', mode: 'markers',
+        marker: { color: ratedColor, size: 12, symbol: 'star' },
+        yaxis: 'y4', showlegend: false,
+        curveGroup: 'duty', legendgroup: 'duty',
+        hovertemplate: `<b>Duty Point</b><br>Flow: %{x:.1f} ${lblQ}<br>Head: %{y:.1f} ${lblH}<extra></extra>`
+      });
+      annotations.push({
+        x: cfg.Q_DUTY, y: cfg.H_DUTY,
+        xref: 'x', yref: 'y4',
+        text: 'Duty',
+        showarrow: true,
+        arrowcolor: ratedColor,
+        ax: 20, ay: -20,
+        font: { color: ratedColor, size: 11 },
+        curveGroup: 'duty'
+      });
+    }
+  }
+
+  // ── Y-axis domain layout & Active Subplot Domains ──
+  // When the pump has NPSH data, the chart is split into four vertical sub-plots:
+  //   y  (NPSH)  0.00-0.20  |  y2 (Power) 0.25-0.45  |  y3 (Eff) 0.50-0.70  |  y4 (Head) 0.75-1.0
+  // When there is no NPSH data the bottom 20 % is reclaimed and shared equally among
+  // the three remaining sub-plots so the chart does not have wasted white space.
+  const domainNpsh = hasNpsh ? [0.00, 0.20] : null;
+  const domainPow = hasNpsh ? [0.25, 0.45] : [0.00, 0.32];
+  const domainEff = hasNpsh ? [0.50, 0.70] : [0.36, 0.65];
+  const domainHead = hasNpsh ? [0.75, 1.00] : [0.69, 1.00];
+
+  const activeDomains = [
+    { key: 'head', domain: domainHead },
+    { key: 'eff', domain: domainEff },
+    { key: 'power', domain: domainPow }
+  ];
+  if (hasNpsh && domainNpsh) {
+    activeDomains.push({ key: 'npsh', domain: domainNpsh });
+  }
+
+  let preferredBorderMode = 'both';
+  try {
+    preferredBorderMode = localStorage.getItem('pump_graph_border_mode') || org.border_outline_mode || 'both';
+  } catch (e) {
+    preferredBorderMode = org.border_outline_mode || 'both';
+  }
+
+  window.currentGraphBorderMode = preferredBorderMode;
+  window.activeGraphDomains = activeDomains;
+  window.currentAxisLineColor = axisLineColor;
+
+  const borderSelectEl = document.getElementById('graphBorderOption');
+  if (borderSelectEl) {
+    borderSelectEl.value = preferredBorderMode;
+  }
+
+  const initialShapes = buildBorderShapes(preferredBorderMode, activeDomains, axisLineColor);
+
+  const layout = {
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    font: { color: '#8b949e', family: fontFamily },
+    margin: { t: 95, r: 80, l: 60, b: 40 },
+    hovermode: 'closest',
+    xaxis: {
+      title: `Flow (${lblQ})`,
+      gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
+    },
+    // NPSH sub-plot: hidden (visible:false) when there is no NPSH data so it occupies no space.
+    yaxis: hasNpsh ? {
+      title: `NPSHr (${lblNpsh})`, domain: domainNpsh,
+      titlefont: { color: npshColor }, tickfont: { color: npshColor },
+      gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
+    } : { visible: false, domain: [0.0, 0.0] },
+    yaxis2: {
+      title: `Power (${lblPow})`, domain: domainPow,
+      titlefont: { color: powColor }, tickfont: { color: powColor },
+      gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
+    },
+    yaxis3: {
+      title: 'Eff (%)', domain: domainEff,
+      titlefont: { color: etaColor }, tickfont: { color: etaColor },
+      gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
+    },
+    yaxis4: {
+      title: `Head (${lblH})`, domain: domainHead,
+      titlefont: { color: hqColor }, tickfont: { color: hqColor },
+      gridcolor: majorGridColor, zerolinecolor: axisLineColor, rangemode: 'tozero'
+    },
+    // Beginners Note: yanchor: 'bottom' and y: 1.02 place the baseline of the legend just above
+    // the top border of the plot. Additional wrapped lines stack upwards into the 95px top margin,
+    // completely preventing the legend from spilling into the Head graph subplot.
+    legend: {
+      orientation: 'h',
+      yanchor: 'bottom',
+      y: 1.02,
+      xanchor: 'left',
+      x: 0,
+      font: { size: 11, color: '#8b949e' }
+    },
+    height: 900,
+    annotations: annotations,
+    shapes: initialShapes
+  };
+
+  applyAxisScale(layout.xaxis, 'flow', pumpObj, minorGridColor, axisLineColor);
+  applyAxisScale(layout.yaxis4, 'head', pumpObj, minorGridColor, axisLineColor);
+  applyAxisScale(layout.yaxis3, 'eff', pumpObj, minorGridColor, axisLineColor);
+  applyAxisScale(layout.yaxis2, 'power', pumpObj, minorGridColor, axisLineColor);
+  // Only scale the NPSH axis when it is actually shown.
+  if (hasNpsh) applyAxisScale(layout.yaxis, 'npsh', pumpObj, minorGridColor, axisLineColor);
+
+  // ── Dynamic Multi-Pump Axis Scale Expansion ──
+  // Beginners Note:
+  // In parallel operation, flow is multiplied by N, so layout.xaxis needs expansion to fit
+  // total station flow and the station duty point. In series operation, head is multiplied by N,
+  // so layout.yaxis4 needs expansion to fit the series shutoff head and station duty point
+  // without breaking off the top border.
+  if (isParallel) {
+    const stationTrace = traces.find(t => t.curveGroup === 'station');
+    const peakQ = (stationTrace && stationTrace.x && stationTrace.x.length) ? Math.max(...stationTrace.x) : 0;
+    const reqQ = Math.max((cfg.Q_DUTY || 0) * 1.25, peakQ * 1.08);
+    if (layout.xaxis.range && layout.xaxis.range[1] < reqQ) {
+      const cleanQ = getCleanAxisScale(0, reqQ, pumpObj.axis_flow_major, pumpObj.axis_flow_minor);
+      layout.xaxis.range = [0, cleanQ.max];
+      if (cleanQ.dtick) layout.xaxis.dtick = cleanQ.dtick;
+    }
+  } else if (isSeries) {
+    const stationTrace = traces.find(t => t.curveGroup === 'station');
+    const peakH = (stationTrace && stationTrace.y && stationTrace.y.length) ? Math.max(...stationTrace.y) : 0;
+    const reqH = Math.max((cfg.H_DUTY || 0) * 1.25, peakH * 1.08);
+    if (layout.yaxis4.range && layout.yaxis4.range[1] < reqH) {
+      const cleanH = getCleanAxisScale(0, reqH, pumpObj.axis_head_major, pumpObj.axis_head_minor);
+      layout.yaxis4.range = [0, cleanH.max];
+      if (cleanH.dtick) layout.yaxis4.dtick = cleanH.dtick;
+    }
+  }
+
+  // ── Final safety net: strip NPSH traces from the render list when hasNpsh is false.
+  // Even though the fam loop already guards NPSH traces with hasNpsh, this filter
+  // ensures that no NPSH trace can reach Plotly with a collapsed/invisible axis.
+  const renderTraces = hasNpsh ? traces : traces.filter(t => t.curveGroup !== 'npsh');
+
+  // Render Chart
+  document.getElementById('chartComp').style.height = '900px';
+  document.getElementById('singleChartPanel').style.display = 'block';
+  Plotly.newPlot('chartComp', renderTraces, layout, { responsive: true });
+
+  // ── Interactive Legend & Curve Visibility Synchronization ──
+  // Beginners Note: Global visibility state object reflecting which curves are currently toggled on/off.
+  // We initialize the visibility state for all individual and combined curves.
+  window.allChartAnnotations = annotations.slice();
+
+  window.curveVisibility = {
+    hq: true,
+    eta: true,
+    pow: true,
+    npsh: hasNpsh,   // false when pump has no NPSH – keeps toggle logic consistent
+    rated: true,
+    station: true,
+    system: true,
+    duty_ind: true,
+    duty_station: true,
+    duty: true
+  };
+
+  const chartEl = document.getElementById('chartComp');
+
+  // Beginners Note: When clicking a category on the Plotly legend, toggle all matching curve traces
+  // across all subplots, synchronize annotation labels, and update report parameters.
+  chartEl.on('plotly_legendclick', function (data) {
+    const clickedTrace = data.data[data.curveNumber];
+    const group = clickedTrace ? clickedTrace.curveGroup : null;
+    if (!group) return true;
+
+    // Toggle visibility for this curve group
+    window.toggleCurveGroup(group);
+
+    return false; // Prevent Plotly's default single-trace toggle behavior
+  });
+
+  // Initial UI button state and report links synchronization
+  updateToolbarButtonsState();
+  updateReportLinks();
+}
+
+/**
+ * Filter and update chart annotations according to the current curve visibility state.
+ * Prevents floating duty point badges and curve labels when the underlying curve is hidden.
+ */
+function updateChartAnnotations() {
+  const chartEl = document.getElementById('chartComp');
+  if (!chartEl || !window.allChartAnnotations) return;
+  const vis = window.curveVisibility || {};
+  const activeAnnotations = window.allChartAnnotations.filter(a => {
+    if (!a.curveGroup) return true;
+    return vis[a.curveGroup] !== false;
+  });
+  Plotly.relayout(chartEl, { annotations: activeAnnotations });
+}
+
+/**
+ * Set the visibility of all traces belonging to a specific curve group.
+ * Legend proxy traces (showlegend: true) use 'legendonly' when hidden so they stay in the legend,
+ * while actual plotted lines and points (showlegend: false) use false so they disappear completely.
+ */
+function setGroupVisibility(group, isVisible) {
+  const chartEl = document.getElementById('chartComp');
+  if (!chartEl || !chartEl.data) return;
+  if (!window.curveVisibility) window.curveVisibility = {};
+  window.curveVisibility[group] = isVisible;
+
+  const legendIndices = [];
+  const plotIndices = [];
+  chartEl.data.forEach((t, idx) => {
+    if (t.curveGroup === group) {
+      if (t.showlegend) legendIndices.push(idx);
+      else plotIndices.push(idx);
+    }
+  });
+
+  if (legendIndices.length > 0) {
+    Plotly.restyle(chartEl, { visible: isVisible ? true : 'legendonly' }, legendIndices);
+  }
+  if (plotIndices.length > 0) {
+    Plotly.restyle(chartEl, { visible: isVisible ? true : false }, plotIndices);
+  }
+}
+
+/**
+ * Toggles an individual curve group on/off.
+ * Called directly from the Plotly legend click handler or from toolbar buttons.
+ * @param {string} group - Curve group name ('rated', 'station', 'system', 'hq', 'eta', 'pow', 'npsh', etc.)
+ */
+window.toggleCurveGroup = function (group) {
+  if (!window.curveVisibility) window.curveVisibility = {};
+  const current = window.curveVisibility[group] !== false;
+  setGroupVisibility(group, !current);
+  updateChartAnnotations();
+  updateToolbarButtonsState();
+  updateReportLinks();
+};
+
+/**
+ * Toggles all operating duty points simultaneously (individual pump, station total, or single pump duty).
+ */
+window.toggleDutyPoints = function () {
+  const vis = window.curveVisibility || {};
+  const isAnyVisible = (vis.duty !== false) || (vis.duty_ind !== false) || (vis.duty_station !== false);
+  const targetState = !isAnyVisible;
+
+  ['duty', 'duty_ind', 'duty_station'].forEach(grp => {
+    setGroupVisibility(grp, targetState);
+  });
+  updateChartAnnotations();
+  updateToolbarButtonsState();
+  updateReportLinks();
+};
+
+/**
+ * Toggles baseline maximum diameter/speed curves (Head, Eff, Power, NPSHr).
+ */
+window.toggleMaxCurves = function () {
+  const vis = window.curveVisibility || {};
+  const isAnyVisible = (vis.hq !== false) || (vis.eta !== false) || (vis.pow !== false) || (vis.npsh !== false);
+  const targetState = !isAnyVisible;
+
+  ['hq', 'eta', 'pow', 'npsh'].forEach(grp => {
+    setGroupVisibility(grp, targetState);
+  });
+  updateChartAnnotations();
+  updateToolbarButtonsState();
+  updateReportLinks();
+};
+
+/**
+ * Updates the visual active/inactive states of the curve toggle buttons above the chart.
+ */
+function updateToolbarButtonsState() {
+  const vis = window.curveVisibility || {};
+
+  function setBtnState(id, isActive) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    if (isActive) {
+      btn.classList.add('active');
+      btn.style.opacity = '1';
+      btn.style.borderColor = '#58a6ff';
+      btn.style.color = '#ffffff';
+    } else {
+      btn.classList.remove('active');
+      btn.style.opacity = '0.45';
+      btn.style.borderColor = '#30363d';
+      btn.style.color = '#8b949e';
+    }
+  }
+
+  setBtnState('btn-toggle-rated', vis.rated !== false);
+  setBtnState('btn-toggle-station', vis.station !== false);
+  setBtnState('btn-toggle-system', vis.system !== false);
+
+  const dutyActive = (vis.duty !== false) && (vis.duty_ind !== false) && (vis.duty_station !== false);
+  setBtnState('btn-toggle-duty', dutyActive);
+
+  const maxActive = (vis.hq !== false) || (vis.eta !== false) || (vis.pow !== false);
+  setBtnState('btn-toggle-max', maxActive);
+}
+
+// Beginners Note: Opens the report with a 100% clean URL (/reports/view) with zero parameters.
+// Stores the active report ID and curve visibility toggles into server session['active_selection'].
+window.openSessionReport = function (event, reportId) {
+  if (event) event.preventDefault();
+
+  const vis = window.curveVisibility || {};
+  const hidden = [];
+  if (vis.hq === false) hidden.push('hq');
+  if (vis.eta === false) hidden.push('eta');
+  if (vis.pow === false) hidden.push('pow');
+  if (vis.npsh === false) hidden.push('npsh');
+  if (vis.rated === false) hidden.push('rated');
+  if (vis.station === false) hidden.push('station');
+  if (vis.system === false) hidden.push('system');
+  if (vis.duty === false) hidden.push('duty');
+  if (vis.duty_ind === false) hidden.push('duty_ind');
+  if (vis.duty_station === false) hidden.push('duty_station');
+
+  const params = {
+    show_hq: (vis.hq !== false) ? '1' : '0',
+    show_eta: (vis.eta !== false) ? '1' : '0',
+    show_pow: (vis.pow !== false) ? '1' : '0',
+    show_npsh: (vis.npsh !== false) ? '1' : '0',
+    show_rated: (vis.rated !== false) ? '1' : '0',
+    show_station: (vis.station !== false) ? '1' : '0',
+    show_sys: (vis.system !== false) ? '1' : '0',
+    show_duty: (vis.duty !== false) ? '1' : '0',
+    show_duty_ind: (vis.duty_ind !== false) ? '1' : '0',
+    show_duty_station: (vis.duty_station !== false) ? '1' : '0',
+    hidden_curves: hidden.join(',')
+  };
+
+  fetch('/reports/api/set-active-report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ report_id: reportId, params: params })
+  }).then(res => res.json()).then(data => {
+    window.open('/reports/view', '_blank');
+  }).catch(err => {
+    console.error("Error setting active report:", err);
+    window.open('/reports/view', '_blank');
+  });
+
+  return false;
+};
+
+function updateReportLinks() {
+  // Sync state whenever legend items or toolbar buttons are toggled
+  const vis = window.curveVisibility || {};
+  const hidden = [];
+  if (vis.hq === false) hidden.push('hq');
+  if (vis.eta === false) hidden.push('eta');
+  if (vis.pow === false) hidden.push('pow');
+  if (vis.npsh === false) hidden.push('npsh');
+  if (vis.rated === false) hidden.push('rated');
+  if (vis.station === false) hidden.push('station');
+  if (vis.system === false) hidden.push('system');
+  if (vis.duty === false) hidden.push('duty');
+  if (vis.duty_ind === false) hidden.push('duty_ind');
+  if (vis.duty_station === false) hidden.push('duty_station');
+
+  const params = {
+    show_hq: (vis.hq !== false) ? '1' : '0',
+    show_eta: (vis.eta !== false) ? '1' : '0',
+    show_pow: (vis.pow !== false) ? '1' : '0',
+    show_npsh: (vis.npsh !== false) ? '1' : '0',
+    show_rated: (vis.rated !== false) ? '1' : '0',
+    show_station: (vis.station !== false) ? '1' : '0',
+    show_sys: (vis.system !== false) ? '1' : '0',
+    show_duty: (vis.duty !== false) ? '1' : '0',
+    show_duty_ind: (vis.duty_ind !== false) ? '1' : '0',
+    show_duty_station: (vis.duty_station !== false) ? '1' : '0',
+    hidden_curves: hidden.join(',')
+  };
+
+  fetch('/reports/api/set-active-report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ params: params })
+  }).catch(() => { });
+}
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', fetchPumpData);

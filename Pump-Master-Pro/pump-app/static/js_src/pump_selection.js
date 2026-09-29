@@ -32,6 +32,14 @@ const UNIT_FACTORS = {
     mm: 1.0,
     um: 0.001,
     in: 25.4
+  },
+  density_rate: {
+    mm_min: 1.0,
+    gpm_ft2: 40.7458
+  },
+  area: {
+    m2: 1.0,
+    ft2: 0.092903
   }
 };
 
@@ -111,6 +119,11 @@ function applyUnitPreset(preset) {
   // Broadcast updated unit configuration to Pipe Network
   if (typeof syncPumpSelectionUnitsToPipeNetwork === 'function') {
     syncPumpSelectionUnitsToPipeNetwork();
+  }
+
+  // Synchronize Fire Protection Panel units with selected preset
+  if (typeof setFireUnitSystem === 'function') {
+    setFireUnitSystem(preset, true);
   }
 }
 
@@ -1518,6 +1531,672 @@ async function onMotorSpecChange() {
   }
 }
 
+// ── Quick Application / Pump Type Filter & Fire Protection Calculator ──
+
+/**
+ * setQuickPumpType(typeVal)
+ * Handles clicking the quick segmented buttons:
+ *   '' => All Types
+ *   'centrifugal' => Clean water centrifugal
+ *   'slurry' => Slurry pumps
+ *   'fire pump' => Fire pumps
+ */
+function setQuickPumpType(typeVal) {
+  const normVal = (typeVal || '').trim().toLowerCase();
+  const filterSelect = document.getElementById('filter_pump_type');
+  if (filterSelect) {
+    let found = false;
+    for (let i = 0; i < filterSelect.options.length; i++) {
+      const optVal = filterSelect.options[i].value.toLowerCase();
+      if ((normVal === 'fire pump' && (optVal === 'fire pump' || optVal === 'fire' || optVal === 'fire_pump')) ||
+          (normVal === optVal)) {
+        filterSelect.selectedIndex = i;
+        found = true;
+        break;
+      }
+    }
+    if (!found && normVal === '') {
+      filterSelect.value = '';
+    }
+  }
+
+  // Update segmented button active styles
+  updateQuickPumpTypeUI(normVal);
+
+  // Toggle Fire Protection Calculator Panel and Right Card
+  const fpPanel = document.getElementById('fireProtectionPanel');
+  const fpRightCard = document.getElementById('fireDesignPointCard');
+  const fireNotice = document.getElementById('quickPtFireNotice');
+  const ptLabel = document.getElementById('quickPtLabel');
+
+  const isFire = (normVal === 'fire' || normVal === 'fire pump' || normVal === 'fire_pump');
+  if (fpPanel) {
+    fpPanel.style.display = isFire ? '' : 'none';
+  }
+  if (fpRightCard) {
+    fpRightCard.style.display = isFire ? '' : 'none';
+  }
+  if (fireNotice) {
+    fireNotice.classList.toggle('hidden', !isFire);
+  }
+  if (ptLabel) {
+    ptLabel.textContent = isFire ? 'Fire Pump' : (normVal === 'slurry' ? 'Slurry' : (normVal === 'centrifugal' ? 'Centrifugal' : 'All Types'));
+  }
+
+  const firePrompt = document.getElementById('fireInitialPrompt');
+  const selPrompt = document.getElementById('selectionInitialPrompt');
+  if (firePrompt && selPrompt) {
+    firePrompt.style.display = isFire ? '' : 'none';
+    selPrompt.style.display = isFire ? 'none' : '';
+  }
+
+  if (isFire) {
+    calculateFireDemand();
+  }
+}
+
+/**
+ * onPumpTypeFilterChange(typeVal)
+ * Invoked when user changes the Pump Type dropdown inside the Filter Panel.
+ */
+function onPumpTypeFilterChange(typeVal) {
+  const normVal = (typeVal || '').trim().toLowerCase();
+  updateQuickPumpTypeUI(normVal);
+
+  const fpPanel = document.getElementById('fireProtectionPanel');
+  const fpRightCard = document.getElementById('fireDesignPointCard');
+  const fireNotice = document.getElementById('quickPtFireNotice');
+  const ptLabel = document.getElementById('quickPtLabel');
+
+  const isFire = (normVal === 'fire' || normVal === 'fire pump' || normVal === 'fire_pump');
+  if (fpPanel) {
+    fpPanel.style.display = isFire ? '' : 'none';
+  }
+  if (fpRightCard) {
+    fpRightCard.style.display = isFire ? '' : 'none';
+  }
+  if (fireNotice) {
+    fireNotice.classList.toggle('hidden', !isFire);
+  }
+  if (ptLabel) {
+    ptLabel.textContent = isFire ? 'Fire Pump' : (normVal === 'slurry' ? 'Slurry' : (normVal === 'centrifugal' ? 'Centrifugal' : 'All Types'));
+  }
+
+  const firePrompt = document.getElementById('fireInitialPrompt');
+  const selPrompt = document.getElementById('selectionInitialPrompt');
+  if (firePrompt && selPrompt) {
+    firePrompt.style.display = isFire ? '' : 'none';
+    selPrompt.style.display = isFire ? 'none' : '';
+  }
+
+  if (isFire) {
+    calculateFireDemand();
+  }
+}
+
+function updateQuickPumpTypeUI(normVal) {
+  const btnAll = document.getElementById('qpt-all');
+  const btnCentrif = document.getElementById('qpt-centrifugal');
+  const btnSlurry = document.getElementById('qpt-slurry');
+  const btnFire = document.getElementById('qpt-fire');
+
+  const activeDefaultClass = 'px-1.5 py-1 text-[11px] font-medium rounded text-center transition-all bg-[#21262d] text-white shadow-sm font-semibold border border-[#30363d]';
+  const inactiveDefaultClass = 'px-1.5 py-1 text-[11px] font-medium rounded text-center transition-all text-[#8b949e] hover:text-white';
+  const activeBlueClass = 'px-1.5 py-1 text-[11px] font-medium rounded text-center transition-all bg-[#21262d] text-[#58a6ff] shadow-sm font-semibold border border-[#30363d]';
+  const activeYellowClass = 'px-1.5 py-1 text-[11px] font-medium rounded text-center transition-all bg-[#21262d] text-[#e3b341] shadow-sm font-semibold border border-[#30363d]';
+  const activeFireClass = 'px-1.5 py-1 text-[11px] font-medium rounded text-center transition-all flex items-center justify-center gap-1 bg-[#f85149]/20 text-[#ff7b72] border border-[#f85149]/40 shadow-sm font-bold';
+  const inactiveFireClass = 'px-1.5 py-1 text-[11px] font-medium rounded text-center transition-all flex items-center justify-center gap-1 text-[#8b949e] hover:text-[#ff7b72]';
+
+  if (btnAll) btnAll.className = (!normVal || normVal === '') ? activeDefaultClass : inactiveDefaultClass;
+  if (btnCentrif) btnCentrif.className = (normVal === 'centrifugal') ? activeBlueClass : inactiveDefaultClass;
+  if (btnSlurry) btnSlurry.className = (normVal === 'slurry') ? activeYellowClass : inactiveDefaultClass;
+  if (btnFire) btnFire.className = (normVal === 'fire' || normVal === 'fire pump' || normVal === 'fire_pump') ? activeFireClass : inactiveFireClass;
+}
+
+/**
+ * ── Fire Protection Hydraulic Sizing & NFPA 20 Evaluation Engine ─────────
+ * Standards: NFPA 20, NFPA 13, NFPA 14, EN 12845, AS 2941
+ */
+let currentFireStandard = 'nfpa13';
+let currentFireUnitSystem = (window.__PMP_UNIT_SYSTEM === 'imperial' ? 'imperial' : 'metric');
+let fireCalcDebounceTimer = null;
+
+/**
+ * selectFireStandardTab(stdKey)
+ * Switches active fire standard tab and displays relevant parameters.
+ */
+function selectFireStandardTab(stdKey) {
+  currentFireStandard = stdKey;
+  const stdInput = document.getElementById('fire_standard');
+  if (stdInput) stdInput.value = stdKey;
+
+  // Toggle Tab button styles
+  const allTabs = ['nfpa13', 'nfpa14', 'en12845', 'as2941', 'custom'];
+  allTabs.forEach(t => {
+    const btn = document.getElementById(`fp_tab_${t}`);
+    if (btn) {
+      const isCustom = (t === 'custom');
+      const baseClass = `fp-tab-btn px-2 py-2 rounded-lg text-xs font-semibold transition-all text-center flex items-center justify-center gap-1.5 ${isCustom ? 'col-span-2' : ''}`;
+      if (t === stdKey) {
+        btn.className = `${baseClass} active bg-[#f85149]/20 text-[#f85149] border border-[#f85149]/40`;
+      } else {
+        btn.className = `${baseClass} text-[#8b949e] hover:text-white border border-transparent`;
+      }
+    }
+  });
+
+  // Update Standard Badge
+  const badgeEl = document.getElementById('fp_badge_flow_standard');
+  if (badgeEl) {
+    badgeEl.textContent = (stdKey === 'as2941' ? 'AS 2941' : (stdKey === 'en12845' ? 'EN 12845' : stdKey.toUpperCase()));
+  }
+
+  // Toggle visible sections based on standard
+  const hazardSec = document.getElementById('fp_section_hazard');
+  const densityAreaRow = document.getElementById('fp_row_density_area');
+  const standpipeRow = document.getElementById('fp_row_standpipe_risers');
+  const hoseStreamRow = document.getElementById('fp_row_hose_stream');
+  const customDutyRow = document.getElementById('fp_row_custom_duty');
+  const lblTitle = document.getElementById('fp_lbl_params_title');
+
+  if (stdKey === 'custom') {
+    if (hazardSec) hazardSec.classList.add('hidden');
+    if (densityAreaRow) densityAreaRow.classList.add('hidden');
+    if (standpipeRow) standpipeRow.classList.add('hidden');
+    if (hoseStreamRow) hoseStreamRow.classList.add('hidden');
+    if (customDutyRow) customDutyRow.classList.remove('hidden');
+    if (lblTitle) lblTitle.textContent = 'Custom Direct Duty Specification';
+  } else if (stdKey === 'nfpa14') {
+    if (hazardSec) hazardSec.classList.remove('hidden');
+    if (densityAreaRow) densityAreaRow.classList.add('hidden');
+    if (standpipeRow) standpipeRow.classList.remove('hidden');
+    if (hoseStreamRow) hoseStreamRow.classList.add('hidden');
+    if (customDutyRow) customDutyRow.classList.add('hidden');
+    if (lblTitle) lblTitle.textContent = 'Standpipe Riser Demands (NFPA 14)';
+  } else if (stdKey === 'as2941') {
+    if (hazardSec) hazardSec.classList.remove('hidden');
+    if (densityAreaRow) densityAreaRow.classList.add('hidden');
+    if (standpipeRow) standpipeRow.classList.add('hidden');
+    if (hoseStreamRow) hoseStreamRow.classList.add('hidden');
+    if (customDutyRow) customDutyRow.classList.add('hidden');
+    if (lblTitle) lblTitle.textContent = 'Installation Sizing Criteria (AS 2941)';
+  } else if (stdKey === 'en12845') {
+    if (hazardSec) hazardSec.classList.remove('hidden');
+    if (densityAreaRow) densityAreaRow.classList.remove('hidden');
+    if (standpipeRow) standpipeRow.classList.add('hidden');
+    if (hoseStreamRow) hoseStreamRow.classList.add('hidden');
+    if (customDutyRow) customDutyRow.classList.add('hidden');
+    if (lblTitle) lblTitle.textContent = 'EN 12845 Hydraulic Sprinkler Demand';
+  } else {
+    // NFPA 13
+    if (hazardSec) hazardSec.classList.remove('hidden');
+    if (densityAreaRow) densityAreaRow.classList.remove('hidden');
+    if (standpipeRow) standpipeRow.classList.add('hidden');
+    if (hoseStreamRow) hoseStreamRow.classList.remove('hidden');
+    if (customDutyRow) customDutyRow.classList.add('hidden');
+    if (lblTitle) lblTitle.textContent = 'Hydraulic Demand Parameters (NFPA 13)';
+  }
+
+  populateFireHazardDropdown(stdKey);
+  calculateFireDemand();
+}
+
+/**
+ * populateFireHazardDropdown(stdKey)
+ * Fills the hazard classification select based on selected standard.
+ */
+function populateFireHazardDropdown(stdKey) {
+  const sel = document.getElementById('fp_select_hazard');
+  const standardsData = window.__PMP_FIRE_STANDARDS || {};
+  if (!sel || !standardsData) return;
+
+  sel.innerHTML = '';
+  let profiles = {};
+  if (stdKey === 'nfpa13') profiles = standardsData.nfpa13 || {};
+  else if (stdKey === 'nfpa14') profiles = standardsData.nfpa14 || {};
+  else if (stdKey === 'en12845') profiles = standardsData.en12845 || {};
+  else if (stdKey === 'as2941') profiles = standardsData.as2941 || {};
+
+  Object.entries(profiles).forEach(([k, v]) => {
+    const opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = v.name || k;
+    sel.appendChild(opt);
+  });
+
+  if (sel.options.length > 0) {
+    sel.selectedIndex = 0;
+  }
+  onFireHazardChange();
+}
+
+/**
+ * onFireHazardChange()
+ * Updates defaults when user changes hazard class within the active standard.
+ */
+function onFireHazardChange() {
+  const std = currentFireStandard || 'nfpa13';
+  const sel = document.getElementById('fp_select_hazard');
+  const descEl = document.getElementById('fp_hazard_description');
+  const standardsData = window.__PMP_FIRE_STANDARDS || {};
+  if (!sel || !standardsData) return;
+
+  const key = sel.value;
+  let profile = null;
+  if (std === 'nfpa13') profile = (standardsData.nfpa13 || {})[key];
+  else if (std === 'nfpa14') profile = (standardsData.nfpa14 || {})[key];
+  else if (std === 'en12845') profile = (standardsData.en12845 || {})[key];
+  else if (std === 'as2941') profile = (standardsData.as2941 || {})[key];
+
+  if (!profile) return;
+
+  if (descEl) descEl.textContent = profile.description || '';
+
+  // Get current unit selections for inputs
+  const unitDens = document.getElementById('fp_unit_density')?.value || 'gpm_ft2';
+  const unitArea = document.getElementById('fp_unit_area')?.value || 'ft2';
+  const unitHose = document.getElementById('fp_unit_hose')?.value || 'gpm';
+  const unitResidual = document.getElementById('fp_unit_residual')?.value || 'psi';
+
+  const densityInput = document.getElementById('fp_density');
+  const areaInput = document.getElementById('fp_area');
+  const hoseInput = document.getElementById('fp_hose_stream');
+  const durInput = document.getElementById('fp_duration');
+  const resInput = document.getElementById('fp_residual');
+
+  if (std === 'nfpa13') {
+    if (densityInput) {
+      densityInput.value = (unitDens === 'mm_min' ? (profile.density_mm_min || 6.1) : (profile.density_gpm_ft2 || 0.15));
+    }
+    if (areaInput) {
+      areaInput.value = (unitArea === 'm2' ? (profile.area_m2 || 139.35) : (profile.area_ft2 || 1500));
+    }
+    if (hoseInput) {
+      hoseInput.value = convertValue(profile.hose_stream_gpm || 250, 'gpm', unitHose, 'flow');
+    }
+    if (durInput) durInput.value = profile.duration_min || 60;
+    if (resInput) {
+      resInput.value = convertValue(profile.min_residual_psi || 10.0, 'psi', unitResidual, 'head');
+    }
+  } else if (std === 'en12845') {
+    if (densityInput) {
+      densityInput.value = (unitDens === 'gpm_ft2' ? ((profile.design_density_mm_min || 5.0) / 40.7458).toFixed(3) : (profile.design_density_mm_min || 5.0));
+    }
+    if (areaInput) {
+      areaInput.value = (unitArea === 'ft2' ? Math.round((profile.design_area_m2 || 144) * 10.7639) : (profile.design_area_m2 || 144));
+    }
+    if (hoseInput) hoseInput.value = 0;
+    if (durInput) durInput.value = profile.duration_min || 60;
+    if (resInput) {
+      resInput.value = convertValue(profile.nominal_head_bar || 1.5, 'bar', unitResidual, 'head');
+    }
+  } else if (std === 'nfpa14') {
+    if (durInput) durInput.value = 30;
+    if (resInput) {
+      resInput.value = convertValue(profile.min_residual_psi || 100.0, 'psi', unitResidual, 'head');
+    }
+  } else if (std === 'as2941') {
+    if (durInput) durInput.value = profile.duration_min || 60;
+    if (resInput) {
+      const barVal = (profile.head_kpa ? profile.head_kpa / 100.0 : 6.0);
+      resInput.value = convertValue(barVal, 'bar', unitResidual, 'head');
+    }
+  }
+
+  calculateFireDemand();
+}
+
+/**
+ * setFireUnitSystem(u, triggerCalc = true)
+ * Toggles fire panel between metric and imperial unit presets.
+ */
+function setFireUnitSystem(u, triggerCalc = true) {
+  currentFireUnitSystem = u;
+  const isImp = (u === 'imperial');
+
+  // Update Fire Unit Button Styles
+  const btnMetric = document.getElementById('btnFireUnitMetric');
+  const btnImp = document.getElementById('btnFireUnitImperial');
+  if (btnMetric && btnImp) {
+    if (isImp) {
+      btnImp.className = 'px-2 py-0.5 rounded transition-all bg-[#21262d] text-[#58a6ff] shadow-sm';
+      btnMetric.className = 'px-2 py-0.5 rounded transition-all text-[#8b949e] hover:text-white';
+    } else {
+      btnMetric.className = 'px-2 py-0.5 rounded transition-all bg-[#21262d] text-[#58a6ff] shadow-sm';
+      btnImp.className = 'px-2 py-0.5 rounded transition-all text-[#8b949e] hover:text-white';
+    }
+  }
+
+  // Target units for all fire parameters
+  const targets = {
+    fp_unit_density: isImp ? 'gpm_ft2' : 'mm_min',
+    fp_unit_area: isImp ? 'ft2' : 'm2',
+    fp_unit_hose: isImp ? 'gpm' : 'm3h',
+    fp_unit_custom_q: isImp ? 'gpm' : 'm3h',
+    fp_unit_custom_h: isImp ? 'psi' : 'm',
+    fp_unit_static_z: isImp ? 'ft' : 'm',
+    fp_unit_friction: isImp ? 'psi' : 'm',
+    fp_unit_residual: isImp ? 'psi' : 'bar'
+  };
+
+  Object.entries(targets).forEach(([selectId, targetUnit]) => {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const prevUnit = sel.dataset.prev || sel.value;
+    const cat = sel.dataset.unitCat || 'flow';
+    const targetInputId = sel.dataset.target;
+    const inputEl = document.getElementById(targetInputId);
+
+    if (inputEl && inputEl.value !== '' && prevUnit !== targetUnit) {
+      inputEl.value = convertValue(inputEl.value, prevUnit, targetUnit, cat);
+    }
+    sel.value = targetUnit;
+    sel.dataset.prev = targetUnit;
+  });
+
+  if (triggerCalc) {
+    calculateFireDemand();
+  }
+}
+
+/**
+ * onFireParamUnitChange(sel)
+ * Converts input value when user changes any individual unit selector.
+ */
+function onFireParamUnitChange(sel) {
+  if (!sel) return;
+  const targetId = sel.dataset.target;
+  const prevUnit = sel.dataset.prev || sel.value;
+  const targetUnit = sel.value;
+  const cat = sel.dataset.unitCat || 'flow';
+  const inputEl = document.getElementById(targetId);
+
+  if (inputEl && inputEl.value !== '' && prevUnit !== targetUnit) {
+    inputEl.value = convertValue(inputEl.value, prevUnit, targetUnit, cat);
+  }
+  sel.dataset.prev = targetUnit;
+  calculateFireDemand();
+}
+
+/**
+ * triggerFireRecalculate()
+ * Debounced recalculation of fire hydraulic demand.
+ */
+function triggerFireRecalculate() {
+  clearTimeout(fireCalcDebounceTimer);
+  fireCalcDebounceTimer = setTimeout(calculateFireDemand, 120);
+}
+
+/**
+ * calculateFireDemand()
+ * Performs complete code-compliant NFPA 20 / NFPA 13 / NFPA 14 / EN 12845 / AS 2941 calculations.
+ */
+function calculateFireDemand() {
+  const std = currentFireStandard || 'nfpa13';
+  const standardsData = window.__PMP_FIRE_STANDARDS || {};
+
+  let flowGpm = 500.0;
+  let durationMin = 60;
+  let residualPsi = 65.0;
+
+  // 1. Flow Calculations
+  if (std === 'nfpa13') {
+    const rawDens = parseFloat(document.getElementById('fp_density')?.value) || 0.15;
+    const unitDens = document.getElementById('fp_unit_density')?.value || 'gpm_ft2';
+    const densGpmFt2 = (unitDens === 'mm_min' ? (rawDens / 40.7458) : rawDens);
+
+    const rawArea = parseFloat(document.getElementById('fp_area')?.value) || 1500.0;
+    const unitArea = document.getElementById('fp_unit_area')?.value || 'ft2';
+    const areaFt2 = (unitArea === 'm2' ? (rawArea * 10.7639) : rawArea);
+
+    const rawHose = parseFloat(document.getElementById('fp_hose_stream')?.value) || 250.0;
+    const unitHose = document.getElementById('fp_unit_hose')?.value || 'gpm';
+    const hoseGpm = Number(convertValue(rawHose, unitHose, 'gpm', 'flow')) || 250.0;
+
+    durationMin = parseFloat(document.getElementById('fp_duration')?.value) || 60;
+    flowGpm = (densGpmFt2 * areaFt2) + hoseGpm;
+
+    const rawRes = parseFloat(document.getElementById('fp_residual')?.value) || 10.0;
+    const unitRes = document.getElementById('fp_unit_residual')?.value || 'psi';
+    residualPsi = Number(convertValue(rawRes, unitRes, 'psi', 'head')) || 10.0;
+
+  } else if (std === 'nfpa14') {
+    const sel = document.getElementById('fp_select_hazard');
+    const stKey = sel ? sel.value : 'class_1';
+    const risers = parseInt(document.getElementById('fp_risers_count')?.value) || 1;
+    const sprinklered = document.getElementById('fp_sprinklered')?.checked ?? true;
+
+    if (stKey === 'class_2') {
+      flowGpm = 100.0;
+      residualPsi = 65.0;
+    } else {
+      const calcGpm = 500.0 + Math.max(0, risers - 1) * 250.0;
+      const maxGpm = sprinklered ? 1250.0 : 1000.0;
+      flowGpm = Math.min(calcGpm, maxGpm);
+      residualPsi = 100.0;
+    }
+    durationMin = 30;
+
+    const rawRes = parseFloat(document.getElementById('fp_residual')?.value);
+    if (!isNaN(rawRes) && rawRes > 0) {
+      const unitRes = document.getElementById('fp_unit_residual')?.value || 'psi';
+      residualPsi = Number(convertValue(rawRes, unitRes, 'psi', 'head')) || residualPsi;
+    }
+
+  } else if (std === 'en12845') {
+    const sel = document.getElementById('fp_select_hazard');
+    const enKey = sel ? sel.value : 'en_oh1';
+    const en = standardsData.en12845 ? standardsData.en12845[enKey] : null;
+
+    if (en) {
+      const nomM3h = en.nominal_flow_m3h || 60.0;
+      flowGpm = nomM3h * 4.402867;
+      durationMin = en.duration_min || 60;
+      residualPsi = (en.nominal_head_bar || 1.5) * 14.5038;
+    }
+
+    const rawRes = parseFloat(document.getElementById('fp_residual')?.value);
+    if (!isNaN(rawRes) && rawRes > 0) {
+      const unitRes = document.getElementById('fp_unit_residual')?.value || 'bar';
+      residualPsi = Number(convertValue(rawRes, unitRes, 'psi', 'head')) || residualPsi;
+    }
+
+  } else if (std === 'as2941') {
+    const sel = document.getElementById('fp_select_hazard');
+    const asKey = sel ? sel.value : 'as_sprinkler_ordinary';
+    const asCrit = standardsData.as2941 ? standardsData.as2941[asKey] : null;
+
+    if (asCrit) {
+      const flowM3h = asCrit.flow_m3h || 90.0;
+      flowGpm = flowM3h * 4.402867;
+      durationMin = asCrit.duration_min || 60;
+      residualPsi = ((asCrit.head_kpa || 600.0) / 100.0) * 14.5038;
+    }
+
+    const rawRes = parseFloat(document.getElementById('fp_residual')?.value);
+    if (!isNaN(rawRes) && rawRes > 0) {
+      const unitRes = document.getElementById('fp_unit_residual')?.value || 'psi';
+      residualPsi = Number(convertValue(rawRes, unitRes, 'psi', 'head')) || residualPsi;
+    }
+
+  } else if (std === 'custom') {
+    const rawQ = parseFloat(document.getElementById('fp_custom_q')?.value) || 500.0;
+    const unitQ = document.getElementById('fp_unit_custom_q')?.value || 'gpm';
+    flowGpm = Number(convertValue(rawQ, unitQ, 'gpm', 'flow')) || 500.0;
+    durationMin = parseFloat(document.getElementById('fp_duration')?.value) || 60;
+  }
+
+  // 2. Elevation, Piping Friction & Total Head Calculations
+  const rawZ = parseFloat(document.getElementById('fp_static_z')?.value) || 0.0;
+  const unitZ = document.getElementById('fp_unit_static_z')?.value || 'ft';
+  const zFeet = Number(convertValue(rawZ, unitZ, 'ft', 'head')) || 0.0;
+  const zPsi = zFeet * 0.4335;
+
+  const rawFric = parseFloat(document.getElementById('fp_friction')?.value) || 0.0;
+  const unitFric = document.getElementById('fp_unit_friction')?.value || 'psi';
+  const frictionPsi = Number(convertValue(rawFric, unitFric, 'psi', 'head')) || 0.0;
+
+  let totalHeadPsi = zPsi + frictionPsi + residualPsi;
+  if (std === 'custom') {
+    const rawH = parseFloat(document.getElementById('fp_custom_h')?.value) || 100.0;
+    const unitH = document.getElementById('fp_unit_custom_h')?.value || 'psi';
+    totalHeadPsi = Number(convertValue(rawH, unitH, 'psi', 'head')) || 100.0;
+  }
+
+  const flowM3h = flowGpm * 0.227124707;
+  const totalHeadM = totalHeadPsi * 0.703069578;
+  const totalHeadFt = totalHeadM * 3.28084;
+  const totalHeadBar = totalHeadM * 0.0980665;
+
+  // 3. NFPA 20 Characteristic Limits Breakdown
+  const maxChurnHeadPsi = totalHeadPsi * 1.40;
+  const maxChurnHeadM = totalHeadM * 1.40;
+  const overloadFlowGpm = flowGpm * 1.50;
+  const overloadFlowM3h = flowM3h * 1.50;
+  const minOverloadHeadPsi = totalHeadPsi * 0.65;
+  const minOverloadHeadM = totalHeadM * 0.65;
+
+  // Driver Power Sizing (Hydraulic + 15% non-overload margin, assuming typical 70% efficiency)
+  const hydPowerKw = (1000.0 * 9.80665 * (flowM3h / 3600.0) * totalHeadM) / 1000.0;
+  const shaftPowerKw = hydPowerKw / 0.70;
+  const driverPowerKw = Math.ceil(shaftPowerKw * 1.15);
+  const driverPowerHp = Math.ceil(driverPowerKw * 1.34102);
+
+  // 4. Auxiliaries: Jockey Pump & Water Storage Tank
+  const jockeyGpm = Math.max(5, Math.round(flowGpm * 0.01 * 10) / 10);
+  const jockeyHeadPsi = Math.round(totalHeadPsi * 1.10);
+  const jockeyStartPsi = Math.round(totalHeadPsi - 5);
+  const jockeyStopPsi = Math.round(totalHeadPsi + 5);
+
+  const tankGallons = Math.round(flowGpm * durationMin);
+  const tankM3 = Math.round((flowM3h * (durationMin / 60.0)) * 10) / 10;
+
+  // 5. NFPA 20 Table 4.27 Pipe Sizing Schedule
+  let suctionIn = 5, suctionMm = 125;
+  let dischargeIn = 5, dischargeMm = 125;
+  let meterIn = 5, reliefIn = 3;
+
+  if (flowGpm <= 250) {
+    suctionIn = 3.5; suctionMm = 90; dischargeIn = 3; dischargeMm = 80; meterIn = 3.5; reliefIn = 2;
+  } else if (flowGpm <= 500) {
+    suctionIn = 5; suctionMm = 125; dischargeIn = 5; dischargeMm = 125; meterIn = 5; reliefIn = 3;
+  } else if (flowGpm <= 750) {
+    suctionIn = 6; suctionMm = 150; dischargeIn = 6; dischargeMm = 150; meterIn = 6; reliefIn = 4;
+  } else if (flowGpm <= 1000) {
+    suctionIn = 8; suctionMm = 200; dischargeIn = 6; dischargeMm = 150; meterIn = 6; reliefIn = 4;
+  } else if (flowGpm <= 1500) {
+    suctionIn = 8; suctionMm = 200; dischargeIn = 8; dischargeMm = 200; meterIn = 8; reliefIn = 6;
+  } else if (flowGpm <= 2000) {
+    suctionIn = 10; suctionMm = 250; dischargeIn = 10; dischargeMm = 250; meterIn = 8; reliefIn = 6;
+  } else {
+    suctionIn = 10; suctionMm = 250; dischargeIn = 10; dischargeMm = 250; meterIn = 8; reliefIn = 8;
+  }
+
+  // 6. Update UI Metrics
+  const isImp = (currentFireUnitSystem === 'imperial');
+
+  const elFlowPrim = document.getElementById('fp_res_flow_primary');
+  const elFlowSec = document.getElementById('fp_res_flow_secondary');
+  const elHeadPrim = document.getElementById('fp_res_head_primary');
+  const elHeadSec = document.getElementById('fp_res_head_secondary');
+
+  if (isImp) {
+    if (elFlowPrim) elFlowPrim.textContent = `${Math.round(flowGpm)} GPM`;
+    if (elFlowSec) elFlowSec.textContent = `${flowM3h.toFixed(1)} m³/h`;
+    if (elHeadPrim) elHeadPrim.textContent = `${Math.round(totalHeadPsi)} PSI (${Math.round(totalHeadFt)} ft)`;
+    if (elHeadSec) elHeadSec.textContent = `${totalHeadM.toFixed(1)} m (${totalHeadBar.toFixed(1)} bar)`;
+  } else {
+    if (elFlowPrim) elFlowPrim.textContent = `${flowM3h.toFixed(1)} m³/h`;
+    if (elFlowSec) elFlowSec.textContent = `${Math.round(flowGpm)} GPM`;
+    if (elHeadPrim) elHeadPrim.textContent = `${totalHeadM.toFixed(1)} m (${totalHeadBar.toFixed(1)} bar)`;
+    if (elHeadSec) elHeadSec.textContent = `${Math.round(totalHeadPsi)} PSI (${Math.round(totalHeadFt)} ft)`;
+  }
+
+  // Limits
+  const elChurn = document.getElementById('fp_res_max_churn');
+  const elOverFlow = document.getElementById('fp_res_overload_flow');
+  const elOverHead = document.getElementById('fp_res_min_overload_head');
+  const elDriver = document.getElementById('fp_res_driver_power');
+
+  if (elChurn) elChurn.textContent = `≤ ${Math.round(maxChurnHeadPsi)} PSI (${maxChurnHeadM.toFixed(1)} m)`;
+  if (elOverFlow) elOverFlow.textContent = `${Math.round(overloadFlowGpm)} GPM (${overloadFlowM3h.toFixed(1)} m³/h)`;
+  if (elOverHead) elOverHead.textContent = `≥ ${Math.round(minOverloadHeadPsi)} PSI (${minOverloadHeadM.toFixed(1)} m)`;
+  if (elDriver) elDriver.textContent = `${driverPowerKw} kW (${driverPowerHp} HP)`;
+
+  // Jockey
+  const elJockDuty = document.getElementById('fp_res_jockey_duty');
+  const elJockStart = document.getElementById('fp_res_jockey_start');
+  const elJockStop = document.getElementById('fp_res_jockey_stop');
+
+  if (elJockDuty) elJockDuty.textContent = `${jockeyGpm} GPM @ ${jockeyHeadPsi} PSI`;
+  if (elJockStart) elJockStart.textContent = `${jockeyStartPsi} PSI`;
+  if (elJockStop) elJockStop.textContent = `${jockeyStopPsi} PSI`;
+
+  // Tank
+  const elTankM3 = document.getElementById('fp_res_tank_vol_m3');
+  const elTankGal = document.getElementById('fp_res_tank_vol_gal');
+  const elTankDur = document.getElementById('fp_res_tank_duration');
+
+  if (elTankM3) elTankM3.textContent = `${tankM3} m³`;
+  if (elTankGal) elTankGal.textContent = `${tankGallons.toLocaleString()} US Gal`;
+  if (elTankDur) elTankDur.textContent = `${durationMin} min`;
+
+  // Pipes
+  const elPipes = document.getElementById('fp_res_pipe_sizes');
+  if (elPipes) {
+    elPipes.textContent = `Suction: ${suctionIn}" (${suctionMm}mm) | Discharge: ${dischargeIn}" (${dischargeMm}mm)`;
+  }
+
+  // Store in panel dataset for retrieval
+  const panel = document.getElementById('fireProtectionPanel');
+  if (panel) {
+    panel.dataset.flowGpm = flowGpm.toFixed(1);
+    panel.dataset.flowM3h = flowM3h.toFixed(2);
+    panel.dataset.headPsi = totalHeadPsi.toFixed(1);
+    panel.dataset.headM = totalHeadM.toFixed(2);
+    panel.dataset.headFt = totalHeadFt.toFixed(1);
+    panel.dataset.headBar = totalHeadBar.toFixed(2);
+  }
+}
+
+/**
+ * applyFireDutyToSelection()
+ * Copies sized fire flow and head directly into the main duty inputs and submits the form.
+ */
+function applyFireDutyToSelection() {
+  const panel = document.getElementById('fireProtectionPanel');
+  if (!panel) return;
+
+  calculateFireDemand();
+
+  const curUnitQ = document.getElementById('select_unit_q')?.value || 'm3h';
+  const curUnitH = document.getElementById('select_unit_h')?.value || 'm';
+
+  const qInput = document.getElementById('input_q_duty');
+  const hInput = document.getElementById('input_h_duty');
+
+  const flowGpm = parseFloat(panel.dataset.flowGpm) || 500.0;
+  const headM = parseFloat(panel.dataset.headM) || 70.0;
+
+  if (qInput) {
+    qInput.value = convertValue(flowGpm, 'gpm', curUnitQ, 'flow');
+  }
+
+  if (hInput) {
+    hInput.value = convertValue(headM, 'm', curUnitH, 'head');
+  }
+
+  const filterSelect = document.getElementById('filter_pump_type');
+  if (filterSelect) {
+    filterSelect.value = 'fire pump';
+  }
+
+  const form = document.getElementById('selectionForm');
+  if (form) {
+    form.submit();
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const freqRadio = document.querySelector('input[name="motor_freq_hz"]:checked');
   const freq = freqRadio ? parseInt(freqRadio.value, 10) : 50;
@@ -1526,5 +2205,24 @@ document.addEventListener('DOMContentLoaded', () => {
   onOperationModeChange();
   onFixedSpeedModeChange();
   onVsdTrimModeChange();
+
+  // Synchronize initial fire unit system with current application preset
+  if (typeof setFireUnitSystem === 'function') {
+    setFireUnitSystem(currentFireUnitSystem, false);
+  }
+
+  // Initialize Quick Pump Type and Fire Protection UI if active
+  const curPt = (document.getElementById('filter_pump_type')?.value || '').trim().toLowerCase();
+  if (curPt === 'fire' || curPt === 'fire pump' || curPt === 'fire_pump') {
+    setQuickPumpType('fire pump');
+  } else if (curPt) {
+    updateQuickPumpTypeUI(curPt);
+  }
+
+  // Initialize Fire Protection Hazard Dropdown & Initial Demand
+  if (typeof populateFireHazardDropdown === 'function') {
+    populateFireHazardDropdown('nfpa13');
+  }
 });
+
 

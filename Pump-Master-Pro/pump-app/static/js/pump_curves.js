@@ -1,1 +1,2925 @@
-const a0_0x21afb1=a0_0x3d74;(function(_0x42605e,_0x31784a){const _0x5e9cd7=a0_0x3d74,_0x43e442=_0x42605e();while(!![]){try{const _0x1483e7=-parseInt(_0x5e9cd7(0xe91,'F40Y'))/0x1*(parseInt(_0x5e9cd7(0xbe4,'l0Vk'))/0x2)+-parseInt(_0x5e9cd7(0xa12,'WYhc'))/0x3+-parseInt(_0x5e9cd7(0x5bd,'o$gV'))/0x4*(-parseInt(_0x5e9cd7(0xb61,'%llI'))/0x5)+parseInt(_0x5e9cd7(0xc8e,'XmTZ'))/0x6*(parseInt(_0x5e9cd7(0xb54,'2U4A'))/0x7)+parseInt(_0x5e9cd7(0x953,'ZQbK'))/0x8+parseInt(_0x5e9cd7(0x5c7,'%llI'))/0x9+parseInt(_0x5e9cd7(0xb75,'1qzA'))/0xa;if(_0x1483e7===_0x31784a)break;else _0x43e442['push'](_0x43e442['shift']());}catch(_0x42890e){_0x43e442['push'](_0x43e442['shift']());}}}(a0_0x3967,0x826c6));const PLOTLY_LAYOUT_BASE={'paper_bgcolor':'trans'+a0_0x21afb1(0xa7f,'ro@9')+'t','plot_bgcolor':a0_0x21afb1(0x97f,'ayOU')+'17','font':{'color':a0_0x21afb1(0x73b,'1qzA')+'9e','size':0xb,'family':a0_0x21afb1(0x828,'2U4A')+a0_0x21afb1(0x90e,'ayOU')+a0_0x21afb1(0xdd4,'fY%z')+a0_0x21afb1(0x4df,'FKaL')+'f'},'xaxis':{'gridcolor':a0_0x21afb1(0xf9e,'T)O0')+'2d','zerolinecolor':a0_0x21afb1(0x40a,'1qzA')+'3d','showline':!![],'linewidth':1.5,'linecolor':a0_0x21afb1(0xd98,'MPp6')+'3d','mirror':!![],'tickfont':{'color':a0_0x21afb1(0xc14,'E7d)')+'9e'},'titlefont':{'color':a0_0x21afb1(0x9a3,'MvFO')+'d9','size':0xc}},'yaxis':{'gridcolor':'#2126'+'2d','zerolinecolor':a0_0x21afb1(0x596,'qape')+'3d','showline':!![],'linewidth':1.5,'linecolor':'#3036'+'3d','mirror':!![],'tickfont':{'color':a0_0x21afb1(0x34d,'O2*S')+'9e'},'titlefont':{'color':a0_0x21afb1(0x9a3,'MvFO')+'d9','size':0xc}},'margin':{'l':0x3a,'r':0x18,'t':0x1c,'b':0x34},'showlegend':!![],'legend':{'bgcolor':a0_0x21afb1(0xed0,'Band')+'22,27'+a0_0x21afb1(0x5fb,'hsDz')+a0_0x21afb1(0x693,'z2Tr'),'bordercolor':a0_0x21afb1(0x87d,'o$gV')+'3d','borderwidth':0x1,'font':{'color':a0_0x21afb1(0x38c,'(7CV')+'d9','size':0xa},'x':0.01,'y':0.99,'xanchor':a0_0x21afb1(0x2d9,'ZQbK'),'yanchor':a0_0x21afb1(0xc4c,'ZQbK')},'hovermode':a0_0x21afb1(0x944,'l&tG')+'st','hoverlabel':{'bgcolor':'#161b'+'22','bordercolor':a0_0x21afb1(0xf62,'XBWK')+'ff','font':{'color':a0_0x21afb1(0xc98,'J$mI')+'f3','size':0xb}}},PLOTLY_CONFIG={'responsive':!![],'displayModeBar':!![],'editable':!![],'edits':{'annotationPosition':!![],'annotationText':![],'annotationTail':![],'axisTitleText':![],'colorbarPosition':![],'colorbarTitleText':![],'legendPosition':![],'titleText':![],'shapePosition':![]},'modeBarButtonsToRemove':[a0_0x21afb1(0x1a5,'FKaL')+a0_0x21afb1(0x912,'$gCG'),a0_0x21afb1(0xb84,'^WDP')+'2d'],'displaylogo':![],'toImageButtonOptions':{'format':a0_0x21afb1(0x105e,'ayOU'),'width':0x578,'height':0x320}},DIA_BLUES=[a0_0x21afb1(0x1c0,'8OR)')+'bf',a0_0x21afb1(0x9e7,'lNG6')+'d4',a0_0x21afb1(0xa26,'T)O0')+'e8',a0_0x21afb1(0x284,'[GdJ')+'ff',a0_0x21afb1(0xf25,'bMaB')+'ff',a0_0x21afb1(0xb03,'QIf#')+'ff'],PUMP_COLORS=[a0_0x21afb1(0x327,'lTg5')+'ff',a0_0x21afb1(0x704,'1qzA')+'50',a0_0x21afb1(0xd28,'^WDP')+'40','#f851'+'49',a0_0x21afb1(0x9e4,'Hgl$')+'ff','#39d3'+'c0'];function isoColor(_0xb95089,_0x3d9a57,_0x201e88){const _0x2ec370=a0_0x21afb1,_0x264048=_0x201e88>_0x3d9a57?(_0xb95089-_0x3d9a57)/(_0x201e88-_0x3d9a57):0.5,_0x164b26=Math[_0x2ec370(0x4c9,'XBWK')](0xf0+_0x264048*(0x3f-0xf0)),_0x1868b7=Math[_0x2ec370(0x9d2,'hsDz')](0xc0+_0x264048*(0xb9-0xc0)),_0x1f51df=Math['round'](0x40+_0x264048*(0x50-0x40));return _0x2ec370(0xd73,'8OR)')+_0x164b26+','+_0x1868b7+','+_0x1f51df+')';}function getUnitScaleRatio(_0x15d338,_0x1a5a08={}){const _0xc4270a=a0_0x21afb1;if(_0x15d338==='eff')return 0x1;const _0x19ede6={'q':{'m3h':0x1,'ls':0.2777777777777778,'gpm':4.402917396,'lmin':16.6666666667},'h':{'m':0x1,'ft':3.280839895},'npsh':{'m':0x1,'ft':3.280839895},'pow':{'kw':0x1,'hp':1.34102209}},_0x507e16=document[_0xc4270a(0x480,'XBWK')+_0xc4270a(0x4eb,'lTg5')+_0xc4270a(0xd76,'T)O0')](_0xc4270a(0xf1f,'hsDz')+_0xc4270a(0xd2d,'o$gV')+_0xc4270a(0x7b0,'lTg5'))?.[_0xc4270a(0x634,'Band')],_0x5ef62a=document['getEl'+_0xc4270a(0x49f,'MvFO')+_0xc4270a(0xc9e,'lNG6')](_0xc4270a(0x830,'l&tG')+_0xc4270a(0xe4b,'8OR)')+_0xc4270a(0xce6,'ZQbK'))?.['value'],_0x37b213=document[_0xc4270a(0x6a2,'$gCG')+_0xc4270a(0x74c,'zfK(')+'ById'](_0xc4270a(0x6c0,'(HU5')+_0xc4270a(0xd2d,'o$gV')+_0xc4270a(0x583,'J$mI')+'sh')?.[_0xc4270a(0x774,'%llI')],_0x2d1a58=document['getEl'+_0xc4270a(0x2df,'ToWT')+_0xc4270a(0xcd0,'W@8N')](_0xc4270a(0x5c6,'MvFO')+_0xc4270a(0xe66,'XmTZ')+'it-po'+'w')?.['value'];let _0xbfd2ff='q',_0x3d091a=_0x507e16||_0xc4270a(0xeb9,'E1r%'),_0x1be876=_0x1a5a08['unit_'+'q']||document['getEl'+_0xc4270a(0xfe9,'9Vcr')+_0xc4270a(0x53f,'z2Tr')](_0xc4270a(0x6b9,'z2Tr')+_0xc4270a(0x6c4,'o$gV')+'ld')?.[_0xc4270a(0x519,'ro@9')]||_0xc4270a(0xe06,'FKaL');if(_0x15d338===_0xc4270a(0xe75,'E7d)'))_0xbfd2ff='h',_0x3d091a=_0x5ef62a||'m',_0x1be876=_0x1a5a08['unit_'+'h']||document[_0xc4270a(0x2bf,'%llI')+_0xc4270a(0x870,'l&tG')+_0xc4270a(0xd76,'T)O0')]('unit_'+_0xc4270a(0x242,'$gCG')+'ld')?.['value']||'m';else{if(_0x15d338===_0xc4270a(0xdfe,'hsDz'))_0xbfd2ff='npsh',_0x3d091a=_0x37b213||'m',_0x1be876=_0x1a5a08['unit_'+_0xc4270a(0x3ae,'z2Tr')]||document['getEl'+_0xc4270a(0xeba,'E1r%')+_0xc4270a(0x990,'l0Vk')](_0xc4270a(0x33c,'(HU5')+'npsh_'+_0xc4270a(0x8f7,'XmTZ'))?.[_0xc4270a(0x3b7,'WYhc')]||'m';else _0x15d338===_0xc4270a(0xa45,'(HU5')&&(_0xbfd2ff=_0xc4270a(0xe80,'[GdJ'),_0x3d091a=_0x2d1a58||'kw',_0x1be876=_0x1a5a08['unit_'+'pow']||_0x1a5a08[_0xc4270a(0xdcf,'WYhc')+_0xc4270a(0x894,'@(im')]||document[_0xc4270a(0xbf8,'WYhc')+_0xc4270a(0xb2b,'XRBL')+_0xc4270a(0xd6d,'[GdJ')](_0xc4270a(0x33c,'(HU5')+_0xc4270a(0xedc,'Hgl$')+_0xc4270a(0xe64,'[GdJ'))?.[_0xc4270a(0xfd7,'FKaL')]||'kw');}const _0x4fb32d=_0x19ede6[_0xbfd2ff]?.[_0x1be876]||0x1,_0x5272b8=_0x19ede6[_0xbfd2ff]?.[_0x3d091a]||0x1;return _0x5272b8/_0x4fb32d;}function getCleanAxisScale(_0x122022,_0x1856a0,_0x200bf1,_0x2fabaa,_0x3cfb7f=![]){const _0x301460=a0_0x21afb1;if(_0x1856a0===null||_0x1856a0===undefined)return{'min':_0x122022,'max':_0x1856a0,'dtick':null,'minor':_0x2fabaa};const _0x42e327=_0x122022!==null&&_0x122022!==undefined?Number(_0x122022):0x0,_0xd16edd=Number(_0x1856a0),_0x35ce36=_0xd16edd-_0x42e327;if(_0x35ce36<=0x0)return{'min':_0x42e327,'max':_0xd16edd,'dtick':null,'minor':_0x2fabaa};let _0x2673d5;_0x200bf1!==null&&_0x200bf1!==undefined&&Number(_0x200bf1)>0x0?_0x2673d5=_0x35ce36/Number(_0x200bf1):_0x2673d5=_0x35ce36/0x5;const _0xbac548=[0x1,1.5,0x2,2.5,0x5,0xa],_0x447d77=Math[_0x301460(0xe3a,'QIf#')](0xa,Math[_0x301460(0xd94,'lNG6')](Math[_0x301460(0x885,'QIf#')](_0x2673d5>0x0?_0x2673d5:0x1)));let _0x55fb8c=[];[0.1,0x1,0xa][_0x301460(0x612,'$gCG')+'ch'](_0x484f3a=>{const _0x12fd28=_0x301460;_0xbac548[_0x12fd28(0xf49,'ToWT')+'ch'](_0x186c1a=>{const _0x11fd4c=_0x12fd28,_0x15ea84=_0x186c1a*_0x447d77*_0x484f3a;if(_0x15ea84>0x0)_0x55fb8c['push'](Math[_0x11fd4c(0x8a5,'ayOU')](_0x15ea84*0xf4240)/0xf4240);});}),_0x55fb8c=Array[_0x301460(0x854,'Band')](new Set(_0x55fb8c))[_0x301460(0x4d3,'$gCG')]((_0x472144,_0x4c2098)=>_0x472144-_0x4c2098);let _0x233638=_0x55fb8c[_0x301460(0xbc0,'O2*S')+'r'](_0x171ee5=>_0x35ce36/_0x171ee5>=2.5&&_0x35ce36/_0x171ee5<=0xc);if(_0x233638[_0x301460(0x1a7,'9Vcr')+'h']===0x0)_0x233638=_0x55fb8c;let _0x14ccfa=_0x233638[0x0],_0x1bdec2=Math['abs'](_0x14ccfa-_0x2673d5);for(let _0xfea392=0x1;_0xfea392<_0x233638[_0x301460(0x398,'J$mI')+'h'];_0xfea392++){const _0x186c02=Math[_0x301460(0xe4c,'T)O0')](_0x233638[_0xfea392]-_0x2673d5);_0x186c02<_0x1bdec2&&(_0x1bdec2=_0x186c02,_0x14ccfa=_0x233638[_0xfea392]);}const _0x3bfe19=Math[_0x301460(0x577,'FKaL')]((_0xd16edd-_0x42e327)/_0x14ccfa-0.00001),_0x3d7d6f=_0x42e327+_0x3bfe19*_0x14ccfa;return{'min':_0x42e327,'max':_0x3d7d6f,'dtick':_0x14ccfa,'minor':_0x2fabaa};}function applyAxisScaleSettings(_0x2ea38e,_0x2b161a,_0x95c2ef={}){const _0xa5eb52=a0_0x21afb1;if(!_0x2ea38e)return _0x2ea38e;const _0x855903=(_0x3be7dc,_0x2b01c5=![])=>{const _0x28a6d8=a0_0x3d74,_0xff76f7=_0x28a6d8(0x8f9,'O8jx')+_0x2b161a+'_'+_0x3be7dc,_0x411c9f=document['getEl'+'ement'+_0x28a6d8(0xac9,'lTg5')](_0xff76f7);if(_0x411c9f&&_0x411c9f['value']!==undefined&&_0x411c9f['value'][_0x28a6d8(0x753,'lTg5')]()!==''){const _0x4be7a9=_0x2b01c5?parseInt(_0x411c9f['value'][_0x28a6d8(0x709,'9Vcr')](),0xa):parseFloat(_0x411c9f[_0x28a6d8(0x3b7,'WYhc')][_0x28a6d8(0x92b,'QIf#')]());if(!isNaN(_0x4be7a9))return _0x4be7a9;}const _0x1adff0=_0x28a6d8(0xc88,'o$gV')+_0x2b161a+'_'+_0x3be7dc;if(_0x95c2ef&&_0x95c2ef[_0x1adff0]!==undefined&&_0x95c2ef[_0x1adff0]!==null){const _0x201ba1=_0x2b01c5?parseInt(_0x95c2ef[_0x1adff0],0xa):parseFloat(_0x95c2ef[_0x1adff0]);if(!isNaN(_0x201ba1))return _0x201ba1;}return null;},_0x2b22b7=_0x855903(_0xa5eb52(0x88e,'9Vcr')),_0x3bac70=_0x855903('max'),_0x519214=_0x855903('major'),_0x4f189f=_0x855903(_0xa5eb52(0xef5,'T)O0'),!![]),_0x10a041=getUnitScaleRatio(_0x2b161a,_0x95c2ef),_0xf7fd53=Math[_0xa5eb52(0xc70,'ro@9')](_0x10a041-0x1)>0.0001,_0x3f03f1=_0x2b22b7!==null?_0x2b22b7*_0x10a041:null,_0x5cb27c=_0x3bac70!==null?_0x3bac70*_0x10a041:null;if(_0x3f03f1!==null||_0x5cb27c!==null){const _0x2b8628=_0x3f03f1!==null?_0x3f03f1:_0x2ea38e[_0xa5eb52(0x794,'ZQbK')]?_0x2ea38e['range'][0x0]:0x0,_0x2c0a5a=_0x5cb27c!==null?_0x5cb27c:_0x2ea38e['range']?_0x2ea38e[_0xa5eb52(0xc44,'fY%z')][0x1]:0x64,_0x1d2eef=getCleanAxisScale(_0x2b8628,_0x2c0a5a,_0x519214,_0x4f189f,_0xf7fd53);_0x2ea38e[_0xa5eb52(0xa14,'O8jx')]=[_0x1d2eef[_0xa5eb52(0x6bc,'^WDP')],_0x1d2eef[_0xa5eb52(0x982,'zfK(')]],_0x2ea38e[_0xa5eb52(0x1e6,'O8jx')+_0xa5eb52(0x2a3,'(7CV')]=![],delete _0x2ea38e['range'+_0xa5eb52(0x74d,'%llI')],_0x1d2eef[_0xa5eb52(0xad7,'XRBL')]!==null&&_0x1d2eef['dtick']>0x0&&(_0x2ea38e['dtick']=_0x1d2eef[_0xa5eb52(0x2ff,'$gCG')],_0x2ea38e[_0xa5eb52(0xc62,'%llI')+_0xa5eb52(0xa3b,'ToWT')]=_0xa5eb52(0x379,'QIf#')+'r');}else _0x519214!==null&&_0x519214>0x0&&(_0x2ea38e[_0xa5eb52(0x6a0,'ToWT')+'s']=Math['round'](_0x519214)+0x1);return _0x4f189f!==null&&_0x4f189f>0x0&&(_0x2ea38e[_0xa5eb52(0x7cd,'MvFO')]={'nticks':_0x4f189f+0x1,'showgrid':!![],'gridcolor':_0xa5eb52(0x46b,'ToWT')+'2d','gridwidth':0x1,'ticks':_0xa5eb52(0xf2d,'XBWK')+'e','ticklen':0x4,'tickcolor':_0xa5eb52(0x949,'l0Vk')+'3d'}),_0x2ea38e;}function makeLayout(_0x3bcd69,_0x32b203,_0x56ef16={},_0x4a69b1={}){const _0x526422=a0_0x21afb1,_0x2e7f29=Object[_0x526422(0x34c,'XRBL')+'n']({},PLOTLY_LAYOUT_BASE,{'xaxis':Object[_0x526422(0xfcd,'%llI')+'n']({},PLOTLY_LAYOUT_BASE[_0x526422(0xcde,'bMaB')],{'title':_0x3bcd69}),'yaxis':Object['assig'+'n']({},PLOTLY_LAYOUT_BASE[_0x526422(0x29d,'lNG6')],{'title':_0x32b203})},_0x56ef16);applyAxisScaleSettings(_0x2e7f29[_0x526422(0x97e,'O2*S')],_0x526422(0x3cd,'ro@9'),_0x4a69b1);const _0x14c741=(typeof _0x32b203===_0x526422(0x264,'F40Y')+'g'?_0x32b203:_0x32b203['text']||'')[_0x526422(0xc96,'ro@9')+_0x526422(0xf81,'(HU5')+'e']();if(_0x14c741[_0x526422(0x392,'[GdJ')+_0x526422(0x1a9,'E7d)')](_0x526422(0xb15,'z2Tr')))applyAxisScaleSettings(_0x2e7f29[_0x526422(0x737,'qape')],'head',_0x4a69b1);else{if(_0x14c741['inclu'+_0x526422(0xf60,'qape')]('eff'))applyAxisScaleSettings(_0x2e7f29['yaxis'],_0x526422(0xc58,'l&tG'),_0x4a69b1);else{if(_0x14c741[_0x526422(0x461,'J$mI')+_0x526422(0xa9d,'lNG6')]('power'))applyAxisScaleSettings(_0x2e7f29[_0x526422(0xa38,'(HU5')],_0x526422(0x308,'T)O0'),_0x4a69b1);else{if(_0x14c741[_0x526422(0x5c2,'l0Vk')+_0x526422(0x351,'ZQbK')](_0x526422(0x3f6,'2j(w')))applyAxisScaleSettings(_0x2e7f29[_0x526422(0xfc4,'W@8N')],_0x526422(0x9f6,'XmTZ'),_0x4a69b1);}}}if(_0x2e7f29[_0x526422(0x216,'9Vcr')+'2']){const _0x52b5c9=(typeof _0x2e7f29['yaxis'+'2'][_0x526422(0x4b3,'l&tG')]===_0x526422(0xf2f,'MPp6')+'g'?_0x2e7f29[_0x526422(0x4e6,'ToWT')+'2'][_0x526422(0xb01,'%llI')]:_0x2e7f29[_0x526422(0xa6e,'Hgl$')+'2'][_0x526422(0x260,'1qzA')]?.['text']||'')[_0x526422(0xb74,'2j(w')+_0x526422(0xfc1,'FKaL')+'e']();if(_0x52b5c9[_0x526422(0x392,'[GdJ')+_0x526422(0xac2,'QIf#')](_0x526422(0x73e,'MPp6')))applyAxisScaleSettings(_0x2e7f29[_0x526422(0xe97,'(7CV')+'2'],'eff',_0x4a69b1);else{if(_0x52b5c9[_0x526422(0xb46,'@(im')+_0x526422(0x494,'ro@9')](_0x526422(0x7c0,'WYhc')))applyAxisScaleSettings(_0x2e7f29[_0x526422(0x3d5,'z2Tr')+'2'],_0x526422(0xe7c,'z2Tr'),_0x4a69b1);else{if(_0x52b5c9['inclu'+_0x526422(0xaaa,'^WDP')](_0x526422(0xafc,'bMaB')))applyAxisScaleSettings(_0x2e7f29[_0x526422(0xad6,'XmTZ')+'2'],_0x526422(0x425,'d4#Z'),_0x4a69b1);}}}return _0x2e7f29;}function dutyTrace(_0x5e42fc,_0x8d409d){const _0x438b6d=a0_0x21afb1;return{'type':_0x438b6d(0x8ed,'hsDz')+'er','mode':_0x438b6d(0xf40,'(7CV')+'rs','name':_0x438b6d(0x3bb,'l&tG')+_0x438b6d(0xc20,'lTg5'),'x':[_0x5e42fc],'y':[_0x8d409d],'marker':{'size':0xe,'color':_0x438b6d(0x38b,'E7d)')+'ff','symbol':_0x438b6d(0x903,'ToWT')+'-open','line':{'color':'#ff44'+'44','width':2.5}},'hovertemplate':_0x438b6d(0xf32,'E1r%')+_0x438b6d(0xbda,'%iKk')+'=\x20'+_0x5e42fc+('\x20m³/h'+_0x438b6d(0xf15,'2U4A')+_0x438b6d(0xac1,'E1r%'))+_0x8d409d+(_0x438b6d(0x2b4,'@(im')+_0x438b6d(0xe7f,'ayOU')+_0x438b6d(0x222,'MvFO')+'a>')};}let customLabelPositions={};function getLabelUnitScaleFactors(){const _0x3bd042=a0_0x21afb1,_0x435643={'q':{'m3h':0x1,'ls':0.2777777777777778,'gpm':4.402917396,'lmin':16.6666666667},'h':{'m':0x1,'ft':3.280839895},'npsh':{'m':0x1,'ft':3.280839895},'pow':{'kw':0x1,'hp':1.34102209}},_0x17028b=document[_0x3bd042(0x94d,'O8jx')+_0x3bd042(0x746,'XBWK')+_0x3bd042(0x599,'ZQbK')](_0x3bd042(0x9eb,'FKaL')+'ew-un'+_0x3bd042(0xaf5,'T)O0'))?.[_0x3bd042(0x774,'%llI')]||'m3h',_0x506e8b=document[_0x3bd042(0x480,'XBWK')+_0x3bd042(0x533,'fY%z')+_0x3bd042(0xe8e,'E7d)')](_0x3bd042(0x9a2,'W@8N')+_0x3bd042(0x293,'l&tG')+_0x3bd042(0x65d,'@(im'))?.[_0x3bd042(0xcb6,'l0Vk')]||'m',_0x3e7d42=document[_0x3bd042(0x9b9,'Band')+'ement'+_0x3bd042(0x2be,'1qzA')]('previ'+'ew-un'+_0x3bd042(0x917,'lNG6')+'sh')?.['value']||'m',_0x518aa8=document[_0x3bd042(0x70a,'F40Y')+'ement'+_0x3bd042(0x1ab,'O2*S')](_0x3bd042(0x489,'ZQbK')+_0x3bd042(0x102e,'%llI')+_0x3bd042(0x5e6,'9Vcr')+'w')?.[_0x3bd042(0xfd7,'FKaL')]||'kw';return{'fQ':_0x435643['q'][_0x17028b]||0x1,'fH':_0x435643['h'][_0x506e8b]||0x1,'fNpsh':_0x435643['npsh'][_0x3e7d42]||0x1,'fPow':_0x435643[_0x3bd042(0x6d7,'%iKk')][_0x518aa8]||0x1};}function getCustomLabelPosition(_0x2ca591,_0x18fb89={},_0x5537b0='h'){const _0x150192=a0_0x21afb1;if(!customLabelPositions||!customLabelPositions[_0x2ca591])return null;const _0x121f3e=customLabelPositions[_0x2ca591];if(_0x121f3e['x']===undefined||_0x121f3e['y']===undefined)return null;const _0x5b4252=getLabelUnitScaleFactors();let _0x17dcf6=_0x5b4252['fH'];if(_0x5537b0===_0x150192(0xd75,'zfK('))_0x17dcf6=_0x5b4252[_0x150192(0xc08,'MvFO')];else{if(_0x5537b0===_0x150192(0xa9a,'LWa7')||_0x5537b0===_0x150192(0x5ed,'d4#Z'))_0x17dcf6=_0x5b4252[_0x150192(0xe5b,'mIwx')];else{if(_0x5537b0===_0x150192(0x98e,'zfK(')||_0x5537b0===_0x150192(0xa56,'%llI'))_0x17dcf6=0x1;}}return{'x':_0x121f3e['x']*_0x5b4252['fQ'],'y':_0x121f3e['y']*_0x17dcf6};}function _parseStyleField(_0x3da98d,_0x4a1dcd,_0xce9146,_0x2a940e){const _0x3f8ac9=a0_0x21afb1,_0x3199bb=document[_0x3f8ac9(0xd78,'l0Vk')+_0x3f8ac9(0x746,'XBWK')+_0x3f8ac9(0x1af,'nlER')](_0x3da98d)?.[_0x3f8ac9(0x207,'zfK(')];if(_0x3199bb&&_0x3199bb[_0x3f8ac9(0x8d1,'2j(w')+_0x3f8ac9(0x101f,'(HU5')](';')&&_0x3199bb[_0x3f8ac9(0x5c2,'l0Vk')+_0x3f8ac9(0x502,'O8jx')](','))try{const _0x51651a=_0x3199bb[_0x3f8ac9(0x21e,'O2*S')](';'),_0x17c699=_0x51651a[0x0][_0x3f8ac9(0x90d,'XBWK')]()||_0x4a1dcd,_0x1b3cd5=(_0x51651a[0x1]||'')[_0x3f8ac9(0x1db,'XRBL')](','),_0x474df7=parseFloat(_0x1b3cd5[0x0])||_0xce9146,_0x3ab327=(_0x1b3cd5[0x1]||'')['trim']()||_0x2a940e;return{'color':_0x17c699,'weight':_0x474df7,'style':_0x3ab327};}catch(_0x26efbf){}return{'color':_0x4a1dcd,'weight':_0xce9146,'style':_0x2a940e};}function a0_0x3d74(_0x913e17,_0x34ed29){_0x913e17=_0x913e17-0x1a0;const _0x3967b9=a0_0x3967();let _0x3d74f=_0x3967b9[_0x913e17];if(a0_0x3d74['QqWMVG']===undefined){var _0x349294=function(_0x78885a){const _0x58d01c='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=';let _0xb95089='',_0x3d9a57='';for(let _0x201e88=0x0,_0x264048,_0x164b26,_0x1868b7=0x0;_0x164b26=_0x78885a['charAt'](_0x1868b7++);~_0x164b26&&(_0x264048=_0x201e88%0x4?_0x264048*0x40+_0x164b26:_0x164b26,_0x201e88++%0x4)?_0xb95089+=String['fromCharCode'](0xff&_0x264048>>(-0x2*_0x201e88&0x6)):0x0){_0x164b26=_0x58d01c['indexOf'](_0x164b26);}for(let _0x1f51df=0x0,_0x15d338=_0xb95089['length'];_0x1f51df<_0x15d338;_0x1f51df++){_0x3d9a57+='%'+('00'+_0xb95089['charCodeAt'](_0x1f51df)['toString'](0x10))['slice'](-0x2);}return decodeURIComponent(_0x3d9a57);};const _0x3b90dc=function(_0x1a5a08,_0x19ede6){let _0x507e16=[],_0x5ef62a=0x0,_0x37b213,_0x2d1a58='';_0x1a5a08=_0x349294(_0x1a5a08);let _0xbfd2ff;for(_0xbfd2ff=0x0;_0xbfd2ff<0x100;_0xbfd2ff++){_0x507e16[_0xbfd2ff]=_0xbfd2ff;}for(_0xbfd2ff=0x0;_0xbfd2ff<0x100;_0xbfd2ff++){_0x5ef62a=(_0x5ef62a+_0x507e16[_0xbfd2ff]+_0x19ede6['charCodeAt'](_0xbfd2ff%_0x19ede6['length']))%0x100,_0x37b213=_0x507e16[_0xbfd2ff],_0x507e16[_0xbfd2ff]=_0x507e16[_0x5ef62a],_0x507e16[_0x5ef62a]=_0x37b213;}_0xbfd2ff=0x0,_0x5ef62a=0x0;for(let _0x3d091a=0x0;_0x3d091a<_0x1a5a08['length'];_0x3d091a++){_0xbfd2ff=(_0xbfd2ff+0x1)%0x100,_0x5ef62a=(_0x5ef62a+_0x507e16[_0xbfd2ff])%0x100,_0x37b213=_0x507e16[_0xbfd2ff],_0x507e16[_0xbfd2ff]=_0x507e16[_0x5ef62a],_0x507e16[_0x5ef62a]=_0x37b213,_0x2d1a58+=String['fromCharCode'](_0x1a5a08['charCodeAt'](_0x3d091a)^_0x507e16[(_0x507e16[_0xbfd2ff]+_0x507e16[_0x5ef62a])%0x100]);}return _0x2d1a58;};a0_0x3d74['OzIJpX']=_0x3b90dc,a0_0x3d74['rtRfpn']={},a0_0x3d74['QqWMVG']=!![];}const _0x9017b5=_0x3967b9[0x0];a0_0x3d74['sDbcBG']!==_0x9017b5&&(a0_0x3d74['rtRfpn']={},a0_0x3d74['sDbcBG']=_0x9017b5);const _0x577bb1=a0_0x3d74['rtRfpn'][_0x913e17];return _0x577bb1===undefined?(a0_0x3d74['RbkzKk']===undefined&&(a0_0x3d74['RbkzKk']=!![]),_0x3d74f=a0_0x3d74['OzIJpX'](_0x3d74f,_0x34ed29),a0_0x3d74['rtRfpn'][_0x913e17]=_0x3d74f):_0x3d74f=_0x577bb1,_0x3d74f;}function getGraphDisplayUnits(){const _0x15699d=a0_0x21afb1,_0x1ca2e9=(_0x46c3a5,_0x411bcf,_0xd3a0f2,_0x2f71c6,_0x4c0cbd,_0xfe9f0f,_0x5513e2)=>{const _0x373252=a0_0x3d74,_0x41b73e=document[_0x373252(0x985,'XmTZ')+'ement'+_0x373252(0x53f,'z2Tr')](_0x46c3a5),_0x468438=document[_0x373252(0xdcb,'FKaL')+_0x373252(0x2e0,'8OR)')+_0x373252(0xf33,'%llI')](_0x411bcf),_0x1c3896=document['getEl'+_0x373252(0x74c,'zfK(')+_0x373252(0x5f3,'$gCG')](_0xd3a0f2);if(_0x41b73e||_0x468438||_0x1c3896)return{'color':_0x41b73e?.[_0x373252(0x519,'ro@9')]||_0x4c0cbd,'weight':parseFloat(_0x468438?.[_0x373252(0xa62,'O8jx')])||_0xfe9f0f,'style':_0x1c3896?.[_0x373252(0x9a1,'9Vcr')]||_0x5513e2};return _parseStyleField(_0x2f71c6,_0x4c0cbd,_0xfe9f0f,_0x5513e2);},_0x41c5aa=_0x1ca2e9(_0x15699d(0x620,'E1r%')+_0x15699d(0xa37,'%iKk')+'or',_0x15699d(0x52d,'O2*S')+'adWei'+_0x15699d(0xb3c,'d4#Z'),_0x15699d(0x105c,'ro@9')+'adSty'+'le',_0x15699d(0xae1,'MPp6')+_0x15699d(0x375,'lNG6')+_0x15699d(0xadd,'E1r%')+_0x15699d(0x580,'(7CV')+'ld',_0x15699d(0x633,'fY%z')+'ff',0x2,'solid'),_0x4a3ff1=_0x1ca2e9(_0x15699d(0xd20,'l0Vk')+_0x15699d(0x346,'fY%z')+'r',_0x15699d(0x1029,'Band')+_0x15699d(0xe71,'ToWT')+'ht',_0x15699d(0x359,'2j(w')+_0x15699d(0x271,'hsDz')+'e',_0x15699d(0x37c,'zfK(')+_0x15699d(0xb0c,'l0Vk')+_0x15699d(0x562,'XRBL')+_0x15699d(0xa40,'(HU5')+'d','#3fb9'+'50',1.5,'dot'),_0x2d4275=_0x1ca2e9(_0x15699d(0xef0,'Band')+'wColo'+'r',_0x15699d(0xc69,'zfK(')+_0x15699d(0xe52,'(7CV')+'ht',_0x15699d(0x597,'%iKk')+_0x15699d(0x6c8,'F40Y')+'e',_0x15699d(0xacd,'hsDz')+_0x15699d(0x837,'z2Tr')+_0x15699d(0x789,'9Vcr')+_0x15699d(0x299,'XmTZ')+_0x15699d(0xb10,'XRBL'),_0x15699d(0x364,'qape')+'49',1.5,_0x15699d(0x768,'J$mI')+_0x15699d(0xc76,'l0Vk')),_0x15c43f=_0x1ca2e9(_0x15699d(0xf36,'d4#Z')+_0x15699d(0x4d4,'$gCG')+'or',_0x15699d(0x91a,'FKaL')+_0x15699d(0xd96,'Hgl$')+_0x15699d(0xde3,'ToWT'),'selNp'+_0x15699d(0x823,'ro@9')+'le',_0x15699d(0xb87,'%iKk')+_0x15699d(0xe4f,'Band')+_0x15699d(0xe8c,'O8jx')+_0x15699d(0xe74,'ro@9')+'ld',_0x15699d(0x786,'lNG6')+'c0',1.5,_0x15699d(0x2fb,'FKaL')+'ot');return{'q':document[_0x15699d(0xc37,'(HU5')+_0x15699d(0xb2b,'XRBL')+_0x15699d(0x724,'d4#Z')](_0x15699d(0xc2e,'fY%z')+_0x15699d(0x100c,'F40Y')+_0x15699d(0x298,'ro@9'))?.[_0x15699d(0x564,'ayOU')]||'m3h','h':document[_0x15699d(0x7e6,'2U4A')+_0x15699d(0xd1e,'W@8N')+_0x15699d(0xd6d,'[GdJ')](_0x15699d(0xccc,'QIf#')+_0x15699d(0x49b,'MPp6')+'it-h')?.[_0x15699d(0xe29,'$gCG')]||'m','npsh':document[_0x15699d(0x863,'ro@9')+'ement'+_0x15699d(0x751,'l&tG')]('previ'+_0x15699d(0x100c,'F40Y')+_0x15699d(0xda3,'@(im')+'sh')?.['value']||'m','labelFormat':document[_0x15699d(0x70a,'F40Y')+_0x15699d(0xc28,'l0Vk')+_0x15699d(0x7bd,'MvFO')](_0x15699d(0x9f7,'d4#Z')+_0x15699d(0x8e9,'z2Tr')+_0x15699d(0x96e,'XBWK'))?.['value']||_0x15699d(0xe28,'lTg5')+'nt','pow':document[_0x15699d(0x70a,'F40Y')+'ement'+_0x15699d(0xabc,'F40Y')](_0x15699d(0x81a,'l0Vk')+_0x15699d(0x55c,'$gCG')+'it-po'+'w')?.[_0x15699d(0x88a,'J$mI')]||'kw','legendMode':document[_0x15699d(0x809,'fY%z')+'ement'+_0x15699d(0x25d,'@(im')]('selLe'+'gendM'+'ode')?.[_0x15699d(0xba4,'XRBL')]||_0x15699d(0x780,'%llI'),'headColor':_0x41c5aa[_0x15699d(0x83d,'O8jx')],'headWeight':_0x41c5aa[_0x15699d(0xee7,'ZQbK')+'t'],'headStyle':_0x41c5aa[_0x15699d(0xd1b,'Hgl$')],'effColor':_0x4a3ff1[_0x15699d(0x59e,'MPp6')],'effWeight':_0x4a3ff1['weigh'+'t'],'effStyle':_0x4a3ff1[_0x15699d(0xa55,'d4#Z')],'powColor':_0x2d4275['color'],'powWeight':_0x2d4275[_0x15699d(0x325,'o$gV')+'t'],'powStyle':_0x2d4275[_0x15699d(0x720,'2U4A')],'npshColor':_0x15c43f[_0x15699d(0xad1,'hsDz')],'npshWeight':_0x15c43f[_0x15699d(0x7b5,'T)O0')+'t'],'npshStyle':_0x15c43f[_0x15699d(0xbc8,'J$mI')]};}!window[a0_0x21afb1(0x1025,'mIwx')+a0_0x21afb1(0xa70,'FKaL')+a0_0x21afb1(0xdf7,'2j(w')+a0_0x21afb1(0x730,'MPp6')+a0_0x21afb1(0x101d,'F40Y')+'ger']&&(window['_glob'+a0_0x21afb1(0xd97,'[GdJ')+'elSel'+a0_0x21afb1(0x46c,'z2Tr')+a0_0x21afb1(0x576,'l&tG')+a0_0x21afb1(0x451,'F40Y')]={'activeState':null,'select'(_0x6a2857){const _0x18ca18=a0_0x21afb1;this[_0x18ca18(0x8c6,'bMaB')+_0x18ca18(0x25c,'[GdJ')+'e']&&this[_0x18ca18(0x211,'F40Y')+_0x18ca18(0x54e,'XRBL')+'e']!==_0x6a2857&&this['desel'+_0x18ca18(0xbbc,'nlER')](),this[_0x18ca18(0x683,'ToWT')+'eStat'+'e']=_0x6a2857;},'deselect'(){const _0x28562d=a0_0x21afb1;if(!this[_0x28562d(0xacb,'@(im')+_0x28562d(0x1063,'1qzA')+'e'])return;const _0x258f21=this[_0x28562d(0x310,'^WDP')+_0x28562d(0x91f,'ayOU')+'e'];this[_0x28562d(0xd6c,'8OR)')+_0x28562d(0x7f6,'lNG6')+'e']=null;try{_0x258f21[_0x28562d(0x4b2,'O2*S')+_0x28562d(0x5d0,'o$gV')](''),_0x258f21['conta'+_0x28562d(0x3ef,'ro@9')][_0x28562d(0x5ec,'ToWT')][_0x28562d(0xfe8,'MvFO')+'r']='';const _0x588738=(_0x258f21['annot'+_0x28562d(0x561,'%llI')+'s']||[])[_0x28562d(0xcc5,'$gCG')](_0x445ed3=>Object[_0x28562d(0xedd,'bMaB')+'n']({},_0x445ed3));Plotly[_0x28562d(0x598,'^WDP')+_0x28562d(0x537,'ro@9')](_0x258f21[_0x28562d(0xf07,'E7d)')+_0x28562d(0xbdf,'%llI')],{'annotations':_0x588738})[_0x28562d(0x4db,'bMaB')](()=>{const _0x487878=_0x28562d;typeof _0x258f21[_0x487878(0x5be,'2U4A')+_0x487878(0xb77,'lNG6')+'ents']===_0x487878(0x9e0,'FKaL')+_0x487878(0xa29,'F40Y')&&_0x258f21[_0x487878(0xfdd,'LWa7')+_0x487878(0x38f,'o$gV')+_0x487878(0xe1f,'Hgl$')]();});}catch(_0x4459fd){}}},document['addEv'+a0_0x21afb1(0x344,'FKaL')+a0_0x21afb1(0xbaa,'2U4A')+'r']('keydo'+'wn',_0x18ef84=>{const _0x10ce23=a0_0x21afb1,_0x501bf7=window[_0x10ce23(0xbe1,'bMaB')+'alLab'+_0x10ce23(0x3c8,'(HU5')+_0x10ce23(0x7c6,'zfK(')+_0x10ce23(0xb34,'Band')+_0x10ce23(0xe0e,'o$gV')][_0x10ce23(0xa79,'%iKk')+_0x10ce23(0x91f,'ayOU')+'e'];if(!_0x501bf7||!_0x501bf7[_0x10ce23(0x736,'XBWK')+'j'])return;if(_0x18ef84[_0x10ce23(0x468,'Hgl$')]===_0x10ce23(0x45e,'l0Vk')+'e'){window[_0x10ce23(0x547,'8OR)')+_0x10ce23(0x5f4,'Band')+'elSel'+'ectio'+'nMana'+_0x10ce23(0x9a7,'nlER')][_0x10ce23(0x8d7,'o$gV')+_0x10ce23(0xa52,'MvFO')]();return;}if([_0x10ce23(0xeef,'8OR)')+_0x10ce23(0x50e,'XBWK'),_0x10ce23(0x883,'T)O0')+_0x10ce23(0x9c8,'9Vcr'),_0x10ce23(0xf4a,'hsDz')+'Up','Arrow'+_0x10ce23(0xcf7,'@(im')][_0x10ce23(0xf0b,'^WDP')+_0x10ce23(0x438,'W@8N')](_0x18ef84[_0x10ce23(0x1057,'MPp6')])){_0x18ef84[_0x10ce23(0x7e5,'l&tG')+'ntDef'+_0x10ce23(0xeee,'fY%z')]();const _0x42ae5e=_0x501bf7[_0x10ce23(0xd85,'F40Y')+'iner'],_0x184510=_0x501bf7['annOb'+'j'],_0xaa13ff=_0x42ae5e[_0x10ce23(0xecb,'@(im')+_0x10ce23(0xf58,'O2*S')+'t'],_0x28b0ab=_0xaa13ff?.[_0x10ce23(0x852,'9Vcr')]?.[_0x10ce23(0xab4,'E7d)')]?Math[_0x10ce23(0xc5d,'MvFO')](_0xaa13ff[_0x10ce23(0x41e,'ayOU')][_0x10ce23(0x868,'MPp6')][0x1]-_0xaa13ff[_0x10ce23(0x86c,'1qzA')][_0x10ce23(0x1021,'nlER')][0x0]):0x64,_0xc1b660=_0xaa13ff?.[_0x10ce23(0xd3c,'J$mI')]?.[_0x10ce23(0x86e,'8OR)')]?Math[_0x10ce23(0x35c,'J$mI')](_0xaa13ff['yaxis'][_0x10ce23(0xc44,'fY%z')][0x1]-_0xaa13ff[_0x10ce23(0x104c,'2U4A')][_0x10ce23(0x8ff,'%iKk')][0x0]):0x32,_0x488bd1=_0x18ef84[_0x10ce23(0xec1,'fY%z')+_0x10ce23(0x445,'O2*S')]?0x5:0x1,_0x1b18a1=_0x28b0ab/0xc8*_0x488bd1,_0x42ee17=_0xc1b660/0xc8*_0x488bd1;let _0x39db6e=_0x184510['x'],_0x4afe42=_0x184510['y'];if(_0x18ef84[_0x10ce23(0x98a,'ToWT')]===_0x10ce23(0xcd8,'ayOU')+'Left')_0x39db6e=Math[_0x10ce23(0x682,'MPp6')](0x0,_0x39db6e-_0x1b18a1);if(_0x18ef84[_0x10ce23(0xdad,'nlER')]===_0x10ce23(0xb1f,'9Vcr')+'Right')_0x39db6e=_0x39db6e+_0x1b18a1;if(_0x18ef84[_0x10ce23(0x462,'1qzA')]===_0x10ce23(0xba3,'^WDP')+_0x10ce23(0xc03,'nlER'))_0x4afe42=Math[_0x10ce23(0x6ae,'%iKk')](0x0,_0x4afe42-_0x42ee17);if(_0x18ef84[_0x10ce23(0xbb4,'[GdJ')]===_0x10ce23(0x6fb,'E1r%')+'Up')_0x4afe42=_0x4afe42+_0x42ee17;_0x39db6e=Math[_0x10ce23(0xf24,'8OR)')](_0x39db6e*0x64)/0x64,_0x4afe42=Math[_0x10ce23(0xdfd,'J$mI')](_0x4afe42*0x64)/0x64,_0x184510['x']=_0x39db6e,_0x184510['y']=_0x4afe42,_0x184510[_0x10ce23(0x6d2,'lTg5')+'or']=_0x10ce23(0xd45,'1qzA')+'r',_0x184510[_0x10ce23(0xbbb,'(HU5')+'or']=_0x10ce23(0x914,'J$mI')+'e',_0x184510['xshif'+'t']=0x0,_0x184510[_0x10ce23(0x740,'WYhc')+'t']=0x0,_0x501bf7[_0x10ce23(0x55d,'%llI')+'ositi'+'on'](_0x184510['name'],_0x39db6e,_0x4afe42),Plotly[_0x10ce23(0x292,'[GdJ')+_0x10ce23(0xcdd,'T)O0')](_0x42ae5e,{'annotations':_0x501bf7[_0x10ce23(0x4c2,'mIwx')+'ation'+'s']})[_0x10ce23(0xc63,'8OR)')](()=>{const _0x1ecf4b=_0x10ce23;_0x501bf7[_0x1ecf4b(0x5db,'mIwx')+_0x1ecf4b(0xc19,'LWa7')+'ents']();});}}),document['addEv'+a0_0x21afb1(0xe02,'QIf#')+'stene'+'r'](a0_0x21afb1(0x236,'l0Vk')+a0_0x21afb1(0xfbc,'(7CV'),_0x4177e3=>{const _0x9b33c0=a0_0x21afb1,_0x5904af=_0x4177e3[_0x9b33c0(0xa21,'QIf#')+'t'][_0x9b33c0(0x499,'8OR)')+'st']('.anno'+_0x9b33c0(0xbea,'%llI')+_0x9b33c0(0xdca,'ToWT')+_0x9b33c0(0x84c,'bMaB')+_0x9b33c0(0x7b9,'^WDP')+_0x9b33c0(0x4c7,'J$mI')+_0x9b33c0(0x443,'ZQbK')+_0x9b33c0(0x4a7,'E7d)'));!_0x5904af&&window[_0x9b33c0(0xd54,'nlER')+_0x9b33c0(0x1062,'Hgl$')+_0x9b33c0(0xb5d,'mIwx')+'ectio'+_0x9b33c0(0x4ad,'T)O0')+_0x9b33c0(0x9d9,'%llI')][_0x9b33c0(0xc68,'(HU5')+_0x9b33c0(0x1050,'@(im')+'e']&&window['_glob'+_0x9b33c0(0xefe,'lNG6')+_0x9b33c0(0xa88,'W@8N')+_0x9b33c0(0x2da,'J$mI')+_0x9b33c0(0x749,'ZQbK')+'ger'][_0x9b33c0(0x8a1,'lNG6')+_0x9b33c0(0xb92,'1qzA')]();}));function makeAnnotationsDraggable(_0x5a136e,_0x2a4dac,_0x2dcc31){const _0x445b2c=a0_0x21afb1,_0x5dd086=document[_0x445b2c(0x985,'XmTZ')+_0x445b2c(0x68a,'LWa7')+'ById'](_0x5a136e);if(!_0x5dd086)return;_0x5dd086[_0x445b2c(0xd23,'XRBL')+_0x445b2c(0x261,'lTg5')+'ps']&&_0x5dd086[_0x445b2c(0x9db,'2U4A')+_0x445b2c(0xb41,'9Vcr')+'ps'][_0x445b2c(0xc47,'F40Y')+'ch'](_0x228e7d=>{try{_0x228e7d();}catch(_0x2b1332){}});_0x5dd086[_0x445b2c(0xdb3,'lNG6')+_0x445b2c(0x107f,'nlER')+'ps']=[];const _0x510d42=_0x5dd086[_0x445b2c(0x9b4,'MPp6')+_0x445b2c(0x39d,'l0Vk')+_0x445b2c(0x784,'MvFO')+'l'](_0x445b2c(0x5ca,'FKaL')+_0x445b2c(0xfa3,'hsDz')+_0x445b2c(0x3b1,'hsDz')+_0x445b2c(0x107c,'Hgl$')+_0x445b2c(0xa3d,'l&tG')+_0x445b2c(0x7e7,'O8jx')+_0x445b2c(0x7df,'lNG6')+'on\x22]');_0x510d42['forEa'+'ch'](_0xd41503=>{const _0x2d0227=_0x445b2c;let _0x21a8b2=_0xd41503[_0x2d0227(0xd87,'ZQbK')+'st']('g.ann'+_0x2d0227(0x671,'mIwx')+'on')||_0xd41503[_0x2d0227(0x499,'8OR)')+'st']('g');if(_0x21a8b2)_0x21a8b2[_0x2d0227(0x238,'z2Tr')+_0x2d0227(0xd89,'%llI')]=![];});function _0x2ad83e(_0x3a0894){const _0x17cafc=_0x445b2c,_0x4fa78b=_0x5dd086[_0x17cafc(0x8a6,'Band')+'Layou'+'t'];if(!_0x4fa78b||!_0x4fa78b[_0x17cafc(0x501,'Band')]||!_0x4fa78b[_0x17cafc(0x87a,'%iKk')])return null;const _0x333a91=_0x4fa78b['xaxis'],_0x2752d8=_0x4fa78b[_0x17cafc(0xf89,'LWa7')],_0x2b15f9=_0x5dd086[_0x17cafc(0x100e,'ToWT')+_0x17cafc(0xdd1,'l&tG')+_0x17cafc(0x679,'MPp6')+_0x17cafc(0xf29,'2U4A')+'t'](),_0x6febc9=_0x3a0894[_0x17cafc(0x312,'qape')+'tX']-_0x2b15f9[_0x17cafc(0x9b8,'nlER')]-_0x333a91['_offs'+'et'],_0x45551b=_0x3a0894[_0x17cafc(0xc9d,'W@8N')+'tY']-_0x2b15f9[_0x17cafc(0xe72,'Band')]-_0x2752d8[_0x17cafc(0x1013,'XBWK')+'et'],_0x3ce2cb=Math['max'](0x0,Math['min'](_0x333a91[_0x17cafc(0xdf8,'l&tG')+'th']||0x270f,_0x6febc9)),_0x4e72fd=Math[_0x17cafc(0xd42,'J$mI')](0x0,Math[_0x17cafc(0x659,'XmTZ')](_0x2752d8['_leng'+'th']||0x270f,_0x45551b)),_0x31ce97=Math[_0x17cafc(0x682,'MPp6')](0x0,Math['round'](_0x333a91[_0x17cafc(0xed7,'W@8N')](_0x3ce2cb)*0x64)/0x64),_0x9f2f3b=Math['max'](0x0,Math[_0x17cafc(0x6aa,'O8jx')](_0x2752d8['p2c'](_0x4e72fd)*0x64)/0x64);return{'x':_0x31ce97,'y':_0x9f2f3b};}let _0x3b28d1=_0x5dd086[_0x445b2c(0xfa6,'Hgl$')+_0x445b2c(0x747,'l&tG')+_0x445b2c(0xa0a,'E7d)')](_0x445b2c(0x6e5,'WYhc')+'-toas'+'t');!_0x3b28d1&&(_0x3b28d1=document['creat'+_0x445b2c(0x1019,'o$gV')+'ent'](_0x445b2c(0x5b8,'XBWK')),_0x3b28d1[_0x445b2c(0xc6e,'^WDP')+_0x445b2c(0x3f3,'ro@9')]=_0x445b2c(0xc93,'ZQbK')+_0x445b2c(0x685,'W@8N'),_0x3b28d1[_0x445b2c(0x647,'LWa7')][_0x445b2c(0xad9,'W@8N')+'xt']=[_0x445b2c(0xd64,'fY%z')+_0x445b2c(0x3a4,'W@8N')+'bsolu'+'te',_0x445b2c(0xd57,'^WDP')+'px',_0x445b2c(0xc83,'MPp6')+_0x445b2c(0xc66,'QIf#'),_0x445b2c(0xded,'lNG6')+_0x445b2c(0x710,'qape')+'trans'+_0x445b2c(0x6b3,'E1r%')+_0x445b2c(0xa65,'F40Y')+')',_0x445b2c(0x6fc,'WYhc')+_0x445b2c(0x433,'%llI')+_0x445b2c(0x567,'o$gV')+_0x445b2c(0x6a4,'FKaL')+_0x445b2c(0x521,'MPp6')+_0x445b2c(0x92f,'@(im')+_0x445b2c(0x99c,'9Vcr'),'color'+_0x445b2c(0xcfc,'8OR)')+_0x445b2c(0xa3e,'8OR)'),_0x445b2c(0x1aa,'[GdJ')+_0x445b2c(0x7e0,'(HU5')+_0x445b2c(0xc41,'Hgl$')+'x',_0x445b2c(0x8b7,'MPp6')+_0x445b2c(0xaa2,'ToWT')+_0x445b2c(0x1e4,'[GdJ')+_0x445b2c(0xde4,'J$mI')+_0x445b2c(0xd83,'%iKk'),_0x445b2c(0x9bc,'fY%z')+_0x445b2c(0xeab,'%iKk')+_0x445b2c(0x52e,'%llI')+'px',_0x445b2c(0x269,'ToWT')+_0x445b2c(0x336,'ayOU')+_0x445b2c(0x60c,'ZQbK'),_0x445b2c(0xdbd,'9Vcr')+'weigh'+_0x445b2c(0x744,'O8jx'),_0x445b2c(0x844,'ToWT')+_0x445b2c(0xb32,'XRBL')+'99',_0x445b2c(0x865,'MvFO')+'er-ev'+_0x445b2c(0xf4f,'%iKk')+_0x445b2c(0x2b7,'qape'),_0x445b2c(0xb4f,'mIwx')+_0x445b2c(0x343,'(7CV')+'ne',_0x445b2c(0xb1c,'l0Vk')+_0x445b2c(0x797,'z2Tr')+_0x445b2c(0xcb5,'XBWK')+_0x445b2c(0x2cb,'8OR)'),_0x445b2c(0x27c,'lTg5')+_0x445b2c(0xa17,'ToWT')+_0x445b2c(0x1c7,'l&tG')+_0x445b2c(0x9da,'lTg5')+_0x445b2c(0x69c,'ro@9')+_0x445b2c(0x2e4,'hsDz')+_0x445b2c(0xe00,'z2Tr')+'5)']['join'](';'),_0x5dd086[_0x445b2c(0xb20,'ayOU')][_0x445b2c(0x932,'qape')+_0x445b2c(0xeb2,'O8jx')]='relat'+_0x445b2c(0xaca,'XRBL'),_0x5dd086[_0x445b2c(0xec2,'[GdJ')+_0x445b2c(0x436,'1qzA')+'d'](_0x3b28d1));const _0x29691d=_0x3f537a=>{const _0x3cdced=_0x445b2c;_0x3b28d1[_0x3cdced(0xc15,'ToWT')+'HTML']=_0x3f537a,_0x3b28d1[_0x3cdced(0x294,'9Vcr')][_0x3cdced(0xb24,'ro@9')+'ay']=_0x3f537a?_0x3cdced(0xe9c,'8OR)'):_0x3cdced(0xfe2,'hsDz');};let _0x4e91bc=null;function _0x5682d3(_0x2ee4e4,_0x3f12,_0xa1a1d9){const _0x424035=_0x445b2c,_0x59db55=getLabelUnitScaleFactors(typeof window[_0x424035(0xfdf,'%llI')+'bj']!==_0x424035(0x6d5,'ayOU')+_0x424035(0x773,'1qzA')?window['pumpO'+'bj']:{});let _0x132cb8=_0x59db55['fH'];if(_0x2ee4e4&&(_0x2ee4e4[_0x424035(0x7be,'l&tG')+_0x424035(0xe07,'ZQbK')](_0x424035(0x8f6,'ayOU'))||_0x2ee4e4[_0x424035(0x589,'%iKk')+_0x424035(0x5b4,'XmTZ')](_0x424035(0x5aa,'qape'))))_0x132cb8=_0x59db55[_0x424035(0x317,'%llI')];else{if(_0x2ee4e4&&(_0x2ee4e4[_0x424035(0x893,'z2Tr')+_0x424035(0x2c1,'MvFO')](_0x424035(0x97a,'l0Vk'))||_0x2ee4e4[_0x424035(0x4b7,'W@8N')+_0x424035(0x900,'ToWT')](_0x424035(0x9be,'9Vcr'))))_0x132cb8=_0x59db55['fPow'];else{if(_0x2ee4e4&&(_0x2ee4e4['start'+_0x424035(0x646,'8OR)')](_0x424035(0x2fc,'d4#Z'))||_0x2ee4e4[_0x424035(0x559,'lNG6')+_0x424035(0xd9e,'lNG6')](_0x424035(0xe22,'%llI'))))_0x132cb8=0x1;}}const _0x88c5e8=Math[_0x424035(0x454,'WYhc')](_0x3f12/(_0x59db55['fQ']||0x1)*0x64)/0x64,_0xb71137=Math[_0x424035(0x3fb,'XRBL')](_0xa1a1d9/(_0x132cb8||0x1)*0x64)/0x64;if(!customLabelPositions[_0x2ee4e4])customLabelPositions[_0x2ee4e4]={};customLabelPositions[_0x2ee4e4]['x']=_0x88c5e8,customLabelPositions[_0x2ee4e4]['y']=_0xb71137,clearTimeout(_0x4e91bc),_0x4e91bc=setTimeout(()=>{const _0x2e2f34=_0x424035;if(!_0x2dcc31)return;fetch(_0x2e2f34(0xdf9,'ro@9')+_0x2e2f34(0x5d9,'Band')+'/'+_0x2dcc31+('/labe'+_0x2e2f34(0x100b,'1qzA')),{'method':_0x2e2f34(0x954,'%iKk'),'headers':{'Content-Type':_0x2e2f34(0x4d8,'O2*S')+'catio'+_0x2e2f34(0x25b,'MvFO')+'n'},'body':JSON['strin'+'gify']({[_0x2ee4e4]:{'x':_0x88c5e8,'y':_0xb71137}})})[_0x2e2f34(0x7f0,'XmTZ')](()=>{});},0x96);}function _0x31383a(_0x29ada8){const _0x441760=_0x445b2c;if(!_0x29ada8)return;const _0xbe2922={'chartId':_0x5a136e,'container':_0x5dd086,'annotations':_0x2a4dac,'annObj':_0x29ada8,'savePosition':_0x5682d3,'showToast':_0x29691d,'setupSvgEvents':_0x5728c5};window[_0x441760(0x345,'zfK(')+_0x441760(0xa70,'FKaL')+_0x441760(0xa24,'E7d)')+'ectio'+_0x441760(0xce4,'2U4A')+_0x441760(0x9a7,'nlER')][_0x441760(0x515,'Band')+'t'](_0xbe2922),_0x29691d('<stro'+'ng>\x22'+_0x29ada8['name']+(_0x441760(0x9b2,'O8jx')+_0x441760(0x231,'2j(w')+_0x441760(0x7cb,'Hgl$')+_0x441760(0xc50,'XmTZ')+_0x441760(0x67e,'o$gV')+_0x441760(0xad8,'hsDz')+_0x441760(0x407,'[GdJ')+_0x441760(0x6fe,'%iKk')+_0x441760(0x326,'F40Y')+_0x441760(0xc1c,'(HU5')+_0x441760(0xb21,'ayOU')+_0x441760(0xd92,'XmTZ')+_0x441760(0xc7d,'LWa7')+'&uarr'+_0x441760(0x6ff,'8OR)')+'rr;\x20&'+_0x441760(0x9c7,'ToWT')+_0x441760(0x767,'J$mI')+'adjus'+'t'));const _0x420b4d=_0x2a4dac[_0x441760(0x103a,'nlER')+'Of'](_0x29ada8);if(_0x420b4d>=0x0){const _0x54ef2c=_0x2a4dac['map']((_0x34c06b,_0x35a33c)=>{const _0x4c2795=_0x441760;if(_0x35a33c===_0x420b4d)return Object[_0x4c2795(0xedd,'bMaB')+'n']({},_0x34c06b,{'bgcolor':_0x4c2795(0xaeb,'bMaB')+_0x4c2795(0x524,'ToWT')+_0x4c2795(0xc75,'mIwx')+_0x4c2795(0x2b1,'ro@9')+')','bordercolor':'#58a6'+'ff','borderwidth':0x2});return Object[_0x4c2795(0xd4d,'lTg5')+'n']({},_0x34c06b);});Plotly[_0x441760(0x3f0,'@(im')+'out'](_0x5dd086,{'annotations':_0x54ef2c})[_0x441760(0x26d,'l&tG')](()=>{_0x5728c5();});}}function _0x2bc3ed(){const _0xabea98=_0x445b2c;window[_0xabea98(0x2af,'[GdJ')+_0xabea98(0x4fa,'WYhc')+'elSel'+_0xabea98(0x94b,'XmTZ')+_0xabea98(0x63f,'9Vcr')+_0xabea98(0x695,'1qzA')]['desel'+_0xabea98(0x246,'2j(w')]();}function _0x3ecb42(_0x1bbe72){const _0x1ad8b2=_0x445b2c;return(_0x1bbe72||'')[_0x1ad8b2(0xd13,'lTg5')+'ce'](/<[^>]*>/g,'')[_0x1ad8b2(0x7b1,'E7d)')+'ce'](/[^a-zA-Z0-9]/g,'')[_0x1ad8b2(0x48f,'T)O0')+_0x1ad8b2(0xe86,'Band')+'e']();}const _0x5728c5=()=>{const _0xce80a6=_0x445b2c,_0x31abc1=_0x5dd086[_0xce80a6(0x81e,'bMaB')+'Selec'+_0xce80a6(0x678,'Band')+'l'](_0xce80a6(0xdb9,'ToWT')+_0xce80a6(0x72c,'zfK(')+_0xce80a6(0xc6f,'l&tG')+_0xce80a6(0x89f,'mIwx')+_0xce80a6(0x847,'MPp6')+'=\x22ann'+'otati'+_0xce80a6(0x743,'l&tG'));_0x31abc1[_0xce80a6(0xf01,'o$gV')+'ch'](_0x166dee=>{const _0x1fb8ce=_0xce80a6;let _0x35d74f=_0x166dee[_0x1fb8ce(0x464,'qape')+'st']('g.ann'+_0x1fb8ce(0xaff,'%llI')+'on')||_0x166dee[_0x1fb8ce(0x6cb,'hsDz')+'st']('g');if(!_0x35d74f||_0x35d74f[_0x1fb8ce(0x4af,'%llI')+_0x1fb8ce(0x93c,'%iKk')])return;const _0x20b520=_0x35d74f[_0x1fb8ce(0x36a,'[GdJ')+_0x1fb8ce(0x2d6,'2U4A')+_0x1fb8ce(0x3fc,'FKaL')](_0x1fb8ce(0xa0b,'lTg5'));if(!_0x20b520)return;const _0x4fb25f=_0x20b520[_0x1fb8ce(0x6a9,'(7CV')+'onten'+'t'][_0x1fb8ce(0x6db,'%llI')](),_0x5cb01a=_0x3ecb42(_0x4fb25f),_0x2cb48b=_0x4fb25f[_0x1fb8ce(0x601,'9Vcr')+'ce'](/[^0-9.]/g,''),_0x314b35=_0x2a4dac[_0x1fb8ce(0x6f7,'bMaB')+'r'](_0x4e7e84=>{const _0x118e34=_0x1fb8ce;if(!_0x4e7e84||!_0x4e7e84[_0x118e34(0x7ef,'XmTZ')])return![];if(_0x4e7e84[_0x118e34(0x8a4,'zfK(')]===_0x4fb25f)return!![];const _0x382cf9=_0x3ecb42(_0x4e7e84[_0x118e34(0x527,'9Vcr')]),_0xe6494c=_0x3ecb42(_0x4e7e84['text']);if(_0x382cf9===_0x5cb01a||_0xe6494c===_0x5cb01a)return!![];if(_0x4e7e84[_0x118e34(0x527,'9Vcr')]['start'+_0x118e34(0x478,'qape')](_0x118e34(0x64c,'d4#Z'))||_0x4e7e84['name'][_0x118e34(0xbb5,'(7CV')+'sWith'](_0x118e34(0x727,'fY%z'))||_0x4e7e84[_0x118e34(0xb8d,'MvFO')][_0x118e34(0xd03,'(HU5')+'sWith']('npsh_')){const _0x4caf77=_0x4e7e84[_0x118e34(0xee0,'%iKk')][_0x118e34(0xe3d,'XBWK')+'ce'](/[^0-9.]/g,'');if(_0x2cb48b&&_0x4caf77&&_0x2cb48b===_0x4caf77)return!![];}return![];});let _0x15bac6=_0x314b35[0x0];if(_0x314b35[_0x1fb8ce(0x2c7,'MPp6')+'h']>0x1){let _0xe612a1=Infinity;const _0xb6a90d=_0x20b520[_0x1fb8ce(0x6f1,'@(im')+_0x1fb8ce(0x30f,'qape')+'gClie'+_0x1fb8ce(0x412,'ZQbK')+'t'](),_0x581385=_0x2ad83e({'clientX':_0xb6a90d[_0x1fb8ce(0xc2d,'%iKk')]+_0xb6a90d[_0x1fb8ce(0x99a,'ayOU')]/0x2,'clientY':_0xb6a90d[_0x1fb8ce(0x30d,'9Vcr')]+_0xb6a90d[_0x1fb8ce(0xe47,'ZQbK')+'t']/0x2});_0x581385&&_0x314b35[_0x1fb8ce(0x775,'@(im')+'ch'](_0x361c0e=>{const _0x13a0de=_0x1fb8ce,_0x3c3bbe=Math[_0x13a0de(0x791,'bMaB')](_0x361c0e['x']-_0x581385['x'],_0x361c0e['y']-_0x581385['y']);_0x3c3bbe<_0xe612a1&&(_0xe612a1=_0x3c3bbe,_0x15bac6=_0x361c0e);});}if(!_0x15bac6||!_0x15bac6[_0x1fb8ce(0xc2b,'QIf#')])return;_0x35d74f[_0x1fb8ce(0x79e,'T)O0')+_0x1fb8ce(0x605,'bMaB')]=!![],_0x35d74f[_0x1fb8ce(0xb8f,'lNG6')][_0x1fb8ce(0x557,'l&tG')+'r']=_0x1fb8ce(0x78d,'XRBL');let _0x5d105f=![],_0x392ab2=0x0,_0x8df526=0x0;const _0x3e92a1=_0x314967=>{const _0x313710=_0x1fb8ce;if(_0x314967['butto'+'n']!==0x0)return;_0x314967[_0x313710(0xc36,'T)O0')+_0x313710(0x78a,'@(im')+_0x313710(0x535,'(HU5')](),_0x314967[_0x313710(0xfb5,'2j(w')+_0x313710(0xeea,'d4#Z')+_0x313710(0x8d5,'mIwx')](),_0x5d105f=![],_0x392ab2=_0x314967[_0x313710(0xae7,'ZQbK')+'tX'],_0x8df526=_0x314967['clien'+'tY'],_0x35d74f[_0x313710(0xc16,'@(im')][_0x313710(0xe1e,'(7CV')+'r']=_0x313710(0x229,'z2Tr')+_0x313710(0x5bf,'1qzA'),document[_0x313710(0xd3d,'1qzA')][_0x313710(0xb47,'ro@9')][_0x313710(0x2c2,'J$mI')+_0x313710(0x31d,'nlER')]=_0x313710(0x266,'O2*S'),_0x31383a(_0x15bac6);const _0x26fb33=_0x3f5044=>{const _0x440550=_0x313710,_0x2a02ba=_0x3f5044[_0x440550(0xb23,'MPp6')+'tX']-_0x392ab2,_0x5834f6=_0x3f5044[_0x440550(0x312,'qape')+'tY']-_0x8df526;(Math[_0x440550(0xb37,'ayOU')](_0x2a02ba)>0x2||Math[_0x440550(0x731,'LWa7')](_0x5834f6)>0x2)&&(_0x5d105f=!![],_0x35d74f[_0x440550(0x6ee,'XmTZ')]['trans'+_0x440550(0x591,'2j(w')]=_0x440550(0x621,'mIwx')+_0x440550(0x3fd,'z2Tr')+_0x2a02ba+_0x440550(0x896,'@(im')+_0x5834f6+_0x440550(0xaab,'fY%z'));},_0x40690f=_0x1fcab4=>{const _0x45c970=_0x313710;window['remov'+_0x45c970(0x89e,'2j(w')+_0x45c970(0x73f,'%llI')+_0x45c970(0x2f0,'l&tG')](_0x45c970(0x1da,'Band')+'move',_0x26fb33),window[_0x45c970(0xbc9,'XRBL')+_0x45c970(0xed8,'nlER')+_0x45c970(0x59d,'$gCG')+_0x45c970(0xbfc,'ayOU')](_0x45c970(0x8ea,'WYhc')+'up',_0x40690f),_0x35d74f[_0x45c970(0xb47,'ro@9')][_0x45c970(0x997,'O2*S')+'r']=_0x45c970(0xcff,'l0Vk'),_0x35d74f[_0x45c970(0x726,'zfK(')]['trans'+_0x45c970(0x506,'l0Vk')]='',document[_0x45c970(0xfb4,'ZQbK')][_0x45c970(0xa55,'d4#Z')]['userS'+_0x45c970(0x3cc,'l0Vk')]='';if(_0x5d105f){const _0xc1c39a=_0x2ad83e(_0x1fcab4);_0xc1c39a&&(_0x15bac6['x']=_0xc1c39a['x'],_0x15bac6['y']=_0xc1c39a['y'],_0x15bac6[_0x45c970(0xb29,'[GdJ')+'or']=_0x45c970(0x1d7,'9Vcr')+'r',_0x15bac6[_0x45c970(0x491,'zfK(')+'or']='middl'+'e',_0x15bac6['xshif'+'t']=0x0,_0x15bac6['yshif'+'t']=0x0,_0x5682d3(_0x15bac6[_0x45c970(0xdbe,'mIwx')],_0xc1c39a['x'],_0xc1c39a['y']),Plotly[_0x45c970(0xd8b,'hsDz')+_0x45c970(0x1066,'W@8N')](_0x5dd086,{'annotations':_0x2a4dac})[_0x45c970(0xcae,'F40Y')](()=>{_0x2bc3ed(),_0x5728c5();}));}};window[_0x313710(0xdb4,'(7CV')+'entLi'+'stene'+'r'](_0x313710(0x401,'MvFO')+_0x313710(0x802,'WYhc'),_0x26fb33),window[_0x313710(0xec3,'[GdJ')+'entLi'+_0x313710(0xae8,'[GdJ')+'r']('mouse'+'up',_0x40690f);};_0x35d74f[_0x1fb8ce(0x4c8,'hsDz')+'entLi'+_0x1fb8ce(0x686,'fY%z')+'r'](_0x1fb8ce(0xa80,'lTg5')+'down',_0x3e92a1);});};if(_0x5dd086['on'])try{_0x5dd086[_0x445b2c(0x102d,'(HU5')+'fterp'+_0x445b2c(0xa83,'LWa7')+_0x445b2c(0x509,'2U4A')]&&_0x5dd086[_0x445b2c(0xfba,'(7CV')+_0x445b2c(0x7f3,'qape')+_0x445b2c(0x338,'QIf#')]?.(_0x445b2c(0x4b9,'MvFO')+'y_aft'+_0x445b2c(0xd91,'O2*S')+'t',_0x5dd086['_annA'+'fterp'+_0x445b2c(0xe84,'2j(w')+'ndler']),_0x5dd086[_0x445b2c(0x6b8,'MvFO')+_0x445b2c(0x47e,'lNG6')+_0x445b2c(0x7d6,'@(im')+_0x445b2c(0x757,'bMaB')]=_0x5728c5,_0x5dd086['on'](_0x445b2c(0x648,'F40Y')+_0x445b2c(0xcc0,'(HU5')+_0x445b2c(0x283,'LWa7')+'t',_0x5728c5);}catch(_0x5759d9){}setTimeout(()=>{_0x5728c5();},0xfa);}const SPD_COLORS=[a0_0x21afb1(0xb35,'2j(w')+'00',a0_0x21afb1(0xb02,'1qzA')+'00',a0_0x21afb1(0x664,'(7CV')+'00',a0_0x21afb1(0x32a,'zfK(')+'00'];function isDuplicateOverlay(_0x1f5f60,_0x3164bb,_0x4d589f,_0x20fb74){const _0x229c62=a0_0x21afb1;if(!_0x3164bb||_0x3164bb['lengt'+'h']===0x0)return![];return _0x3164bb[_0x229c62(0x9cf,'2j(w')](_0x47dce3=>{const _0x38b290=_0x229c62;if(_0x4d589f&&!_0x20fb74){const _0x3921a3=_0x1f5f60[_0x38b290(0x33e,'[GdJ')]!==undefined?_0x1f5f60[_0x38b290(0xbe6,'T)O0')]:_0x1f5f60[_0x38b290(0xbf1,'2j(w')+_0x38b290(0x1c6,'8OR)')]!==undefined?_0x1f5f60[_0x38b290(0x587,'QIf#')+_0x38b290(0x705,'E1r%')]:_0x1f5f60[_0x38b290(0x3ac,'9Vcr')],_0x437260=_0x47dce3[_0x38b290(0xcee,'XRBL')]!==undefined?_0x47dce3['rpm']:_0x47dce3[_0x38b290(0x83a,'QIf#')];if(_0x3921a3!==undefined&&_0x437260!==undefined&&Math[_0x38b290(0xdfb,'8OR)')](_0x437260-_0x3921a3)<0x2)return!![];}else{if(!_0x4d589f&&_0x20fb74){const _0x100a00=_0x1f5f60['dia']!==undefined?_0x1f5f60[_0x38b290(0x330,'Hgl$')]:_0x1f5f60[_0x38b290(0x7d8,'l&tG')],_0x305daf=_0x47dce3[_0x38b290(0x7a4,'hsDz')];if(_0x100a00!==undefined&&_0x305daf!==undefined&&Math[_0x38b290(0xd9c,'O2*S')](_0x305daf-_0x100a00)<0x1)return!![];}}return![];});}function filterOverlayLines(_0x75d582,_0x5df972,_0x3be16a,_0x4f236c){const _0x5f30e4=a0_0x21afb1;if(!_0x75d582||_0x75d582['lengt'+'h']===0x0)return[];if(!_0x5df972||_0x5df972[_0x5f30e4(0x981,'lTg5')+'h']===0x0)return _0x75d582;return _0x75d582[_0x5f30e4(0x6c1,'d4#Z')+'r'](_0x58aff7=>!isDuplicateOverlay(_0x58aff7,_0x5df972,_0x3be16a,_0x4f236c));}function getCurveDisplaySelection(_0x13d8ce,_0x24ab09={}){const _0x278581=a0_0x21afb1,_0x32e55a=_0x13d8ce?.[_0x278581(0x83c,'E7d)')]?.[_0x278581(0x629,'mIwx')+_0x278581(0xa5d,'O2*S')+'e']||_0x278581(0x897,'$gCG')+'ed_im'+_0x278581(0x93f,'mIwx')+'r',_0x50a57b=_0x32e55a===_0x278581(0xfb0,'%llI')+_0x278581(0x504,'d4#Z')+_0x278581(0xc02,'ToWT'),_0x56e2ea=typeof document!==_0x278581(0x103b,'9Vcr')+_0x278581(0x4b1,'ro@9')?document[_0x278581(0xbf8,'WYhc')+_0x278581(0xd5f,'ZQbK')+_0x278581(0xd76,'T)O0')]('chkRp'+'mOver'+_0x278581(0x6cc,'O2*S')):null,_0x2ef9b7=typeof document!==_0x278581(0xffd,'hsDz')+_0x278581(0x651,'l0Vk')?document[_0x278581(0x420,'LWa7')+_0x278581(0xc48,'o$gV')+_0x278581(0x56f,'bMaB')](_0x278581(0x7e9,'@(im')+_0x278581(0x939,'l0Vk')+_0x278581(0xd79,'o$gV')):null,_0x5b277d=_0x24ab09[_0x278581(0xd1c,'E7d)')+_0x278581(0x994,'bMaB')+_0x278581(0x47f,'XBWK')]!==undefined?Boolean(_0x24ab09[_0x278581(0x624,'FKaL')+_0x278581(0x984,'zfK(')+_0x278581(0x340,'d4#Z')]):Boolean(_0x56e2ea?_0x56e2ea[_0x278581(0xb19,'9Vcr')+'ed']:_0x50a57b),_0x33ef37=_0x24ab09[_0x278581(0xa85,'lTg5')+_0x278581(0x8b6,'MPp6')+_0x278581(0xea6,'o$gV')]!==undefined?Boolean(_0x24ab09['showD'+_0x278581(0x103c,'WYhc')+_0x278581(0x6dc,'lNG6')]):Boolean(_0x2ef9b7?_0x2ef9b7[_0x278581(0xdc8,'2U4A')+'ed']:!_0x50a57b),_0x5a41a1=_0x50a57b?_0x5b277d:_0x33ef37,_0x42675d=_0x50a57b?_0x33ef37:_0x5b277d,_0x38554a=_0x13d8ce?.[_0x278581(0x25f,'%llI')+'y']||[],_0x41b7fa=_0x13d8ce?.[_0x278581(0x1067,'J$mI')+_0x278581(0x951,'MPp6')+'s']||_0x13d8ce?.[_0x278581(0xdcd,'lNG6')+'verla'+'y']||[],_0x3a5233=_0x13d8ce?.[_0x278581(0x4e5,'ayOU')+'verla'+'y']||[],_0x5db431=filterOverlayLines(_0x41b7fa,_0x38554a,_0x50a57b,![]),_0x56a4f4=filterOverlayLines(_0x3a5233,_0x38554a,_0x50a57b,!![]),_0x1b8dde=_0x50a57b?_0x56a4f4:_0x5db431;return{'famType':_0x32e55a,'isVarSpeed':_0x50a57b,'showSpeedLines':_0x5b277d,'showDiaOverlay':_0x33ef37,'showPrimary':_0x5a41a1,'showSecondary':_0x42675d,'primaryFamily':_0x38554a,'secondaryLines':_0x1b8dde,'spd_lines':_0x5db431,'dia_overlay':_0x56a4f4};}function buildWarmanChart(_0x2a6a95,_0x197c2c={}){const _0x23b321=a0_0x21afb1,{showIsolines:showIsolines=!![],showPowerIso:showPowerIso=![],showNpshIso:showNpshIso=![],showNpshCurve:showNpshCurve=![],npshYAxis:npshYAxis='y2',dutyQ:_0x5c8fb2,dutyH:_0x944652}=_0x197c2c,_0x9531bd=getGraphDisplayUnits(),_0x2028ec=typeof getUnitLabel===_0x23b321(0x7c2,'ayOU')+_0x23b321(0x42b,'O2*S')?getUnitLabel('q',_0x9531bd['q']):_0x9531bd['q'],_0x16aec1=typeof getUnitLabel==='funct'+_0x23b321(0x279,'WYhc')?getUnitLabel('h',_0x9531bd['h']):_0x9531bd['h'],_0x3ff6ed=typeof getUnitLabel===_0x23b321(0xf7d,'d4#Z')+_0x23b321(0xa60,'Hgl$')?getUnitLabel(_0x23b321(0x34e,'WYhc'),_0x9531bd[_0x23b321(0x34e,'WYhc')]):_0x9531bd[_0x23b321(0xd44,'LWa7')],_0x2e0218=typeof getUnitLabel===_0x23b321(0x47d,'@(im')+_0x23b321(0xed4,'ToWT')?getUnitLabel(_0x23b321(0x1dc,'bMaB'),_0x9531bd['pow']):_0x9531bd[_0x23b321(0x6c3,'E1r%')],_0x3e2776=[],_0x1f9462=[],_0x21744b=getCurveDisplaySelection(_0x2a6a95,_0x197c2c),{isVarSpeed:_0x1983d1,showPrimary:_0xf7df46,showSecondary:_0x48ae62,primaryFamily:_0x893132,secondaryLines:_0x385874}=_0x21744b,_0x25ac17=_0x9531bd[_0x23b321(0xf2a,'^WDP')+_0x23b321(0x55b,'T)O0')+'t']||_0x23b321(0x72d,'hsDz')+'nt',_0x49fa8b=_0x2a6a95[_0x23b321(0x8f0,'ro@9')]?.[_0x23b321(0x1030,'%iKk')+_0x23b321(0x63c,'^WDP')]||0x5aa,_0x326896=_0x2a6a95[_0x23b321(0x3c5,'lTg5')]?.[_0x23b321(0x4d6,'ro@9')+'ler_d'+_0x23b321(0xe05,'O2*S')]||0x12c,_0x5e5b60=(_0x384946,_0x58fc54)=>{const _0x115cb1=_0x23b321;if(_0x384946[_0x115cb1(0xf2a,'^WDP')])return _0x384946[_0x115cb1(0x5d3,'qape')];if(_0x58fc54){const _0x54fad4=_0x384946['dia']!==undefined?_0x384946['dia']:_0x384946['val']!==undefined?_0x384946[_0x115cb1(0xe4d,'^WDP')]:_0x384946[_0x115cb1(0xede,'J$mI')],_0x6870ae=_0x384946[_0x115cb1(0xb4d,'FKaL')]!==undefined?_0x384946[_0x115cb1(0xc7e,'zfK(')]:_0x384946[_0x115cb1(0x8a9,'d4#Z')+_0x115cb1(0x805,'E1r%')+'o']!==undefined?_0x384946[_0x115cb1(0x85c,'qape')+_0x115cb1(0x372,'ro@9')+'o']:_0x54fad4/_0x326896,_0x308f63=Math[_0x115cb1(0x9d2,'hsDz')]((_0x6870ae||0x1)*0x64);return _0x25ac17===_0x115cb1(0x1ba,'mIwx')+'nt'?'Ø'+_0x54fad4+_0x115cb1(0xee4,'O8jx')+_0x308f63+'%)':'Ø'+_0x54fad4+_0x115cb1(0x49e,'O8jx');}else{const _0x4d2c03=_0x384946['rpm']!==undefined?_0x384946['rpm']:_0x384946[_0x115cb1(0x1067,'J$mI')+_0x115cb1(0x64f,'MPp6')]!==undefined?_0x384946[_0x115cb1(0x4fb,'lNG6')+'_rpm']:_0x384946[_0x115cb1(0x826,'T)O0')]!==undefined?_0x384946[_0x115cb1(0x59c,'O2*S')]:_0x384946['dia'],_0xab4c1e=_0x384946[_0x115cb1(0xb8a,'XmTZ')]!==undefined?_0x384946[_0x115cb1(0xc2f,'nlER')]:_0x384946[_0x115cb1(0x3da,'XBWK')+_0x115cb1(0xaa8,'O2*S')+'o']!==undefined?_0x384946['speed'+'_rati'+'o']:_0x4d2c03/_0x49fa8b,_0x261f0e=Math['round']((_0xab4c1e||0x1)*0x64);return _0x25ac17===_0x115cb1(0x41d,'XmTZ')+'nt'?_0x4d2c03+(_0x115cb1(0x30a,'Hgl$')+'(')+_0x261f0e+'%)':_0x4d2c03+_0x115cb1(0xa15,'qape');}},_0x376d6b=_0x2a6a95['isoli'+_0x23b321(0x232,'ayOU')]||[],_0x5dd6f5=_0x2a6a95[_0x23b321(0x1ef,'XmTZ')+_0x23b321(0xaa5,'ayOU')+_0x23b321(0xa32,'ToWT')]||[],_0x106668=_0x2a6a95[_0x23b321(0x658,'d4#Z')+_0x23b321(0xfa1,'(HU5')+_0x23b321(0x1e8,'LWa7')]||[],_0x31e07e=_0x9531bd['legen'+_0x23b321(0x2de,'lNG6')]||'each',_0x3b949c=_0x9531bd[_0x23b321(0x8d6,'FKaL')+_0x23b321(0xdd7,'E1r%')]||_0x23b321(0x1014,'^WDP')+'ff',_0x13dd55=_0x9531bd[_0x23b321(0x20b,'%llI')+_0x23b321(0x846,'hsDz')]||0x2,_0x140d8=_0x9531bd[_0x23b321(0xdb1,'l0Vk')+_0x23b321(0x3f2,'XBWK')]||'solid',_0xabc053=_0x9531bd[_0x23b321(0xe54,'[GdJ')+'lor']||_0x23b321(0xc6b,'9Vcr')+'50',_0x1a3eaa=_0x9531bd[_0x23b321(0x106a,'o$gV')+'ight']||1.5,_0x47b181=_0x9531bd[_0x23b321(0xafa,'@(im')+_0x23b321(0x9d4,'l&tG')]||'dot',_0xb667e=_0x9531bd[_0x23b321(0xff6,'9Vcr')+_0x23b321(0xeb7,'W@8N')]||_0x23b321(0xbcd,'hsDz')+'49',_0x23404c=_0x9531bd[_0x23b321(0xe34,'ro@9')+_0x23b321(0x1040,'$gCG')]||1.5,_0x3b6a99=_0x9531bd[_0x23b321(0xf50,'qape')+_0x23b321(0x397,'lNG6')]||_0x23b321(0x349,'%iKk')+_0x23b321(0x318,'ayOU'),_0x110e6f=_0x9531bd[_0x23b321(0xfad,'z2Tr')+'olor']||_0x23b321(0xec9,'2U4A')+'c0',_0xb324cd=_0x9531bd['npshW'+'eight']||1.5,_0x34aad1=_0x9531bd[_0x23b321(0x52f,'z2Tr')+'tyle']||_0x23b321(0x441,'9Vcr')+'ot';let _0x498451=[],_0x5f1d0e=[],_0x58d082=!_0x1983d1;if(_0xf7df46&&!_0x48ae62)_0x498451=_0x893132,_0x5f1d0e=[],_0x58d082=!_0x1983d1;else{if(!_0xf7df46&&_0x48ae62)_0x498451=_0x385874,_0x5f1d0e=[],_0x58d082=_0x1983d1;else _0xf7df46&&_0x48ae62?(_0x498451=_0x893132,_0x5f1d0e=_0x385874,_0x58d082=!_0x1983d1):(_0x498451=_0x893132[_0x23b321(0x891,'ZQbK')](0x0,0x1),_0x5f1d0e=[],_0x58d082=!_0x1983d1);}_0x498451[_0x23b321(0x612,'$gCG')+'ch']((_0x308418,_0x382b3a)=>{const _0x45dbb9=_0x23b321,_0x541fe7=_0x308418[_0x45dbb9(0x32e,'$gCG')+'x']||_0x382b3a===0x0,_0x104e28=_0x308418['label'+'_tag']||(_0x308418[_0x45dbb9(0x800,'F40Y')+_0x45dbb9(0x1072,'E7d)')]===_0x45dbb9(0x9f3,'nlER')?_0x45dbb9(0xf84,'l0Vk')+_0x45dbb9(0x70d,'9Vcr'):''),_0x13f6a0=_0x308418[_0x45dbb9(0x77a,'LWa7')+_0x45dbb9(0x4a2,'ToWT')+_0x45dbb9(0xf06,'O2*S')+'e']||_0x308418[_0x45dbb9(0x57f,'Band')+_0x45dbb9(0xcf5,'9Vcr')]==='custo'+'m',_0x29f898=_0x13f6a0&&_0x308418[_0x45dbb9(0x8dd,'nlER')]?_0x308418[_0x45dbb9(0x8dd,'nlER')]:_0x3b949c,_0x44a967=_0x13f6a0&&_0x308418[_0x45dbb9(0x33a,'[GdJ')+'t']?_0x308418[_0x45dbb9(0xd14,'@(im')+'t']:_0x541fe7?_0x13dd55:Math[_0x45dbb9(0x1cc,'1qzA')](0x1,_0x13dd55-0.5),_0x420087=_0x13f6a0&&_0x308418[_0x45dbb9(0xd33,'T)O0')]?_0x308418[_0x45dbb9(0xe31,'MvFO')]:_0x308418[_0x45dbb9(0x4d2,'E7d)')+_0x45dbb9(0xd3e,'lTg5')]?'dash':_0x140d8,_0x2a618a=_0x5e5b60(_0x308418,_0x58d082),_0x5482cc=_0x31e07e===_0x45dbb9(0xde1,'l&tG')+_0x45dbb9(0x9a9,'9Vcr')+'ls'?_0x382b3a===0x0:_0x31e07e!==_0x45dbb9(0x52c,'fY%z')+_0x45dbb9(0x394,'O2*S')+'ls',_0x1d1810=_0x31e07e===_0x45dbb9(0xbf4,'lTg5')+_0x45dbb9(0x3c9,'WYhc')+'ls'?_0x45dbb9(0x27a,'LWa7')+'H':''+_0x2a618a+_0x104e28;_0x3e2776[_0x45dbb9(0xd4e,'WYhc')]({'type':_0x45dbb9(0x99d,'%iKk')+'er','mode':_0x45dbb9(0x4ea,'o$gV'),'name':_0x1d1810,'x':_0x308418['q'],'y':_0x308418['h'],'line':{'color':_0x29f898,'width':_0x44a967,'dash':_0x420087},'showlegend':_0x5482cc,'hovertemplate':''+_0x2a618a+_0x104e28+('<br>Q'+_0x45dbb9(0xea0,'XRBL')+_0x45dbb9(0x446,'%iKk'))+_0x2028ec+(_0x45dbb9(0x303,'LWa7')+_0x45dbb9(0x9e8,'qape')+_0x45dbb9(0x3df,'hsDz'))+_0x16aec1+('<extr'+_0x45dbb9(0xd51,'z2Tr')+_0x45dbb9(0x9fc,'[GdJ'))});const _0x6f01e4=_0x308418['bep'];_0x6f01e4&&_0x6f01e4['q']!==undefined&&_0x6f01e4['h']!==undefined&&_0x3e2776[_0x45dbb9(0x7fe,'XmTZ')]({'type':_0x45dbb9(0xf7f,'T)O0')+'er','mode':'marke'+'rs','name':_0x45dbb9(0xeaf,'mIwx')+_0x2a618a+_0x104e28,'x':[_0x6f01e4['q']],'y':[_0x6f01e4['h']],'marker':{'size':_0x541fe7?0xa:0x7,'color':_0x29f898,'symbol':_0x45dbb9(0x8c7,'mIwx'),'line':{'color':_0x45dbb9(0xddf,'T)O0'),'width':0x1}},'showlegend':![],'hovertemplate':_0x45dbb9(0x48a,'WYhc')+_0x2a618a+_0x104e28+(_0x45dbb9(0x584,'d4#Z')+'=')+_0x6f01e4['q']+'\x20'+_0x2028ec+(_0x45dbb9(0xaaf,'F40Y')+'=')+_0x6f01e4['h']+'\x20'+_0x16aec1+(_0x6f01e4[_0x45dbb9(0xde7,'nlER')]?_0x45dbb9(0xb85,'$gCG')+'='+_0x6f01e4[_0x45dbb9(0xa02,'qape')]+'%':'')+('<extr'+_0x45dbb9(0x9f8,'ZQbK')+_0x45dbb9(0x300,'LWa7'))});if(_0x31e07e===_0x45dbb9(0xc8c,'ayOU')+_0x45dbb9(0x563,'O8jx')+'ls'&&_0x308418['q']&&_0x308418['q'][_0x45dbb9(0x4f7,'ToWT')+'h']>0x0){const _0x5a9b40=''+_0x2a618a+_0x104e28;let _0x3573e1=0x0,_0x11e8c3=0x0,_0x4beef4=_0x45dbb9(0xfbf,'d4#Z'),_0x319634='botto'+'m',_0x3f6f5f=0x4,_0x3d9e9d=0x4;const _0x3fc602=_0x58d082?'dia_l'+_0x45dbb9(0x1ea,'$gCG')+_0x382b3a:_0x45dbb9(0x1f9,'MvFO')+'bl_'+_0x382b3a,_0x1b93a5=getCustomLabelPosition(_0x5a9b40,_0x2a6a95[_0x45dbb9(0xd35,'8OR)')],'h')||getCustomLabelPosition(_0x2a618a,_0x2a6a95[_0x45dbb9(0xf51,'$gCG')],'h')||getCustomLabelPosition(_0x3fc602,_0x2a6a95[_0x45dbb9(0x628,'(7CV')],'h');if(_0x1b93a5)_0x3573e1=_0x1b93a5['x'],_0x11e8c3=_0x1b93a5['y'],_0x4beef4='cente'+'r',_0x319634=_0x45dbb9(0xcd1,'z2Tr')+'e',_0x3f6f5f=0x0,_0x3d9e9d=0x0;else{const _0x46a642=_0x308418['q'][_0x45dbb9(0x31f,'ro@9')+'h']-0x1;_0x3573e1=_0x308418['q'][_0x46a642],_0x11e8c3=_0x308418['h'][_0x46a642];}_0x1f9462[_0x45dbb9(0x6c2,'hsDz')]({'x':_0x3573e1,'y':_0x11e8c3,'text':_0x45dbb9(0x400,'F40Y')+_0x5a9b40+_0x45dbb9(0x4b5,'zfK('),'showarrow':![],'captureevents':!![],'font':{'color':_0x45dbb9(0xcfe,'qape')+'ff','size':0xa,'family':_0x45dbb9(0x5ea,'qape')+_0x45dbb9(0x7a1,'FKaL')+_0x45dbb9(0xf34,'%llI')+'if'},'bgcolor':_0x45dbb9(0x825,'8OR)')+_0x45dbb9(0xefd,'$gCG')+_0x45dbb9(0x4cb,'WYhc')+_0x45dbb9(0xf0a,'F40Y')+'2)','bordercolor':_0x29f898,'borderwidth':1.5,'borderpad':0x4,'xanchor':_0x4beef4,'yanchor':_0x319634,'xshift':_0x3f6f5f,'yshift':_0x3d9e9d,'name':_0x5a9b40});}});if(_0x5f1d0e[_0x23b321(0x77d,'l&tG')+'h']>0x0){const _0x507cb5=_0x1983d1;_0x5f1d0e[_0x23b321(0x612,'$gCG')+'ch']((_0x139eac,_0x11301c)=>{const _0x2fe292=_0x23b321,_0x227f49=SPD_COLORS[Math[_0x2fe292(0x771,'bMaB')](_0x11301c,SPD_COLORS[_0x2fe292(0x964,'T)O0')+'h']-0x1)],_0xb3c2c7=_0x139eac['ratio']===0x1||_0x139eac['speed'+'_rati'+'o']===0x1?0x2:1.5,_0x58cea4=_0x5e5b60(_0x139eac,_0x507cb5),_0x13f6e6=_0x507cb5?'dash':_0x139eac[_0x2fe292(0xabf,'(7CV')]===0x1||_0x139eac[_0x2fe292(0x4fb,'lNG6')+_0x2fe292(0x25e,'%llI')+'o']===0x1?'solid':'dot';_0x3e2776[_0x2fe292(0x61f,'FKaL')]({'type':_0x2fe292(0xd84,'$gCG')+'er','mode':_0x2fe292(0x779,'J$mI'),'name':_0x58cea4,'x':_0x139eac['q'],'y':_0x139eac['h'],'line':{'color':_0x227f49,'width':_0xb3c2c7,'dash':_0x13f6e6},'showlegend':_0x31e07e!==_0x2fe292(0x2cc,'2U4A')+_0x2fe292(0xe90,'Band')+'ls','hovertemplate':_0x58cea4+(_0x2fe292(0xe77,'l0Vk')+_0x2fe292(0x529,'MPp6')+_0x2fe292(0x579,'WYhc'))+_0x2028ec+(_0x2fe292(0xa49,'J$mI')+'=%{y:'+_0x2fe292(0xc3a,'%llI'))+_0x16aec1+(_0x2fe292(0x1051,'%llI')+_0x2fe292(0xbca,'(7CV')+_0x2fe292(0x8d0,'$gCG'))});const _0x291856=_0x139eac[_0x2fe292(0x5e4,'qape')];_0x291856&&_0x291856['q']!==undefined&&_0x291856['h']!==undefined&&_0x3e2776[_0x2fe292(0x716,'qape')]({'type':_0x2fe292(0x31c,'2U4A')+'er','mode':_0x2fe292(0xf40,'(7CV')+'rs','name':_0x2fe292(0x274,'o$gV')+_0x58cea4,'x':[_0x291856['q']],'y':[_0x291856['h']],'marker':{'size':0x6,'color':_0x227f49,'symbol':'diamo'+'nd','line':{'color':_0x2fe292(0x921,'O8jx'),'width':0.8}},'showlegend':![],'hovertemplate':_0x2fe292(0xe24,'2j(w')+_0x58cea4+('<br>Q'+'=')+_0x291856['q']+'\x20'+_0x2028ec+(_0x2fe292(0x36d,'lTg5')+'=')+_0x291856['h']+'\x20'+_0x16aec1+(_0x2fe292(0xe5e,'MPp6')+'a></e'+_0x2fe292(0xb7f,'1qzA'))});if(_0x139eac['q']&&_0x139eac['q'][_0x2fe292(0x7b8,'bMaB')+'h']>0x0&&_0x139eac['h']&&_0x139eac['h'][_0x2fe292(0x6b0,'E1r%')+'h']>0x0){const _0x4e4c04=Math[_0x2fe292(0x28f,'E1r%')](_0x139eac['q'][_0x2fe292(0x4f7,'ToWT')+'h']*0.9),_0x5b1b54=_0x507cb5?_0x2fe292(0x4de,'%iKk')+_0x2fe292(0x2f2,'O2*S')+_0x11301c:_0x2fe292(0x7d9,'l&tG')+_0x2fe292(0x6f4,'lNG6')+_0x11301c,_0x305900=getCustomLabelPosition(_0x5b1b54,_0x2a6a95[_0x2fe292(0x5b5,'1qzA')],'h')||getCustomLabelPosition(_0x58cea4,_0x2a6a95['pump'],'h')||getCustomLabelPosition('ol_lb'+'l_'+_0x11301c,_0x2a6a95[_0x2fe292(0x8c3,'^WDP')],'h'),_0x37fd7b=_0x305900?_0x305900['x']:_0x139eac['q'][_0x4e4c04],_0x19d36c=_0x305900?_0x305900['y']:_0x139eac['h'][_0x4e4c04];_0x1f9462[_0x2fe292(0x716,'qape')]({'x':_0x37fd7b,'y':_0x19d36c,'text':_0x2fe292(0x362,'9Vcr')+_0x58cea4+_0x2fe292(0xd2f,'XmTZ'),'showarrow':![],'captureevents':!![],'font':{'color':_0x2fe292(0xc61,'bMaB')+'ff','size':0x9,'family':_0x2fe292(0x556,'FKaL')+',\x20san'+'s-ser'+'if'},'bgcolor':_0x2fe292(0x58d,'QIf#')+_0x2fe292(0x3ff,'d4#Z')+_0x2fe292(0x916,'bMaB')+_0x2fe292(0xee3,'lTg5')+'0)','bordercolor':_0x227f49,'borderwidth':0x1,'borderpad':0x2,'xanchor':_0x2fe292(0xd3a,'QIf#')+'r','yanchor':_0x2fe292(0x2ed,'1qzA')+'e','name':_0x5b1b54});}});}showIsolines&&_0x376d6b[_0x23b321(0x398,'J$mI')+'h']>0x0&&_0x376d6b[_0x23b321(0x9af,'%iKk')+'ch']((_0x287383,_0x25d308)=>{const _0x5beca2=_0x23b321,_0x4010e8=_0x31e07e===_0x5beca2(0x7e8,'zfK(')+_0x5beca2(0x563,'O8jx')+'ls'?_0x25d308===0x0:![],_0x31b428=_0x31e07e===_0x5beca2(0xbf4,'lTg5')+_0x5beca2(0xa64,'E1r%')+'ls'?_0x5beca2(0x2ea,'^WDP')+_0x5beca2(0xf63,'ayOU')+'\x20η':_0x5beca2(0x862,'Hgl$')+_0x287383[_0x5beca2(0xa02,'qape')]+'%';_0x3e2776[_0x5beca2(0xce1,'$gCG')]({'type':'scatt'+'er','mode':'lines','name':_0x31b428,'x':_0x287383['q'],'y':_0x287383['h'],'line':{'color':_0xabc053,'width':_0x1a3eaa,'dash':_0x47b181},'fill':_0x5beca2(0xd55,'ro@9'),'hovertemplate':_0x5beca2(0x862,'Hgl$')+_0x287383[_0x5beca2(0x365,'T)O0')]+('%<br>'+'Q=%{x'+_0x5beca2(0xb0b,'MPp6')+'\x20')+_0x2028ec+(_0x5beca2(0x3ee,'bMaB')+_0x5beca2(0x57c,'%llI')+_0x5beca2(0x795,'Hgl$'))+_0x16aec1+(_0x5beca2(0x849,'FKaL')+_0x5beca2(0x335,'^WDP')+'xtra>'),'showlegend':_0x4010e8});if(_0x287383['label'+'_q']!==undefined&&_0x287383[_0x5beca2(0x417,'Hgl$')+'_h']!==undefined){const _0x263fd1=_0x287383[_0x5beca2(0xbdc,'ayOU')+'h']?'_'+_0x287383[_0x5beca2(0x1027,'ToWT')+'h']:'_'+_0x25d308,_0x168b3d=_0x5beca2(0x100d,'fY%z')+_0x287383[_0x5beca2(0x788,'WYhc')]+_0x263fd1,_0x267cdc=_0x5beca2(0x919,'(HU5')+_0x287383[_0x5beca2(0xd21,'zfK(')],_0x2172e5=getCustomLabelPosition(_0x168b3d,_0x2a6a95['pump'],'h')||(_0x25d308===0x0?getCustomLabelPosition(_0x267cdc,_0x2a6a95[_0x5beca2(0x24b,'Band')],'h'):null),_0x3bd4f6=_0x2172e5?_0x2172e5['x']:_0x287383[_0x5beca2(0x2b3,'(7CV')+'_q'],_0x42f250=_0x2172e5?_0x2172e5['y']:_0x287383[_0x5beca2(0xbeb,'J$mI')+'_h'];_0x1f9462['push']({'x':_0x3bd4f6,'y':_0x42f250,'text':_0x5beca2(0x85a,'FKaL')+(_0x287383['label'+_0x5beca2(0xcb3,'mIwx')]||_0x287383['eta']+'%')+_0x5beca2(0xfb9,'W@8N'),'showarrow':![],'captureevents':!![],'font':{'color':_0x5beca2(0x28e,'2U4A')+'ff','size':9.5,'family':_0x5beca2(0x68f,'XBWK')+_0x5beca2(0x804,'lTg5')+_0x5beca2(0xff4,'T)O0')+'if'},'bgcolor':_0x5beca2(0x9f2,'E7d)')+_0x5beca2(0x27b,'O2*S')+_0x5beca2(0xd11,'%llI')+',\x200.9'+'2)','bordercolor':_0xabc053,'borderwidth':0x1,'borderpad':0x3,'xanchor':_0x5beca2(0x6e1,'ToWT')+'r','yanchor':'middl'+'e','name':_0x168b3d});}});showPowerIso&&_0x5dd6f5[_0x23b321(0x1a7,'9Vcr')+'h']>0x0&&_0x5dd6f5['forEa'+'ch']((_0x53fdf3,_0x57224e)=>{const _0x52f858=_0x23b321,_0x159da8=_0x31e07e===_0x52f858(0x1d4,'9Vcr')+_0x52f858(0x833,'%iKk')+'ls'?_0x57224e===0x0:![],_0x3becb7=_0x31e07e==='curve'+_0x52f858(0x4d0,'[GdJ')+'ls'?_0x52f858(0xe40,'XBWK')+'\x20P':_0x52f858(0x91b,'ToWT')+_0x53fdf3[_0x52f858(0xcf2,'l&tG')]+'\x20'+_0x2e0218;_0x3e2776[_0x52f858(0x798,'W@8N')]({'type':_0x52f858(0x4fc,'9Vcr')+'er','mode':_0x52f858(0x479,'ro@9'),'name':_0x3becb7,'x':_0x53fdf3['q'],'y':_0x53fdf3['h'],'line':{'color':_0xb667e,'width':_0x23404c,'dash':_0x3b6a99},'showlegend':_0x159da8,'hovertemplate':'P\x20=\x20'+_0x53fdf3[_0x52f858(0xccd,'Hgl$')]+'\x20'+_0x2e0218+(_0x52f858(0x97b,'%llI')+_0x52f858(0x958,'zfK(')+_0x52f858(0xaee,'F40Y'))+_0x2028ec+(_0x52f858(0xefc,'z2Tr')+_0x52f858(0xa6d,'LWa7')+_0x52f858(0x70f,'fY%z'))+_0x16aec1+(_0x52f858(0x3d1,'J$mI')+'a></e'+_0x52f858(0x29f,'Band'))});if(_0x53fdf3['q'][_0x52f858(0xef9,'8OR)')+'h']>0x0){const _0x3f50cf=_0x53fdf3[_0x52f858(0xfb3,'hsDz')+'h']?'_'+_0x53fdf3[_0x52f858(0xba6,'O8jx')+'h']:'_'+_0x57224e,_0xb9a3d4=_0x52f858(0x727,'fY%z')+_0x53fdf3[_0x52f858(0xf48,'LWa7')]+_0x3f50cf,_0x5a7565=Math[_0x52f858(0x493,'ToWT')](_0x53fdf3['q']['lengt'+'h']/0x2),_0x7dc446=getCustomLabelPosition(_0xb9a3d4,_0x2a6a95['pump'],'h'),_0x2afadd=_0x7dc446?_0x7dc446['x']:_0x53fdf3['q'][_0x5a7565],_0x3366d0=_0x7dc446?_0x7dc446['y']:_0x53fdf3['h'][_0x5a7565];_0x1f9462[_0x52f858(0x67c,'fY%z')]({'x':_0x2afadd,'y':_0x3366d0,'text':_0x52f858(0x915,'2U4A')+_0x53fdf3[_0x52f858(0x894,'@(im')]+_0x2e0218+_0x52f858(0x108a,'O2*S'),'showarrow':![],'captureevents':!![],'font':{'color':_0x52f858(0xe5d,'W@8N')+'ff','size':9.5,'family':_0x52f858(0xf75,'9Vcr')+_0x52f858(0xa31,'ro@9')+'s-ser'+'if'},'bgcolor':_0x52f858(0xfe1,'d4#Z')+_0x52f858(0x8fc,'XBWK')+_0x52f858(0x67d,'XRBL')+_0x52f858(0xfed,'QIf#')+'2)','bordercolor':_0x52f858(0xdf0,'XmTZ')+'49','borderwidth':0x1,'borderpad':0x3,'xanchor':_0x52f858(0xe96,'lTg5')+'r','yanchor':_0x52f858(0xfec,'XBWK')+'e','name':_0xb9a3d4});}});showNpshIso&&_0x106668['lengt'+'h']>0x0&&_0x106668['forEa'+'ch']((_0x2ef8ce,_0x34eb80)=>{const _0x346fca=_0x23b321,_0x1e1e86=_0x31e07e==='curve'+'_labe'+'ls'?_0x34eb80===0x0:![],_0x161e50=_0x31e07e==='curve'+_0x346fca(0x306,'Hgl$')+'ls'?_0x346fca(0xace,'(7CV'):_0x346fca(0xaa7,'FKaL')+_0x346fca(0x864,'mIwx')+_0x2ef8ce['npsh']+'\x20'+_0x3ff6ed;_0x3e2776[_0x346fca(0xcdc,'d4#Z')]({'type':_0x346fca(0xd84,'$gCG')+'er','mode':_0x346fca(0xfc9,'XBWK'),'name':_0x161e50,'x':_0x2ef8ce['q'],'y':_0x2ef8ce['h'],'line':{'color':_0x110e6f,'width':_0xb324cd,'dash':_0x34aad1},'showlegend':_0x1e1e86,'hovertemplate':'NPSHr'+_0x346fca(0xa67,'l0Vk')+_0x2ef8ce[_0x346fca(0x910,'MPp6')]+'\x20'+_0x3ff6ed+(_0x346fca(0xa5f,'@(im')+_0x346fca(0xd06,'XmTZ')+'.1f}\x20')+_0x2028ec+(_0x346fca(0x348,'O8jx')+_0x346fca(0x7bb,'1qzA')+'.2f}\x20')+_0x16aec1+(_0x346fca(0xbad,'QIf#')+_0x346fca(0x5a0,'E7d)')+_0x346fca(0xcaa,'2j(w'))});if(_0x2ef8ce['q'][_0x346fca(0xff3,'lNG6')+'h']>0x0){const _0x18d2a4=_0x2ef8ce[_0x346fca(0x65a,'zfK(')+'h']?'_'+_0x2ef8ce[_0x346fca(0x5eb,'^WDP')+'h']:'_'+_0x34eb80,_0x1cde6b=_0x346fca(0x6be,'2j(w')+_0x2ef8ce[_0x346fca(0x904,'@(im')]+_0x18d2a4,_0x48a332=Math[_0x346fca(0x531,'XBWK')](_0x2ef8ce['q'][_0x346fca(0x895,'F40Y')+'h']/0x2),_0x31125f=getCustomLabelPosition(_0x1cde6b,_0x2a6a95[_0x346fca(0x6e0,'lNG6')],'h'),_0x7525db=_0x31125f?_0x31125f['x']:_0x2ef8ce['q'][_0x48a332],_0x1c74af=_0x31125f?_0x31125f['y']:_0x2ef8ce['h'][_0x48a332];_0x1f9462['push']({'x':_0x7525db,'y':_0x1c74af,'text':_0x346fca(0x649,'[GdJ')+_0x2ef8ce[_0x346fca(0xafc,'bMaB')]+_0x3ff6ed+_0x346fca(0x4cf,'l0Vk'),'showarrow':![],'captureevents':!![],'font':{'color':'#ffff'+'ff','size':9.5,'family':_0x346fca(0x275,'XRBL')+',\x20san'+'s-ser'+'if'},'bgcolor':_0x346fca(0xca0,'1qzA')+_0x346fca(0x5fc,'mIwx')+_0x346fca(0xb28,'1qzA')+_0x346fca(0xfbb,'E7d)')+'2)','bordercolor':_0x346fca(0x39e,'WYhc')+'c0','borderwidth':0x1,'borderpad':0x3,'xanchor':_0x346fca(0xc45,'nlER')+'r','yanchor':_0x346fca(0x1f6,'qape')+'e','name':_0x1cde6b});}});_0x31e07e===_0x23b321(0xaf2,'lNG6')+'ly'&&(showIsolines&&_0x376d6b['lengt'+'h']>0x0&&_0x3e2776[_0x23b321(0x2b5,'z2Tr')]({'type':_0x23b321(0x7cc,'MvFO')+'er','mode':_0x23b321(0xd66,'Hgl$'),'name':_0x23b321(0x371,'z2Tr')+_0x23b321(0x1059,'9Vcr')+'\x20Isol'+_0x23b321(0x9c4,'MPp6')+_0x23b321(0xd6e,'ZQbK'),'x':[null],'y':[null],'line':{'color':_0x23b321(0x781,'qape')+'41','width':1.8,'dash':'dot'},'showlegend':!![]}),showPowerIso&&_0x5dd6f5[_0x23b321(0x689,'FKaL')+'h']>0x0&&_0x3e2776[_0x23b321(0x41f,'QIf#')]({'type':_0x23b321(0x3f8,'O8jx')+'er','mode':_0x23b321(0x6f0,'ZQbK'),'name':_0x23b321(0x3f1,'ToWT')+_0x23b321(0x4b0,'XBWK')+'ines\x20'+'('+_0x2e0218+')','x':[null],'y':[null],'line':{'color':_0x23b321(0x2db,'MvFO')+'49','width':1.8,'dash':_0x23b321(0x741,'^WDP')+_0x23b321(0x318,'ayOU')},'showlegend':!![]}),showNpshIso&&_0x106668[_0x23b321(0x83e,'nlER')+'h']>0x0&&_0x3e2776[_0x23b321(0xe76,'XBWK')]({'type':_0x23b321(0x9d7,'W@8N')+'er','mode':_0x23b321(0x3ec,'O8jx'),'name':_0x23b321(0x35b,'XRBL')+_0x23b321(0x82f,'%iKk')+_0x23b321(0x43c,'J$mI')+_0x3ff6ed+')','x':[null],'y':[null],'line':{'color':_0x23b321(0xcf9,'hsDz')+'c0','width':1.8,'dash':_0x23b321(0x8c0,'^WDP')+'ot'},'showlegend':!![]}));if(showNpshCurve){const _0x538d13=[..._0x498451,..._0x5f1d0e];_0x538d13[_0x23b321(0xc4a,'lTg5')+'ch']((_0xace883,_0x31da41)=>{const _0x33bd43=_0x23b321;if(!_0xace883['npsh'])return;const _0x501e51=_0x5e5b60(_0xace883,_0x58d082);_0x3e2776[_0x33bd43(0x268,'ZQbK')]({'type':'scatt'+'er','mode':_0x33bd43(0x224,'hsDz'),'name':_0x33bd43(0x2e7,'hsDz')+'\x20'+_0x501e51,'x':_0xace883['q'],'y':_0xace883[_0x33bd43(0x69b,'mIwx')],'line':{'color':DIA_BLUES[Math[_0x33bd43(0x2b6,'$gCG')](_0x31da41,DIA_BLUES[_0x33bd43(0x4f7,'ToWT')+'h']-0x1)],'width':1.5,'dash':_0x33bd43(0x98d,'%llI')+'ot'},'yaxis':npshYAxis,'showlegend':_0x31e07e==='hq_on'+'ly','hovertemplate':_0x501e51+(_0x33bd43(0xd3b,'O8jx')+_0x33bd43(0x82e,'FKaL')+_0x33bd43(0xdee,'FKaL')+_0x33bd43(0x7af,'E7d)')+'\x20')+_0x2028ec+(_0x33bd43(0x988,'E1r%')+_0x33bd43(0xc74,'o$gV')+_0x33bd43(0x1b0,'ToWT')+'2f}\x20')+_0x3ff6ed+('<extr'+_0x33bd43(0x335,'^WDP')+'xtra>')});});}_0x2a6a95[_0x23b321(0xbbf,'QIf#')+_0x23b321(0x82a,'O8jx')]&&_0x2a6a95[_0x23b321(0x3ad,'lTg5')+_0x23b321(0x492,'bMaB')]&&_0x3e2776[_0x23b321(0x2b5,'z2Tr')]({'type':_0x23b321(0x6ef,'XmTZ')+'er','mode':_0x23b321(0x8ba,'MvFO'),'name':_0x23b321(0x7d0,'MPp6')+_0x23b321(0xd25,'WYhc')+'ve','x':_0x2a6a95['syste'+_0x23b321(0xdc6,'XBWK')],'y':_0x2a6a95['syste'+_0x23b321(0xeda,'@(im')],'line':{'color':'#bc8c'+'ff','width':0x2,'dash':'dash'},'showlegend':_0x31e07e!==_0x23b321(0xc12,'XmTZ')+_0x23b321(0xf3f,'hsDz')+'ls','hovertemplate':_0x23b321(0x309,'l&tG')+_0x23b321(0x7a6,'hsDz')+_0x23b321(0x3b6,'ayOU')+_0x23b321(0x72a,'%llI')+'\x20'+_0x2028ec+('<br>H'+_0x23b321(0xffa,'MPp6')+_0x23b321(0x1084,'%llI')+_0x23b321(0xa5c,'^WDP'))+_0x16aec1+(_0x23b321(0xc32,'^WDP')+_0x23b321(0xeca,'2j(w')+'xtra>')});if(_0x5c8fb2&&_0x944652)_0x3e2776[_0x23b321(0x76a,'l0Vk')](dutyTrace(_0x5c8fb2,_0x944652));const _0x448b8b=makeLayout(_0x23b321(0xa03,'W@8N')+'Q\x20(m³'+'/h)',_0x23b321(0x1f8,'d4#Z')+_0x23b321(0xc39,'O2*S'),{'yaxis':Object[_0x23b321(0x2e6,'%iKk')+'n']({},PLOTLY_LAYOUT_BASE['yaxis'],{'title':'Head\x20'+_0x23b321(0x9c5,'$gCG'),'rangemode':_0x23b321(0x272,'O2*S')+'o'})});return _0x31e07e===_0x23b321(0xe4f,'Band')+_0x23b321(0x563,'O8jx')+'ls'&&(_0x448b8b[_0x23b321(0x33f,'o$gV')+_0x23b321(0x1f1,'hsDz')]=!![],_0x448b8b[_0x23b321(0x99e,'XBWK')+'d']=Object[_0x23b321(0x8e0,'lNG6')+'n']({},_0x448b8b[_0x23b321(0x45f,'lNG6')+'d']||{},{'bgcolor':'rgba('+_0x23b321(0xae3,'FKaL')+_0x23b321(0xa08,'d4#Z')+',\x200.8'+'8)','bordercolor':_0x23b321(0xc55,'^WDP')+'3d','borderwidth':0x1,'font':{'color':_0x23b321(0xdd0,'XBWK')+'d9','size':0xa}})),_0x1f9462[_0x23b321(0x83f,'l0Vk')+'h']>0x0&&(_0x448b8b[_0x23b321(0x218,'qape')+_0x23b321(0x4a9,'J$mI')+'s']=_0x1f9462),showNpshCurve&&npshYAxis==='y2'&&(_0x448b8b[_0x23b321(0xe97,'(7CV')+'2']={'title':_0x23b321(0x505,'Hgl$')+_0x23b321(0xeec,'8OR)'),'overlaying':'y','side':_0x23b321(0xb82,'(HU5'),'rangemode':_0x23b321(0x286,'2j(w')+'o','showgrid':![],'titlefont':{'color':_0x23b321(0x918,'XRBL')+'c0','size':0xc},'tickfont':{'color':_0x23b321(0xc60,'lTg5')+'c0'}}),{'traces':_0x3e2776,'layout':_0x448b8b};}function buildNpshFamilyChart(_0x34884e){const _0x51ac43=a0_0x21afb1,_0x435681=_0x34884e[_0x51ac43(0xd2e,'l&tG')]((_0x792282,_0x5b5a9e)=>{const _0x4bb756=_0x51ac43,_0x2b1222=_0x792282[_0x4bb756(0x3c7,'XBWK')]||DIA_BLUES[Math['min'](_0x5b5a9e,DIA_BLUES[_0x4bb756(0xd29,'d4#Z')+'h']-0x1)],_0x5c34d0=_0x792282[_0x4bb756(0xf72,'WYhc')+_0x4bb756(0xdcc,'ayOU')]===_0x4bb756(0x456,'lNG6')?_0x4bb756(0x3d2,'zfK(')+_0x4bb756(0xa4c,'$gCG'):'';return{'type':_0x4bb756(0xfca,'(HU5')+'er','mode':_0x4bb756(0x6f0,'ZQbK'),'name':'Ø'+_0x792282[_0x4bb756(0xe8f,'l0Vk')]+_0x4bb756(0xab2,'zfK(')+_0x5c34d0,'x':_0x792282['q'],'y':_0x792282[_0x4bb756(0xdfe,'hsDz')],'line':{'color':_0x2b1222,'width':1.8},'hovertemplate':'Ø'+_0x792282[_0x4bb756(0x538,'o$gV')]+_0x5c34d0+('<br>Q'+_0x4bb756(0x850,'2j(w')+_0x4bb756(0x3ce,'QIf#')+_0x4bb756(0x4ae,'l0Vk')+_0x4bb756(0xc49,'MPp6')+_0x4bb756(0xc8d,'E1r%')+_0x4bb756(0xc04,'1qzA')+_0x4bb756(0x102b,'^WDP')+_0x4bb756(0xcd6,'hsDz')+_0x4bb756(0xc1a,'1qzA'))};});return{'traces':_0x435681,'layout':makeLayout(_0x51ac43(0xc1f,'[GdJ')+_0x51ac43(0x807,'MvFO')+'/h)',_0x51ac43(0x106c,'z2Tr')+'\x20(m)',{'yaxis':Object[_0x51ac43(0xcd2,'QIf#')+'n']({},PLOTLY_LAYOUT_BASE[_0x51ac43(0xfeb,'^WDP')],{'rangemode':_0x51ac43(0xae4,'l0Vk')+'o'})})};}function buildPowerFamilyChart(_0x340889){const _0x5099e1=a0_0x21afb1,_0x61ce79=_0x340889[_0x5099e1(0x938,'2U4A')]((_0x4756b0,_0x2fc085)=>{const _0x3a9b76=_0x5099e1,_0x52853b=_0x4756b0[_0x3a9b76(0x79f,'lTg5')]||DIA_BLUES[Math['min'](_0x2fc085,DIA_BLUES[_0x3a9b76(0xf8e,'fY%z')+'h']-0x1)],_0x4dea6b=_0x4756b0[_0x3a9b76(0x754,'@(im')+'_mode']==='fit'?_0x3a9b76(0xdc9,'d4#Z')+_0x3a9b76(0xe3b,'W@8N'):'';return{'type':_0x3a9b76(0x5a6,'l0Vk')+'er','mode':'lines','name':'Ø'+_0x4756b0[_0x3a9b76(0xf9d,'WYhc')]+_0x3a9b76(0x7aa,'l0Vk')+_0x4dea6b,'x':_0x4756b0['q'],'y':_0x4756b0[_0x3a9b76(0xf69,'O2*S')],'line':{'color':_0x52853b,'width':1.8},'hovertemplate':'Ø'+_0x4756b0['dia']+_0x4dea6b+(_0x3a9b76(0x380,'fY%z')+_0x3a9b76(0xd12,'[GdJ')+_0x3a9b76(0xd01,'(HU5')+_0x3a9b76(0x80e,'J$mI')+_0x3a9b76(0x7f7,'8OR)')+'2f}\x20k'+_0x3a9b76(0x473,'fY%z')+_0x3a9b76(0xd68,'W@8N')+'extra'+'>')};});return{'traces':_0x61ce79,'layout':makeLayout(_0x5099e1(0x940,'ro@9')+_0x5099e1(0x105d,'9Vcr')+_0x5099e1(0xf2c,'zfK('),'Shaft'+_0x5099e1(0x530,'2U4A')+_0x5099e1(0x963,'W@8N')+_0x5099e1(0xba0,'E1r%'),{'yaxis':Object[_0x5099e1(0xedd,'bMaB')+'n']({},PLOTLY_LAYOUT_BASE[_0x5099e1(0xf12,'XRBL')],{'rangemode':_0x5099e1(0x7d2,'mIwx')+'o'})})};}function buildHQChart(_0x144b57,_0x5d99c9,_0x1dd8ba){const _0x999496=a0_0x21afb1,_0x4c02ac=[];_0x4c02ac[_0x999496(0xbdb,'lTg5')]({'type':'scatt'+'er','mode':_0x999496(0xfb1,'l&tG'),'name':_0x999496(0x20e,'1qzA')+(_0x144b57[_0x999496(0xbf3,'zfK(')+'d']!==_0x999496(0x26a,'$gCG')?'('+_0x144b57[_0x999496(0x360,'QIf#')+'d']+')':''),'x':_0x144b57['q'],'y':_0x144b57['h'],'line':{'color':_0x999496(0x6e6,'%iKk')+'ff','width':2.5},'hovertemplate':_0x999496(0x1037,'MPp6')+_0x999496(0xc10,'WYhc')+_0x999496(0xc3d,'bMaB')+_0x999496(0x466,'ZQbK')+_0x999496(0xa99,'$gCG')+'.2f}\x20'+_0x999496(0xe6f,'MvFO')+_0x999496(0xe7b,'O2*S')+_0x999496(0xe7d,'9Vcr')+'>'});_0x1dd8ba&&_0x144b57['h_cle'+'an']&&_0x4c02ac['push']({'type':_0x999496(0x8ed,'hsDz')+'er','mode':_0x999496(0x1048,'lNG6'),'name':_0x999496(0x9fb,'2U4A')+'water'+_0x999496(0xcfb,'J$mI'),'x':_0x144b57['q'],'y':_0x144b57['h_cle'+'an'],'line':{'color':_0x999496(0x301,'l0Vk')+'ff','width':1.5,'dash':_0x999496(0x696,'bMaB')},'opacity':0.45,'showlegend':!![],'hovertemplate':'Q=%{x'+_0x999496(0xb48,'l&tG')+'<br>H'+_0x999496(0x267,'F40Y')+_0x999496(0x315,'(HU5')+_0x999496(0xbb3,'lTg5')+'}<ext'+_0x999496(0x487,'8OR)')+_0x999496(0x482,'lTg5')+'>'});_0x5d99c9&&_0x144b57[_0x999496(0x65f,'%llI')+_0x999496(0x2ce,'lNG6')]&&_0x4c02ac[_0x999496(0x4bc,'8OR)')]({'type':_0x999496(0x6c7,'8OR)')+'er','mode':_0x999496(0xbe7,'(7CV'),'name':_0x999496(0xe37,'d4#Z')+_0x999496(0x8bf,'lNG6')+'ve','x':_0x144b57['q'],'y':_0x144b57[_0x999496(0xb80,'XmTZ')+'m_h'],'line':{'color':_0x999496(0x50c,'ZQbK')+'ff','width':0x2,'dash':_0x999496(0x276,'d4#Z')},'hovertemplate':_0x999496(0xc4e,'XRBL')+_0x999496(0x406,'nlER')+_0x999496(0x5f8,'O2*S')+_0x999496(0xb50,'nlER')+'%{y:.'+_0x999496(0x606,'l0Vk')+_0x999496(0x5bb,'z2Tr')+_0x999496(0x273,'%iKk')+_0x999496(0xc7c,'ZQbK')});_0x144b57[_0x999496(0x378,'fY%z')]&&_0x4c02ac[_0x999496(0x82d,'mIwx')]({'type':_0x999496(0x1038,'QIf#')+'er','mode':_0x999496(0xd8a,'zfK(')+'rs','name':'BEP','x':[_0x144b57[_0x999496(0xc5b,'FKaL')]['q']],'y':[_0x144b57['bep']['h']],'marker':{'size':0xa,'color':_0x999496(0xf35,'T)O0')+'50','symbol':_0x999496(0x430,'1qzA'),'line':{'color':_0x999496(0xcbf,'l&tG'),'width':0x1}},'hovertemplate':_0x999496(0xff8,'ZQbK')+_0x999496(0x22e,'WYhc')+_0x144b57[_0x999496(0x31b,'2U4A')]['q']+('<br>H'+'=')+_0x144b57[_0x999496(0x6df,'W@8N')]['h']+(_0x999496(0x523,'mIwx')+'a></e'+_0x999496(0x36c,'l0Vk'))});const _0xa00b14=makeLayout(_0x999496(0x2c6,'(7CV')+_0x999496(0x2f6,'%iKk')+_0x999496(0x243,'lTg5'),'Head\x20'+_0x999496(0xfc2,'XBWK'));return _0xa00b14['yaxis'][_0x999496(0xbf2,'XBWK')+_0x999496(0xbac,'ToWT')]=_0x999496(0x361,'bMaB')+'o',{'traces':_0x4c02ac,'layout':_0xa00b14};}function getActiveOverlayLines(_0x354129,_0x1b9b1e={}){const _0x5909b3=a0_0x21afb1;if(!_0x354129)return[];const _0x5e544b=getCurveDisplaySelection(_0x354129,_0x1b9b1e);return _0x5e544b[_0x5909b3(0x488,'J$mI')+'daryL'+'ines']||[];}function buildEffChart(_0x5e776e,_0x3ec09a,_0x35873b,_0x16ada7={}){const _0x53bcb8=a0_0x21afb1,_0x2536ed=[],_0x2e9d4c=getCurveDisplaySelection(_0x5e776e||_0x3ec09a,_0x16ada7),{isVarSpeed:_0x5d2472,showPrimary:_0x299200,showSecondary:_0xc61a52,primaryFamily:_0xc33bb1,secondaryLines:_0x7cbdbb}=_0x2e9d4c;let _0x1c8762=[],_0x38685e=[],_0x3cc670=!_0x5d2472;if(_0x299200&&!_0xc61a52)_0x1c8762=_0xc33bb1['lengt'+'h']?_0xc33bb1:_0x5e776e?[_0x5e776e]:[],_0x38685e=[],_0x3cc670=!_0x5d2472;else{if(!_0x299200&&_0xc61a52)_0x1c8762=_0x7cbdbb,_0x38685e=[],_0x3cc670=_0x5d2472;else _0x299200&&_0xc61a52?(_0x1c8762=_0xc33bb1['lengt'+'h']?_0xc33bb1:_0x5e776e?[_0x5e776e]:[],_0x38685e=_0x7cbdbb,_0x3cc670=!_0x5d2472):(_0x1c8762=_0xc33bb1[_0x53bcb8(0xc84,'o$gV')+'h']?_0xc33bb1[_0x53bcb8(0xaad,'lTg5')](0x0,0x1):_0x5e776e?[_0x5e776e]:[],_0x38685e=[],_0x3cc670=!_0x5d2472);}const _0x5e3e4e=getGraphDisplayUnits(),_0x155047=_0x5e3e4e[_0x53bcb8(0x356,'2U4A')+_0x53bcb8(0xa20,'$gCG')]||'#3fb9'+'50',_0x523d7a=_0x5e3e4e[_0x53bcb8(0x80c,'l0Vk')+_0x53bcb8(0x1b3,'MPp6')]||1.5,_0x4e2e1f=_0x5e3e4e[_0x53bcb8(0x3e6,'$gCG')+_0x53bcb8(0xbcc,'%iKk')]||_0x53bcb8(0x652,'(7CV'),_0x2b427d=(typeof getGraphDisplayUnits===_0x53bcb8(0xf7d,'d4#Z')+_0x53bcb8(0x304,'2j(w')?getGraphDisplayUnits()[_0x53bcb8(0x90b,'%iKk')+_0x53bcb8(0x544,'ZQbK')+'t']:_0x53bcb8(0x8ac,'(HU5')+'nt')||_0x53bcb8(0xb1a,'nlER')+'nt',_0xcb411c=_0x5e776e?.[_0x53bcb8(0xc77,'XmTZ')]?.[_0x53bcb8(0x1024,'nlER')+_0x53bcb8(0x72b,'o$gV')]||_0x3ec09a?.[_0x53bcb8(0xac7,'O2*S')]?.[_0x53bcb8(0x4fb,'lNG6')+_0x53bcb8(0x543,'lTg5')]||0x5aa,_0x1dfd7a=_0x5e776e?.['pump']?.[_0x53bcb8(0x62b,'XBWK')+_0x53bcb8(0xc9f,'W@8N')+_0x53bcb8(0x972,'ZQbK')]||_0x3ec09a?.[_0x53bcb8(0x24b,'Band')]?.[_0x53bcb8(0x8c8,'(HU5')+_0x53bcb8(0x53a,'QIf#')+_0x53bcb8(0x2bd,'nlER')]||0x12c,_0x3ebed3=(_0x478e7c,_0x2c2a28)=>{const _0x514d0a=_0x53bcb8;if(_0x478e7c[_0x514d0a(0x872,'mIwx')])return _0x478e7c[_0x514d0a(0x73a,'d4#Z')];if(_0x2c2a28){const _0x754416=_0x478e7c[_0x514d0a(0xf96,'O8jx')]!==undefined?_0x478e7c[_0x514d0a(0x9a0,'$gCG')]:_0x478e7c[_0x514d0a(0x366,'Hgl$')]!==undefined?_0x478e7c[_0x514d0a(0x221,'FKaL')]:_0x478e7c[_0x514d0a(0x43d,'bMaB')],_0x288aed=_0x478e7c[_0x514d0a(0xef4,'ayOU')]!==undefined?_0x478e7c[_0x514d0a(0xc3c,'%llI')]:_0x478e7c[_0x514d0a(0x1030,'%iKk')+_0x514d0a(0xbcb,'E7d)')+'o']!==undefined?_0x478e7c[_0x514d0a(0x574,'ToWT')+_0x514d0a(0x8e2,'hsDz')+'o']:_0x754416/_0x1dfd7a,_0x48e841=Math[_0x514d0a(0x36b,'ToWT')]((_0x288aed||0x1)*0x64);return _0x2b427d===_0x514d0a(0xd70,'O8jx')+'nt'?'Ø'+_0x754416+_0x514d0a(0x4cc,'XmTZ')+_0x48e841+'%)':'Ø'+_0x754416+_0x514d0a(0x8f5,'MPp6');}else{const _0x4c092d=_0x478e7c['rpm']!==undefined?_0x478e7c[_0x514d0a(0x9b5,'mIwx')]:_0x478e7c[_0x514d0a(0xe78,'zfK(')+_0x514d0a(0x8fd,'qape')]!==undefined?_0x478e7c[_0x514d0a(0xee2,'%llI')+_0x514d0a(0xebb,'ToWT')]:_0x478e7c[_0x514d0a(0x826,'T)O0')]!==undefined?_0x478e7c[_0x514d0a(0x654,'O8jx')]:_0x478e7c[_0x514d0a(0xe8f,'l0Vk')],_0x547c76=_0x478e7c['ratio']!==undefined?_0x478e7c[_0x514d0a(0x9fd,'hsDz')]:_0x478e7c['speed'+_0x514d0a(0x75d,'ayOU')+'o']!==undefined?_0x478e7c[_0x514d0a(0x4e2,'[GdJ')+_0x514d0a(0xd9d,'9Vcr')+'o']:_0x4c092d/_0xcb411c,_0x59c48e=Math[_0x514d0a(0xfbd,'MvFO')]((_0x547c76||0x1)*0x64);return _0x2b427d===_0x514d0a(0xc99,'%llI')+'nt'?_0x4c092d+('\x20RPM\x20'+'(')+_0x59c48e+'%)':_0x4c092d+_0x514d0a(0xb2e,'zfK(');}};_0x1c8762[_0x53bcb8(0xa22,'qape')+'ch']((_0x4afa9d,_0x4d16e2)=>{const _0x2a47cf=_0x53bcb8;if(!_0x4afa9d[_0x2a47cf(0xde7,'nlER')])return;const _0x775400=_0x4afa9d[_0x2a47cf(0xb27,'zfK(')+'x']||_0x4d16e2===0x0,_0x83ef30=_0x775400?_0x523d7a+0.7:_0x523d7a,_0x4a38ec=_0x5e3e4e[_0x2a47cf(0x3d3,'o$gV')+_0x2a47cf(0xb11,'%iKk')]==='curve'+_0x2a47cf(0xc5e,'ro@9')+'ls'?_0x4d16e2===0x0:_0x5e3e4e['legen'+_0x2a47cf(0xb11,'%iKk')]===_0x2a47cf(0xfa9,'l0Vk'),_0x1a85c8=_0x3ebed3(_0x4afa9d,_0x3cc670),_0x5d7e9b=_0x5e3e4e['legen'+_0x2a47cf(0x2de,'lNG6')]===_0x2a47cf(0x800,'F40Y')+_0x2a47cf(0xf47,'nlER')+'ls'?_0x2a47cf(0x3c4,'nlER')+_0x2a47cf(0x40f,'F40Y')+'\x20η':'η\x20'+_0x1a85c8;_0x2536ed[_0x2a47cf(0x37b,'ToWT')]({'type':_0x2a47cf(0xca5,'ToWT')+'er','mode':_0x2a47cf(0x1069,'8OR)'),'name':_0x5d7e9b,'x':_0x4afa9d['q'],'y':_0x4afa9d[_0x2a47cf(0xf90,'%iKk')],'line':{'color':_0x155047,'width':_0x83ef30,'dash':_0x4e2e1f},'showlegend':_0x4a38ec,'hovertemplate':_0x1a85c8+(_0x2a47cf(0x7d4,'(HU5')+'=%{x:'+'.1f}\x20'+_0x2a47cf(0xefa,'O8jx')+'br>η='+_0x2a47cf(0x22a,'o$gV')+_0x2a47cf(0x1056,'E1r%')+_0x2a47cf(0x851,'d4#Z')+_0x2a47cf(0x403,'FKaL')+_0x2a47cf(0x1cf,'FKaL'))});const _0xe5bfb7=_0x4afa9d[_0x2a47cf(0x6d8,'ayOU')];_0xe5bfb7&&_0xe5bfb7['q']!==undefined&&_0xe5bfb7[_0x2a47cf(0xddc,'lTg5')]!==undefined&&_0x2536ed[_0x2a47cf(0x5a3,'%iKk')]({'type':_0x2a47cf(0x305,'nlER')+'er','mode':_0x2a47cf(0xd4f,'LWa7')+'rs','name':_0x2a47cf(0xff0,'O8jx')+_0x1a85c8,'x':[_0xe5bfb7['q']],'y':[_0xe5bfb7['eta']],'marker':{'size':_0x775400?0xa:0x7,'color':_0x155047,'symbol':_0x2a47cf(0xbd6,'l0Vk'),'line':{'color':_0x2a47cf(0x882,'ro@9'),'width':0x1}},'showlegend':![],'hovertemplate':_0x2a47cf(0x33d,'[GdJ')+_0x1a85c8+(_0x2a47cf(0x97b,'%llI')+'=')+_0xe5bfb7['q']+('<br>η'+'=')+_0xe5bfb7[_0x2a47cf(0xd69,'2U4A')]+('%<ext'+'ra></'+_0x2a47cf(0xb51,'@(im')+'>')});});if(_0x38685e[_0x53bcb8(0xf00,'XRBL')+'h']>0x0){const _0x122246=_0x5d2472;_0x38685e[_0x53bcb8(0x7f9,'2j(w')+'ch']((_0x37ead0,_0x2dcf53)=>{const _0x4be4fa=_0x53bcb8,_0x2b3494=SPD_COLORS[Math['min'](_0x2dcf53,SPD_COLORS[_0x4be4fa(0x75f,'^WDP')+'h']-0x1)],_0x2db5fe=_0x3ebed3(_0x37ead0,_0x122246);_0x37ead0['eta']&&_0x2536ed['push']({'type':_0x4be4fa(0xc46,'J$mI')+'er','mode':'lines','name':'η\x20'+_0x2db5fe,'x':_0x37ead0['q'],'y':_0x37ead0[_0x4be4fa(0x712,'9Vcr')],'line':{'color':_0x2b3494,'width':1.5,'dash':_0x4be4fa(0x86f,'lTg5')},'showlegend':![],'hovertemplate':_0x2db5fe+('\x20η<br'+_0x4be4fa(0x4c6,'mIwx')+_0x4be4fa(0xa42,'WYhc')+'}\x20m³/'+_0x4be4fa(0x94c,'XmTZ')+_0x4be4fa(0xf59,'FKaL')+_0x4be4fa(0x8b1,'XmTZ')+'%<ext'+_0x4be4fa(0xb88,'ayOU')+_0x4be4fa(0x692,'ZQbK')+'>')});});}_0x35873b&&_0x3ec09a&&_0x3ec09a[_0x53bcb8(0x1a3,'^WDP')+_0x53bcb8(0x29e,'Hgl$')]&&_0x2536ed['push']({'type':_0x53bcb8(0x75e,'l&tG')+'er','mode':'lines','name':_0x53bcb8(0xc95,'^WDP')+_0x53bcb8(0x5d6,'%llI')+_0x53bcb8(0x7a8,'MPp6'),'x':_0x3ec09a['q'],'y':_0x3ec09a[_0x53bcb8(0x902,'(7CV')+_0x53bcb8(0x6d6,'FKaL')],'line':{'color':_0x53bcb8(0xbb2,'zfK(')+'40','width':1.5,'dash':_0x53bcb8(0xa41,'z2Tr')},'opacity':0.45,'hovertemplate':'Q=%{x'+_0x53bcb8(0xb45,'hsDz')+'<br>η'+_0x53bcb8(0x5e3,'@(im')+_0x53bcb8(0xa72,'XRBL')+_0x53bcb8(0x227,'MvFO')+'}%<ex'+_0x53bcb8(0x56b,'o$gV')+'/extr'+'a>'});const _0x431e00=makeLayout(_0x53bcb8(0x2c6,'(7CV')+_0x53bcb8(0xa9e,'QIf#')+'/h)','Effic'+_0x53bcb8(0x239,'Band')+_0x53bcb8(0x848,'lNG6')+')');_0x431e00[_0x53bcb8(0x737,'qape')]=Object[_0x53bcb8(0x374,'ayOU')+'n']({},_0x431e00[_0x53bcb8(0x1088,'d4#Z')],{'range':[0x0,0x64]});(_0x5e3e4e[_0x53bcb8(0xcec,'^WDP')+_0x53bcb8(0xb6f,'^WDP')]==='hq_on'+'ly'||_0x5e3e4e[_0x53bcb8(0x570,'@(im')+'dMode']===_0x53bcb8(0x7e8,'zfK(')+'_labe'+'ls')&&(_0x431e00[_0x53bcb8(0x56e,'bMaB')+_0x53bcb8(0x6cd,'XRBL')]=![]);_0x431e00[_0x53bcb8(0x548,'ToWT')+_0x53bcb8(0xdec,'ayOU')+'s']=_0x431e00[_0x53bcb8(0x4f1,'nlER')+_0x53bcb8(0xf88,'W@8N')+'s']||[],_0x1c8762[_0x53bcb8(0xde8,'lNG6')+'ch']((_0x50f3a3,_0x5960b5)=>{const _0x350363=_0x53bcb8;if(!_0x50f3a3['q']||_0x50f3a3['q'][_0x350363(0x75f,'^WDP')+'h']===0x0||!_0x50f3a3[_0x350363(0x42f,'(7CV')])return;const _0x26c6d0=DIA_BLUES[Math[_0x350363(0x663,'l&tG')](_0x5960b5,DIA_BLUES[_0x350363(0x7b8,'bMaB')+'h']-0x1)],_0x557225=_0x3ebed3(_0x50f3a3,_0x3cc670),_0x10373b=_0x350363(0x8ab,'lNG6')+_0x557225,_0x4a1b12=_0x557225,_0x3edd2b=_0x3cc670?'dia_l'+_0x350363(0x955,'W@8N')+_0x5960b5:_0x350363(0xea9,'XBWK')+_0x350363(0xcf4,'T)O0')+_0x5960b5;let _0x403758=0x0,_0x4f5dd3=0x0,_0x4bf6d7=_0x350363(0x898,'E7d)'),_0x4bb5f6=_0x350363(0xf4d,'XBWK')+'m',_0x37630f=0x4,_0x1e4cd8=0x4;const _0x30280e=getCustomLabelPosition(_0x10373b,_0x5e776e?.[_0x350363(0x8e8,'E1r%')],_0x350363(0xada,'F40Y'))||getCustomLabelPosition(_0x4a1b12,_0x5e776e?.[_0x350363(0xd02,'F40Y')],_0x350363(0xc9a,'8OR)'))||getCustomLabelPosition('eff_'+_0x3edd2b,_0x5e776e?.[_0x350363(0x628,'(7CV')],_0x350363(0x73e,'MPp6'))||getCustomLabelPosition(_0x3edd2b,_0x5e776e?.[_0x350363(0x8c3,'^WDP')],_0x350363(0xf43,'Hgl$'));if(_0x30280e)_0x403758=_0x30280e['x'],_0x4f5dd3=_0x30280e['y'],_0x4bf6d7='cente'+'r',_0x4bb5f6=_0x350363(0x58e,'MPp6')+'e',_0x37630f=0x0,_0x1e4cd8=0x0;else{const _0x475b32=Math['floor'](_0x50f3a3['q'][_0x350363(0x9e3,'ayOU')+'h']*0.95);_0x403758=_0x50f3a3['q'][_0x475b32],_0x4f5dd3=_0x50f3a3[_0x350363(0x48c,'E7d)')][_0x475b32];}_0x431e00[_0x350363(0x9cd,'ZQbK')+_0x350363(0xab0,'MPp6')+'s'][_0x350363(0x7fe,'XmTZ')]({'x':_0x403758,'y':_0x4f5dd3,'text':_0x350363(0x5ba,'WYhc')+_0x557225+_0x350363(0x1004,'MPp6'),'showarrow':![],'captureevents':!![],'font':{'color':_0x350363(0x687,'1qzA')+'ff','size':9.5,'family':_0x350363(0xaef,'2j(w')+_0x350363(0xcf6,'(7CV')+_0x350363(0xf91,'XmTZ')+'if'},'bgcolor':_0x350363(0xe94,'LWa7')+_0x350363(0x48b,'MPp6')+'3,\x2042'+_0x350363(0x498,'Hgl$')+'2)','bordercolor':_0x26c6d0,'borderwidth':1.5,'borderpad':0x3,'xanchor':_0x4bf6d7,'yanchor':_0x4bb5f6,'xshift':_0x37630f,'yshift':_0x1e4cd8,'name':_0x10373b});});if(_0x38685e[_0x53bcb8(0xb93,'mIwx')+'h']>0x0){const _0x23156a=_0x5d2472;_0x38685e['forEa'+'ch']((_0x5b891d,_0x3585b7)=>{const _0x14fc82=_0x53bcb8;if(!_0x5b891d['q']||_0x5b891d['q']['lengt'+'h']===0x0||!_0x5b891d[_0x14fc82(0xd21,'zfK(')])return;const _0x288128=SPD_COLORS[Math[_0x14fc82(0x698,'lTg5')](_0x3585b7,SPD_COLORS[_0x14fc82(0xabd,'E7d)')+'h']-0x1)],_0xaba9e=_0x3ebed3(_0x5b891d,_0x23156a),_0x56e537=_0x23156a?_0x14fc82(0x892,'l0Vk')+'ia_'+_0x3585b7:_0x14fc82(0x956,'ayOU')+_0x14fc82(0x3cf,'ro@9')+_0x3585b7,_0x53b798=getCustomLabelPosition(_0x56e537,_0x5e776e?.[_0x14fc82(0xd27,'mIwx')],_0x14fc82(0xbd7,'1qzA'))||getCustomLabelPosition(_0x14fc82(0xb6a,'(7CV')+_0xaba9e,_0x5e776e?.['pump'],_0x14fc82(0xbd7,'1qzA'))||getCustomLabelPosition(_0xaba9e,_0x5e776e?.[_0x14fc82(0xfcc,'WYhc')],_0x14fc82(0x51c,'2j(w'))||getCustomLabelPosition(_0x14fc82(0x91e,'QIf#')+'pd_'+_0x3585b7,_0x5e776e?.[_0x14fc82(0xbe5,'l0Vk')],_0x14fc82(0x481,'hsDz')),_0x40266b=Math[_0x14fc82(0xd94,'lNG6')](_0x5b891d['q'][_0x14fc82(0xc09,'MvFO')+'h']*0.9),_0x4ec34f=_0x53b798?_0x53b798['x']:_0x5b891d['q'][_0x40266b],_0x2de434=_0x53b798?_0x53b798['y']:_0x5b891d[_0x14fc82(0xa02,'qape')][_0x40266b];_0x431e00['annot'+_0x14fc82(0x3a2,'E1r%')+'s'][_0x14fc82(0xc29,'(HU5')]({'x':_0x4ec34f,'y':_0x2de434,'text':'<b>η\x20'+_0xaba9e+'</b>','showarrow':![],'captureevents':!![],'font':{'color':_0x14fc82(0x2a5,'hsDz')+'ff','size':0x9,'family':_0x14fc82(0x390,'2U4A')+_0x14fc82(0xf45,'O2*S')+_0x14fc82(0x5cf,'z2Tr')+'if'},'bgcolor':_0x14fc82(0x3c1,'ro@9')+_0x14fc82(0xc4d,'bMaB')+_0x14fc82(0x3c0,'Band')+_0x14fc82(0xeff,'l&tG')+'0)','bordercolor':_0x288128,'borderwidth':0x1,'borderpad':0x2,'xanchor':_0x14fc82(0xb09,'XmTZ')+'r','yanchor':_0x14fc82(0xd18,'%iKk')+'e','name':_0x56e537});});}return{'traces':_0x2536ed,'layout':_0x431e00};}function buildEffPowerChart(_0x38ea9a,_0x39aee3,_0x40260b,_0x168129={}){const _0x3ba128=a0_0x21afb1,_0x12cc01=[],_0x52f7f8=getCurveDisplaySelection(_0x38ea9a||_0x39aee3,_0x168129),{isVarSpeed:_0x326cd2,showPrimary:_0x553fdd,showSecondary:_0x46807a,primaryFamily:_0x1b711f,secondaryLines:_0xe8a5a4}=_0x52f7f8;let _0x73f236=[],_0x1d3406=[],_0x58fb96=!_0x326cd2;if(_0x553fdd&&!_0x46807a)_0x73f236=_0x1b711f['lengt'+'h']?_0x1b711f:_0x38ea9a?[_0x38ea9a]:[],_0x1d3406=[],_0x58fb96=!_0x326cd2;else{if(!_0x553fdd&&_0x46807a)_0x73f236=_0xe8a5a4,_0x1d3406=[],_0x58fb96=_0x326cd2;else _0x553fdd&&_0x46807a?(_0x73f236=_0x1b711f['lengt'+'h']?_0x1b711f:_0x38ea9a?[_0x38ea9a]:[],_0x1d3406=_0xe8a5a4,_0x58fb96=!_0x326cd2):(_0x73f236=_0x1b711f[_0x3ba128(0x568,'hsDz')+'h']?_0x1b711f[_0x3ba128(0x102a,'MPp6')](0x0,0x1):_0x38ea9a?[_0x38ea9a]:[],_0x1d3406=[],_0x58fb96=!_0x326cd2);}const _0x1c56e0=getGraphDisplayUnits(),_0x4a17e3=_0x1c56e0[_0x3ba128(0x9f5,'T)O0')+_0x3ba128(0x9ad,'(HU5')]||_0x3ba128(0x3e5,'Hgl$')+'50',_0x420e9c=_0x1c56e0[_0x3ba128(0x81c,'WYhc')+_0x3ba128(0x776,'E7d)')]||1.5,_0x35415e=_0x1c56e0[_0x3ba128(0xd5d,'^WDP')+_0x3ba128(0x4f8,'W@8N')]||'dot',_0x2254cd=_0x1c56e0[_0x3ba128(0xda5,'bMaB')+_0x3ba128(0x1ed,'[GdJ')]||_0x3ba128(0x36e,'2j(w')+'49',_0x404150=_0x1c56e0[_0x3ba128(0xe09,'XmTZ')+_0x3ba128(0xca1,'(7CV')]||1.5,_0x4b5bf4=_0x1c56e0[_0x3ba128(0x8d4,'XmTZ')+_0x3ba128(0x9d4,'l&tG')]||_0x3ba128(0xa57,'QIf#')+_0x3ba128(0x7ca,'^WDP'),_0x317a2e=(typeof getGraphDisplayUnits===_0x3ba128(0xd10,'LWa7')+_0x3ba128(0xe0c,'^WDP')?getGraphDisplayUnits()[_0x3ba128(0xd40,'ZQbK')+_0x3ba128(0xe61,'8OR)')+'t']:_0x3ba128(0xcd5,'T)O0')+'nt')||_0x3ba128(0xb1a,'nlER')+'nt',_0x75037a=_0x38ea9a?.[_0x3ba128(0x978,'QIf#')]?.[_0x3ba128(0x8a9,'d4#Z')+_0x3ba128(0xcdf,'Band')]||_0x39aee3?.[_0x3ba128(0xdea,'bMaB')]?.[_0x3ba128(0x9e5,'@(im')+_0x3ba128(0xa3a,'d4#Z')]||0x5aa,_0x5ebf3f=_0x38ea9a?.[_0x3ba128(0xcd3,'XBWK')]?.[_0x3ba128(0x80d,'lNG6')+'ler_d'+'ia_mm']||_0x39aee3?.[_0x3ba128(0x6e0,'lNG6')]?.[_0x3ba128(0x80d,'lNG6')+_0x3ba128(0xc9f,'W@8N')+_0x3ba128(0xeb0,'hsDz')]||0x12c,_0x11ac3a=(_0x51928b,_0x1b122a)=>{const _0x108c9a=_0x3ba128;if(_0x51928b['label'])return _0x51928b[_0x108c9a(0xab5,'FKaL')];if(_0x1b122a){const _0x32df8e=_0x51928b[_0x108c9a(0xf14,'XRBL')]!==undefined?_0x51928b[_0x108c9a(0x7a4,'hsDz')]:_0x51928b[_0x108c9a(0xf8f,'J$mI')]!==undefined?_0x51928b['val']:_0x51928b['rpm'],_0xff95cf=_0x51928b[_0x108c9a(0xcc1,'LWa7')]!==undefined?_0x51928b[_0x108c9a(0x469,'F40Y')]:_0x51928b[_0x108c9a(0x302,'F40Y')+'_rati'+'o']!==undefined?_0x51928b[_0x108c9a(0x2f1,'(7CV')+_0x108c9a(0xf54,'mIwx')+'o']:_0x32df8e/_0x5ebf3f,_0x2e3005=Math[_0x108c9a(0xf24,'8OR)')]((_0xff95cf||0x1)*0x64);return _0x317a2e===_0x108c9a(0xb70,'O2*S')+'nt'?'Ø'+_0x32df8e+_0x108c9a(0xcce,'(HU5')+_0x2e3005+'%)':'Ø'+_0x32df8e+'\x20mm';}else{const _0x42c7d3=_0x51928b[_0x108c9a(0x328,'MvFO')]!==undefined?_0x51928b[_0x108c9a(0x391,'l&tG')]:_0x51928b[_0x108c9a(0x85c,'qape')+_0x108c9a(0xfa5,'2U4A')]!==undefined?_0x51928b[_0x108c9a(0x967,'E7d)')+'_rpm']:_0x51928b[_0x108c9a(0x819,'$gCG')]!==undefined?_0x51928b[_0x108c9a(0xf8f,'J$mI')]:_0x51928b[_0x108c9a(0xb6e,'^WDP')],_0x44583b=_0x51928b[_0x108c9a(0xc05,'ZQbK')]!==undefined?_0x51928b[_0x108c9a(0xabe,'ToWT')]:_0x51928b[_0x108c9a(0xe78,'zfK(')+_0x108c9a(0x999,'XRBL')+'o']!==undefined?_0x51928b[_0x108c9a(0xaae,'WYhc')+_0x108c9a(0x8d3,'qape')+'o']:_0x42c7d3/_0x75037a,_0x26e33f=Math[_0x108c9a(0x7b3,'2U4A')]((_0x44583b||0x1)*0x64);return _0x317a2e===_0x108c9a(0x288,'J$mI')+'nt'?_0x42c7d3+(_0x108c9a(0xb1d,'nlER')+'(')+_0x26e33f+'%)':_0x42c7d3+_0x108c9a(0x28c,'O8jx');}};_0x73f236[_0x3ba128(0x8f3,'(HU5')+'ch']((_0x23816d,_0x3898d1)=>{const _0x12d7ad=_0x3ba128,_0x2aed0d=_0x23816d[_0x12d7ad(0x1031,'qape')+'x']||_0x3898d1===0x0,_0x51b941=_0x1c56e0[_0x12d7ad(0x78c,'bMaB')+_0x12d7ad(0xdc0,'lTg5')]===_0x12d7ad(0x3bd,'o$gV')+_0x12d7ad(0xa77,'o$gV')+'ls'?_0x3898d1===0x0:_0x1c56e0[_0x12d7ad(0xeac,'WYhc')+_0x12d7ad(0x68d,'9Vcr')]==='each',_0x286f3f=_0x11ac3a(_0x23816d,_0x58fb96);if(_0x23816d[_0x12d7ad(0x712,'9Vcr')]){_0x12cc01[_0x12d7ad(0xdc5,'nlER')]({'type':_0x12d7ad(0x99b,'2j(w')+'er','mode':_0x12d7ad(0x3ec,'O8jx'),'name':_0x1c56e0['legen'+_0x12d7ad(0xad3,'fY%z')]===_0x12d7ad(0x1078,'J$mI')+_0x12d7ad(0xa64,'E1r%')+'ls'?'Effic'+'iency'+'\x20η':'η\x20'+_0x286f3f,'x':_0x23816d['q'],'y':_0x23816d['eta'],'line':{'color':_0x4a17e3,'width':_0x2aed0d?_0x420e9c+0.7:_0x420e9c,'dash':_0x35415e},'yaxis':'y1','showlegend':_0x51b941,'hovertemplate':_0x286f3f+(_0x12d7ad(0x551,'T)O0')+'>Q=%{'+_0x12d7ad(0x4f6,'J$mI')+_0x12d7ad(0xb42,'MvFO')+'h<br>'+_0x12d7ad(0x640,'O8jx')+_0x12d7ad(0xb48,'l&tG')+_0x12d7ad(0x6c9,'(7CV')+_0x12d7ad(0x27e,'ro@9')+_0x12d7ad(0x36f,'F40Y')+'>')});const _0x747ac=_0x23816d[_0x12d7ad(0xfd5,'T)O0')];_0x747ac&&_0x747ac['q']!==undefined&&_0x747ac[_0x12d7ad(0x788,'WYhc')]!==undefined&&_0x12cc01['push']({'type':_0x12d7ad(0x6ef,'XmTZ')+'er','mode':'marke'+'rs','name':_0x12d7ad(0x1ae,'ZQbK')+_0x286f3f,'x':[_0x747ac['q']],'y':[_0x747ac['eta']],'marker':{'size':_0x2aed0d?0xa:0x7,'color':_0x4a17e3,'symbol':_0x12d7ad(0xf4e,'z2Tr'),'line':{'color':_0x12d7ad(0xf67,'J$mI'),'width':0x1}},'yaxis':'y1','showlegend':![],'hovertemplate':_0x12d7ad(0x4bb,'XBWK')+_0x286f3f+(_0x12d7ad(0xb4c,'2U4A')+'=')+_0x747ac['q']+(_0x12d7ad(0xa2c,'1qzA')+'=')+_0x747ac[_0x12d7ad(0x96a,'MPp6')]+('%<ext'+_0x12d7ad(0xd7f,'[GdJ')+'extra'+'>')});}const _0x5cb83a=_0x23816d[_0x12d7ad(0xcf2,'l&tG')]||_0x23816d[_0x12d7ad(0xd0b,'(7CV')];_0x5cb83a&&_0x12cc01[_0x12d7ad(0xbdb,'lTg5')]({'type':_0x12d7ad(0x53d,'XBWK')+'er','mode':_0x12d7ad(0xe85,'2j(w'),'name':'P\x20'+_0x286f3f,'x':_0x23816d['q'],'y':_0x5cb83a,'line':{'color':_0x2254cd,'width':_0x2aed0d?_0x404150+0.7:_0x404150,'dash':_0x4b5bf4},'yaxis':'y2','showlegend':![],'hovertemplate':_0x286f3f+('\x20P<br'+'>Q=%{'+_0x12d7ad(0x4f6,'J$mI')+_0x12d7ad(0x71d,'Hgl$')+_0x12d7ad(0xb78,'nlER')+_0x12d7ad(0x5e5,'O8jx')+_0x12d7ad(0xea2,'@(im')+_0x12d7ad(0x24d,'d4#Z')+_0x12d7ad(0xeeb,'@(im')+_0x12d7ad(0x8fa,'ayOU')+_0x12d7ad(0x354,'O8jx'))});});if(_0x1d3406[_0x3ba128(0xc4b,'XmTZ')+'h']>0x0){const _0x151024=_0x326cd2;_0x1d3406[_0x3ba128(0x715,'E7d)')+'ch']((_0x5f44fe,_0x462f33)=>{const _0x1cbd4a=_0x3ba128,_0x50f8c1=SPD_COLORS[Math[_0x1cbd4a(0x88e,'9Vcr')](_0x462f33,SPD_COLORS['lengt'+'h']-0x1)],_0x1ddec8=_0x11ac3a(_0x5f44fe,_0x151024),_0x1846ef=_0x5f44fe['pow']||_0x5f44fe['power'];_0x5f44fe[_0x1cbd4a(0x937,'ayOU')]&&_0x12cc01[_0x1cbd4a(0x4bc,'8OR)')]({'type':_0x1cbd4a(0x223,'MPp6')+'er','mode':'lines','name':'η\x20'+_0x1ddec8,'x':_0x5f44fe['q'],'y':_0x5f44fe['eta'],'line':{'color':_0x50f8c1,'width':1.5,'dash':_0x1cbd4a(0x86f,'lTg5')},'yaxis':'y1','showlegend':![],'hovertemplate':_0x1ddec8+(_0x1cbd4a(0x7a9,'ayOU')+_0x1cbd4a(0xd65,'ro@9')+_0x1cbd4a(0x959,'hsDz')+_0x1cbd4a(0x88d,'2j(w')+_0x1cbd4a(0xbce,'XRBL')+_0x1cbd4a(0xb91,'ro@9')+_0x1cbd4a(0x4ab,'mIwx')+_0x1cbd4a(0x7f2,'mIwx')+_0x1cbd4a(0xd90,'XmTZ')+_0x1cbd4a(0x102f,'[GdJ')+'>')}),_0x1846ef&&_0x12cc01[_0x1cbd4a(0xe76,'XBWK')]({'type':_0x1cbd4a(0xb08,'Band')+'er','mode':_0x1cbd4a(0xafb,'qape'),'name':'P\x20'+_0x1ddec8,'x':_0x5f44fe['q'],'y':_0x1846ef,'line':{'color':_0x50f8c1,'width':1.5,'dash':_0x1cbd4a(0x1d2,'@(im')+'ot'},'yaxis':'y2','showlegend':![],'hovertemplate':_0x1ddec8+(_0x1cbd4a(0xf71,'Hgl$')+_0x1cbd4a(0x4fd,'MPp6')+'x:.1f'+_0x1cbd4a(0xfef,'1qzA')+_0x1cbd4a(0x9e9,'2U4A')+_0x1cbd4a(0x5e5,'O8jx')+':.2f}'+_0x1cbd4a(0x7bf,'QIf#')+_0x1cbd4a(0x23e,'E1r%')+_0x1cbd4a(0x3d4,'Hgl$')+_0x1cbd4a(0x732,'ToWT'))});});}_0x40260b&&_0x39aee3&&(_0x39aee3[_0x3ba128(0xbd0,'FKaL')+'lean']&&_0x12cc01[_0x3ba128(0x41c,'[GdJ')]({'type':_0x3ba128(0xd4c,'z2Tr')+'er','mode':_0x3ba128(0xe85,'2j(w'),'name':_0x3ba128(0x6f2,'hsDz')+_0x3ba128(0xe42,'E7d)')+_0x3ba128(0xb13,'O2*S'),'x':_0x39aee3['q'],'y':_0x39aee3[_0x3ba128(0x321,'[GdJ')+_0x3ba128(0xb18,'@(im')],'line':{'color':_0x3ba128(0x60b,'8OR)')+'40','width':1.5,'dash':_0x3ba128(0x44a,'XRBL')},'opacity':0.45,'yaxis':'y1','hovertemplate':'Q=%{x'+_0x3ba128(0x7bc,'%iKk')+_0x3ba128(0x2d4,'MvFO')+_0x3ba128(0xe25,'l&tG')+_0x3ba128(0x832,'XBWK')+_0x3ba128(0xac3,'ro@9')+_0x3ba128(0xf3d,'zfK(')+_0x3ba128(0x525,'2U4A')+_0x3ba128(0x8a0,'9Vcr')+'a>'}),_0x39aee3[_0x3ba128(0x6e2,'%iKk')+_0x3ba128(0x460,'hsDz')+'n']&&_0x12cc01[_0x3ba128(0x5a3,'%iKk')]({'type':_0x3ba128(0x6ef,'XmTZ')+'er','mode':_0x3ba128(0x479,'ro@9'),'name':_0x3ba128(0xb57,'z2Tr')+_0x3ba128(0xe60,'(7CV')+_0x3ba128(0xa7a,'l0Vk'),'x':_0x39aee3['q'],'y':_0x39aee3[_0x3ba128(0x5b1,'E1r%')+_0x3ba128(0xa7c,'T)O0')+'n'],'line':{'color':_0x3ba128(0xdd8,'XRBL')+'49','width':1.5,'dash':_0x3ba128(0x44a,'XRBL')},'opacity':0.45,'yaxis':'y2','hovertemplate':_0x3ba128(0x70b,'1qzA')+_0x3ba128(0x72a,'%llI')+_0x3ba128(0x1c3,'ToWT')+_0x3ba128(0x9e6,'2U4A')+_0x3ba128(0x226,'l0Vk')+_0x3ba128(0xa8d,'T)O0')+_0x3ba128(0xe23,'2U4A')+_0x3ba128(0x528,'E7d)')+_0x3ba128(0x7c3,'QIf#')+_0x3ba128(0x1080,'XmTZ')}));const _0xb22a44=Object[_0x3ba128(0xfcd,'%llI')+'n']({},PLOTLY_LAYOUT_BASE,{'xaxis':Object[_0x3ba128(0x307,'[GdJ')+'n']({},PLOTLY_LAYOUT_BASE[_0x3ba128(0xf7c,'(HU5')],{'title':_0x3ba128(0xd60,'fY%z')+_0x3ba128(0x5e8,'$gCG')+_0x3ba128(0xc31,'1qzA')}),'yaxis':Object['assig'+'n']({},PLOTLY_LAYOUT_BASE['yaxis'],{'title':_0x3ba128(0x8d2,'J$mI')+_0x3ba128(0xbef,'bMaB')+'\x20η\x20(%'+')','range':[0x0,0x69]}),'yaxis2':{'title':_0x3ba128(0x7b4,'%llI')+_0x3ba128(0x946,'o$gV')+_0x3ba128(0x234,'MvFO')+_0x3ba128(0xa5a,'lNG6'),'overlaying':'y','side':'right','rangemode':_0x3ba128(0x369,'nlER')+'o','showgrid':![],'titlefont':{'color':_0x3ba128(0x36e,'2j(w')+'49','size':0xc},'tickfont':{'color':'#f851'+'49'}}});applyAxisScaleSettings(_0xb22a44[_0x3ba128(0x55e,'MvFO')],_0x3ba128(0xb5a,'^WDP'),_0x38ea9a?.[_0x3ba128(0x721,'@(im')]),applyAxisScaleSettings(_0xb22a44[_0x3ba128(0xaa6,'$gCG')],'eff',_0x38ea9a?.[_0x3ba128(0x681,'2U4A')]),applyAxisScaleSettings(_0xb22a44[_0x3ba128(0x29d,'lNG6')+'2'],_0x3ba128(0x1086,'mIwx'),_0x38ea9a?.[_0x3ba128(0xac7,'O2*S')]);(_0x1c56e0['legen'+_0x3ba128(0xbe0,'ro@9')]==='hq_on'+'ly'||_0x1c56e0[_0x3ba128(0xf39,'(7CV')+_0x3ba128(0x960,'qape')]===_0x3ba128(0x440,'E7d)')+_0x3ba128(0x723,'d4#Z')+'ls')&&(_0xb22a44['showl'+_0x3ba128(0xfdb,'%llI')]=![]);_0xb22a44[_0x3ba128(0x637,'@(im')+'ation'+'s']=_0xb22a44[_0x3ba128(0x9ae,'O2*S')+_0x3ba128(0x2e2,'%iKk')+'s']||[],_0x73f236[_0x3ba128(0xd7c,'Band')+'ch']((_0x3f2cda,_0x4eee40)=>{const _0x35bca4=_0x3ba128;if(!_0x3f2cda['q']||_0x3f2cda['q']['lengt'+'h']===0x0||!_0x3f2cda['eta'])return;const _0x31ac05=DIA_BLUES[Math[_0x35bca4(0x719,'o$gV')](_0x4eee40,DIA_BLUES[_0x35bca4(0xf3e,'1qzA')+'h']-0x1)],_0x171c27=_0x11ac3a(_0x3f2cda,_0x58fb96),_0x334781=_0x35bca4(0xc57,'E7d)')+_0x171c27,_0x7159a0=_0x171c27;let _0x5ebb77=0x0,_0x5091da=0x0,_0x362572=_0x35bca4(0xfa2,'FKaL'),_0x5cb484=_0x35bca4(0xdab,'(7CV')+'m',_0x5daa19=0x4,_0x12cc6d=0x4;const _0x1a2678=getCustomLabelPosition(_0x334781,_0x38ea9a?.[_0x35bca4(0x8f8,'z2Tr')],'eff')||getCustomLabelPosition(_0x7159a0,_0x38ea9a?.[_0x35bca4(0x3c5,'lTg5')],_0x35bca4(0x28d,'o$gV'));if(_0x1a2678)_0x5ebb77=_0x1a2678['x'],_0x5091da=_0x1a2678['y'],_0x362572='cente'+'r',_0x5cb484='middl'+'e',_0x5daa19=0x0,_0x12cc6d=0x0;else{const _0x5d0806=Math[_0x35bca4(0x758,'T)O0')](_0x3f2cda['q'][_0x35bca4(0xf8e,'fY%z')+'h']*0.95);_0x5ebb77=_0x3f2cda['q'][_0x5d0806],_0x5091da=_0x3f2cda[_0x35bca4(0xaea,'ToWT')][_0x5d0806];}_0xb22a44[_0x35bca4(0x6d4,'J$mI')+_0x35bca4(0x107d,'lNG6')+'s'][_0x35bca4(0x636,'T)O0')]({'x':_0x5ebb77,'y':_0x5091da,'text':'<b>η\x20'+_0x171c27+_0x35bca4(0xfd9,'O8jx'),'showarrow':![],'captureevents':!![],'font':{'color':'#ffff'+'ff','size':9.5,'family':_0x35bca4(0x859,'o$gV')+_0x35bca4(0xbc2,'8OR)')+_0x35bca4(0x5cf,'z2Tr')+'if'},'bgcolor':_0x35bca4(0xfda,'lTg5')+'15,\x202'+_0x35bca4(0xcba,'o$gV')+_0x35bca4(0x3a7,'O8jx')+'2)','bordercolor':_0x31ac05,'borderwidth':1.5,'borderpad':0x3,'xanchor':_0x362572,'yanchor':_0x5cb484,'xshift':_0x5daa19,'yshift':_0x12cc6d,'name':_0x334781});});if(_0x1d3406[_0x3ba128(0x77d,'l&tG')+'h']>0x0){const _0xf2430c=_0x326cd2;_0x1d3406['forEa'+'ch']((_0x37ca48,_0x5dee6c)=>{const _0x387407=_0x3ba128;if(!_0x37ca48['q']||_0x37ca48['q'][_0x387407(0x895,'F40Y')+'h']===0x0||!_0x37ca48['eta'])return;const _0x1335e8=SPD_COLORS[Math[_0x387407(0x4bd,'@(im')](_0x5dee6c,SPD_COLORS[_0x387407(0x7b8,'bMaB')+'h']-0x1)],_0x1d5279=_0x11ac3a(_0x37ca48,_0xf2430c),_0x3187ed=_0x387407(0x72e,'O2*S')+_0x387407(0x217,'2j(w')+_0x5dee6c,_0x4ab9c2=getCustomLabelPosition(_0x3187ed,_0x38ea9a?.[_0x387407(0x57a,'MvFO')],'eff'),_0x1b6a36=Math[_0x387407(0x1c5,'%llI')](_0x37ca48['q'][_0x387407(0x668,'O2*S')+'h']*0.9),_0x113b68=_0x4ab9c2?_0x4ab9c2['x']:_0x37ca48['q'][_0x1b6a36],_0x1eb6ef=_0x4ab9c2?_0x4ab9c2['y']:_0x37ca48[_0x387407(0x2fa,'8OR)')][_0x1b6a36];_0xb22a44[_0x387407(0x6d4,'J$mI')+'ation'+'s'][_0x387407(0xed5,'^WDP')]({'x':_0x113b68,'y':_0x1eb6ef,'text':_0x387407(0xed6,'(HU5')+_0x1d5279+'</b>','showarrow':![],'captureevents':!![],'font':{'color':_0x387407(0xf0c,'$gCG')+'ff','size':0x9,'family':_0x387407(0xe0a,'%llI')+_0x387407(0x804,'lTg5')+_0x387407(0x5cf,'z2Tr')+'if'},'bgcolor':_0x387407(0x9f2,'E7d)')+'15,\x202'+_0x387407(0x842,'O2*S')+_0x387407(0x287,'ZQbK')+'0)','bordercolor':_0x1335e8,'borderwidth':0x1,'borderpad':0x2,'xanchor':_0x387407(0x447,'XRBL')+'r','yanchor':_0x387407(0xd18,'%iKk')+'e','name':_0x3187ed});});}return{'traces':_0x12cc01,'layout':_0xb22a44};}function buildPowerChart(_0x52c5a6,_0x53b11e,_0x140896,_0x527ef2={}){const _0x5579ae=a0_0x21afb1,_0x3977dd=[],_0x25996b=getCurveDisplaySelection(_0x52c5a6||_0x53b11e,_0x527ef2),{isVarSpeed:_0x56992d,showPrimary:_0x13d713,showSecondary:_0x4ed8a8,primaryFamily:_0x36d055,secondaryLines:_0x1676ac}=_0x25996b;let _0x2fa23a=[],_0x47c45f=[],_0x2a0ff9=!_0x56992d;if(_0x13d713&&!_0x4ed8a8)_0x2fa23a=_0x36d055[_0x5579ae(0x220,'2U4A')+'h']?_0x36d055:_0x52c5a6?[_0x52c5a6]:[],_0x47c45f=[],_0x2a0ff9=!_0x56992d;else{if(!_0x13d713&&_0x4ed8a8)_0x2fa23a=_0x1676ac,_0x47c45f=[],_0x2a0ff9=_0x56992d;else _0x13d713&&_0x4ed8a8?(_0x2fa23a=_0x36d055[_0x5579ae(0x78e,'z2Tr')+'h']?_0x36d055:_0x52c5a6?[_0x52c5a6]:[],_0x47c45f=_0x1676ac,_0x2a0ff9=!_0x56992d):(_0x2fa23a=_0x36d055['lengt'+'h']?_0x36d055[_0x5579ae(0xa50,'MvFO')](0x0,0x1):_0x52c5a6?[_0x52c5a6]:[],_0x47c45f=[],_0x2a0ff9=!_0x56992d);}const _0x42dd72=getGraphDisplayUnits(),_0x52262a=_0x42dd72[_0x5579ae(0x9dd,'l0Vk')+'lor']||_0x5579ae(0x8fb,'9Vcr')+'49',_0x399938=_0x42dd72[_0x5579ae(0x608,'lNG6')+_0x5579ae(0x1010,'mIwx')]||1.5,_0x57c17b=_0x42dd72[_0x5579ae(0x41b,'XRBL')+_0x5579ae(0xbcc,'%iKk')]||_0x5579ae(0x453,'[GdJ')+_0x5579ae(0x23a,'[GdJ'),_0x200ca5=(typeof getGraphDisplayUnits===_0x5579ae(0xafe,'%llI')+'ion'?getGraphDisplayUnits()['label'+_0x5579ae(0xecf,'O2*S')+'t']:_0x5579ae(0xd70,'O8jx')+'nt')||'perce'+'nt',_0x4a3e94=_0x52c5a6?.['pump']?.[_0x5579ae(0x1ff,'(HU5')+'_rpm']||_0x53b11e?.[_0x5579ae(0xf51,'$gCG')]?.[_0x5579ae(0x818,'T)O0')+_0x5579ae(0xf23,'nlER')]||0x5aa,_0x48ecc2=_0x52c5a6?.[_0x5579ae(0xd6a,'(HU5')]?.['impel'+_0x5579ae(0x29b,'9Vcr')+_0x5579ae(0x449,'ro@9')]||_0x53b11e?.[_0x5579ae(0xcd3,'XBWK')]?.[_0x5579ae(0x94e,'XRBL')+'ler_d'+_0x5579ae(0xf53,'Band')]||0x12c,_0x26a39a=(_0x742a86,_0x326b85)=>{const _0x1ef0fd=_0x5579ae;if(_0x742a86[_0x1ef0fd(0xb73,'XBWK')])return _0x742a86[_0x1ef0fd(0x4f5,'%llI')];if(_0x326b85){const _0x144c43=_0x742a86[_0x1ef0fd(0xca3,'F40Y')]!==undefined?_0x742a86[_0x1ef0fd(0xc27,'nlER')]:_0x742a86[_0x1ef0fd(0x44b,'1qzA')]!==undefined?_0x742a86[_0x1ef0fd(0xca7,'QIf#')]:_0x742a86[_0x1ef0fd(0x93b,'lNG6')],_0x964166=_0x742a86[_0x1ef0fd(0xd5a,'9Vcr')]!==undefined?_0x742a86[_0x1ef0fd(0x9fd,'hsDz')]:_0x742a86[_0x1ef0fd(0xfce,'Hgl$')+_0x1ef0fd(0x3f4,'1qzA')+'o']!==undefined?_0x742a86['speed'+'_rati'+'o']:_0x144c43/_0x48ecc2,_0x54433b=Math['round']((_0x964166||0x1)*0x64);return _0x200ca5===_0x1ef0fd(0xbf9,'l0Vk')+'nt'?'Ø'+_0x144c43+'\x20mm\x20('+_0x54433b+'%)':'Ø'+_0x144c43+_0x1ef0fd(0xde9,'WYhc');}else{const _0x201333=_0x742a86[_0x1ef0fd(0x93b,'lNG6')]!==undefined?_0x742a86[_0x1ef0fd(0x1bd,'ayOU')]:_0x742a86[_0x1ef0fd(0xcc3,'l&tG')+_0x1ef0fd(0xcf1,'O8jx')]!==undefined?_0x742a86[_0x1ef0fd(0xbf1,'2j(w')+_0x1ef0fd(0xd9b,'hsDz')]:_0x742a86[_0x1ef0fd(0xb36,'lTg5')]!==undefined?_0x742a86['val']:_0x742a86[_0x1ef0fd(0xf8d,'O2*S')],_0x3142cf=_0x742a86[_0x1ef0fd(0xcc1,'LWa7')]!==undefined?_0x742a86[_0x1ef0fd(0xe2a,'Band')]:_0x742a86[_0x1ef0fd(0x69a,'XRBL')+'_rati'+'o']!==undefined?_0x742a86[_0x1ef0fd(0xa87,'MvFO')+_0x1ef0fd(0xa4a,'QIf#')+'o']:_0x201333/_0x4a3e94,_0x4e467f=Math['round']((_0x3142cf||0x1)*0x64);return _0x200ca5===_0x1ef0fd(0x50f,'XBWK')+'nt'?_0x201333+(_0x1ef0fd(0x1de,'@(im')+'(')+_0x4e467f+'%)':_0x201333+_0x1ef0fd(0xdeb,'nlER');}};_0x2fa23a[_0x5579ae(0xe48,'bMaB')+'ch']((_0x498bf9,_0x494c89)=>{const _0xf05c5b=_0x5579ae,_0x97d8ed=_0x498bf9[_0xf05c5b(0x1d1,'XRBL')+'x']||_0x494c89===0x0,_0x302d95=_0x42dd72[_0xf05c5b(0x60a,'ToWT')+_0xf05c5b(0xb6f,'^WDP')]===_0xf05c5b(0x800,'F40Y')+_0xf05c5b(0x8ce,'mIwx')+'ls'?_0x494c89===0x0:_0x42dd72[_0xf05c5b(0x611,'$gCG')+_0xf05c5b(0xe0b,'[GdJ')]===_0xf05c5b(0x442,'(7CV'),_0x3e3b69=_0x26a39a(_0x498bf9,_0x2a0ff9),_0x298fc7=_0x42dd72[_0xf05c5b(0xeb6,'ro@9')+_0xf05c5b(0xd15,'nlER')]===_0xf05c5b(0x2cc,'2U4A')+_0xf05c5b(0x3c9,'WYhc')+'ls'?_0xf05c5b(0x609,'WYhc')+'\x20P':'P\x20'+_0x3e3b69,_0x490cf7=_0x498bf9[_0xf05c5b(0xacd,'hsDz')]||_0x498bf9['pow'];_0x490cf7&&_0x3977dd[_0xf05c5b(0xc29,'(HU5')]({'type':'scatt'+'er','mode':_0xf05c5b(0xa59,'mIwx'),'name':_0x298fc7,'x':_0x498bf9['q'],'y':_0x490cf7,'line':{'color':_0x52262a,'width':_0x97d8ed?_0x399938+0.7:_0x399938,'dash':_0x57c17b},'showlegend':_0x302d95,'hovertemplate':_0x3e3b69+(_0xf05c5b(0x97b,'%llI')+_0xf05c5b(0x4c5,'1qzA')+'.1f}\x20'+_0xf05c5b(0x108f,'d4#Z')+_0xf05c5b(0x2b2,'XBWK')+_0xf05c5b(0xc5f,'MvFO')+_0xf05c5b(0x871,'bMaB')+_0xf05c5b(0x85b,'J$mI')+'ra></'+'extra'+'>')});});if(_0x47c45f[_0x5579ae(0x437,'@(im')+'h']>0x0){const _0x333cdb=_0x56992d;_0x47c45f[_0x5579ae(0xde8,'lNG6')+'ch']((_0x46bfb1,_0x5a70eb)=>{const _0x78904c=_0x5579ae,_0x3f4a17=SPD_COLORS[Math[_0x78904c(0x20a,'ToWT')](_0x5a70eb,SPD_COLORS[_0x78904c(0x68b,'QIf#')+'h']-0x1)],_0x1f5bee=_0x26a39a(_0x46bfb1,_0x333cdb),_0x21a855=_0x46bfb1[_0x78904c(0xc0b,'8OR)')]||_0x46bfb1['power'];_0x21a855&&_0x3977dd['push']({'type':_0x78904c(0x44f,'1qzA')+'er','mode':_0x78904c(0x1048,'lNG6'),'name':'P\x20'+_0x1f5bee,'x':_0x46bfb1['q'],'y':_0x21a855,'line':{'color':_0x3f4a17,'width':1.5,'dash':'dashd'+'ot'},'showlegend':![],'hovertemplate':_0x1f5bee+(_0x78904c(0x324,'MPp6')+_0x78904c(0x1b7,'fY%z')+_0x78904c(0x5c4,'Hgl$')+'}\x20m³/'+_0x78904c(0xd80,'%llI')+_0x78904c(0x2f9,'1qzA')+_0x78904c(0xac4,'fY%z')+'\x20kW<e'+_0x78904c(0xc4f,'(7CV')+'</ext'+_0x78904c(0x457,'1qzA'))});});}_0x140896&&_0x53b11e&&_0x53b11e[_0x5579ae(0x103d,'qape')+_0x5579ae(0x460,'hsDz')+'n']&&_0x3977dd['push']({'type':'scatt'+'er','mode':_0x5579ae(0xafb,'qape'),'name':_0x5579ae(0x1a2,'(HU5')+_0x5579ae(0x102c,'nlER')+_0x5579ae(0x495,'qape')+'f)','x':_0x53b11e['q'],'y':_0x53b11e[_0x5579ae(0x5b1,'E1r%')+_0x5579ae(0x432,'nlER')+'n'],'line':{'color':_0x5579ae(0x973,'FKaL')+'49','width':1.5,'dash':_0x5579ae(0x770,'O2*S')},'opacity':0.45,'hovertemplate':'Q=%{x'+_0x5579ae(0xb3e,'ayOU')+_0x5579ae(0xfc8,'T)O0')+_0x5579ae(0x3cb,'nlER')+'n)=%{'+_0x5579ae(0xe50,'$gCG')+_0x5579ae(0x7d1,'qape')+_0x5579ae(0x102f,'[GdJ')+_0x5579ae(0xc73,'(7CV')+_0x5579ae(0xe62,'l0Vk')});const _0x2e98ff=makeLayout(_0x5579ae(0x285,'lTg5')+_0x5579ae(0x9ab,'2j(w')+'/h)','Shaft'+_0x5579ae(0x80f,'XmTZ')+_0x5579ae(0xf8c,'2U4A')+_0x5579ae(0xef3,'lTg5'));_0x2e98ff[_0x5579ae(0x216,'9Vcr')][_0x5579ae(0xcbe,'MvFO')+'mode']=_0x5579ae(0xdc4,'LWa7')+'o';(_0x42dd72['legen'+_0x5579ae(0xa00,'E7d)')]===_0x5579ae(0x95e,'XmTZ')+'ly'||_0x42dd72[_0x5579ae(0x404,'[GdJ')+'dMode']===_0x5579ae(0x104d,'MvFO')+_0x5579ae(0x394,'O2*S')+'ls')&&(_0x2e98ff[_0x5579ae(0xea1,'Band')+_0x5579ae(0xfdb,'%llI')]=![]);_0x2e98ff['annot'+_0x5579ae(0xef1,'(HU5')+'s']=_0x2e98ff[_0x5579ae(0x1b2,'hsDz')+_0x5579ae(0xf78,'[GdJ')+'s']||[],_0x2fa23a[_0x5579ae(0x3a9,'T)O0')+'ch']((_0x48b000,_0x5a757c)=>{const _0x265ed8=_0x5579ae,_0x2f714b=_0x48b000[_0x265ed8(0x1086,'mIwx')]||_0x48b000[_0x265ed8(0xe3a,'QIf#')];if(!_0x48b000['q']||_0x48b000['q'][_0x265ed8(0x689,'FKaL')+'h']===0x0||!_0x2f714b)return;const _0xacba78=DIA_BLUES[Math['min'](_0x5a757c,DIA_BLUES[_0x265ed8(0x8be,'zfK(')+'h']-0x1)],_0x28e3be=_0x26a39a(_0x48b000,_0x2a0ff9),_0x44f59b='pow_'+_0x28e3be,_0x24439b=_0x28e3be,_0x166315=_0x2a0ff9?_0x265ed8(0x377,'zfK(')+_0x265ed8(0x6fa,'@(im')+_0x5a757c:'spd_l'+'bl_'+_0x5a757c;let _0x7e0d2e=0x0,_0x572352=0x0,_0x123d42=_0x265ed8(0x1ac,'[GdJ'),_0x545d2a=_0x265ed8(0x7a2,'o$gV')+'m',_0x47f167=0x4,_0x1c23ae=0x4;const _0x10de1b=getCustomLabelPosition(_0x44f59b,_0x52c5a6?.['pump'],_0x265ed8(0x385,'WYhc'))||getCustomLabelPosition(_0x24439b,_0x52c5a6?.[_0x265ed8(0x8f8,'z2Tr')],_0x265ed8(0x30b,'(HU5'))||getCustomLabelPosition(_0x265ed8(0x200,'ZQbK')+_0x166315,_0x52c5a6?.['pump'],_0x265ed8(0x4bf,'XmTZ'))||getCustomLabelPosition(_0x166315,_0x52c5a6?.[_0x265ed8(0xdea,'bMaB')],_0x265ed8(0x1b5,'ZQbK'));if(_0x10de1b)_0x7e0d2e=_0x10de1b['x'],_0x572352=_0x10de1b['y'],_0x123d42=_0x265ed8(0x39b,'FKaL')+'r',_0x545d2a=_0x265ed8(0x909,'MvFO')+'e',_0x47f167=0x0,_0x1c23ae=0x0;else{const _0x3e8e80=Math[_0x265ed8(0x62e,'J$mI')](_0x48b000['q'][_0x265ed8(0xff3,'lNG6')+'h']*0.95);_0x7e0d2e=_0x48b000['q'][_0x3e8e80],_0x572352=_0x2f714b[_0x3e8e80];}_0x2e98ff[_0x265ed8(0xc8f,'E1r%')+_0x265ed8(0xb9a,'LWa7')+'s'][_0x265ed8(0x7fe,'XmTZ')]({'x':_0x7e0d2e,'y':_0x572352,'text':_0x265ed8(0x76d,'2j(w')+_0x28e3be+_0x265ed8(0xe32,'Band'),'showarrow':![],'captureevents':!![],'font':{'color':_0x265ed8(0xf2e,'^WDP')+'ff','size':9.5,'family':_0x265ed8(0xadb,'Hgl$')+_0x265ed8(0xf56,'[GdJ')+_0x265ed8(0x1020,'MvFO')+'if'},'bgcolor':_0x265ed8(0xb3d,'(7CV')+_0x265ed8(0xf61,'Band')+'3,\x2042'+_0x265ed8(0xeb8,'O2*S')+'2)','bordercolor':_0xacba78,'borderwidth':1.5,'borderpad':0x3,'xanchor':_0x123d42,'yanchor':_0x545d2a,'xshift':_0x47f167,'yshift':_0x1c23ae,'name':_0x44f59b});});if(_0x47c45f[_0x5579ae(0x964,'T)O0')+'h']>0x0){const _0x129cad=_0x56992d;_0x47c45f[_0x5579ae(0xbfd,'nlER')+'ch']((_0x23b05a,_0x30091e)=>{const _0x13373a=_0x5579ae,_0xac0316=_0x23b05a['pow']||_0x23b05a['power'];if(!_0x23b05a['q']||_0x23b05a['q'][_0x13373a(0xe5c,'[GdJ')+'h']===0x0||!_0xac0316)return;const _0x2164a7=SPD_COLORS[Math[_0x13373a(0xe59,'2U4A')](_0x30091e,SPD_COLORS[_0x13373a(0x485,'%llI')+'h']-0x1)],_0x5f20a0=_0x26a39a(_0x23b05a,_0x129cad),_0x5dcbaf=_0x129cad?'pow_d'+_0x13373a(0x6c6,'Band')+_0x30091e:_0x13373a(0x84d,'fY%z')+_0x13373a(0xe19,'O8jx')+_0x30091e,_0x14b0bd=getCustomLabelPosition(_0x5dcbaf,_0x52c5a6?.[_0x13373a(0x3c5,'lTg5')],_0x13373a(0xb79,'O2*S'))||getCustomLabelPosition(_0x13373a(0x200,'ZQbK')+_0x5f20a0,_0x52c5a6?.[_0x13373a(0x347,'2j(w')],_0x13373a(0x1dc,'bMaB'))||getCustomLabelPosition(_0x5f20a0,_0x52c5a6?.[_0x13373a(0x5b5,'1qzA')],_0x13373a(0xa9c,'fY%z'))||getCustomLabelPosition(_0x13373a(0x84d,'fY%z')+_0x13373a(0x6a8,'$gCG')+_0x30091e,_0x52c5a6?.['pump'],'pow'),_0x2962a6=Math[_0x13373a(0x4c4,'W@8N')](_0x23b05a['q'][_0x13373a(0x83f,'l0Vk')+'h']*0.9),_0x409bf1=_0x14b0bd?_0x14b0bd['x']:_0x23b05a['q'][_0x2962a6],_0x4fec2f=_0x14b0bd?_0x14b0bd['y']:_0xac0316[_0x2962a6];_0x2e98ff[_0x13373a(0x387,'Hgl$')+_0x13373a(0xfd2,'9Vcr')+'s']['push']({'x':_0x409bf1,'y':_0x4fec2f,'text':_0x13373a(0x44c,'J$mI')+_0x5f20a0+'</b>','showarrow':![],'captureevents':!![],'font':{'color':_0x13373a(0x650,'(7CV')+'ff','size':0x9,'family':'Arial'+_0x13373a(0x5d7,'E7d)')+_0x13373a(0x969,'@(im')+'if'},'bgcolor':_0x13373a(0xa10,'zfK(')+_0x13373a(0x31e,'z2Tr')+_0x13373a(0xcb9,'MvFO')+_0x13373a(0xe56,'lNG6')+'0)','bordercolor':_0x2164a7,'borderwidth':0x1,'borderpad':0x2,'xanchor':_0x13373a(0x7ed,'hsDz')+'r','yanchor':_0x13373a(0x3bc,'lNG6')+'e','name':_0x5dcbaf});});}return{'traces':_0x3977dd,'layout':_0x2e98ff};}function buildNpshChart(_0x41fbc8,_0xb2ed36,_0x672476={}){const _0x38b944=a0_0x21afb1,_0xa6cf=[],_0x26aaba=getCurveDisplaySelection(_0x41fbc8||_0xb2ed36,_0x672476),{isVarSpeed:_0x399a0d,showPrimary:_0x478dde,showSecondary:_0x41e3d9,primaryFamily:_0x101c18,secondaryLines:_0x5d1a91}=_0x26aaba;let _0x2eeaa9=[],_0x2882ee=[],_0x239dfa=!_0x399a0d;if(_0x478dde&&!_0x41e3d9)_0x2eeaa9=_0x101c18[_0x38b944(0x8be,'zfK(')+'h']?_0x101c18:_0x41fbc8?[_0x41fbc8]:[],_0x2882ee=[],_0x239dfa=!_0x399a0d;else{if(!_0x478dde&&_0x41e3d9)_0x2eeaa9=_0x5d1a91,_0x2882ee=[],_0x239dfa=_0x399a0d;else _0x478dde&&_0x41e3d9?(_0x2eeaa9=_0x101c18[_0x38b944(0x89b,'ZQbK')+'h']?_0x101c18:_0x41fbc8?[_0x41fbc8]:[],_0x2882ee=_0x5d1a91,_0x239dfa=!_0x399a0d):(_0x2eeaa9=_0x101c18['lengt'+'h']?_0x101c18['slice'](0x0,0x1):_0x41fbc8?[_0x41fbc8]:[],_0x2882ee=[],_0x239dfa=!_0x399a0d);}const _0xf1e453=getGraphDisplayUnits(),_0x2bfb08=_0xf1e453[_0x38b944(0xe9f,'ayOU')+'olor']||_0x38b944(0x34b,'d4#Z')+'c0',_0x1a119b=_0xf1e453[_0x38b944(0x81f,'$gCG')+'eight']||1.5,_0x4ba3cd=_0xf1e453[_0x38b944(0x759,'E7d)')+_0x38b944(0x8da,'2j(w')]||_0x38b944(0x410,'2U4A')+'ot',_0x5eac7d=(typeof getGraphDisplayUnits===_0x38b944(0x422,'O2*S')+_0x38b944(0x8fe,'$gCG')?getGraphDisplayUnits()[_0x38b944(0xe73,'(HU5')+_0x38b944(0x107b,'WYhc')+'t']:_0x38b944(0x7a7,'ToWT')+'nt')||_0x38b944(0xd8d,'ZQbK')+'nt',_0x4d9c11=_0x41fbc8?.[_0x38b944(0x24b,'Band')]?.[_0x38b944(0xd6b,'hsDz')+_0x38b944(0xcc4,'ayOU')]||_0xb2ed36?.[_0x38b944(0xbe5,'l0Vk')]?.[_0x38b944(0x8c5,'2U4A')+_0x38b944(0xd1f,'1qzA')]||0x5aa,_0x4a8fb6=_0x41fbc8?.[_0x38b944(0xaf4,'XRBL')]?.[_0x38b944(0x80d,'lNG6')+_0x38b944(0xedf,'nlER')+_0x38b944(0x449,'ro@9')]||_0xb2ed36?.[_0x38b944(0xab3,'hsDz')]?.[_0x38b944(0x3fe,'bMaB')+_0x38b944(0xcbb,'E7d)')+_0x38b944(0x816,'XBWK')]||0x12c,_0x44bfcc=(_0x2525ff,_0x1f5be)=>{const _0x370f64=_0x38b944;if(_0x2525ff['label'])return _0x2525ff[_0x370f64(0x212,'@(im')];if(_0x1f5be){const _0x11d1ef=_0x2525ff[_0x370f64(0xe69,'lNG6')]!==undefined?_0x2525ff[_0x370f64(0xa89,'2U4A')]:_0x2525ff['val']!==undefined?_0x2525ff[_0x370f64(0x654,'O8jx')]:_0x2525ff[_0x370f64(0x6dd,'Hgl$')],_0x4210e3=_0x2525ff[_0x370f64(0xc3c,'%llI')]!==undefined?_0x2525ff[_0x370f64(0x331,'2U4A')]:_0x2525ff[_0x370f64(0x2f1,'(7CV')+_0x370f64(0x372,'ro@9')+'o']!==undefined?_0x2525ff['speed'+_0x370f64(0x75d,'ayOU')+'o']:_0x11d1ef/_0x4a8fb6,_0xdd30ba=Math[_0x370f64(0x673,'LWa7')]((_0x4210e3||0x1)*0x64);return _0x5eac7d==='perce'+'nt'?'Ø'+_0x11d1ef+'\x20mm\x20('+_0xdd30ba+'%)':'Ø'+_0x11d1ef+_0x370f64(0x3d6,'$gCG');}else{const _0x2c2d5c=_0x2525ff['rpm']!==undefined?_0x2525ff['rpm']:_0x2525ff[_0x370f64(0x967,'E7d)')+_0x370f64(0x7e2,'mIwx')]!==undefined?_0x2525ff[_0x370f64(0x448,'FKaL')+_0x370f64(0xd9b,'hsDz')]:_0x2525ff[_0x370f64(0xbc1,'nlER')]!==undefined?_0x2525ff[_0x370f64(0xd05,'fY%z')]:_0x2525ff[_0x370f64(0x9a0,'$gCG')],_0x42a1ff=_0x2525ff[_0x370f64(0xedb,'1qzA')]!==undefined?_0x2525ff[_0x370f64(0xc7e,'zfK(')]:_0x2525ff[_0x370f64(0x2f1,'(7CV')+_0x370f64(0x75d,'ayOU')+'o']!==undefined?_0x2525ff[_0x370f64(0x1067,'J$mI')+_0x370f64(0x55a,'O8jx')+'o']:_0x2c2d5c/_0x4d9c11,_0x279de5=Math[_0x370f64(0x3fb,'XRBL')]((_0x42a1ff||0x1)*0x64);return _0x5eac7d===_0x370f64(0x4ee,'9Vcr')+'nt'?_0x2c2d5c+(_0x370f64(0xaa1,'J$mI')+'(')+_0x279de5+'%)':_0x2c2d5c+_0x370f64(0xb3f,'lNG6');}};_0x2eeaa9['forEa'+'ch']((_0x1e3670,_0x5eb42c)=>{const _0x29fa13=_0x38b944;if(!_0x1e3670[_0x29fa13(0xf1a,'fY%z')])return;const _0x942b88=_0x1e3670[_0x29fa13(0x772,'d4#Z')+'x']||_0x5eb42c===0x0,_0x493450=_0xf1e453[_0x29fa13(0x662,'E1r%')+_0x29fa13(0x516,'z2Tr')]==='curve'+'_labe'+'ls'?_0x5eb42c===0x0:_0xf1e453[_0x29fa13(0xe6d,'Hgl$')+'dMode']==='each',_0x895e3d=_0x44bfcc(_0x1e3670,_0x239dfa),_0x5acf54=_0xf1e453[_0x29fa13(0xc38,'MPp6')+_0x29fa13(0x960,'qape')]==='curve'+'_labe'+'ls'?_0x29fa13(0x60f,'mIwx'):_0x29fa13(0x80b,'(HU5')+'\x20'+_0x895e3d;_0xa6cf[_0x29fa13(0xc85,'zfK(')]({'type':_0x29fa13(0xfca,'(HU5')+'er','mode':_0x29fa13(0xe85,'2j(w'),'name':_0x5acf54,'x':_0x1e3670['q'],'y':_0x1e3670[_0x29fa13(0xd75,'zfK(')],'line':{'color':_0x2bfb08,'width':_0x942b88?_0x1a119b+0.7:_0x1a119b,'dash':_0x4ba3cd},'showlegend':_0x493450,'hovertemplate':_0x895e3d+(_0x29fa13(0xbc6,'1qzA')+_0x29fa13(0x850,'2j(w')+'.1f}\x20'+_0x29fa13(0x8a2,'XmTZ')+_0x29fa13(0x337,'@(im')+'SHr=%'+_0x29fa13(0xfc3,'XRBL')+'f}\x20m<'+_0x29fa13(0xa07,'MPp6')+_0x29fa13(0x2f8,'lTg5')+'tra>')});});if(_0x2882ee['lengt'+'h']>0x0){const _0x11fe87=_0x399a0d;_0x2882ee[_0x38b944(0xe2f,'9Vcr')+'ch']((_0x32e876,_0x4c7f36)=>{const _0x170006=_0x38b944,_0x3ecdb3=SPD_COLORS[Math[_0x170006(0x23b,'nlER')](_0x4c7f36,SPD_COLORS[_0x170006(0x626,'2j(w')+'h']-0x1)],_0x721063=_0x44bfcc(_0x32e876,_0x11fe87);_0x32e876[_0x170006(0x7f8,'FKaL')]&&_0xa6cf['push']({'type':_0x170006(0x905,'Hgl$')+'er','mode':_0x170006(0xafb,'qape'),'name':_0x170006(0x6c5,'lNG6')+'\x20'+_0x721063,'x':_0x32e876['q'],'y':_0x32e876[_0x170006(0x3f6,'2j(w')],'line':{'color':_0x3ecdb3,'width':1.5,'dash':_0x170006(0x1023,'fY%z')+'ot'},'showlegend':![],'hovertemplate':_0x721063+(_0x170006(0x630,'lNG6')+_0x170006(0xa5b,'E7d)')+_0x170006(0x70b,'1qzA')+_0x170006(0x7af,'E7d)')+_0x170006(0xa11,'[GdJ')+_0x170006(0x512,'WYhc')+_0x170006(0x9d5,'zfK(')+_0x170006(0x522,'Band')+_0x170006(0x9ff,'[GdJ')+_0x170006(0xb96,'2U4A')+_0x170006(0x104b,'XRBL')+_0x170006(0x688,'qape'))});});}const _0x4eb798=makeLayout('Flow\x20'+_0x38b944(0x975,'O8jx')+_0x38b944(0x1016,'FKaL'),_0x38b944(0xec5,'XmTZ')+_0x38b944(0xf5b,'F40Y'));return _0x4eb798[_0x38b944(0x4e6,'ToWT')][_0x38b944(0x794,'ZQbK')+_0x38b944(0xab7,'hsDz')]=_0x38b944(0x642,'ZQbK')+'o',(_0xf1e453['legen'+_0x38b944(0xb11,'%iKk')]===_0x38b944(0x92d,'ToWT')+'ly'||_0xf1e453[_0x38b944(0x570,'@(im')+'dMode']===_0x38b944(0xf4c,'E1r%')+_0x38b944(0xa64,'E1r%')+'ls')&&(_0x4eb798[_0x38b944(0x5f6,'hsDz')+_0x38b944(0x6f8,'FKaL')]=![]),_0xf1e453[_0x38b944(0xcaf,'qape')+_0x38b944(0x210,'ToWT')]===_0x38b944(0x3ca,'2j(w')+_0x38b944(0x97c,'LWa7')+'ls'&&_0x2eeaa9[_0x38b944(0xcb2,'W@8N')+'h']>0x0&&(_0x4eb798[_0x38b944(0xba8,'ayOU')+'ation'+'s']=_0x4eb798[_0x38b944(0xda0,'MPp6')+_0x38b944(0x674,'hsDz')+'s']||[],_0x2eeaa9['forEa'+'ch']((_0x561f09,_0x503a19)=>{const _0x4b1b0c=_0x38b944;if(!_0x561f09['q']||_0x561f09['q'][_0x4b1b0c(0x437,'@(im')+'h']===0x0||!_0x561f09['npsh'])return;const _0x381ddf=DIA_BLUES[Math[_0x4b1b0c(0x9d8,'l0Vk')](_0x503a19,DIA_BLUES['lengt'+'h']-0x1)],_0x34e289=_0x44bfcc(_0x561f09,_0x239dfa),_0x12ba11=_0x4b1b0c(0xce8,'(HU5')+_0x34e289,_0x48ef35=_0x34e289,_0x3293ee=_0x239dfa?_0x4b1b0c(0xf99,'(7CV')+_0x4b1b0c(0x411,'l&tG')+_0x503a19:_0x4b1b0c(0x1083,'XRBL')+_0x4b1b0c(0x711,'2U4A')+_0x503a19;let _0xa7ce9d=0x0,_0xe8d8f5=0x0,_0xd9ace4=_0x4b1b0c(0xbd1,'mIwx'),_0x13aa67=_0x4b1b0c(0x88f,'qape')+'m',_0x5e2f4b=0x4,_0x4a0d27=0x4;const _0x32a3fb=getCustomLabelPosition(_0x12ba11,_0x41fbc8?.[_0x4b1b0c(0xbe5,'l0Vk')],_0x4b1b0c(0x910,'MPp6'))||getCustomLabelPosition(_0x48ef35,_0x41fbc8?.[_0x4b1b0c(0xab3,'hsDz')],_0x4b1b0c(0xffe,'o$gV'))||getCustomLabelPosition(_0x4b1b0c(0x5fd,'Band')+_0x3293ee,_0x41fbc8?.[_0x4b1b0c(0x92c,'MPp6')],_0x4b1b0c(0x3ae,'z2Tr'))||getCustomLabelPosition(_0x3293ee,_0x41fbc8?.[_0x4b1b0c(0x3c5,'lTg5')],'npsh');if(_0x32a3fb)_0xa7ce9d=_0x32a3fb['x'],_0xe8d8f5=_0x32a3fb['y'],_0xd9ace4='cente'+'r',_0x13aa67=_0x4b1b0c(0xf5c,'(7CV')+'e',_0x5e2f4b=0x0,_0x4a0d27=0x0;else{const _0x31ee1f=_0x561f09['q'][_0x4b1b0c(0xd29,'d4#Z')+'h']-0x1;_0xa7ce9d=_0x561f09['q'][_0x31ee1f],_0xe8d8f5=_0x561f09[_0x4b1b0c(0xc5a,'(7CV')][_0x31ee1f];}_0x4eb798[_0x4b1b0c(0xc0c,'$gCG')+_0x4b1b0c(0x251,'E7d)')+'s'][_0x4b1b0c(0x108b,'o$gV')]({'x':_0xa7ce9d,'y':_0xe8d8f5,'text':_0x4b1b0c(0x627,'@(im')+_0x34e289+_0x4b1b0c(0xa09,'fY%z'),'showarrow':![],'captureevents':!![],'font':{'color':_0x4b1b0c(0xcfd,'[GdJ')+'ff','size':9.5,'family':_0x4b1b0c(0xd04,'fY%z')+',\x20san'+_0x4b1b0c(0xa58,'ayOU')+'if'},'bgcolor':_0x4b1b0c(0x9f2,'E7d)')+_0x4b1b0c(0xba2,'O8jx')+'7,\x2034'+_0x4b1b0c(0x5f2,'1qzA')+'2)','bordercolor':_0x381ddf,'borderwidth':1.5,'borderpad':0x3,'xanchor':_0xd9ace4,'yanchor':_0x13aa67,'xshift':_0x5e2f4b,'yshift':_0x4a0d27,'name':_0x12ba11});})),{'traces':_0xa6cf,'layout':_0x4eb798};}function buildOverlayChart(_0x1218cf,_0xfd275e,_0x21948e,_0x4b067b){const _0x339e4f=a0_0x21afb1,_0x3e8682=[];_0x3e8682[_0x339e4f(0xd4e,'WYhc')]({'type':_0x339e4f(0x44f,'1qzA')+'er','mode':_0x339e4f(0xa6f,'d4#Z'),'name':_0x339e4f(0xd4a,'Hgl$'),'x':_0x1218cf['q'],'y':_0x1218cf['h'],'line':{'color':_0x339e4f(0x313,'d4#Z')+'ff','width':0x3},'hovertemplate':_0x339e4f(0x6a1,'d4#Z')+':.1f}'+_0x339e4f(0x9e2,'hsDz')+_0x339e4f(0x1d0,'zfK(')+_0x339e4f(0x2b0,'z2Tr')+_0x339e4f(0xe83,'T)O0')+_0x339e4f(0xbf7,'qape')+_0x339e4f(0x3e8,'FKaL')+'>'});_0x1218cf[_0x339e4f(0x656,'%iKk')+'m_h']&&_0x3e8682['push']({'type':_0x339e4f(0xf7f,'T)O0')+'er','mode':_0x339e4f(0x6f0,'ZQbK'),'name':'Syste'+_0x339e4f(0x95c,'%llI')+'ve','x':_0x1218cf['q'],'y':_0x1218cf[_0x339e4f(0x831,'fY%z')+'m_h'],'line':{'color':_0x339e4f(0x856,'XmTZ')+'ff','width':0x2,'dash':_0x339e4f(0xe87,'o$gV')},'hovertemplate':_0x339e4f(0x6d9,'^WDP')+_0x339e4f(0x2ab,'ToWT')+_0x339e4f(0x927,'ayOU')+'_sys='+_0x339e4f(0x38a,'z2Tr')+_0x339e4f(0x71c,'o$gV')+_0x339e4f(0x1007,'WYhc')+_0x339e4f(0x880,'qape')+'ra>'});_0xfd275e&&_0x3e8682[_0x339e4f(0x41c,'[GdJ')]({'type':_0x339e4f(0xd4c,'z2Tr')+'er','mode':_0x339e4f(0xfa7,'WYhc'),'name':_0x339e4f(0x610,'ZQbK'),'yaxis':'y2','x':_0x1218cf['q'],'y':_0x1218cf[_0x339e4f(0x365,'T)O0')],'line':{'color':'#f0c0'+'40','width':0x2,'dash':_0x339e4f(0x106f,'bMaB')+_0x339e4f(0x4dc,'$gCG')},'hovertemplate':_0x339e4f(0x9c1,'%llI')+_0x339e4f(0xc10,'WYhc')+_0x339e4f(0x631,'ToWT')+_0x339e4f(0xbf7,'qape')+_0x339e4f(0x684,'MvFO')+'>'});if(_0x21948e&&_0x1218cf[_0x339e4f(0xa45,'(HU5')]){const _0x6ed15e=Math[_0x339e4f(0x214,'2j(w')](..._0x1218cf[_0x339e4f(0xc43,'2U4A')]),_0x23ed30=Math[_0x339e4f(0x4a8,'nlER')](..._0x1218cf['h']),_0x428fd2=_0x6ed15e>0x0?_0x23ed30/_0x6ed15e*0.55:0x1;_0x3e8682['push']({'type':_0x339e4f(0x6d0,'(7CV')+'er','mode':_0x339e4f(0x4ea,'o$gV'),'name':_0x339e4f(0x2a9,'bMaB')+_0x339e4f(0x21b,'E1r%')+_0x339e4f(0x911,'Band'),'x':_0x1218cf['q'],'y':_0x1218cf[_0x339e4f(0xacd,'hsDz')][_0x339e4f(0x228,'8OR)')](_0x34ba59=>_0x34ba59*_0x428fd2),'line':{'color':_0x339e4f(0x4e8,'W@8N')+'49','width':1.5,'dash':_0x339e4f(0x696,'bMaB')},'customdata':_0x1218cf[_0x339e4f(0x1086,'mIwx')],'hovertemplate':_0x339e4f(0x37a,'MPp6')+_0x339e4f(0x1089,'hsDz')+_0x339e4f(0x43f,'F40Y')+'.2f}\x20'+_0x339e4f(0xf57,'^WDP')+_0x339e4f(0xd62,'l&tG')+_0x339e4f(0x1041,'mIwx')+'a>'});}if(_0x4b067b){const _0x23c944=!_0xfd275e&&!_0x21948e;_0x3e8682[_0x339e4f(0x6c2,'hsDz')]({'type':_0x339e4f(0x99b,'2j(w')+'er','mode':_0x339e4f(0xf0f,'E7d)'),'name':_0x339e4f(0x9a4,'ZQbK'),'yaxis':_0x23c944?'y2':'y1','x':_0x1218cf['q'],'y':_0x1218cf[_0x339e4f(0x9f6,'XmTZ')],'line':{'color':_0x339e4f(0xf6d,'1qzA')+'c0','width':0x2,'dash':_0x339e4f(0xa1a,'lTg5')+'ot'},'hovertemplate':_0x339e4f(0xbe3,'1qzA')+_0x339e4f(0x57c,'%llI')+_0x339e4f(0x4aa,'lTg5')+'m<ext'+_0x339e4f(0x393,'o$gV')+'extra'+'>'});}_0x1218cf['bep']&&_0x3e8682[_0x339e4f(0x37b,'ToWT')]({'type':_0x339e4f(0x7cc,'MvFO')+'er','mode':_0x339e4f(0xd4f,'LWa7')+'rs','name':_0x339e4f(0xc56,'@(im'),'x':[_0x1218cf[_0x339e4f(0xe53,'J$mI')]['q']],'y':[_0x1218cf[_0x339e4f(0x85d,'ro@9')]['h']],'marker':{'size':0xa,'color':_0x339e4f(0xcb8,'E1r%')+'50','symbol':_0x339e4f(0xa36,'Hgl$'),'line':{'color':'#fff','width':0x1}},'hovertemplate':_0x339e4f(0x84f,'$gCG')+'='+_0x1218cf['bep']['q']+_0x339e4f(0x48d,'(7CV')+_0x1218cf['bep']['h']+(_0x339e4f(0x9df,'fY%z')+_0x339e4f(0xd2a,'lNG6')+_0x339e4f(0xeeb,'@(im'))});const _0x35e38d=Object[_0x339e4f(0xf68,'Band')+'n']({},PLOTLY_LAYOUT_BASE,{'xaxis':Object[_0x339e4f(0xedd,'bMaB')+'n']({},PLOTLY_LAYOUT_BASE[_0x339e4f(0x45b,'%iKk')],{'title':_0x339e4f(0x77f,'T)O0')+_0x339e4f(0x1eb,'l&tG')+'/h)'}),'yaxis':Object[_0x339e4f(0xc11,'fY%z')+'n']({},PLOTLY_LAYOUT_BASE[_0x339e4f(0xa1d,'E7d)')],{'title':_0x339e4f(0x6a5,'WYhc')+_0x339e4f(0x34f,'d4#Z'),'rangemode':_0x339e4f(0x376,'ro@9')+'o'})});applyAxisScaleSettings(_0x35e38d[_0x339e4f(0x986,'QIf#')],'flow',_0x1218cf?.[_0x339e4f(0xf1b,'O8jx')]),applyAxisScaleSettings(_0x35e38d[_0x339e4f(0x96f,'1qzA')],_0x339e4f(0x5b9,'qape'),_0x1218cf?.['pump']);if(_0xfd275e)_0x35e38d['yaxis'+'2']={'title':'Effic'+_0x339e4f(0x79a,'J$mI')+'\x20η\x20(%'+')','overlaying':'y','side':'right','range':[0x0,0x69],'showgrid':![],'titlefont':{'color':_0x339e4f(0x8ae,'hsDz')+'40','size':0xc},'tickfont':{'color':'#f0c0'+'40'},'ticksuffix':'%'},applyAxisScaleSettings(_0x35e38d['yaxis'+'2'],_0x339e4f(0x725,'fY%z'),_0x1218cf?.['pump']);else _0x4b067b&&(_0x35e38d[_0x339e4f(0xd74,'l&tG')+'2']={'title':_0x339e4f(0x2e7,'hsDz')+'\x20(m)','overlaying':'y','side':'right','rangemode':_0x339e4f(0xaf1,'E1r%')+'o','showgrid':![],'titlefont':{'color':_0x339e4f(0xc17,'%llI')+'c0','size':0xc},'tickfont':{'color':_0x339e4f(0x6bf,'8OR)')+'c0'}},applyAxisScaleSettings(_0x35e38d[_0x339e4f(0x87a,'%iKk')+'2'],_0x339e4f(0xd2c,'lNG6'),_0x1218cf?.[_0x339e4f(0x4e1,'FKaL')]));return{'traces':_0x3e8682,'layout':_0x35e38d};}function renderPerfSummary(_0x3b76ba,_0x1d35f9){const _0x5350fe=a0_0x21afb1,_0x26e29b=_0x3b76ba['famil'+'y']||[],_0xd3b9f8=_0x3b76ba[_0x5350fe(0x33b,'nlER')]?.['impel'+'ler_d'+_0x5350fe(0x595,'MPp6')]||0x1;let _0x3b82ad='';_0x26e29b['forEa'+'ch']((_0x355501,_0x48c6bd)=>{const _0x3825bc=_0x5350fe,_0x50b8c4=_0x355501['bep']||{},_0x13772e=DIA_BLUES[Math[_0x3825bc(0xd71,'fY%z')](_0x48c6bd,DIA_BLUES[_0x3825bc(0x9e3,'ayOU')+'h']-0x1)];let _0xc813a2;if(_0x355501[_0x3825bc(0x32e,'$gCG')+'x']){const _0x254605=typeof PUMP_MAIN_LABEL!==_0x3825bc(0xdd5,'J$mI')+_0x3825bc(0xac6,'d4#Z')&&PUMP_MAIN_LABEL?PUMP_MAIN_LABEL:'',_0x51e130=typeof PUMP_MAIN_DIA!==_0x3825bc(0x95d,'l0Vk')+_0x3825bc(0xb59,'$gCG')&&PUMP_MAIN_DIA?PUMP_MAIN_DIA:_0x355501[_0x3825bc(0x7f5,'d4#Z')],_0x182e26='Ø'+_0x51e130+_0x3825bc(0xccb,'O2*S');_0xc813a2=_0x254605?_0x3825bc(0xe95,'T)O0')+_0x3825bc(0x9c9,'fY%z')+_0x182e26+('</str'+_0x3825bc(0xaa4,'lNG6')+_0x3825bc(0xef8,'[GdJ')+_0x3825bc(0xde6,'o$gV')+_0x3825bc(0x1087,'o$gV')+_0x3825bc(0xd8c,'^WDP')+_0x3825bc(0xe35,'O2*S')+_0x3825bc(0xe39,'Band')+'>(')+_0x254605+(_0x3825bc(0xef7,'lTg5')+_0x3825bc(0xadf,'MvFO')):_0x3825bc(0x38d,'O8jx')+'ng>'+_0x182e26+(_0x3825bc(0xeaa,'o$gV')+_0x3825bc(0x860,'Band'));}else _0xc813a2=_0x3825bc(0x26b,'MPp6')+_0x3825bc(0x4d9,'hsDz')+_0x355501[_0x3825bc(0x7f5,'d4#Z')]+(_0x3825bc(0x90f,'W@8N')+_0x3825bc(0x6cf,'QIf#')+'g>');_0x3b82ad+='<tr>\x0a'+'\x20\x20\x20\x20\x20'+_0x3825bc(0xd38,'ZQbK')+_0x3825bc(0x7fc,'d4#Z')+_0x3825bc(0x8e4,'(HU5')+'e=\x22di'+_0x3825bc(0x887,'$gCG')+_0x3825bc(0xbd9,'E7d)')+'ne-bl'+_0x3825bc(0x4b8,'l&tG')+_0x3825bc(0x565,'hsDz')+_0x3825bc(0xc91,'l&tG')+_0x3825bc(0x517,'^WDP')+'t:10p'+_0x3825bc(0xf6b,'(7CV')+_0x3825bc(0x1e7,'9Vcr')+_0x3825bc(0x573,'l&tG')+_0x3825bc(0x29c,'o$gV')+'backg'+_0x3825bc(0xdfd,'J$mI')+':'+_0x13772e+(';marg'+_0x3825bc(0x670,'9Vcr')+_0x3825bc(0xd5b,'F40Y')+_0x3825bc(0xebd,'MPp6')+_0x3825bc(0x107a,'9Vcr')+_0x3825bc(0xd5e,'QIf#')+_0x3825bc(0x1074,'O2*S')+'\x20')+_0xc813a2+(_0x355501[_0x3825bc(0xaf7,'ayOU')+'x']?'\x20<spa'+_0x3825bc(0x77b,'J$mI')+_0x3825bc(0xda8,'(HU5')+_0x3825bc(0x2d2,'W@8N')+_0x3825bc(0x7c1,'9Vcr')+_0x3825bc(0x42d,'(7CV')+_0x3825bc(0x998,'o$gV')+'-1\x22\x20s'+_0x3825bc(0xbf6,'9Vcr')+'\x22font'+_0x3825bc(0xabb,'Hgl$')+_0x3825bc(0x35d,'XmTZ')+_0x3825bc(0x3be,'E1r%')+'BASE<'+_0x3825bc(0xb31,'XmTZ')+'>':'')+(_0x3825bc(0x4d5,'lTg5')+_0x3825bc(0x4f9,'Band')+_0x3825bc(0x21f,'ro@9')+_0x3825bc(0x1c2,'ro@9')+_0x3825bc(0xb7b,'O2*S')+'xt-ce'+_0x3825bc(0x2d7,'ayOU')+'>')+(_0x355501[_0x3825bc(0xe2a,'Band')]*0x64)[_0x3825bc(0x477,'@(im')+'ed'](0x1)+(_0x3825bc(0xbee,'MvFO')+_0x3825bc(0xd31,'ro@9')+'\x20\x20\x20<t'+_0x3825bc(0x104e,'9Vcr')+_0x3825bc(0x661,'%llI')+_0x3825bc(0x87b,'QIf#')+_0x3825bc(0xd7b,'J$mI')+_0x3825bc(0x5de,'[GdJ')+'emibo'+'ld\x22>')+(_0x50b8c4['q']??'—')+(_0x3825bc(0x81d,'z2Tr')+_0x3825bc(0x63b,'ZQbK')+_0x3825bc(0xb05,'hsDz')+_0x3825bc(0x1ca,'lTg5')+_0x3825bc(0x314,'FKaL')+_0x3825bc(0x6b7,'ro@9')+'nter\x22'+'>')+(_0x50b8c4['h']??'—')+('</td>'+_0x3825bc(0xcdb,'o$gV')+_0x3825bc(0x1f5,'W@8N')+'\x20clas'+_0x3825bc(0x8ef,'%iKk')+_0x3825bc(0xbbd,'fY%z')+_0x3825bc(0xaa3,'MPp6')+_0x3825bc(0x764,'%llI')+_0x3825bc(0xdde,'l&tG')+_0x3825bc(0xa1c,'Band')+_0x3825bc(0x90c,'WYhc')+'bold\x22'+'>')+(_0x50b8c4[_0x3825bc(0x42f,'(7CV')]??'—')+('%</td'+_0x3825bc(0xceb,'lNG6')+_0x3825bc(0xfb8,'O8jx')+_0x3825bc(0x4e4,'1qzA')+'ss=\x22t'+_0x3825bc(0x22d,'E7d)')+_0x3825bc(0x89d,'8OR)')+'\x22>')+(_0x50b8c4[_0x3825bc(0x106e,'XBWK')]??'—')+(_0x3825bc(0x103f,'%iKk')+_0x3825bc(0x8db,'fY%z')+'</tr>');});const _0x198e86=customCurves['filte'+'r'](_0x399df0=>_0x399df0['fitte'+'d']);_0x198e86[_0x5350fe(0x103e,'XRBL')+'ch'](_0x393bfc=>{const _0x23a38c=_0x5350fe;let _0x1ea12a='—',_0x24cd05='—',_0x40bbf0='—',_0x226017='—';if(_0x393bfc[_0x23a38c(0x937,'ayOU')]&&_0x393bfc[_0x23a38c(0x69f,'F40Y')][_0x23a38c(0x75f,'^WDP')+'h']){const _0x227b99=Math[_0x23a38c(0x2c0,'l0Vk')](..._0x393bfc['eta']),_0x15b626=_0x393bfc[_0x23a38c(0x937,'ayOU')]['index'+'Of'](_0x227b99);_0x1ea12a=_0x393bfc['q'][_0x15b626]?.[_0x23a38c(0xfe4,'(HU5')+'ed'](0x1)??'—',_0x24cd05=_0x393bfc['h'][_0x15b626]?.['toFix'+'ed'](0x2)??'—',_0x40bbf0=_0x393bfc[_0x23a38c(0xa02,'qape')][_0x15b626]?.[_0x23a38c(0x85f,'FKaL')+'ed'](0x1)??'—',_0x226017=_0x393bfc[_0x23a38c(0xe7c,'z2Tr')]?.[_0x15b626]?.[_0x23a38c(0xb7a,'QIf#')+'ed'](0x2)??'—';}const _0x7c4dbb=_0x393bfc[_0x23a38c(0x46a,'ro@9')+_0x23a38c(0x7d5,'mIwx')]||null,_0x223971=_0x7c4dbb?(_0x7c4dbb/_0xd3b9f8*0x64)[_0x23a38c(0xff5,'ZQbK')+'ed'](0x1)+'%':'—',_0x1489fa=_0x7c4dbb?_0x23a38c(0x68c,'Hgl$')+_0x23a38c(0x1012,'LWa7')+_0x7c4dbb+(_0x23a38c(0xe51,'l&tG')+_0x23a38c(0xf04,'^WDP')+_0x23a38c(0x641,'MPp6')+'anual'+')'):_0x23a38c(0x2d8,'1qzA')+_0x23a38c(0xf26,'bMaB')+_0x393bfc[_0x23a38c(0x37f,'8OR)')]+(_0x23a38c(0xa3c,'Band')+'ong>');_0x3b82ad+=_0x23a38c(0x8de,'l&tG')+_0x23a38c(0xbff,'^WDP')+'\x20<td>'+_0x23a38c(0x3aa,'hsDz')+_0x23a38c(0x845,'Hgl$')+_0x23a38c(0x2a6,'E7d)')+_0x23a38c(0xb72,'F40Y')+_0x23a38c(0xa8e,'nlER')+_0x23a38c(0x815,'qape')+_0x23a38c(0xd5c,'z2Tr')+_0x23a38c(0x405,'^WDP')+_0x23a38c(0xce0,'MvFO')+_0x23a38c(0xf83,'2j(w')+_0x23a38c(0x9d0,'MvFO')+_0x23a38c(0xfff,'z2Tr')+_0x23a38c(0xb43,'8OR)')+_0x23a38c(0x101c,'ayOU')+_0x23a38c(0x908,'l&tG')+_0x23a38c(0xdb2,'[GdJ')+_0x23a38c(0xba9,'$gCG')+':'+_0x393bfc[_0x23a38c(0x6ad,'^WDP')]+(_0x23a38c(0x63a,'[GdJ')+_0x23a38c(0xa43,'z2Tr')+_0x23a38c(0x2c5,'FKaL')+'px;\x22>'+_0x23a38c(0x9a8,'fY%z')+_0x23a38c(0x8e5,'WYhc')+_0x23a38c(0xe99,'l&tG')+'\x20')+_0x1489fa+(_0x23a38c(0x1e3,'W@8N')+_0x23a38c(0x24a,'XRBL')+'\x20\x20<td'+_0x23a38c(0x877,'$gCG')+_0x23a38c(0xbc5,'T)O0')+'xt-ce'+_0x23a38c(0xc1b,'QIf#')+'>')+_0x223971+(_0x23a38c(0x534,'d4#Z')+_0x23a38c(0x1082,'FKaL')+_0x23a38c(0x588,'Band')+_0x23a38c(0x9ee,'[GdJ')+_0x23a38c(0x105b,'W@8N')+'xt-ce'+_0x23a38c(0x104f,'Band')+_0x23a38c(0x9a6,'E7d)')+_0x23a38c(0xf27,'%llI')+_0x23a38c(0x64a,'E1r%'))+_0x1ea12a+(_0x23a38c(0x8e1,'lNG6')+_0x23a38c(0x869,'d4#Z')+_0x23a38c(0xc67,'FKaL')+_0x23a38c(0x76e,'8OR)')+'s=\x22te'+'xt-ce'+_0x23a38c(0x931,'J$mI')+'>')+_0x24cd05+('</td>'+_0x23a38c(0x35f,'z2Tr')+_0x23a38c(0xe2e,'qape')+_0x23a38c(0x41a,'2j(w')+_0x23a38c(0x8e7,'@(im')+_0x23a38c(0xf73,'%iKk')+_0x23a38c(0x104f,'Band')+_0x23a38c(0x53c,'mIwx')+_0x23a38c(0x745,'ro@9')+_0x23a38c(0x1065,'$gCG')+_0x23a38c(0xa01,'XBWK')+'bold\x22'+'>')+_0x40bbf0+('%</td'+_0x23a38c(0x431,'lTg5')+_0x23a38c(0x24e,'MPp6')+_0x23a38c(0x22b,'O2*S')+_0x23a38c(0x7e1,'MvFO')+'ext-c'+'enter'+'\x22>')+_0x226017+('</td>'+_0x23a38c(0xb0a,'%iKk')+_0x23a38c(0xc2a,'E7d)'));});if(!_0x26e29b['lengt'+'h']&&!_0x198e86['lengt'+'h']){document['getEl'+_0x5350fe(0xc28,'l0Vk')+_0x5350fe(0x83b,'QIf#')](_0x1d35f9)[_0x5350fe(0x370,'MPp6')+'HTML']=_0x5350fe(0xe36,'z2Tr')+'ass=\x22'+_0x5350fe(0x2b8,'MPp6')+_0x5350fe(0xac8,'qape')+_0x5350fe(0x8b8,'8OR)')+_0x5350fe(0x2b9,'MPp6')+_0x5350fe(0xe2d,'1qzA');return;}document[_0x5350fe(0x4ec,'l&tG')+_0x5350fe(0xb44,'QIf#')+'ById'](_0x1d35f9)['inner'+_0x5350fe(0xb76,'hsDz')]=_0x5350fe(0x101a,'9Vcr')+_0x5350fe(0xa5e,'1qzA')+_0x5350fe(0x660,'MvFO')+_0x5350fe(0x613,'LWa7')+_0x5350fe(0xde0,'ayOU')+_0x5350fe(0x1071,'F40Y')+_0x5350fe(0xe46,'z2Tr')+_0x5350fe(0x869,'d4#Z')+_0x5350fe(0x947,'2U4A')+_0x5350fe(0x2c8,'ZQbK')+_0x5350fe(0x32b,'lNG6')+_0x5350fe(0xa98,'1qzA')+_0x5350fe(0x742,'(HU5')+_0x5350fe(0x44e,'ayOU')+_0x5350fe(0xed2,'ro@9')+_0x5350fe(0x496,'XRBL')+_0x5350fe(0x43b,'O8jx')+_0x5350fe(0xe6b,'ZQbK')+_0x5350fe(0x3f5,'(7CV')+'le\x20mb'+'-0\x22\x20s'+'tyle='+_0x5350fe(0x7e3,'ayOU')+_0x5350fe(0xe9d,'$gCG')+_0x5350fe(0x7c9,'[GdJ')+'rem\x22>'+'\x0a\x20\x20\x20\x20'+_0x5350fe(0xcd9,'E1r%')+_0x5350fe(0xaf6,'bMaB')+_0x5350fe(0x943,'^WDP')+_0x5350fe(0xe27,'8OR)')+_0x5350fe(0x8cf,'%iKk')+_0x5350fe(0xf6c,'l0Vk')+_0x5350fe(0xcac,'O2*S')+_0x5350fe(0x1c8,'o$gV')+_0x5350fe(0xd47,'2j(w')+'\x20\x20\x20\x20\x20'+_0x5350fe(0xa92,'1qzA')+_0x5350fe(0x9fe,'2U4A')+_0x5350fe(0x93a,'ZQbK')+_0x5350fe(0x444,'XRBL')+_0x5350fe(0xd3a,'QIf#')+_0x5350fe(0xbb6,'^WDP')+_0x5350fe(0x382,'QIf#')+_0x5350fe(0x717,'bMaB')+_0x5350fe(0x755,'QIf#')+'\x20\x20\x20\x20\x20'+_0x5350fe(0xb16,'ayOU')+_0x5350fe(0xc8b,'mIwx')+_0x5350fe(0x95f,'zfK(')+'-cent'+_0x5350fe(0xe8d,'O8jx')+_0x5350fe(0x2c3,'zfK(')+_0x5350fe(0xeae,'fY%z')+'sub>\x20'+_0x5350fe(0x2ef,'(HU5')+_0x5350fe(0x808,'$gCG')+_0x5350fe(0x7ab,'ToWT')+_0x5350fe(0x8cf,'%iKk')+_0x5350fe(0x602,'l0Vk')+_0x5350fe(0xae5,'XmTZ')+'s=\x22te'+'xt-ce'+_0x5350fe(0x472,'1qzA')+_0x5350fe(0xeed,'%llI')+_0x5350fe(0xf9a,'fY%z')+_0x5350fe(0xaec,'l&tG')+_0x5350fe(0x966,'WYhc')+_0x5350fe(0xf92,'(7CV')+_0x5350fe(0x930,'@(im')+_0x5350fe(0x363,'2U4A')+'\x20<th\x20'+'class'+_0x5350fe(0x4ba,'fY%z')+_0x5350fe(0x5e1,'XBWK')+_0x5350fe(0xbbe,'d4#Z')+_0x5350fe(0x58b,'LWa7')+_0x5350fe(0x497,'XBWK')+_0x5350fe(0xec4,'O8jx')+'</th>'+_0x5350fe(0x6ce,'mIwx')+_0x5350fe(0x2dd,'Hgl$')+_0x5350fe(0xf95,'%llI')+'class'+'=\x22tex'+'t-cen'+_0x5350fe(0x96c,'mIwx')+_0x5350fe(0x98c,'d4#Z')+_0x5350fe(0x82b,'@(im')+'/sub>'+'\x20(kW)'+_0x5350fe(0xea7,'W@8N')+'\x0a\x20\x20\x20\x20'+'\x20\x20\x20\x20<'+_0x5350fe(0xb4b,'hsDz')+_0x5350fe(0x1e0,'XBWK')+_0x5350fe(0x677,'2j(w')+_0x5350fe(0x339,'LWa7')+_0x5350fe(0xcc6,'W@8N')+_0x5350fe(0x603,'9Vcr')+_0x3b82ad+(_0x5350fe(0x5cd,'Band')+'dy>\x0a\x20'+'\x20\x20\x20\x20\x20'+_0x5350fe(0x5e7,'@(im')+_0x5350fe(0xa06,'FKaL')+'\x20\x20\x20</'+_0x5350fe(0x766,'MPp6'));}const CUSTOM_COLORS=[a0_0x21afb1(0xbb7,'zfK(')+'ff',a0_0x21afb1(0x761,'mIwx')+'50',a0_0x21afb1(0x395,'mIwx')+'40',a0_0x21afb1(0xe20,'o$gV')+'49',a0_0x21afb1(0x73d,'XBWK')+'ff','#39d3'+'c0',a0_0x21afb1(0xb62,'9Vcr')+'00',a0_0x21afb1(0x2c9,'QIf#')+'f9'];let customCurves=[],_curveIdCounter=0x0;function parseDataText(_0x43e375){const _0x43b084=a0_0x21afb1,_0x370b44=_0x43e375[_0x43b084(0x993,'lNG6')]('\x0a')['map'](_0x5587f8=>_0x5587f8[_0x43b084(0x237,'hsDz')]())[_0x43b084(0x1a0,'ZQbK')+'r'](_0x1334a1=>_0x1334a1&&!_0x1334a1[_0x43b084(0x756,'^WDP')+_0x43b084(0x7b2,'LWa7')]('#')),_0x573798=[],_0x12b2fb=[];for(const _0x25cbac of _0x370b44){const _0x414372=_0x25cbac[_0x43b084(0xfc5,'XBWK')](/[\s,;]+/)['map'](Number);_0x414372[_0x43b084(0x4f7,'ToWT')+'h']>=0x2&&!_0x414372[_0x43b084(0x526,'F40Y')](isNaN)&&(_0x573798[_0x43b084(0x76a,'l0Vk')]([_0x414372[0x0],_0x414372[0x1]]),_0x414372[_0x43b084(0x568,'hsDz')+'h']>=0x3&&!isNaN(_0x414372[0x2])&&_0x12b2fb['push']([_0x414372[0x0],_0x414372[0x2]]));}return{'q_h':_0x573798,'q_eta':_0x12b2fb};}function updateCurveCountBadge(){const _0x1a8f35=a0_0x21afb1,_0x4c940b=document[_0x1a8f35(0xd78,'l0Vk')+_0x1a8f35(0x533,'fY%z')+_0x1a8f35(0x1af,'nlER')]('custo'+'mCurv'+_0x1a8f35(0xbde,'XRBL')+'t'),_0x26cf5a=customCurves[_0x1a8f35(0xe4e,'QIf#')+'r'](_0x14d79a=>_0x14d79a[_0x1a8f35(0x54b,'WYhc')+'d'])[_0x1a8f35(0xfae,'Band')+'h'];_0x4c940b[_0x1a8f35(0xf42,'1qzA')+'onten'+'t']=_0x26cf5a,_0x4c940b[_0x1a8f35(0x1068,'WYhc')][_0x1a8f35(0xe13,'(HU5')+'ay']=_0x26cf5a>0x0?'':'none',document[_0x1a8f35(0x2bf,'%llI')+_0x1a8f35(0xfbe,'J$mI')+'ById'](_0x1a8f35(0x8f2,'ToWT')+_0x1a8f35(0xcfa,'XRBL')+_0x1a8f35(0xb6b,'FKaL')+'ty')[_0x1a8f35(0x562,'XRBL')][_0x1a8f35(0xfdc,'9Vcr')+'ay']=customCurves[_0x1a8f35(0x220,'2U4A')+'h']===0x0?'':_0x1a8f35(0xa4e,'E7d)');}function getUnitLabel(_0x564358,_0x2c3936){const _0x2210dd=a0_0x21afb1;if(!_0x2c3936){if(_0x564358==='q')return _0x2210dd(0x86d,'mIwx');if(_0x564358==='h'||_0x564358===_0x2210dd(0x965,'J$mI'))return'm';if(_0x564358===_0x2210dd(0x600,'@(im'))return'kW';if(_0x564358===_0x2210dd(0x83a,'QIf#'))return'mm';return'';}if(_0x564358==='q'){if(_0x2c3936==='m3h')return _0x2210dd(0x248,'LWa7');if(_0x2c3936==='ls')return'L/s';if(_0x2c3936===_0x2210dd(0xe14,'@(im'))return _0x2210dd(0x91d,'[GdJ');if(_0x2c3936===_0x2210dd(0x4cd,'l0Vk'))return _0x2210dd(0xa8b,'Band');}if(_0x564358==='h'||_0x564358===_0x2210dd(0x3c6,'^WDP')){if(_0x2c3936==='m')return'm';if(_0x2c3936==='ft')return'ft';}if(_0x564358===_0x2210dd(0xa9a,'LWa7')){if(_0x2c3936==='kw')return'kW';if(_0x2c3936==='hp')return'hp';}if(_0x564358===_0x2210dd(0xfaa,'(HU5')){if(_0x2c3936==='mm')return'mm';if(_0x2c3936==='in')return'in';if(_0x2c3936==='m')return'm';}return _0x2c3936;}const CURVE_CONVERSIONS={'q':{'m3h':0x1,'ls':0.2777777777777778,'gpm':4.402917396,'lmin':16.6666666667},'h':{'m':0x1,'ft':3.280839895},'npsh':{'m':0x1,'ft':3.280839895},'pow':{'kw':0x1,'hp':1.34102209}};function buildCustomTraces(_0x12ca6c){const _0x527196=a0_0x21afb1;if(!_0x12ca6c[_0x527196(0x782,'lNG6')+'d'])return[];const {label:_0x11a27b,color:_0x14bf8a,weight:_0x5ad3a8,style:_0x3df54a,use_custom_style:_0x476d7b,style_mode:_0x1ff23e,q:_0x4087a4,h:_0x1cef12,eta:_0x15f359}=_0x12ca6c,_0x516cd1=getGraphDisplayUnits(),_0x25db20=CURVE_CONVERSIONS['q'][_0x516cd1['q']]||0x1,_0x3c4d7a=CURVE_CONVERSIONS['h'][_0x516cd1['h']]||0x1,_0x1d2b4a=typeof getUnitLabel===_0x527196(0x976,'2j(w')+_0x527196(0x53b,'QIf#')?getUnitLabel('h',_0x516cd1['h']):_0x516cd1['h'],_0x17d791=_0x476d7b||_0x1ff23e===_0x527196(0x3d9,'O8jx')+'m',_0x4acbdc=_0x17d791&&_0x14bf8a?_0x14bf8a:_0x516cd1[_0x527196(0x8d6,'FKaL')+_0x527196(0x6f5,'nlER')],_0x4895a1=_0x17d791&&_0x5ad3a8?_0x5ad3a8:_0x516cd1['headW'+_0x527196(0x890,'(HU5')],_0x548168=_0x17d791&&_0x3df54a?_0x3df54a:_0x516cd1['headS'+_0x527196(0xcbd,'z2Tr')],_0x2a4c3e=_0x4087a4[_0x527196(0x728,'zfK(')](_0x5ec286=>_0x5ec286*_0x25db20),_0x1dd596=_0x1cef12[_0x527196(0x8cb,'[GdJ')](_0x46d115=>_0x46d115*_0x3c4d7a),_0x55c8cf=[];return _0x55c8cf[_0x527196(0xd4e,'WYhc')]({'type':_0x527196(0xd4c,'z2Tr')+'er','mode':_0x527196(0x1048,'lNG6'),'name':_0x11a27b||'Custo'+'m','x':_0x2a4c3e,'y':_0x1dd596,'line':{'color':_0x4acbdc,'width':_0x4895a1,'dash':_0x548168},'legendgroup':_0x527196(0xf38,'ZQbK')+'m_'+_0x12ca6c['id'],'hovertemplate':(_0x11a27b||_0x527196(0x585,'1qzA')+'m')+(_0x527196(0xf86,'XRBL')+'=%{x:'+_0x527196(0x316,'XRBL')+_0x527196(0x8d9,'ToWT')+_0x527196(0x922,'O8jx')+_0x527196(0x290,'ToWT'))+_0x1d2b4a+(_0x527196(0xd48,'E7d)')+'a></e'+_0x527196(0xa73,'Hgl$'))}),_0x15f359&&_0x15f359[_0x527196(0x4c0,'$gCG')+'h']&&_0x55c8cf['push']({'type':_0x527196(0x53d,'XBWK')+'er','mode':_0x527196(0x6a6,'fY%z'),'name':(_0x11a27b||_0x527196(0xe33,'XRBL')+'m')+'\x20η','x':_0x2a4c3e,'y':_0x15f359,'line':{'color':_0x14bf8a,'width':1.5,'dash':_0x527196(0x245,'2U4A')},'legendgroup':_0x527196(0xd9a,'E7d)')+'m_'+_0x12ca6c['id'],'hovertemplate':(_0x11a27b||'Custo'+'m')+(_0x527196(0xd30,'[GdJ')+_0x527196(0x100a,'mIwx')+_0x527196(0xc53,'nlER')+_0x527196(0x913,'o$gV')+_0x527196(0x2d3,'hsDz')+'xtra>'),'showlegend':![]}),_0x55c8cf;}function getCustomTracesHQ(){const _0xc45f12=a0_0x21afb1;return customCurves[_0xc45f12(0xfc0,'(7CV')+'ap'](_0x496067=>buildCustomTraces(_0x496067)[_0xc45f12(0x702,'hsDz')+'r'](_0x5154e2=>!_0x5154e2[_0xc45f12(0xf89,'LWa7')]||_0x5154e2[_0xc45f12(0xbfb,'XBWK')]==='y'));}function getCustomTracesEta(){const _0x186af8=a0_0x21afb1,_0x2c9c4a=getGraphDisplayUnits(),_0x22db4b=CURVE_CONVERSIONS['q'][_0x2c9c4a['q']]||0x1;return customCurves[_0x186af8(0x3e7,'1qzA')+'ap'](_0x5f17f7=>{const _0x43a75d=_0x186af8;if(!_0x5f17f7[_0x43a75d(0xaa0,'XmTZ')+'d']||!_0x5f17f7[_0x43a75d(0xf90,'%iKk')]||!_0x5f17f7[_0x43a75d(0x70c,'E1r%')][_0x43a75d(0xc84,'o$gV')+'h'])return[];return[{'type':_0x43a75d(0xa19,'F40Y')+'er','mode':_0x43a75d(0x6a6,'fY%z'),'name':(_0x5f17f7[_0x43a75d(0x470,'2U4A')]||_0x43a75d(0xe93,'Band')+'m')+'\x20η','x':_0x5f17f7['q'][_0x43a75d(0xa78,'qape')](_0x35f8a=>_0x35f8a*_0x22db4b),'y':_0x5f17f7[_0x43a75d(0xcc7,'l&tG')],'line':{'color':_0x5f17f7['color'],'width':1.8,'dash':_0x43a75d(0x3ab,'hsDz')+'ot'},'legendgroup':_0x43a75d(0x233,'l0Vk')+'m_'+_0x5f17f7['id'],'hovertemplate':(_0x5f17f7[_0x43a75d(0xfb2,'O2*S')]||'Custo'+'m')+(_0x43a75d(0xaa9,'o$gV')+'=%{y:'+_0x43a75d(0x987,'MvFO')+_0x43a75d(0x205,'ToWT')+_0x43a75d(0x7ae,'E1r%')+_0x43a75d(0xa04,'d4#Z'))}];});}function a0_0x3967(){const _0x2de7e1=['BWLtW7De','WOjsuepcNq','W7JdOt/dN8k1','WP/dHdTacG','B8kpW7qLW6m','jc/dMmkjW74','cmkjFw81','dK/cTh/cSa','W77cOHxcIa','W6xcPLVcJ2u','uCoZzSohzW','WR8qWRC','a8o9wCk0','W4ZcI8oeZOpdOG','W77cQCkR','W5WxtuOk','a8osWRO','W4RdMci','w20Np3i','W4NcO1GsW7K','cCk2WPreEG','v8oSEq','W5u3sxaa','ECkbW49A','oNddQa','iJhdMCkjW7W','u8odrKhdSW','W5NdNdGdvG','BSkfy2mN','a3GGWRCI','f2NdG3Wz','cCkRWOLcAq','ENKUoJO','W5dcJSkVjCoH','W5/dSZJdKSoN','a3bTWR4','BWNcGmkFW60','kSogWRjP','yIPYW7H1','h0tcPe7dTW','WPhcNCktw8kS','W7ZdRCkTW5pcVq','fmk0xW','ECoitWBcGG','WQH6cmosEq','WOObpaNcLG','vSoFwrZcUG','W48jb3HA','tZ1UW7b2','WPqcEKTc','W5tdSYVdH8kW','cfBcVarv','msDNjYO','WQKJW5jfDW','zdhcTCkbWP8','W4TgWPNdJwK','WOKyf2/dPq','vtLSW6jN','W4NdU8oaAmoD','amo8wmkZWPa','DSoEW7OpWPO','eCkvE3S4','W73dLCkcbWa','r1hcUG','EdzHW7PN','xmoIW7mDCq','gSoMsCkWWOS','ihmTyx4','W7aHva','WPL5g04h','W7ldK8kcfHi','d3VdR30x','c8kmeqJcPG','W55cWO/dG24','WPxcHmkFwSk2','W4nkWPy','CfGyWQ0/','fmo4WRWtdq','lhC+C2W','WQGRWPNdUa','cCoJWQOzeq','jCodWQ11','WONdHdHt','wqjHW6VdHa','yMy4oJO','cCkggHW','cIJcNSoYWPC','WO8juu4','aSk9WRG','pCkBWR5OW7W','W6yGs0i','utD1W7LM','s8o9W5voEq','bSkIW5K','pcJdNSkdW7q','zmkdW7GUW6O','iK44W7yu','h8oPsmk5WPi','W77dRSk8','WPuGuW','W5BdTmoFDmoC','umoUtmk6WPG','DmksW6iOW6G','xILEW7ia','WQPKlSoS','vCooW7OZW4O','eZJdTCki','iMZdJ8kjW6O','W6yGamoFmG','W4hcJCkTcSo2','sgaNlW','a3NdMw8E','W4xcP8krW7FcVG','fCkhWQezgW','W5ZdV8koqmoJ','W45/oq','W4DTrG9R','rwK9mwK','jtBcMSoMWPS','W4tcO8keW7NcTq','W5vJk8oTW7a','xwKRiL4','W5ZcQKK','WPqFgx15','ySogFgm6','WP3dMczteG','W6y+wK0b','WOTxWRixWR0','WRaqWQVdUdW','oYJcICoRWOK','hSk2WRGteq','CSooW7W8WPm','W53dTCoyACox','r0dcR0G','CSkoW5zmWRC','cguyWPfp','C2aMDW','WPCugcNcNG','fuNcIxpdTq','sr4Bu2m','sXT1W6v0','W59AbhHA','gmoFfSk5WOy','aSkhDM0H','Z4pcISoTobG','l1ylW6ae','umoQWQ4A','W4tcQ8ksW7BcVa','bCodWQ11W5G','o8kvWOxdKsm','aCkWWOmgcW','hg8C','tr3dUJ7cQG','WPZcR8kuFmko','ySomvqZcLa','hSkYWRbB','A8kdW6HHW6C','aZP0W7KV','bSo6CSoG','hvVcPxFdVW','pSkjEgCM','WP1xWRC3WQ4','W5hdUCkuW73cOG','gfj6W63cNW','cJ9QmI4','W4JdV8oEuCoD','wWTGW7hdHa','WR1zWQGBWQm','WPNcNbmVW60','lmksWPBdHcm','B8kuWO9CW6G','k8keW4TjWQ0','W6bJi8oVW7K','W4jKoCo6W7O','WR8rWRZdMq','WPiohNzA','a2ddI2Gc','W5q4cqjm','WPSJWPpdUmoc','WOJcImkcxCkX','W4tcLmkXj8oY','W4dcRmkAW7VcVG','WRzWb8ojFW','pttdMCorWRO','WPxcM8k5vCkX','WPmRWPNdP8oB','WOSjbqVcKa','geziW6ZdLq','f8oHwCk9WPW','WPTbWOxcLeW','WOFcP2RcK8o5','W6/dR8kHWPhcOa','WOjzWR0BWRW','efZcIwRdQG','e8kSWQjwhq','pHO6WRnF','kSkpBG','j8owWRb6W7u','u8o9Ea','CSkuW4m','aSo1WR8tdq','WPxdRCkcW7RdRG','W5RcTSkpW77cTq','xx4YnxG','Cx3dImkeWRG','WP3dMdq','WOPxce/cQq','WOWFdNNdRa','W43cQ8kxW43cVa','kCknWPXyW5e','wfxcT1vO','W5FcRum5W6y','k8koWOu','W6yHv8kppq','W75XcCopBW','zxW/C30','WPNcMSkvwmkR','gmosWQ43','dJVcJ8oTWPe','WP5wWRe+WQy','e0GAW74','W4JcUuO/W6y','i8koWORdLZu','gmkgaIRcPG','xq9TW60','WPtcGmkB','W6ldUSkXWPhcUW','WOCca1Xs','wKtcVvjE','ee3cUhNdRa','W4nWWPldHNG','jYddJSkfW7K','jhJdQ8okW5u','iSkhBwC4','gcJcMSoQWP0','aMpdJMi','WPayaXZcQa','W5BdRSkHpW','W4RcQSktW7hcUW','W5NcKxuFcG','WRlcTmkQW4a','W5VcP8kBW73cPG','WRlcMSoCxvG','W43cRCkbW7W','x8k7g8kinW','qmoXCCoOFW','W47cHmk5ma','W4/cRSkxW6BcNq','eCofWOSIeG','W7FcUSkeCmkr','W5XAW43cHc8','W7FdUSkWWPFcVq','W4ZdQSoaDmom','WOtdRK05W7e','fSoUtmkdWPW','W7LXfmkdwW','W5pdS8ocEmol','WOpcISkBqmk2','W5rgWOm','p8ksWONdGG','mdldJ8kfW78','W4RcVeOOW7S','e8kQWQjDlW','g2ikWQfq','WPpcHCkBr8kX','W4bLi8oHW7S','W7yCWRxdNc4','kGvArgy','WQD2fG','zmkNaq','aSowWQq2ba','W5VdS8oAi8kY','W4xcNJCD','dCkefa7dOG','ncBdMCkcW7W','W4v4oCo+W7K','WOHDWRehWR8','sCoOs8oYEq','ittdKCkCW5C','csXZDJ0','W5dcHSk9jCkU','fdxcLCoH','d8kGWPnOCq','WOtcHSk8xCk6','CrGjW7Ss','ggVcO2ZdRG','W57cUSopCCoz','tSkHhmkvpa','W4r8l8oGW6e','vZ1KWRFIGjy','cSoPuSk1WO0','W5ldS8oiECou','W5TIW5RcUCko','WPDbgWNcKq','vcW+W6uY','WRVdTaud','kmkvWOVdHZy','C8oeyxiN','WQqQW7bdyq','WRy+fCoyEq','fgpdRhij','W5f+pConW7O','gmkKWOLiCq','iKNdUICt','W5q9fZ5H','wmkvW6KYWRS','smoLWPDbFa','gtlcKmoxWPy','dZtcN8oHWPG','WOehfKi','ta/cRfvV','WOtdSSowW6lcQa','WPRdHcDvgW','W414jmoRWRG','WPBdHHbfga','o8ojW7j/','WRGUW7aArG','W5BcMCkRaCoG','n8ktWPBdK3G','W77dTmk/WPVcVa','cCo4WQ0AfG','k0KbxJa','rseJow4','fCk1W65gjG','lSohWR9c','WReAWQ3dVZi','W5WDbxHe','FWSsuW','WPCJW79gCa','WPvFW7VcQG','W6ddTCokE8ol','umk9eSk9W4G','rmkItSkfpW','w8oFW6e','W5BcU2ORW7K','zmkoW7SsW7y','WOOYcu/dQq','WQSXASkUWRu','d8oEtSogCW','ASonuHRcNG','hSkpWQjDkq','yga5Cx0','WPtcJmkj','xSo5hCkdiq','W4SZvuGb','i8olBhCM','l8osWQ11W6u','W4OIxKOa','sqSwsgG','hCozWQyMeW','WRqnWRJdKZ4','i8kgWOBdLYO','d03cULVdVG','DmkkW7KIW6m','fSoWxSkUWP8','WPL6te4q','WQ/cImkuwSkd','ndBcKCkzW7y','WPyca2Tv','zmkqW4DAW6K','exKWWQ9A','ACkwW6mPW5K','jsddJSklW70','f8osW6OEwW','cSkbWOldOIK','W58WvW1H','vSoBWRu6W74','WOqHWOVdO8od','W5RcTSktW7ZcTq','W5a8x0OC','W5r/lSoRW7m','jSkgWQVdHcm','cguyWQDj','W4fmWOxdR3W','k8opW5zBWRm','ANiJCW','oqKcu3G','eCkmgaO','W5JcQeSiW6K','pCoBlweH','W4nmteZdMa','W4xdMhvaeG','WRnsWR3dNcK','WQqMW7bbzG','cs7cGSoOWPS','WPGEWRtdMa','W4yDW4VcHxG','nvSsW7Oe','tSkHhmkqnG','W4uXkCoIW7q','eLZcS2ZcUa','W4ldLd7dKSkT','BstdHmkyW6O','eeKAWRbn','W43dTcxdNq','CgeYA30','tgiNgNq','imoDW7nVW4O','BmkdW6K','wWjVW7BdKG','W4H0jmoTW6W','egGZWQiZW6DIfaRdJSotW5aB','W73cPSoQWORcQW','W6tcQbFcS2e','W7aXySoJjG','E8ohxa','tSk8d8kujW','ht/cJ8obWPi','egddI2jl','W5JcOgmSW70','tf8Nn2K','eg3dHh4D','BxjRyw8','W6hdRSk8','vSoSCCoJBW','pmktWP3dNIm','tZfUW7jX','WOOra33dOq','ceBdU23dTq','EMtcNxjV','WPSyfW','W4/dTCoBEmok','bmkQWOLkEq','gYNcImk5W5W','a8kYWQXDoW','W4hdL8kdfWq','WP8lWPNdUa','BSoglYj0','WP3cImkk','WR7dMmkyhuW','o8kcWPZdHGu','rSoPzSoWBG','ASohbwxdJq','WP0+oCo+W7q','cCkiWPBdNYC','W43dOa8wW7W','WQK7W7DlEW','W4j5iCoDW70','W5u3wKer','bCkQWQ1i','WQCHW6PbEW','FSkxW6HJqq','W5rtWPpdTxe','DdRdHCowWRy','kt/cL8oHWP0','zGmnqNG','WPXkr17dOq','W5VcGmkNlCo1','dYNcJ8oRWPm','CSojBtW','WP8cfKi','W4tcRCk6mSoJ','eCkYWRnFiq','hdxcICoPW5m','W49sW7aSWRO','bMxdHM8u','c8kmba','WQdcHSknuCkW','fSo8s8kdWP0','fCkVWQzDpa','b8osWQqMaG','W5BdTmoCAmom','W410jmoPW6e','W7VdLSkF','W7RdN8kF','WOmBe31D','dmkFrMy','WP8Few0','W7lcOb7cLxa','iKNdUJS','W7SRCKS','W7meWQdcH3m','tc9qW7H1','gZtcLCoRWOO','BSkbW7G1','WQz2dSoszW','egpdNq','vmoPCCo0CG','DCoIW6m4W7O','sSoRrmoPFa','WPHqWQ4HWQC','zGKirg8','W5dcJCkBqmkJ','W5u/pWX1','ECozvG','rSoAW7WNWPC','WQzYeSouza','agLJWQfK','C0etqZC','WRFcRHFcMNC','W6ODWQVcGW0','l8oAWQ18W6m','nY3dK8kdW6O','FcPWW7O','CIhcPCkBW5y','WOmsfXBcQW','mCoXy8k4','x8kagG7cUq','W63dUCkehaG','rg0R','imknWPbN','ufxcULTU','amofWQL9','WODTarmP','W45qWQJdH3W','W4pdPJNdM8k9','butcSYpcUG','W4jKomo4W7a','a8oNxCk5WOW','WRJcQrlcJtO','W4j0jmo6W7a','WPaseNPF','e0ZcSW','euFcO23dVq','W5rtWPVdG2K','gmkQWPa','W6L0k8oQW7a','WOFdLrRdVSo5','W5NcVqJcK10','WPddRSoeEmoz','ffBcULqW','WPZdNsy','WRlcTmk8WPRdSa','W5mjghvD','WRSGWRxdNd8','WPJdHcfmda','W4v0omkJW6C','WPvDWRy','txvVW6j2','yxKu','gthcRCocfq','W5NcKxudxG','WP8vbq','W5W/xKeq','aCk3WRStdq','WOCca1De','hZ3cNSoQWPO','lCkoBNaG','WRZcSmomu0e','zmkjW70JW68','WQ7cU8o0WORcQG','fwmlWQzx','eCkUWQ8','W6RcHmk+imkM','xSkKcSk5pW','WQr3aSo4Fq','W6LmteZdMa','fCoGW73dPhq','zqqvufu','W4FcJmk6kSoY','WOpcMCkFuCkM','egpdNuq','W7NdN8kynG0','ga17W7FdLW','AdhdRmolWPS','fCotWQWgfW','W6OAWQhdIs8','cwldHh4d','W4WPfH92','gCkVWPXdlq','WRuBhNvr','WRSwWRC','ostdNCkiW48','WOZcGSkQnSoW','W5Chda9H','ysecDG','ASkxb0dcIa','WRiYWRBdMtG','eCkHWRDApG','W4VdPIJdLSk1','vGfGW6a','WO4nfa','iSkkl28N','W5HWmSoNW6y','WPmimW','gwqbWQ1p','j8kjyxe','fwSx','mCktW70PWPC','l1eiW7Wp','uCo4W6XwxW','pCkwy2SG','WRFdRuFcJ2a','if8eW7qd','aSowWQq','aSkXfSksiq','DmkfW7e1W7i','fJpcLCoHWO0','zaKBrh4','vKCZWQddMG','vmoUqmoxnq','tJLW','u0BcR1H/','W4OmhbdcQG','kSogBg41','qgiJi2K','W7VdGSkyxGi','pCozWRxcJW','WO/dLdLq','oSkjFq','WPedaGVdHG','zComsa','wXT9W7hdJG','x8o0pSogEW','WQDNcmoVBG','vqf7W7BdHa','dIJcKSoP','A1dcVfT6','fu3cUh3dOq','WPijhW','W5q7vq','pCkwAMCW','WOmRWOxdUCkx','ACopW7WRW4G','CqKoyMy','W6vAWR7dJG','W4NcHmkMnmo0','A0OTBN0','umklxW','W449cq','kfuE','WOypga','z3W4D3q','WPBcI8oQgG','F8ouW6aV','WQ0dW5FcIJ0','df3cU24','b8oNwmkDWPi','WOlcISkiEmoJ','j8ogWRb9W7i','xCkHWRzbpG','yCkQW7u3W6m','W7/dJSkfha8','kSo8WQH4W7m','x8odaGBcVG','W7/dRSkTWOZcTW','W7hdJ8kyhWG','t8kGamogmq','W4RcPea6W4a','zmodWQTWW7e','dJVcJ8oXWO0','WRS7W7TkCa','q8o7bmkvpa','WPyPa3Ha','W6xdVGpdLW','dJpdNCkyW7e','nYddKCkfW7q','xwuNoNG','e8kgfWhcVW','y1nuW4aw','WOtcJmkcqmkb','a8k2WRfAjG','htpcNCo9','imkjywC','wmkHWQ9wkq','ehNdMxm','WRaqWRFdIxa','Dhq/yMO','o8kvW6qZW6K','WOyndWq','phNdOmob','WRviWRyAWPy','W5DmWOa','WPmdgW','haNcJ8o9WPi','oSkjDwCM','k8opW4DhW7K','WQ0YnqO','W6zrWP7dI3e','W4BcGmkSla','W63dS8kPWOZcUG','tmkoW4nsW6G','jSkiWOO','WRnDWQqwW68','F8otiYjM','hCkmdKlcUq','WPFdHqfcda','W6xcRexdHYS','WRpcUCkSW5pcQa','W7SmWRhdJZq','WPLYgW9e','ysW3n2K','WP5kWRuEWQa','W5bpt3Sm','oCkpgrJdQG','WPCdfGNcIG','tcZcMJvi','vCo5zSoLBG','AmobwGhcIG','WQiGW7Dk','WObhvxPb','W5NdOWvU','WOOraW','B1WmW7ur','D8oxW6eLWOq','W6qzWQtcNq','WQb+a8otFW','WOeFg3Hn','lwBcQmoAW4G','W5jLm8oIW7a','b8kYWRDcAG','vrKiuw8','hdpcJ8oWWPS','W77cUvBcIG','hCk9WPmqfG','WPruWQOaW6i','W410omorW7e','W5vcvq/cVW','WReUW6znzG','W5xcQu4J','bfZcPh/cPG','W7VdL8kjhru','WP/cUSkmpCky','h0tcV33dSW','W4JcRmkrW7C','W4BcImkP','wtZcNCoIWPG','W7VcH8oofWG','DSkoW4XqW7K','B8oitW7cNG','omkQWPbiBW','WOpdQCoCFmow','W6XrW6JdMYa','W7JdVSoLWP3cOq','W4K3vu4i','W5lcQX0','WQWDg3zw','gGBcQeC9','WRVdVvxdJZe','W53dQmkstCkf','W4xcO8kuW7FcVa','WOFdQNBdLSkH','rehcVvi','BNWL','fMubWQC','C8kdW6G1WQS','y8khW6qGWQG','lmksWPBdGcm','yh0GrhC','dJ5SW7j6','W5aZzeij','A3uAmG','nItdImkPW7q','vq92','xSkdb8ksoW','umoVCCo0wa','WOy7dWGT','h8kiWPC','e8oFWRX5vW','W6/cRSkzW6xdSa','A8kdW74MW7i','aMddJZSs','W5qNW5lcOmko','W543t2Oi','utLW','l08yW6us','WPPwWQSDWRS','WQuqW7y','W4K7r0H1','yhJcJmouWQaKW5xdLdCwWRCd','WQLYbmoyzW','W6/dV8kVWPVdRG','g2tdH8kRWPS','eCk2hmoyZ6q','fZVcIW','h18gW7yu','zCoDxH3dJW','fx8Njhi','dgNdJg8','qmo/ymoVza','dSkYvSotyG','qJlcLJqc','WPNdRa9TWR8','WQWcW7faCa','WRmsWRZdKYK','rJvLW7L2','lmkmW5/dHs8','DSkuW4TqW6m','WPunabNcNq','g3ldI8kOW44','Bmoybsj0','DSktW5fwW6O','naRcQmomWOW','BgfPdtG','W4ZdJSk1n8oP','nSoUtmk1WP0','WQdcMUkdUfmo','DavArwm','rgu3mNe','eCo8rmkjWO4','W5JcHeKBWQO','lx/dOmoD','W5RcSSktW7FcTa','lmkkua','uhaNyNS','WOaodNvr','vvdcQN9R','rSoaWOPspG','gJLIzsW6W7JcVwBcVY7dSSoN','qCoFwqRcSG','Etf2lwq','rIXH','emowWRSRbq','W4FcLCk+','qSkaW7yrW6K','W5WehXX2','z2eIzhm','WOnmWRCtW7e','g1S2W6tcLW','a8kYWQzwla','W4DAWRDmWOC','WOOdaG','W4OXwLSq','W6BcOe4VW7O','WPijbhbt','WRv8eCoyEq','g2JdTSoBW4m','WPNcNN8aWR8','WOdcHSkn','W5FdVMFcG8o5','W5v+oG','r0dcQ1r4','dwqlWQTv','eSoRxSk1WOG','sCkwW6mP','g2ygWQDv','WOhdLmoNjCkW','b8kkW6O3ba','WP7dGmoheCk5','WOKsWPhdLYe','nW/dJmkFW7a','ASoAuW','WQj5WR0BWRW','vYPPW7PD','lL8A','p1KlW6Cd','W5W+xKWq','bqhdOHOV','W7VcQbxcNha','B8kVW6mU','WPyofKzx','dIT0W7z2','W5j5bSoRW6m','j8k2WQWJW7q','WPGsde3dRa','aSoIWRzalq','xmowtG7dVa','x8kKaW','FWmu','WPKUhfmQ','WQqUW61xka','qdbLW7rP','wCkqW5fx','AMyuANK','hmkleWZcOq','W53cPu4','pLSEW7Oy','WP4AW49sW68','ifStW7Wc','WOpcJmko','eSk2fSoZWPS','EmoaqqRdLW','W4xdTxtdVCkj','WPiSWO/dPq','W5SyW6vsW68','WOqFhN5C','W4KNvL8','WOxcH8ktqmkD','WRe/jZK','WOekgG','WPWFcL3dQa','W4VcJ8k6nW','EqioqMq','WRpcUCkMWO7cVq','W4JcU8omW7ZcVW','eCozWRWpca','W6uVfGvX','lCoWWRfXW64','WPmzarW','W4xdKYCDnG','E8kpW4XyW6K','W409sq','WOhdKSoMimk1','W4zqWOtdG3O','BCoEBtTG','iCkxWPFdMG','W6RdGCo3kCkV','WPeWWOxdUG','bgNdMq','W4bIoCkZWRC','eCkSWQ1Cpa','WOVdKgS','WOqjgcNcLa','kvWmW5ay','xWz6WR/cLW','k8klAMWG','WPajacNcNG','g8kkbr/cPG','W6LZWQtdOJ0','rmo+zW','s8oOW6jasG','W4VcJ8kVmCoY','pHtdRHO9','WPSRWPVdOSoE','hmkQWP1iBW','WP1ZDa','BbPkWRnx','w2XxW7Ck','WQbNbW','W4/cRum','zSkiWR0IW64','u8ocW4CU','W409quOw','WOipeMTn','WQqqWQZdKZK','qbP8W6tcNW','q8kbbfhcGG','W4akvfNdIq','fCk6WRDbkq','BSkiW74KW7q','CvlcQfn+','W4JcVXRcJ20','ncRcImoSWRi','ASoAsaBcIG','WQS6W6XsCa','W6pcOGhcNNy','W54HgZv/','kCowWQ4','WPSRWOtdSSow','v8oBWRu6W6u','WQykWQRdLq','W58UhdvW','W4ZcTmktW77cOW','yh0Gvha','tZLIW7jU','D8orWQWJW5a','W45nWOq','WP4VW4RcSSkl','WPKTWOtdSG','WOhcNmkFrSk7','p8kiWPm','hSkSWProCG','W5JcOKeIW6S','W40PdG9H','WPGEav7dRa','eu/cTWaZ','WR3dNmkkfqC','WORcOCopW7BdOq','W4xdGIfreq','W586vXL+','WRWbaM/dSG','duGdW7iB','oMhdQa','WPOufhvb','WP0wwXBcQW','eCkkBMaX','nqPkrdO','WPmJWP7dSG','WReJW7S','sCo5ESoHFW','WOmWWPm','W5RdT8odA8oD','f8osWQy3ba','WPVcUeO1W6S','AWTIW6ddGG','BmouW53dLNu','WPejdq/cJa','W5OHWOldSSou','W7ddISkFgZ4','CmopW6CLWPG','k8kurNe7','W6FdTmkMW4tcRW','fJ/cNW','WQS4isa','W5xcKwunrW','hgmCWQnz','WQn8fmo4AG','rINcI8oLWPa','hJVcImoSWPO','W5DWjG','dmkAbrVcRW','wKtcVvi','rN4+E34','W5O9x0PA','fhFcJ8oHWOy','emoKq8k/WPu','h8k1WOTI','W7zFW7NcNx0','WPpcGCkFv8kP','wSkuhHtcLq','oCkgWOJdHYm','exNdJ2Ki','WPZcJmkE','k3NdRSo8W44','dgtdSCowWOy','WQuMW7PaEq','WOWcf1ZdOq','y8oEW6nOW4G','WP9rWRycWQm','tWtdTIRcQG','W6xcQHNcMIW','zSorWRfVW6u','D8kjW6CEW7y','W7W0xuyh','d8kwgX8','hCo4wCk0','W5ZdTCoaCSok','WPxcHCkPuCkU','emklWOxdKcm','WOazhHRcNq','WPeXv0Of','xqjRW6BdLq','W7hcOrtcJa','W5LZWOZdQSkl','W6FcQsq','W53dOmowW7hcVa','gCo5BmoYEq','WPPGpanN','WOmsaK/dQG','WOxdO0O1W6S','tvxcTLnU','i3GM','mYtdKmk8W7C','W7JdQdRdH8kW','WPRdHczxeq','W4ZdQSojEmoC','W47dLCkBfHm','WQaAWRxdJG','W5LWWOZdQSkx','zmkoW7uIW60','vgJcNCo5W54','W5CldXHL','W4FcHmk7cmoV','E8ogtaRcNW','lhJdTSoFW4O','WO5lW6uqWRO','WPRdV0KVWQy','zNmTvgW','t2aYiLa','eCopWRWXaa','ChaNs30','WQuxWRBdIGi','cCkXWO5cCW','WPxdMdTgdq','n8k3oYm','vmkNWPutvq','W77cOX7cIq','W5xdOIBdKSkG','WOyqWQ7dMc8','W4VdO8oaEa','W5NcRbBcNG','DN4YiNq','WOtcR8kFW7BcTa','WO0ChWq','WRKnW7tdMti','WORdKJrxcG','xIjRW7pdHa','fSkmgbZdQG','W5vmWOldHhK','amoyWRO','wfxcUL81','aCkOWPDiCq','WPpdLmoZzmk0','tmkGW70','qmk7g8kvnG','W50TdI9/','sSklW6CMgq','WP8FehXA','gSoSxSk0W4q','WOn8cKKz','WPiDv3rB','W49xwv7dOq','W4RdISocvSo7','cJ9JzsS','z1hcOL9+','WOHqWQOfWPa','wf3cQG','emkheW','gCkNWQ1qmq','kfSzW7St','kN3dMG','dNJdUh4s','isddKSkjW7q','W71/WRSFDW','a3NdMg0u','W5jvb1/dSa','W5xcRu0OW7m','rmoeqCkRWOFcH0O','W54HdXKP','W4mpaa3cIW','W5DmWOddUwK','WOmpbhe','aCk9WR4vgG','C8oiqWBcNG','WOC3WPNdVW','WPXDWRe3WQm','CSknW4DrW7K','kmktyweG','WPTbgX7cMq','W4z0pSolW7K','W4ZcKCkSla','WPqFa1Xy','lSovWRHcW6m','cmk8umoNFW','W7tcPr7cMg8','W6rDW6FcT30','j8kjyq','WRVdIbXh','W4RcRCkyW7BcSq','W40Qt38l','W4ZcTSkx','wNGYja','qCoPvK/dQG','W6yXv0Of','iY7dICkcW7W','is7dIW','WOPnWQaaWRy','tu87p3e','W4VdOItdLmkT','W6RdVSk7','DmkvW5bjW6G','CrGjW6yf','WPBdHZbrxG','s8o5z8kMiW','gSk1WOO','xbT6W7ZdQq','fmkJWRDsCG','W73dJ8kEbqq','W4vWoCoMW7e','W4ZcO8kvW7O','d3JdI28y','W5ngWO/dNJa','bCkdDG','oCorW4rcWQ0','W4rgWPNdNNG','b8ohWQ0Mbq','W77cRctcLMK','W4nmWOm','x20/','gCo+kSowkW','WPFdLcy','z8omfGVcJa','wM8YiMK','W48Zv1Ob','f8kNWRe','WP4SWOtdSSof','WP8vgx5q','pCkiWPhdNci','W5u/kGvK','WQ4MW6O','w21T','WPquwNba','o3NdQSoyW7K','W5xcTdlcNW','B8kbW5PwW74','vCkzW6TB','W4KZvuOi','Fr1TW6tdKq','WQqQW7LbEW','jtNcL8oHWP8','tmoYD8oQFG','qMKQ','WPHDW6CVW7u','g2yaWRfE','W6D9fSooyW','xg7dMcu5','vmkxW6HJqq','W5lcQvy','aSkJWRDAjW','W7pcPbRcLMe','W7vnW6JcJ2S','uvFcULnY','WO8nfqpcJq','W4ONdq9H','f30HWRji','ifSiW7yB','eKFcUhS','r3G2jd8','hmkpWRTLW7u','W63dS8kTWP3cPq','W45ye3bh','W7JdUSkKWOVcQW','W5pdQaZdMSkH','c10gWRzt','W7VcPbxcNNC','gSkpwWBcPa','tdz0W7jS','WPRdLhD+jq','W4hdSItdKmkT','WQ47W7Twzq','W5BdTmojBG','W5JdV8oywmou','hZZcNq','gSkBaH3cQW','emohWQDTW6q','dCkOWOjdAq','pstdKSklW6W','cg8bWQnx','utK+WQST','vSo5D8oPzq','eh7dJ20y','dCkIWRtcKG','nSotWRXHWRq','W7VdJSkn','WONcISol','y8kpW6mGW6q','WRf8kSosFa','W4bgWOpdR3e','W4mPfaL7','bCkAWO8','WRatWRBdKI8','W7pcQaG','hxHpWRbE','W4vpWPlcH3u','WOhdMmoPtCke','WPxdRb9JWQy','qdrVW6rN','WPqgWPddMq','ySkrWR00W6G','DrKju2u','wNG2ohG','W5NdNdG','smk5c8kijW','W4/cRum4W7O','w1RcVq','WQmmWQ3dKJa','i006W7Wa','W55ZWPBdHhG','p8oyW7S4WOa','fsJdHSkM','W7hdLmoolG','W5qZqW','rmoOFCoPzq','uCorebldQG','lejlqxC','b8odWReVba','WQTEb8otAG','wHWWW4VdSq','dIxdJSknW78','WP/dK8oFCSou','W77cOX7cNW','pCkoyhua','phJdSCodW4m','WPyCeq','WOzNgfq','WPRdNtrqdq','W6FdTCkRWPlcUW','j3ldRSkuW5e','xCk4aCkspW','DSkrWQP4W7K','W73dN8o8pq','uY1ZW78','W4RdRIq','fuKAWRbn','aCk3WRS','B3aLygW','kCoAW75/W6G','DWiush4','W4L4lSoQW7a','W6JdT8kNWPhcVa','fcKOlIC','kd1haNe','gmk+DCoOzq','gZ7cN8obWOG','W43dTCozC8oC','FSofW5RcJMK','EmolW4tcGxi','uCk1WQfwvW','vanNW6S','WRGqWRFdMa','befSWRS','WQWwfNTr','qg/dHNOc','W7ldM8kofG0','ChO5CW','Ch0iAhq','q8omaGVdTa','W77cOaVcNMG','uZD3W7jW','l8kwF249','fd3dHvW','l8oGWRTXW6q','hmkTWOjd','yMyJ','k8k0WOhdNIm','C8kjW4nGW6e','wCoeWQ0Xca','ECkqW5DlW5y','bmocWQuZ','WOakeNXq','udr1W6vW','tsWWoNW','B8oawJdcGG','WQ8EWQhdLc4','W51MteZdMa','WQ3dVCoWW4VdVW','WPWdheBdOq','WOmEc0/dTW','gSkoeWhcVG','l3tdSCoQW4O','WOyAnu/dQG','W5f0omoTW7a','W7hdJCkc','DqqFrge','W5G8vuaq','bshdJNOf','rmkNaq','W4L1wbLJ','psddNSkjW7q','xCkMoSk3Bq','WROAWRFdMIK','W7FdT8kT','DGJdTJ7cUa','lSklWQJdKYq','WRS/W7TbCq','W5jYk8o6W6e','oCk3WQ1KW70','WQz7a8oEya','y8oGsaa','hCoNrmk5','beNcRNFdQW','WP3dLcy','WOCNWOtdTSoB','W4dcJCk6g8o1','W7FcNhWfW60','xGf8W6G','DbGuDgS','gSoyWQyM','iL4gW7yf','h0dcVu3dSa','WQpdUmk9WOZcUa','q27dIsms','W5hdTCocEa','W7pdV8okAq','W4/dV8oEFSoD','BCkeWPhdGda','uuBcVfvV','C8kfWPBcJaG','W77dUSkMW4a','W6RdGSkyiW4','d03cUNVdUW','uhNcOv54','g8oTq8k7WPy','WPqWvf0a','W6hcRbFcJMe','eNFcLmo0WOO','z8oLxCoI','WOykcG','W6NdVSk8WRVcOG','bmowWQz9lq','W5pdVZ7dO8k2','W4VdTCoE','nCorWRXHWRu','wvpcRYtcTG','kGKcu3G','W65hW7xcJgS','oeGlWQ1l','a8kTWQ5w','W49Wj8oR','W7VdGSkyaqa','oSodW6S5WRW','lCosWQ4PWPO','gvdcOJpdTq','kmogWQXRW6q','pCkdy0OX','odtdJ8owWQ4','wKtcVvjo','BgOfW6qs','W5NdTSodCSok','ySklW7uVW7i','lSoEWRTZW7u','WP7dJSkRimk4','WPhcNmkwqa','ewqbWQDj','W7JcUa8','WOSEba','WOycgcdcKq','WPSNWPJdImot','WP4TWOq','yGKcuYC','W4ZdUConACom','WOddRJzv','DK3cH14','W53cPvW9W7m','jmozwH/cHa','W5nAvZKu','imkrbGi','jMpdMhyq','g8ofW6uWfG','cJVcICo3WPS','Fd9SW7HG','WRCrWRFdKIK','zmkuW5TtW6G','W7hdJCkIaXi','kCkoWPddHIm','cs7cICoTWPa','W5mNfbK','W4jWWOpdI2K','WPddGJO','bCk3WR4','W6xoPfRdN3K','WP/cNSkQw8k1','WOKkWPOAWR4','W7HpWP7dHhG','hmkJWRPCpq','nCofWQeIdq','k2tdT8oCW4K','ucXLW7LN','WRS7W79wyq','WQBdGZrxfW','WOn8fmoqAG','zMjMCNy','iIddISkjW4G','vCk1fSkpia','WQK7W71m','h8kOsCkPWOW','mdxdLCkdW7y','W5rxWO7dHNG','WQBdNtrbgW','FCoivXRcIa','eZ7cJ8oSW4q','j8osWQDYW7q','W5ufaKJdPq','fJ/cLCoJWOO','W5rFWRCtWR8','eCobWQ0VeG','WPSfbbtcUa','b28MjgS','W5BcU38IW6G','g8kTWOHACq','kSk8WQ5j','W4VdOI3dLSk3','WP0yeetdOa','WPHqWQ4XWQa','kxxdRmoAW5u','WQupWRZdMdK','jmkSWPrz','jLZdPmobW4C','f8osWQeV','W5ldL8oWfmoI','yCowWOldJ2y','xCkHa8kw','WOy3WO/dPCoo','BgtdH8kvWQi','W4OMqKmb','wNRdM8kKW54','d1ZcR3ldVq','W4ZcNCkqW7VcTq','sSkMWPjFAW','e3/dPmocW4m','tmoOoCoOEW','WP7cG8kTESox','ANKGiNi','fSoLt8kYWOO','WOqYWO/dSSot','xaJdQMRdVa','FSkoW4ftW7G','WQ0IW7Tkyq','ZyWeWRyhWQ0','ge4UWQxcGq','WOuLWOJdTSkF','ASkpW7qLW6O','dtP0W7KV','WP/dU8oaDmoF','WOudhGe','WPmdgWNcIG','fSkmgbW','hMuDWQfE','BSkhW48SW6S','wZLFW7en','zmkfW45VW6i','aCoTrSk9WOC','iNxdO38','W5D0jSo9','W4GNxL0D','omkhyW','D1KIDgW','zmkjW7WUW7q','fmo1WQ4Aea','W7/cHmoqxaq','W5ZdTSonBSol','zmkuW4nlW6q','z8kvW5fx','W4KEW6zdW78','uI1LW6v7','sW1VW7hdLq','xGJcPNldUq','le9crtm','WOyAoLRdOq','fNOCWQO','fdVcLSoHW4m','pSosWRazWPC','WOtcHSkDu8kU','W45vW5FdIxe','imoTrSk5WP0','cI/cJ8kKWOK','yCouW7KVWOq','W4zJk8o+W70','EmkuW4PAW78','fCk9WR8','wxK+jG','A8o9ECoJ','W5tdQMRdKCkT','W5VdS8oA','eg8oWQy','C8kfW5RmHwy','tedcVfSJ','W7FdLmkcfHm','W5SefgldLmkndq','p18EW6yh','qgi0','dCogWRbHWQy','v1ZcPwL1','uqbTW6NdLa','aCkRWOLiBW','W4hdTGf8W7K','WQxdU0NdJJzPd2rLxd5tga','xCkMc8kqoG','AxNcI8ozWQaUWRpdRWSVWR0aW50','WQ8fhXG','cK3dU3FdVa','wSowWQyTdG','imkfWO7dLYu','iSk9WQatha','qaFcONZdTW','W5GMuKak','rXNcVv9V','WOawfL4','WRutWRJdJI4','W5TvWRfFW70','fgSnWQDx','hSkTWQ1w','WO4AdeBdVq','jstdJSomW6O','WRlcMSkFeG8','W5jsiSoHW7W','u1JcO3pdQa','zNGUAwW','zqKouNO','WQS8dmooza','ySopW7CMWPm','W5mCadrh','xSkXgG','a8o7tW','W4VcT8opEmow','kuWpW78e','WO/dPcBdLSk4','gM8F','WQNcJhbybW','W4HLz8o+W7O','WPVcQd7dKSk7','uJvJASkR','W4rwWOxdNhG','oxGgWQnx','eCo6s8kYWP0','WQulWQddKtG','W5lcJSkOiCo0','dmkxbaBcPa','dCo0tSogBW','a2qVW7TJ','WO/dGZPn','bsXJEcq','qwWcyW','hutcMN/dUG','WOmsaq','ctlcLmoZWPi','W7NdImkdbHe','CSkeFtWC','WOPKwLKN','W4brWPJdN20','vMNdJ8kOW44','j1LwbZG','eLJcPxBdHW','dedcMw7dRa','CWeFsx4','W5FdQd0','W5n0oSoIW7q','ge4YW7hdIq','W4vODa','zmkuW4DrW6G','kSkQWPjdEq','cGHZWRNdHa','WP/cNSkYzq','WRGGW6LZCa','h8kiWPpdLZq','WROAWR7dMdm','ad4WW7qY','ut7dMMm','DCkuW4XSW6W','W55lvsCi','wdWPB3G','Z5CSWOi+wa','B3aSyNy','zxO5qNK','W4yAWRetWQ0','W63dRSk7WORcOq','emkSWQuzeq','WPn7WRaaWRK','DqqrDhO','WP45aMTc','vvRcOfvP','mmktaGBcPq','W5KGetL7','WPiNWO7dM8oE','W5KyWQWwW7i','W7RcMSkyhee','bmocWRSR','CSoxW7WcWPm','yH4BsxK','bxRdJ3Cc','mcxdMmkPW64','b8oFWQC0mG','W73dS8kNWONcKq','WO8jaGVcJa','WPVdPxq','W5NcT8kBW6i','Ca0xtMy','tSk8bCk1oW','W5BdT8oCEmou','W5e7x0Sb','W7DcWPNdJ3e','q8oWE8oPEq','WQRdLdLghq','W6GbW453xq','W7ndWRZdHsK','smo5ymoN','AmkgW6z8WRC','cKNcUMVdVq','W5v+omopW7K','WRvMfCov','W4BdQstdNmkT','WPaNWP7dKSoB','W5RcUv07W7O','W4GxfMTt','AIZcIJTr','lmo6wSkX','WOdcKmoAwCkN','xGDIW7hdHa','W49Ck8oGW7q','Zy7cJhbybW','ymoyWRbPW4S','fgpdKh4d','WReAWQ3dUde','WQuUW6y','gmowWRj4W6i','ua9PW6nQ','WOHmWRWEWQO','amkUWQXhja','W48ysq','DCkzWRa','W7q4cqjF','W4FcLCk+gW','fMSdWRzc','WO5Mk8o8W7G','wmkuW6aS','WORcPmkqW7tcTG','uqbRW6e','W43cRCkc','WQj2eSo4zW','WO/dKdK','bSkNW65wjG','zmkzW5flW6G','fM3dHM4u','W4ZcKCkSlmoz','hmkXWQi','W5G6gWrW','WPpcNmkjqmkT','W41jBWRcPa','W47dS2FdMW','W4pcSCkzW7W','iJJdJ8kyW70','tSk4d8kvia','iJlcGCooW6W','FCoEW6KVWPG','jxJdQW','WORcOCkvWQxdPW','yhONAgO','vmkxW6HJxq','ESo1z8oP','iSkdywuG','WODeWPBdMJa','f8oFWQ0GcG','l8khWQe5WOy','W7tcOrRcIhC','BxauyN4','W5SShI9L','WO0daGK','W4H/z8o8W7W','ErGBu2m','bmk7WQ9wDq','WOLxWRaCWQS','gY7cKSoRWPa','W5ddTSofEq','ySoEW7O','WODszKZdMa','ceFcPf/dTa','ymkLW7WOW6m','W4VcQu4UW6S','WPyUWP7dRG','o8ogWQ11','WPqpW5FcNI8','W4KAauVdTW','W4KiW7vEW68','tJLYW64I','pe8hW6m','ASkhW6G','WRCCWQ3dLcS','smkSgSkumG','W7RdTmkPWO3cUG','omohWRTZW6q','cMO1mhS','ah4DWQmf','gmosWQyKfq','WP5vWQaCWRS','WPSNWOtdSmod','WOxcV1S/W7a','W4vCjCoQW7a','y8kdyxyM','W77dQmofFmou','u0BcOu9T','W7ZdK8omeqG','bxtdNMKq','gGZdTHm','W5ONsvKb','tMKH','dmkQWPm','W5S7cvCX','eSkkga','W5RcPeOUW7q','W5rtWPldJ3K','EbWjtW','W6/dRqNcNgy','xaD9W7xdJq','g8kGWPm','fCk2WQi','WRGlWRddNJy','W7pdNmo6p8o+','zha/qNq','Amo/WRT6','xmkfW7PVqq','b8kcWOxdLMy','j8oAWRb4W7i','r3JcICoRWOK','C3eu','W53cP8koW6BcKW','WOVdNIbngG','jSolvb3cIq','dCo0tSogCW','emoNrSkZWOW','ESkbW5O','WORdNsbrda','FCoEW6aTWOi','kSogBNz0','W59QjW','FCoAW7OVWQ4','fmk2WRG6fG','fCkXWR8geW','W4/cG8k2kSoJ','W6/cUvBcMge','CSk1amkieG','qvRcP05c','lSoDWQO','W6PJb8onyG','hSoHra','W4GVh8o+W7e','WO0ChWtcPW','agS5W7mX','WOdcM8kFqSkR','W4tcImkZmmoJ','cI/cImoS','yCouW7K','WP4Oa0pdOq','WOyFW41SzW','fuNcIq','udTHW6n2','b8krWRDkja','WOZdVSktW6RcPa','WOLDWQehWQW','gtBcLmo3WPS','iSkhDG','W4jeWPldHhK','heXAbYO','WOq2WPJdUmoz','W5RcOCkxW6BcPa','DmkmW4nmW74','b8kcgaZcOG','rCkFW5KL','rmoYESoPFW','FSohxWRcIW','gmosWQKT','z8kpW5u','AComsW','iSk1d8kNWOy','ct/cL8oiWPS','jtpdLCkb','WROJW79D','W4VcVei','c8kaAu4X','W6ZdVSk4','WRG6W7nu','WRuAWRFdItG','z8kpW5vAW78','WPOoeNrh','W41gwhak','yCk4WOxdNcG','nmovWPPEWRS','bxJdI0qt','wGVdL8kKWRy','fCoKs8kOWRm','WQCJWOtdSSoB','yh48BMS','DmkiW4nnW7K','tSk7aSkjiq','aSkSWRuAgG','aSk7WQ0ccW','dgxdHh4c','W4ddOJ7dSCk2','Z416W5pdS8kF','W47cP8kcW5FcVa','WQOJW4e','W5y+vf0','WPGUW4RdSCoy','dSkSWOTzEa','eCoqWQ0Tbq','eMtdHuqc','W4xdQXu','umojW7WLWOe','lCkgWOFdMse','W4RcQSkDW4hcUa','ySktW4CFW6i','ghGMW6vJ','n8oaWOjjW6W','WRuxWRZdNJy','hdpcL8oWWPS','WPNdRa9TWQm','cJ81ncq','tSojW74N','tbXNW6JdVG','F8oqWRr6W5q','zuO7Ag8','W5vJi8oJ','f8kNWRD2ja','Edf2lwu','DmopW68','W5v0lSkN','WOeXASkUWRu','zCkbWRHGWQe','hMuDWQ8b','lLy1','W4rLkW','o3tdSq','eCoAWQ0Tfq','W7JdLCkEnGa','ch8CWQO','r8kXWO8tfW','eCkUWRDk','WOiEcW','WPajacdcNq','WPyRWOBdSSot','W50rgbBdOq','W4tdReldVSkW','WQLYh8osFG','W63dJSkvhWq','p04tW78s','W5FdSIFdGW','WPashePC','W73cJCk+jSoJ','W6dcMmkwia','lSovWRG','W4K8aWz2','o8oCWQLc','W5CPcG','eCo1q8olCW','A2/cJCkkW6u','WRaffuC','W44PdGn8','cJ/cICoNWPS','k8kaAv0N','n8ofwG3cIa','ySkfW6qOW6K','WPPAWRy','WQqEW6C','f8kLtmkWWPS','WRHnWRygWQa','WOSfcaNdLG','W57dTmocuSoA','awSxWQTi','W48+imo9W7O','WRCBWR3cNC+Q','W47cGmk9iCoQ','cJqXBYK','WPP/a8olBG','WPZdUmopjCoB','ySkaW7y','jq3dLCkFW6W','nSkuWOZdMYa','h8oNrmk7WPO','WPxdICkovCkG','j3/cP8oY','WO3cI2mttG','W6dcRaNcLw0','W5RdT8ojC8om','g3tdQCokW4u','WP/dQSonDmok','dKhdI3uq','W6GEW4fjDa','W5ldICkoxCk2','W58LhWrN','pc7dMmkj','W4ddKSoibSoY','mINdL8k/W7a','fCkUWRa','cMJdJmol','W7hdLmkF','c8krhWi','W4tdSJJdHCk8','W5DIW4RcT8kx','amo8s8kUWOO','bSkHWOTiBW','WQn/cCosEq','W7ddISkFgZi','WQa+bCoszW','W4TgW4RcIe8','WR8yWRFcKdq','vmoBwHVcHa','o3ldPmoBW5i','h8oTrmk7WOO','W6dcTSkHWORcQW','nv8Crtm','W5DkWOFdJ0i','ix/dTCoAW5i','jstdHmkyWRu','W6v3b8ojAG','y8kpW6z/','dmk8ymoPkW','sCoZESoHBW','mINdMCkpW7m','sbT9W60','cM8oWQfp','WP0kbhfR','W58ouJZdMa','aZTSW7zX','AhaYDa','kSkjEW','bCkSWOK','W4VcKSkakCoN','qgi2mG','jYddKmkzW70','W4hdQdJdTSk4','W7FdNCkebW','dCk2WQvcEq','WPvxWQSx','sCo1ESoJEa','WO5lWQaTWQW','s8k8D8oQAG','WOybcqlcJa','jhtdQ8oiW5i','WPy0eW','WOn/cCokkW','ncddN8ke','w29CWQai','WQ4MW6PqCa','uvNcQ1rP','wCk7hmkNpW','WPZcTNRcG8o1','W6T8WQDajG','WOmwhexdSq','kSktWOu','W4rooCo6W6W','W4NdSW7dLSk/','e2NdNG','bmkGWObiCW','W4brWPBdIa','wfhcOf1P','W57dTmocCSom','gmk1WPWteq','amk8WPDcAq','W5RdTSoF','hSk8WQK','eM3dHhWu','WPFdVKKWWR8','vSoOCCoOBG','guFcVLT+','W77dRSk7WPy','lx/dSCoJW48','tmo5ESoLCG','W73dKSkjeaO','WORdMrLgca','g8kTWOHA','WPP3fmoCBa','hmkmgGdcUa','smoLW5TjDa','wmkxWRSIdW','WO0yev7dQW','WO9xWQivWQm','hJpcMG','re8MjgS','f2BcMCo2W4a','WQyAWQVdNJG','ySkaWRK','k8YEbW3cNW','ganJ','W6H1W7NcNx0','b8k5WQadgG','xhNdISk0W4u','CmkfWRjLWPm','WQtcLmoDfrW','fSkxwX4','W6ZdN8kChWa','WOHVWQWgWQC','pLuFW70t','aINdNCkkW6W','WRj2d8oAyW','s1mSW6pdJq','W5O6xKWp','bmkGWOLkAq','h8oPwCkVW5q','WQz7dCoUyW','fcKOlYC','lCooWPnzW7a','B8kTj8kc','o2xdPmoDW5i','W5CPWR3cQ8os','p8kiWPpdLZq','W4n2z8o9W7a','BCoCvqZcMq','W4L+W4xdSSop','fcRcImoSWQe','DWjArgy','W58RdGn8','W5RdOSokW6hcOa','WONdOSowWRldSa','W4Lkwsem','eSo7qG','WPNcV0OHW7O','xSk3d8ksjW','qmk9amkjiq','bCk8kmoIyG','hSkKWOTyEa','vmkFW6m1W6m','bsOeWPuh','yGmaqNG','b8oFWQC0pG','W4ZcI8kicSkt','yGKi','W4VdQd7dU8k4','dHtdSLLY','pNddQq','o2hdOCoWW4O','oSkEE0WK','W73dT8k9WOZcVa','WPJdKJ5eda','WPyxeNDa','WOxcJwRcK8o5','WQC7W79qFa','WP7cJSoaaSkY','xSkNu8oejW','sr4ksG','kCopvahcMq','WPDDWRmxWQm','ogpdOmozW4m','k18EW5yB','W4tcKZrnea','W5K9cbX2','W4tdRYhdT8kW','WOCdW5FcLNK','WRNcMSkv','WOCvbvHy','gt/cLCoWWPS','ymkdW6qeW6O','h8k5WQet','eSk5WRGvfW','W7/dLSkacKe','m1aFx34','huygWRfp','bmkTWQ0rAa','W4BcImk+','WQ0CW6Pfyq','bIn5WQ0S','gSohWRSR','WOudhINcMq','zmkoW7SsW64','W7ddN8kZfGC','WP7cKSkVjCoO','xun9W7hdGa','aCkTWR8E','W4zoWP7dHMq','e8k3WRfflq','AmkiW6qZW6K','iSkiWPldLW','c8kTWOX+Dq','u8odbq7cPa','tSojW68+WP8','d8k3WOHyBq','Fmo0rSklW6a','kILKC3a','lmowWQPyW60','WPrwWReaWQa','WR7cUCkPFmkW','xqHOW5ldHa','WQeIW65bEq','r8oUkSownG','uCkiWQmbgG','h28BWODx','zmk5W7GKW6C','uvRcUNz0','rSkNWPndma','W4ZcR8ktW7ZcPa','fM9cWQbx','W5BdU8oZCmov','tSkXtmk7','WRzJa8oyBW','DxqN','sbXRW7pdIa','wCkSgSkJnq','kSkbWOldPsm','cbVcUL4J','gCkWWOjFza','Bwu4B08','e8kQWQzqiW','WOyzc0/dTG','rNT+zZ8','W6tcPsJcJ30','lmkgWPddMYK','ut9IW7yQ','WRnYcG','WPhcJCkECCk0','p0mzW6Cs','y8kpW5b+W6e','WPtdRIq','WPNdHq/dO8oL','W47cQv0','zHKjtW','bSklWQOXxW','xSktW41tW6q','ogpdOmozW48','omokWQ1PW6q','W5hcS8kromod','smkmW4nDW6G','WPBdHHTtdq','WRvYcmoyzW','emk2WQizcW','A1FcU0HR','uSkgW4q','WRDrWRyg','WPmRWOS','WRu7WQpdSW','W67dJ8kbaW','WPRdNJLmda','W5u3vuGq','vaTGW6ldLq','W57dVSoiwmoo','W44oaX7cNa','FCoklZzM','FSoFW6S','WQXsWRddKZK','WPNcV1S0W7m','hZpcNmoSWOO','A8khW6mYWQW','W6JpUmk+dda','smosWRa3eW','qmoQCCoQEa','WRiKWOZdH8oy','hmoPW4D2FG','o8oCWQLcW7i','W63dS8kJWQ3cPG','qvaBj0K','W55jfXtdGG','W4FcMCkRnSoN','W5LWmSoNW6y','W4HxWP/dJ28','gLRcUxm','WOXGcq','uSk6WQ9oha','W4O6hXX2','W53cHmkpqmkN','WQ4fdeVdQa','smovW7y','CSkGCCo+FW','c3OkWQDF','W7xcQaS','W4TcWO7dHwG','amoyWO4Qgq','e0BcSsa','WRSEWQe','Zi7dRbjT','W7dcQa/cVMG','nLfA','xCk7b8kijW','gehcPx/dUG','WQyqWQ4','DCkhW74MW6m','WQJdGCo/zmkM','zmoCvqVdLW','v0hcVu5Y','uw0Rp24','E8oFvu8','utLUW7bN','g8kmaG','lxZdOmobW5i','wSkJWPOnDG','EG0yqMy','m8kHWOus','lfldRCogW4O','aSoaWRe','kvCpW70d','i3yNzMS','gSohWRSRpG','WPPoWQWCWQG','BSkbW5PwW74','WPi6WP7cUSou','WQSGW7bqzW','W4XevrNcSG','f8ocWRO1ba','CWKEA2m','rcukWRPp','p8obWRDWW54','WRtcQX3cNq','WOrHfmosFa','lMyMj2W','WPSTWO3cPSkh','dCkRWPnHDa','CguNzMe','d3VdOKO','d1ifW7Ou','u8o9EmoZBG','WPHqWQ4HWR8','CCkpW5bsWQa','WP5maCoFW5C','W4X4ja','gMuBWRzu','WPxcGmkDxmk2','e2ddG3Gu','xqHOW5RdHq','r0dcR0HP','W5FdQd3dLSkR','hmkNWQ1upa','W5FdV2BcKW','D2CIANu','W7ldN8kkbW','g38CWRzu','E8oEWOhcKhG','dgNdHhWf','W4VcTSkyWR/cOG','rJz0W7jW','WOyPgGNcLG','yKbAFgK','WO50mSo6W6C','WQWQW61bEq','hgVdOX5d','xMmHpt0','W5qPfW8','ECogtGhcIq','i07cO3ldTa','eMtdHuGE','W5rGWP/dHxq','W5hcKCk6iCoI','tMKNe3e','WQ0PW7H7','WOdcJmkiv8kN','t2RdL8kKW4S','wtZdI8oNW44','e1/cK3JdVG','d08zW6Cy','s8o2W70qaG','CSotW6SPWP0','yIbPW6q','WQykcJZcLW','vvRdSda9','BSkhW583W6m','zCkjW6iLW6m','awzoW7GI','WPLmWQSNWR8','qCk9amkdia','W4LGfCoVWQu','zCouW7W','ANGByNy','W5yTfa1N','WQvVW51rzW','f8oPwCk0WPO','WOiFh1hdMG','wG9TW67dHG','a8o9r8kS','aSkTWRe','p0OpW7yt','cCkMWPneAW','zrGBvq','WPNcHmkkuCkU','WQWUW6PfzG','ySolW6m1W6C','WP4BbW','W54uW6uGFq','EmkoWPW1WQ0','sqaBrw8','n8oaWOiFWQ0','E2e5zIy','WOOcdWdcJq','ymo6CSoVAa','j3GoWRzs','aCk3WRSLcW','DXGtsgq','hmosWQKNiG','WOSsfK/dQa','W5O6wL0q','WRqnW6FdTwa','WPCvaaK','qCktW749WQe','tt1Z','W5O9v0aw','DgxdT8krWQW','pmkRWRbh','WQK8W61nCG','W7rGW6PakW','jsJcMSoWWPC','CSouW6a+WPC','W5dcMSkotCkU','iCozW67cKMy','W4RcT8keW6tcTq','W5tcUMJdH8k8','yCooW6m6','vLhcONXY','iSkiWPhdGsm','dKmJW7C','uqbGW6ddKW','ctNcMSoWWOO','W4OiW7vEW68','zmoDWOblW6G','W6FcUbBcIW','umoIW6mtAa','WRukWQRdIti','WPBcHSkiCCkJ','W5BcU2e9W6W','j8klW70','zCozsaC','f8kXWQKAgW','rehcO0O','WPJdItXqiq','n8kgxHFcMq','WOj3CSk7WQq','WO7cR8kapCkk','j3GFWQ8','ANOL','zCkbW4XyW6G','WRiAWQO','WQyQWRnfDG','W4ZcTSkxW43cSW','WRunWRBdJI4','W4NdTZNdMW','W4RcR045W6S','W4myfrZcNq','rZ1MW7z3','CItcTCkkWP0','qmk9cSkcpW','W6xcOGK','E8kbW4bAW6e','ySkuWOhdNY8','W4VdQmofCa','zSketGBdGq','WQ7dTSkLW4ldOq','ACkwW6mP','ee3cSJC','DYCV','W5mshv7dTG','smo1CmoIzW','CfHu','w8oPW4CzlW','WQe7WRnkzq','WOqqW47dJI4','WPxcNCkBAW','b8osWQqneq','WOzFW6tcNq','j8owWQH4W60','WPqkgG','WPiKWOZdImoe','BSo6tW7cMq','WOVdVmokWR3cPa','W5RdLZnf','W5ZdIIWzua','WR8wc0/dQa','uCo1W6fiDq','dSkweX3cSW','WP8BbgOj','n8olsvhcPq','xSkNu8oenW','x8odvK/dQG','zZGTA30','WOmWWOpdUG','D8ktW70X','WR4oWOBdKJm','W7q8W65fEW','WPpcQ2RcG8o3','WQ3cP2RcK8o5','s8oOCCo0kq','cguCWQTp','BmomtYRcGq','zCkai8kQ','k8kDdKNdJG','W4tdRY/dKmkY','BSoDwG','ivSA','wsf4W6ddKW','ax/dMszt','WRO/W7m','vCkpW5DrW6K','W7SzrSkDkW','WPxcKCkovCkW','zGKws28','W5hcOrtcJcq','WRddMCkzarC','wWzVW6VdHG','tCk0xSkUW4a','k33dQSoCW4m','x8kYWQjdiq','W48NcL3dOq','BbPwW6Cw','W45Mbmo+W6y','g10+WRBcLW','uSo5zSokBG','fmk7WRGFea','gCoKWQ4eqq','WP7dLcfMeG','W45oWOFdJ3e','ymkxWOxdGI8','hCo4WQ8AhG','wmkkW7KVW6m','uCk2imo8W54','uZNcMYHaW5mEwmkwW6qnWRdcKG','r8kVW7fR','W6ZdT8kx','BSopxtdcNG','W4KTfIz2','WODTariP','aMddLCk1WPG','fJVcMCoHWPi','omkhy3CX','pghdV8kzW6O','tqbQW6ddHW','gCkPWPmzeq','WPG8hXjN','heCaWQzE','W53cISksuCk0','wCk9amkbCW','W7ZcU8kyW57dPG','WQL2cmoAFW','s8oSz8oU','CCohW4ZdN28','W63dISkjfGu','W4HuWRNdMM4','W5tcQJNdLSkR','ySksW7e','WQpdVmk6WP/cVG','yGKibtq','bSk5WR4BhG','W43dT8onAq','ug0Rp24','gvFcPL9R','BSofzb/cGG','cw3dTxyC','v8orW7b2ua','yGmi','WQJcKx1oW40','WOuzaG/cJa','WOWBdeNdRW','WOC3WOFdPW','qeBcR1L4','saf5','BspdJSosW4K','WQruWQqqWQO','udbVW6bD','nSkhD2SN','kmkzx17dNa','h03dTepcOG','e8kggaJcVG','W5CPaG','W4jqWRVdG24','W4OThW5F','fSk9WRGZeW','WO8JWPldVSoe','a8oLcmkBDG','lCozW7X0WRG','W47cHmoIzSoK','WR0AWQa','WQ7cU8oOW57dRG','W7ldNCkSmCoK','nsddJ8keW7W','W58Uha','AmobudZcHq','EHDhW6e','W6VcTSkRWPhcOG','pwlcPCokW5q','WRS/W7jnyq','gmkGWOjjuq','CamiyMS','xXXHW7ddKq','lCktFxe7','WP0oruFdTW','W7HrWPBdNNq','FmoaxXVcHq','WPapdrJcJa','WPGKyW','zmkdW4nlW7K','W5pdV8olEmow','WO1DW6u9WR8','z3WQ','W5DWjSo7W7a','W77dQCkTWOJcPW','dSk3v8kcyG','lLZdUvmd','cCokWPD5','W7JdJCobaaq','W543sq','D8kCWQ1TW6a','W759k8oSW7a','Cd1SW7jH','WRjmrafl','iZuVzMW','WPZcHSki','l8kiyw0G','CCkpW5b6W6W','WQuUW64','jCoyWQXUW7u','W5VcJxPqcG','hmkJWRO','DSktW7uZW78','zbWx','hZFcNSoQWOO','rSkMWPjFAW','W5u3xvS','g03cOLVdTa','z8oQuWdcHa','yaKEbG','kCoCWQX5W6q','rHPkWRnx','W5f+pq','guxcS3ddRa','W4tcJSkTaCoN','Z6z8WPNcL8oH','pmkwbbNcRW','gSooeG7cVG','BSkiW7uYWQy','sZvJAJe','WQmwb0/dQa','WRiEWQVdJ2y','W7n4lCoMW6e','jCouW6a','WQfNdSkhoG','nJpdK8kzW6G','WQyMW6PD','awldHhqf','W7W8W69SrCkumq','WPadaqK','wCoUx8owiW','zCozsaFcQW','cdxcJSoQWPO','qCo1z8o2zW','mx3dOa','W6OBmHGU','ACkdW6m','W73dUmkPWORcUG','vqDG','nItdJG','b8odr13cUG','e1SeW700','W7xcQbFdHq4','saf5W4BdJG','kmoFWRD+W6O','D8owWQzPW7m','eSocWQyGfq','pSkdFwqh','rJJcICk6WRy','z8omvqJcMq','WPRcRKX1W7W','W5tdTY/dLSk9','zfKgW7yw','W6T9W78Cia','rs8uWRSb','jayiW6fj','pZhdJ8keW4C','bmofWQ01ca','v0BcQ1TP','emo9wmkQWPS','W5mzg3Hh','WOXIpSoVW6e','kHxcQmoq','vmofWQC0eG','W6ZdNCkoeKK','W587tW','W7hdJCk8ebu','WQb1amo+za','h8kOWR8E','W5hcHmkZcmoN','atlcLJqu','W4TGWP/dHxq','W4BdSYpdNmk3','bbC7WRnF','WOSobxGk','cdVcJ8oTWPe','ofjkW7aB','W4eCcJLz','W7RdT8kdfWq','WPldQCojCmor','hx4o','W4JdT8kNWONdRG','W5RcLCkTjCk4','W77dSSk4WPVcHq','gmosW7zjqq','ySkEW6qZW6C','WPxdJCo/D8kY','D8kCWRWJ','W6RdLCkE','c8kgdHS','BSoexGhcMq','ncFdMSkZW7q','C8kjW5fpW6e','W4VdRJVdHSkW','W4GVgaS7','W5mxW4q2xa','FCorW5BcH3tcQ3HKus1HW47cMG','WPuLb3zd','WOVdKdTegW','wfG/WO8','gSkfeddcQa','WR4EWR3dKIO','wqPQW4ddLW','a8kHWQjhpa','g8kcbqFcRG','W6BcUb7cIx0','eK/dTNJdRW','W6FdM8kugHi','W57cQvSiW7m','WO8jca','B3O5','WOmJWPJdSmos','hMuDWODA','W6ddTSojA8oD','W7VdLSk/fG0','pgtdTSkc','W6yGamoCoW','W5f0jmoVW7K','hsddNSkjW7q','gCkTWQ0','ddVcL8oXWPS','WPVdOYpdHCo5','fw4HAm6Q','sSovW68NWPm','WPxcJ8kCA8kU','BmoBvbRcNq','WQz8cmojAG','WRVdRqJcMMO','WR8rWRZdJG','vbuZqW','r3VcVK50','gmkcbKldUa','W4RcUe4/','DSkeW6fqW6e','WONcImkcxCkX','WOL+gXPr','W73cK8kVkq','WRKBWRW','qaFcPwRdQG','jhddTSoCWOW','ft5M','yh0Uzhm','WQ/cJ8ktuCkU','ufVcUG','n8oDW4RcGYa','xvRdO0H0','W4dcNe4JW7O','WOdcHSknuCkW','tcZmNuqZ','W6v+WRWAvG','yCkfygyX','gCo+zSk4qW','WQGWWOVdO8oE','W5ZdV8ocACky','D3aVlG','WQqMW7Lkoa','W7ddLCkcfG','h8k3WQit','xSk4b8kfnG','i00KW6me','smk3gG','W4rlWPZdUxu','nSoEWRzIWRC','W5hcLCkMkmoJ','ndxdNq','WPSTWOtdSmot','EmkesaRcNW','EGuuqNK','WQmyWRC','W6ZcHSkoav8','qCoUv8o8','n8k5E3SK','fwG6id0','WPVdPtJcJCki','W5dcO0e','mCkBWQ5QW5y','WO/dKdLwgW','twRdHNqb','tSoxW68OWPm','wmoVW7ydBq','W4ZdRSojC8oD','gfmU','ltVcICoPWP8','WPpdS8oaWQlcOa','yhKQDgS','WRJcVq7cLNq','WQZdTSkPWOBdOW','W4yDWR4lW7u','W4dcRvCKW6W','W47cImkXiCo1','fCoBWOqIaW','vdJcJ8oQW5m','W4KkW4RcJ2y','W4hcUf0SWQe','W45ya3Xm','EJmkshK','WRSNW7ftsG','WRaBbeJdOq','fwSF','DSkdW5zwW7S','xqGN','pmkliMe7','WPPWcSoyAG','bmkWWQPEfW','DSkmW5zg','W6FcRaNcNMO','eSkmaXZcRW','bSkJWQ9glq','g8oNrSk4WPS','WPDxWRe6WQ4','WPayfqdcNq','dmklgrJcJG','W4NdQctdLG','xSkKc8kdnW','W6VdT8kBWPVcOG','kfml','g8oFWRfPWOS','maFcU3FdTG','fNOCWQPK','WRWPsmkpBq','WOm7vumn','WOOAfGFdPW','W7rgWPVdJ34','iwugW7iv','csXZDIe','W5jvb17dQG','oSoeW6qZW68','a8kNWRD/kq','s8oSz8oUtq','BZLIW7jU','c3GYnhe','pJaWFIi','WOTxWRi','z8kBW60MWPC','o8oCWQK','WQWQW60','WQzIW4ldUGq','WQ1IoCoCoq','f8kXWRGcgG','bCoormolkW','WQrfW6JdJsu','ACksW7uZWQy','WQCHW7KAnq','vmoasadcGq','ENqZBMS','oSoNWPSleW','eCkuBNy9','W5mvfXtmSW','f8oTwq','o8olW7C','t3W4CW','dmkphWZcRW','pmkxWOhdLYi','tmkGWRenaa','zSksW7KUW6G','WQCTWP3dSSof','WPOLfW','cI/cLSo0','W6ZdM8kcfaq','gmowWQOMdq','dCk2WPq','fZxcN8oH','hmo/ESkZWOK','WPxcH8koEmkR','xb/dRIlcTW','WPtcV0y3W7O','mSk7WOPx','W7ldN8kcfbu','WQqEWQ3dLdi','W5VcO8kcW7VcVW','W45ya2TD','mCkgWQ4','WPmNWPK','W67dT1xdIMi','CCkDW6X7W7W','EG0dsh8','W4VcJ8k6ia','pSktyNi','fx8BWQDF','pCkApWS','W45vWPi','W4BdPd7dMSkV','WPC+uL4r','cJxcJmoHWOW','W6FcKSkLW5RcOG','qcZcLJPC','W5BdKIbrca','gtxcL8oRWOW','WOC0efJdSG','l8o+WRf5W6q','j8kiywCM','lvyEW6O','cmk5WRqFda','W4nxWP7dIxy','eMhdM8oaWOW','W63dQmk7WQRcQW','fCkKWQu','W7JcVKySW7m','oCktWQXYW7y','tSoiW7OZWPO','W6BdJSknaqq','tmk6ua','pLhcN3O','B8kdW7eLW5K','WPSJnMfD','rSkfW6rJuW','taf0W6ddKW','uCk7WQaxda','WPuta21r','a2ddG34F','WOaoeNDr','WPLlW6SrWQa','WRmlWRG','gSkIWOvmnq','Dd7dTSoAW4q','hNP0W6vR','xSoZWQvoAa','WQiEbq3cLa','zmoDWObmW70','zCouW7qVWOq','WQa+W4flEW','W4xcQ8khW6FcUq','W5DwWPRdMG','WQXNs8om','hmkTWOjmEq','ySoAzalcJa','CCkjW5y','rJz0W5TR','W4ldOsZdOmkT','fgmbWQDi','bSk1WPrf','b2NdNL4D','nZtdKSkpW6W','pJxdNCkyW7e','fSkojGRcPa','jsJdImkaW70','cJvQyYG','W5qGW5NdSSkh','W4nkWOtdI38','wNRdH8oWWPO','wJFcNSkPW48','vSo5ya','d0VcT2RdRa','eSk9WQicgG','hCoaWOiFWQ0','pCoiWQeNW7S','trX4W6ddVG','W4zhWPpdR2S','W7VdImkEhbm','WRxdH1VdMYq','W4jpWPm','C8kTW41BW6G','wWzRW6BdIG','k8kajG','W5RcUvW5W7a','xfhcR14','n8oDu0/cJG','qJhcPCkpWOy','W4VdOIVdNq','W4j5l8oTW74','W4K3suWb','rSkTWOHrjX02','tWzNW7hdHa','WPKaA2je','WPPOwLzX','W6bJomoHW6i','EmoDqGpcIa','FmkjuaRcLa','kSoxWRPyW7C','zmkkW7KKW6G','W7pcPaJcI2G','WPuSeXWT','WQuMW7a','W5m7jqDY','gIbZyI8','WOSBgxPC','tmo0hSkjoG','W4joWPldHgK','xmk9WQicdq','lmkzW6a6WOu','WPOAkIC','WPLmWQTFWR8','DG9JW6a','xSkRWRWxeq','W4jBW43cKYq','WRRdVLNdHq4','eMxcT3ddUq','W4bAwLJdJa','cCkcgG','ASolsa','W5ngWO/dNL4','WR7dJSkvaWq','pCkcWONdNta','qCkhW70OW6O','W4xcICkR','W5VcPCkuW7pdUa','mCkhcGNcKa','W6GDW45P','a0tdJ3Ov','W410k8oGW6a','umo0a1v8','rZ1YWRPW','WPiVWO/dUCod','qhtdISoIWOm','W47dQsNdN8kS','W6tcUqlcL2e','CJ/cTmojW5S','kSoFWQPK','WPNdSaaPW7y','vs7cICk6W4i','CfGyWQ0M','bSowWRWQdG','hCo4wCk0WQe','CGujv2y','W6yHqLXz','W4ldVZ7dGCk4','o8kFWPddVdy','DSktW5ecWQ8','E3ybW6qoWPhdGW','lrCjW7WB','WPpcGCkrCmkR','zbtdPK18','ESkTW41BW6G','ANSUyW','fCoKrCkR','WOe8W7e','WOaNWPG','CWaPqMy','saf5W6ddKW','WRCmWQRcGh8','W7j0jSoRW7y','zhNcHCoCWQ8TW73dPdWfWOCQ','WOj3lmk3WQW','WPrwWRexWQe','W5tcHmkynSoN','WPrpWPuDWRG','W7VcL8kaeGm','W4XZi8oGW7a','WQb2aSoXyG','hmo6r8k9WPi','W4ZcPmkqW40','eCoeWO0Ueq','jSoisr3cGG','DCkfW44sW6q','f8oHsW','f8ofrCk4WPS','pSkdFweX','W5u/nbPG','a8kYWQ9smq','W5pdU8ooEmou','WPCdiapcJW','gJXGyYW0W7RcUw/cKsRdGmo9','mG7cTSoi','WPS5W7LHyW','W5fUwv1A','pSkjEa','WOmTWQZdVSop','pCoBlxyX','WR9IW71iEG','DqqrDgi','WOzbdXNcIG','uxGHnYm','aSkHWR8cgG','W7SmWQ3dNcK','WOlcGmkDxmk2','b8odWQ0Tba','h8oPwCkVWPe','p3C5oC6V','qCo5zSk7kq','ECkqW5fxW5i','ECoibvpdGG','f8oFWQmqcq','a8k5WRGFea','wmomvWRcJG','W7JdK8kcfW','q8k1a8kd','W4/cQJ/dG8o5','WRS7W6DiCa','fmoTxSkzWPi','ZkddSf7cGh0','tg8N','EGKuqh4','WO59vfGV','WQTJfCovva','Cf8sW6Cf','fgSwWQ1o','zCkpW5DrW6K','W47cHmk7','WPPmWQWDWQe','WQufgeZcNG','W5mLkG99','W5u6f0DW','W49+jmoR','WRzqdSosyG','ESoSWQC','W7GXmW4','W4VcG3Kdta','mSo6wmkZWOK','W5fcWPVdN3G','hCo4x8kOW5W','WPVdGZrnhq','WPGsf2BdOq','ASohvqdcMq','CxO+AxW','p04pW70s','W6y9s1Sn','WRSqWR3dMa','W4SNWPldO8of','qMKQi20','WQSNW7v3Fq','W6ZdN8kFfHu','gSoMwq','WPKUsGKJ','bSozwf3cRa','WPGFdG','W5RcTSkxW6dcPa','aCkQfmkiWOW','WPL9qGSL','kSkkWOhdNdi','tSk8c8kfoa','zCoCvJVcNW','WONcImkuv8kQ','W5WXtW','m8ohW7n+W6q','W5BcHmkTzSk4','WOq7WPNdO8os','kmkpy3yX','W48ZvW','d3HZW7zS','rd10','FSomW4SSWPa','WRyUrmojBG','fw4HAeW','qSo5ymodzW','vSoOBCoQBG','W5vgWPRdHwS','W4JdVmokWR3cTq','W4hdImknbWG','BSkmW4C','wtZdG8kXW48','W48FWPxdMcm','WP8bWP/dPCob','eCodWQKCaG','EGKCuW','g8k2W5OpFG','WP5EWQmTWQy','g2ieWPft','qSkOr8kVW5m','sXPVW7C','tgO1','ySktWOjAW78','WQtdK8kchWG','DCksWPXUWQ0','d8kwbqC','ACoBwGhcJG','pCoPr8k5','W4jGWPJdN3m','oc/dMCkE','W7pcGbtcN2e','n8kIWOTcFW','WPSZbhy','z1WahM8','dGffW6FdJHXG','sbTJW7u','WRDJcW','W4xcQ8kyW7FcOW','E8kmW4npW74','WQH8aSoyzW','jsddImkfW7C','sCo9DSoJzW','c8kggXZdPW','WOaebZ7cIa','cmoOqCksnW','aCkGWOLoza','WQaEWRxdIdG','WPaCcqNcNa','W43dU8ocESoD','W5yHcX96','hmkwbbNcRW','aSkpFhy','W5vOjSoRWQG','cMTrW74u','kmkcWPddTYO','saT8W6BdHa','fbtdRHO9','W4BdU8ouDmol','BSohxH0','W589swOf','yCoAW7W5WPm','u8kOcSo8W54','a2tdGvGE','p2ddJ20u','WQyAWRZdMq','W709tee','t3fZoYe','eM3dNNiE','WPSpexRdQW','bmoBWQC3ta','s8kAhSkvoW','qCkXamkbjW','qITZW75L','uZD3','yNSLAgW','WOiLeM1v','DmoiW40IWPm','cwldMM4f','DCojW5xdLdS','kSoaWQ10W6y','eSkTWR4agG','W5FcO0eO','WR3cGSkosLu','WR8rWRFdMc8','W5tdSZpdN8k8','CNlcHCkiWQS','huZcSLVdRG','WQHoWQi3WRK','xx4YAa','WPK2WO/dPCkv','W5dcQmkirSkT','vCoNW5ipfW','W4ldQI/dNCkT','WRuwgg4u','l8kmhWhcVG','iSoDWQ5OW7u','fJVcGSoRWOS','W4j9k8o9W6y','h3GoWRjt','gCowWRG','WPRdMtbafq','W507wG','xqnRW6VdLq','WOdcNmkjxa','WQlcLCkyav8','WPKJWOFdSG','eHNcJSo2WOG','E8kfW4rl','o8obWRTRW6G','W4SZt0yl','sNKHjhG','bMr6','t8oTuSkOWOW','qqRcUg7dQW','hmoUWOK7ca','W63dKSkdbd4','WRvHa8olBG','WPFcJmkoCCkU','A8kdW7CKW6G','bSogj299','F3pdMSkrWRG','iwFcUW','iYddImkfW7C','smkOvaj1','W5rlWPJdNtm','l08zW6Cy','fh7dG3yU','W4hdRb57W68','taT2W7hdOG','pfuDW7yf','oCosWRb6W6q','W5O3vvSb','vSo/DCoYFW','fSkTWRf2kq','WOOAaetdSa','vmkUW6j8WQm','gCkmbcRcQW','hCk9WQircW','fgpdMG','wCoWW4SnlW','W7yEW5ldKwu','W5hcTSkeW7pdRG','eSkSWQKsxW','otddO8knWQK','WPaFtbZcGq','WPDJxvjb','WPpcGCkrz8kQ','umk7gSoVW4G','W6xdGHO','W7VdNmkkla','lxFdOW','W5uru0an','W4FcSSkfW7O','fSosWRG','oCosWQLcW7a','tmk2hq','W4JcOrRcMwe','cmkVf8oCFq','xmoqtWVdUq','s8kJWOflEW','jsJdN8khW7u','vZbLW7K','qCo9ESoHBG','WQevjqG','W4jYW48','vmkxW7q3bq','WPhcISkoxCk0','W4KTfJP8','W7BdO8kTcWG','WOiIlmoSWQW','kSkhE2mN','u8o5u8o0AG','emoKs8kVWO0','jJZdSCokW54','W7BcRWG','smk6gSkQoG','oNmMWQy','WPFdVSozW7FcQa','WR8KlvJcUq','iebieJ8','wr1M','aCkTWQeg','l19iW45n','W507sf8i','W4RdMmoirmk6','W6jKomo4W7a','eM3cLa','WPPkWRDjW68','W4GPdGn8','W7NcUt/cNMi','sSoRw8oYyW','ps3dNCkCW6S','WOldGCo/zmkM','A8kdW7y1WRW','WOmsc03dSa','W4O9cqi','WRFcM8kBrmkQ','s8kpW6m1','WO4pdfNdMW','qCo5W4HEBq','z20+mW','EG0jvdC','AmoCsrNcIa','ASocWRrKW4q','sCoPW71asx4hWRVcNxlcQ8ks','CmovW6aLWOi','W5ddICogg8kM','EshdTCoxWP0','ht/cLCoGWRm','p23dHhvC','W4X2CeOZ','Z4tcQalcQ8kF','W6pcOJFcLhm','eSkbw17dQa','bSo5iSoJBW','istdJSkpW70','rJ5M','iZvRj2S','W5RcPeqEW7C','W63dT8kHWPVcOa','WOO2W5Da','W6ldVSk6WQhcQG','w2SXnZu','W4dcPCkEW6y','Cr4Bv2i','fmkRWQi','W5xdQdG','WQuCWRJdIsK','hxGMWRfu','WOeJWOy','sCkhW70K','h8kxWQS2eW','WPSyhG3dHG','v1ZcQ1L2','b8klF2C4','xaJdTJ7cPa','bmkQWQzD','fg8iWQDv','ocpcSSoG','W5nAsZzq','W6ldVSkMWPNcUG','srGFx34','zSoAW7WNWPC','W5RcOmocCSop','tG9IW7ddHa','mmo9wmkQWPS','mSkiW6GOW48','hSo4tSosyq','W5XBrr7cTG','W7ldN8kElau','W5nAe3Ha','qe3cOL8','x8k1amkbnG','A3FdO8oj','WONcTSkBuSk2','WOLzWReBWQa','W5RcQSkzW6xcJW','o2hdOmokW4i','vmoBsWi','BNq7','WQ7cP8k8WPZcOq','lwxdPa','CSotW6uzWOy','W5tdRWBdLSkV','ix/dOmol','BSklyG','WOCWWO/dOCoE','W4NcO1GOW60','W5dcHmkxfmoQ','W6pcVXRcMge','W4ZdOSkbWPO','wv3cQL5X','WPyXWPNdVSoq','W4/dR8obBq','CSoxW685WOu','WRv2fmoEBG','rgBdLmoHWOy','CCkhW7W0W6m','sSoBsqdcMG','mCkBWQ5QW4O','rcuCWRjA','W6vxrqRcPa','W5lcLmkSla','WQPMeG','emkKWP9eBG','i1RcPNm','hmoKhSkEAa','C2a4BW','W5dcL8k6ACoL','j3xdOa','iNClW70w','W7SCWQZdJYS','cxJcH3m','WQTMc8oPEq','WP7cMCkjxmkD','CxaMAg4','W73dLSkfeaO','W7zfWR4enq','h8oTtCk5WPa','yCk9hCks','W5vtWPO','ySotW6e9WQK','qcZcIJTn','WQBdGYvo','oh7dSSokW5q','W754oCoH','WQD/oq','W758jCoQW7a','WOxdOSkfW7pcVG','W6pdQd3dNq','4P+ltKJdRmov','wwNdGSoGW40','W4PGWOldMgS','bCoUCCoGiG','gxS1WQ9J','W5aCex9s','w2WjWQrD','xXXVW6C','cx8kWRbc','W57dMmkCsCo+','amk3WQ5d','WOpcNCkBrSk2','cSobWRD8W60','pCosWRi','tmo9WRCorq','wKdcVfvX','aItdKmkjW7S','W7qPfW8','a8k9WQezcq','W5NcRCkb','WPqifMLC','pmkpWOVdHrK','smoLW4Cnpq','W47dQHRdLSk3','WP1nWQSrWRS','yM3cNmoyWQO','W45Fdgeo','dCkgbGpcQW','W5ddOIpdLmkX','W50FveSb','W4j5iConW7O','B8ouW4tdO2O','ESkjW4zBW6e','Bxa4','W4dcHmkZaSoQ','W4RcUfyHW7O','W63dKSkdbdi','a2tdI2Kf','W6VdTSkTWPdcUG','DN4JoW','wWj8W4ddHW','W588gW','yWbVW6JdHa','W7HcWPNdHf4','xaJdTJ7cUa','iSohWQFdHZq','W57dRSoj','zHKxvW','umoUgSk/W44','W47cHmkXi8oY','WQLXWQilCa','n8oaWOidW6K','WQy/W61m','WOOasf/dQG','jxddTq','tCo3WQ5i','W48ybsFoGW','WQNdH1VdMYq','umo+WQDApG','WRzNh8orBG','mI3dNCkFW6S','uY1TW6C','l8ktWQ1WW6a','jmknfWlcRW','qdddNN9p','bCk5WR4rgG','WPqNWOtdO8os','W5NdVWvWnG','xmo9BmoVEa','s2m3lW','imkxfWG','tSkXtmk7ca','dg3dIh4D','lmkpWOxdNce','smo9Ba','crBcUKH0','WPviWRyA','sMK9iNG','g8kPWPjFBW','WPCeuMBdMa','WQldN8kubXm','WOq2WPpdU8os','W7hdOx4','bCoOBCo2BG','r1FcR05P','hSkqbqBcRq','p8ksWPFdMG','WPzzWRCzWQO','WR7cMSomu0e','vqRdSHv4','W49xrqRcPa','tmoVEW','W6y1v0ag','W7NcOHxcNG','hSkGWOTE','b8oNwSoMW4y','W7VcTwyP','sMq2nxy','W5nWpSoNW7O','f8kQWRCjFG','w1FcPqfQ','fSoUtmkpWOO','WPL8W6dcT8kx','bwhdJ3uf','dCoFWRfQWQe','FCoBvae','pgpdPmkrWPO','W459jCo8WQ8','o8oCWQ10W7u','WQNcNeBdNN8','W5xcPueOW6W','eCorWQ4Cca','W7ZdUSo2W4ldOq','ku4l','WOdcNmkxra','csRcNSoHWPO','qJT0W750','WRedpN0','scNcGW','W7iCnYy','WONdLcDagW','jSoAWRa','WOrmWOpdGNG','ut9IWR8','mxddVCogW5u','W5q4cqi','WODQl8oz','W5vvWPldPNW','xWT6W4ddJq','WOmwha','wCoVW4mg','qmoYymoJEq','gKFcPfVdUq','y8ktW6q4W5C','WPONWPNdPmow','WOeBssuB','ox3dNSkEWQy','sCoqCGS','gSkogrNcRW','jmowWPfB','ChyQC2W','e8kTWQ1hkq','g8oaWPGSfG','a2ddHwGu','WPCdhG','eY7dICkcW7W','W5CPcaf2','cd/cL8oLWOC','c8o8b8kXWOS','egNdMhGu','W6CTtSoszq','W5pdQdG','a8k5W7jkua','k8kuF247','aSo4W6rqeW','W5hdRSo4Fmok','WQ4JW7flzW','zmknWOjDW7K','W4RcPhGOW7y','WPiwo3Hw','jmovWQbYWRa','gt/dMCozWQu','W73dJ8kFbW4','jsJcI8oP','l8keFa','W75Jk8o6W7W','WRSyW7DqFq','uSkoW5zAW78','zSkiW74UW7i','W7JdQYpdNCk8','rd10W5jU','W47dS2FdNCkP','W5ZcOuOJW6S','gmkQWPbUCG','huRcS3lcUa','dY7cJ8oRWPa','WOpcMSohfSkG','k8kvtw0W','dmklgrJcLq','W4VcRCkcW6BcVW','WRS7W79kCq','W5i3qG','W5CcwKeb','vHPRW7FcGq','wJ7cMSoWWP8','uaTVW6hdSG','WPeBfhjt','WPCUW7bkvG','W4JcPSksW5FcPG','WOpcNCkdwmkN','zSkUjJ8','af8CW7yB','hSoPwG','W7GEWRFdKZi','ysfjW7m','W7FdLmkCbHu','b2xdJgi','W4D+jmo6WRG','Ea0xqG','WPOeruxdRW','g8kUgqVcRW','trPRW6hcGq','W6DosSkDyG','jSkjWOhdLG','WO9xWR8xWR0','W4KNseC','W5ldHCoD','WOCTWP3dImoh','l1ipW7aC','WOldICkzlCoY','WRHsWQ3dMcu','e8osWRWgdq','vmoevaVcIa','WRO/W7n7EG','z8kfWOrQW5y','oSkjWO3dHHK','WPZdUCkvECkj','px/dOCogW4G','W4rmWPVdHw8','w8kXaSkv','A8oaWR9ZW7i','umoYCmoJBq','o2xdOmobW4m','FSoxW6e4','WOrfW4/cNYW','lwpdJmoCW4K','W5v/z8o9W7G','W58MdIz6','gSkxfW','W5FcNe4JW7O','p3ddT8obW48','W6z1amoB','z8omfH3cIa','k2tdT8ozW4m','lCkkzMe/','WRexWQ0','qCk8n8k1oW','b8oFWOqMfW','W48ucuVdTW','W5WMwG','WQ4GW6XHDa','B8kkWOK','gmkWWOPD','WPKaA2i','ASoDuGdcGW','WRW9W79kzG','jCkkW604gq','ASozsWpcHa','uSk+W7rdtG','W5qHfKWb','ASonxYRcMW','WPiWW4FdPmoA','ySowW4BcJhO','kSktWRTZW7u','WPHqWQarWQq','WOyapWNcLa','f33dOmobW4e','WRJcVrRcI20','WPqUWOVdPmoe','qJPZ','pstdM8kjW7y','v8oZyCoOBW','fcRcImoS','aSkWWQmbia','gatdOGOZ','fSkngaRcUa','WPiSWP7dM8oE','hZBcPmo0WPe','W5/cQ8kfW7hcVW','j8khug85','gCkeWQa','e1VdG28z','gu7cSehdTa','aCk3WRSHgG','edpdLCknW7q','WPC3gh1r','gSoNra','cs7cNSoQWPS','WOGsfW','k18E','h8kTWQeIdq','W4xdTgtdKmk2','W5Cffq52','WPtcGmkjrmkU','W4ddTYC','WR/cQ8oZW4/dUW','e8kQWQHGia','WP5lWOyAWQO','owtdOmoDW58','WONdLqO','W77dR8kHWPhcOa','W5ObtW','W73dO8oLEq','W5BcU2a5W7C','W4RcT8keW6hcVW','W5ZcOLS+','W4Wrxr/cTq','WQO7W7bLCq','ncFdMG','mrObW4rl','WQePpeW','yhldQCokW4C','y8oWEHFcHa','kxGGWRCI','d8kgbaZcRW','DxqNCN0','dKNcONFdTW','W57cP8ke','WQf6fConzW','fsmJAa','wcPtWRzF','W4D+omolW7q','hCkdy2C3','xSkGf8kknG','qaFcTca','W6rwWOtdNNi','W6FcOGZcRge','oSkdAYiN','cetdRLLX','W7hcMmkSmmoJ','tMK9mLa','euNcUNlcUG','WOCTWP0','W7RdVSkSW5C','4P6QW6XPjmoR','W43dV8oCCCoz','g8oaWOas','W4ddOJ7dTSk1','W6/dTCoBEmok','j8ogWRb9WQK','W6RdN8kEuXm','xmkHc8kukG','W6ldVSkVWPVcOa','WPyXWPNcQSkv','xulcQXGJ','cgNdG3Wz','dSkQWPvOFa','ECkvW49RW78','bCk8nmkMkW','rI8TW6jS','WQrXfq','bCoPrG','WPeRWOBdO8os','h13cPgJdVq','EI9Lnx4','AhZdQmktWOK','W57cLCktW7VcTW','r8o5za','WPyCevPB','W4r0lSocW7W','W6rVWQ4kla','w8k1aSktnG','WRLbWOWw','ivme','W5xcQu4+W6S','CdWvua','WP8Fgx5a','WQ3dVCkUWPJcQa','o8kdW6G1W7q','W5VdNmkkiW4','W53cP8keWRlcOG','ztDYW7PJ','tbXVWRS','WRb9aSoyBq','WPOFg30','hwCkWQXp','fmkVW6edeq','ncZdMCkcW6W','sZfKW7nN','WQWMW78','pwuhW7ip','awddG3WF','u1hcUN9X','W5xcQuGOW7e','WQKSW6PnyW','qmoOc8kEjW','W7lcOW/cT20','WRaOWRZdLdO','ceFcPG','WPZcImkyuCkU','W7lcKH3cKMe','W7BdN8knfW','W4/dR8oFDq','baX8WRVdSa','W4K4hW93','WP85h3zD','kmoBWRvoW6K','pmkhmt57','rfVcUv9V','W4rPpSo8W7q','CCkdWR0LW6C','F8oBwLhdKq','WOmvaa','amo8t8kYWPS','WPJdHtXmea','WQGVa8ofFW','WO8dgctcMq','WO8faGNcIW','gvRcLx/dQW','WOSwfKi','WP1IoSoVW7S','a8kFWR4xdW','fs3cTCo0WO0','W5nBWOpdPg0','WQBdGIfAeG','WPZdG3CDlW','W5ZdG8kLfW','xaDV','i0tcT3ZdVq','qCo7W7mlChajW47cIs3cKGO','W6pcVXlcLLS','p13cPwRdTW','WOLFWQCtW6C','W7LGeSopza','hmkggbVcRW','W5dcO8koW7VcOW','W5hdPIBdHSk8','AdhcPCkpWOy','WQHqe8opFq','dSoJW6m','qtrVW7rP','lMyIFx0','W43cO8kcW7pcOW','zCozsaFcRG','WPOgWOZdKIC','d0dcUwNdTa','WP3cQxJdLCkK','W47cGmkMk8oZ','CwhcNmomWRG','W4xcHmkRaCoQ','WP0Bbfm','WRlcTmk8WPBdSa','hmklhtZcOG','W4ZdQSoiqSou','W5nyfL7dTG','zConW5bEW6K','i8kcWOpdLYG','WPlcQ8kClCkA','cCo2WO4HWQ4','vcKQbW','eZVcPmoPWPm','fN8cWPzj','WPddNJS','aZXHW6nJ','W6nOa8oQ','WORdMtPuiq','W7VcQbZcNMO','W6ldTmk6','ySogpYXT','FmkiW6y','DmowW6SKWOi','WOKnWQNdKa','gSkkeqFcVG','D8kEWQTJWRG','WRVcO8oXW47dUuy0bq9Fi3a','zmkqW4nrWQ0','WP/cNSk0rmkX','omoBWRD7W7u','WPikb3XA','WPiEe1Xc','W5BdGIbbqa','p8kiWP8+dq','rSo0CCoLya','W4FcK8kTk8o0','W4OMwLSr'];a0_0x3967=function(){return _0x2de7e1;};return a0_0x3967();}function getCustomTracesPower(){const _0x3d200a=a0_0x21afb1,_0xbdcf15=getGraphDisplayUnits(),_0x4d126a=CURVE_CONVERSIONS['q'][_0xbdcf15['q']]||0x1,_0x1aa837=CURVE_CONVERSIONS[_0x3d200a(0x26f,'XRBL')][_0xbdcf15['pow']]||0x1,_0xbdeab=typeof getUnitLabel===_0x3d200a(0xecc,'O8jx')+_0x3d200a(0x329,'mIwx')?getUnitLabel(_0x3d200a(0x270,'2j(w'),_0xbdcf15[_0x3d200a(0x1dc,'bMaB')]):_0xbdcf15[_0x3d200a(0x434,'%llI')];return customCurves[_0x3d200a(0x6e9,'^WDP')+'ap'](_0x5f04d5=>{const _0x1a5f49=_0x3d200a;if(!_0x5f04d5[_0x1a5f49(0xae6,'[GdJ')+'d']||!_0x5f04d5[_0x1a5f49(0xf69,'O2*S')]||!_0x5f04d5[_0x1a5f49(0x5ed,'d4#Z')][_0x1a5f49(0x89b,'ZQbK')+'h'])return[];return[{'type':_0x1a5f49(0x8ed,'hsDz')+'er','mode':_0x1a5f49(0x6a6,'fY%z'),'name':(_0x5f04d5[_0x1a5f49(0x1028,'WYhc')]||_0x1a5f49(0x734,'LWa7')+'m')+'\x20P','x':_0x5f04d5['q'][_0x1a5f49(0x2d5,'hsDz')](_0x413524=>_0x413524*_0x4d126a),'y':_0x5f04d5[_0x1a5f49(0xe7c,'z2Tr')][_0x1a5f49(0xdb8,'^WDP')](_0x3fae71=>_0x3fae71*_0x1aa837),'line':{'color':_0x5f04d5[_0x1a5f49(0xdd2,'XRBL')],'width':1.8,'dash':_0x1a5f49(0x2fb,'FKaL')+'ot'},'legendgroup':_0x1a5f49(0xc3f,'2U4A')+'m_'+_0x5f04d5['id'],'hovertemplate':(_0x5f04d5[_0x1a5f49(0x5d3,'qape')]||_0x1a5f49(0x8b0,'2U4A')+'m')+('<br>P'+_0x1a5f49(0x1d0,'zfK(')+_0x1a5f49(0x3dd,'QIf#'))+_0xbdeab+('<extr'+_0x1a5f49(0x20f,'ayOU')+_0x1a5f49(0xa73,'Hgl$'))}];});}async function fitCustomCurve(_0x3c21bc){const _0xaed6c3=a0_0x21afb1,_0x5a4cd5=customCurves['find'](_0x57c42d=>_0x57c42d['id']===_0x3c21bc);if(!_0x5a4cd5)return;const _0x333e45=document[_0xaed6c3(0xb90,'^WDP')+'ement'+_0xaed6c3(0x7bd,'MvFO')](_0xaed6c3(0x101e,'$gCG')+_0xaed6c3(0xb2c,'XmTZ')+'y-'+_0x3c21bc),_0x50944a=_0x333e45[_0xaed6c3(0x59b,'nlER')+_0xaed6c3(0x5cc,'XmTZ')+_0xaed6c3(0xd88,'2j(w')](_0xaed6c3(0x56c,'1qzA')+_0xaed6c3(0x8ca,'MPp6')+_0xaed6c3(0x244,'zfK(')),_0x4980b0=_0x333e45[_0xaed6c3(0x57b,'QIf#')+'Selec'+'tor'](_0xaed6c3(0x58f,'8OR)')+'plot-'+'curve'),_0x20f351=_0x333e45['query'+'Selec'+_0xaed6c3(0x550,'XmTZ')](_0xaed6c3(0x4a5,'E1r%')+_0xaed6c3(0x9c3,'lTg5')+'a-inp'+'ut'),{q_h:_0x190873,q_eta:_0x3001b4}=parseDataText(_0x20f351['value']);if(_0x190873['lengt'+'h']<0x3){_0x50944a['class'+_0xaed6c3(0xd09,'zfK(')]='curve'+_0xaed6c3(0xb81,'ToWT')+_0xaed6c3(0x992,'l&tG')+_0xaed6c3(0xca4,'@(im'),_0x50944a[_0xaed6c3(0xc42,'l0Vk')+_0xaed6c3(0x1081,'lNG6')+'t']='✗\x20Nee'+_0xaed6c3(0x6b1,'O2*S')+_0xaed6c3(0xe5a,'Hgl$')+_0xaed6c3(0xd17,'WYhc')+_0xaed6c3(0x282,'1qzA')+_0xaed6c3(0xb2a,'MvFO')+'nts';return;}_0x50944a[_0xaed6c3(0x5a1,'XBWK')+_0xaed6c3(0x5b6,'J$mI')]=_0xaed6c3(0xde1,'l&tG')+'-stat'+_0xaed6c3(0x3e4,'LWa7')+'sy',_0x50944a[_0xaed6c3(0xb38,'XRBL')+_0xaed6c3(0x341,'mIwx')+'t']=_0xaed6c3(0xcf8,'l0Vk')+_0xaed6c3(0x962,'MvFO')+_0xaed6c3(0x415,'ZQbK')+'…',_0x4980b0[_0xaed6c3(0x3a8,'qape')+_0xaed6c3(0x3a5,'hsDz')]=!![];const _0xe9ce6e={'q_h':_0x190873};if(_0x3001b4[_0xaed6c3(0xc4b,'XmTZ')+'h']>=0x3)_0xe9ce6e[_0xaed6c3(0xc0d,'[GdJ')]=_0x3001b4;else _0xe9ce6e['q_eta']=_0x190873[_0xaed6c3(0x9b0,'lNG6')](([_0x28c5e7])=>[_0x28c5e7,0x46]);try{const _0x3a3c55=await fetch(_0xaed6c3(0x945,'F40Y')+'/fit-'+'curve'+'s',{'method':'POST','headers':{'Content-Type':_0xaed6c3(0x108d,'F40Y')+_0xaed6c3(0x1bf,'T)O0')+_0xaed6c3(0x738,'9Vcr')+'n'},'body':JSON['strin'+_0xaed6c3(0x265,'hsDz')](_0xe9ce6e)}),_0x57b961=await _0x3a3c55['json']();if(!_0x57b961['ok']){_0x50944a[_0xaed6c3(0xcd4,'E1r%')+_0xaed6c3(0xca8,'MPp6')]=_0xaed6c3(0x8e6,'(7CV')+_0xaed6c3(0x322,'8OR)')+_0xaed6c3(0xbd8,'%iKk')+_0xaed6c3(0x90a,'ro@9'),_0x50944a[_0xaed6c3(0x1077,'WYhc')+_0xaed6c3(0x47b,'8OR)')+'t']='✗\x20'+(_0x57b961['error']||_0xaed6c3(0xb9b,'2j(w')+_0xaed6c3(0x71b,'QIf#'));return;}const _0xacf927=_0x57b961[_0xaed6c3(0xe6a,'2U4A')],_0x3dc18d=Array[_0xaed6c3(0x350,'QIf#')]({'length':0x50},(_0x11cc1d,_0x3bdae5)=>_0x3bdae5/0x4f*_0xacf927),_0x98c8eb=(_0x22778e,_0x4578cb)=>_0x22778e[_0xaed6c3(0x6ca,'LWa7')+'e']((_0x327b80,_0x2ca0d5,_0x240ce6)=>_0x327b80+_0x2ca0d5*Math[_0xaed6c3(0x867,'ToWT')](_0x4578cb,_0x240ce6),0x0),_0x169d4c=[_0x57b961[_0xaed6c3(0x8bb,'9Vcr')],_0x57b961[_0xaed6c3(0xc51,'%llI')],_0x57b961[_0xaed6c3(0xa9f,'T)O0')],_0x57b961['hq_a3']],_0x4f977d=[_0x57b961[_0xaed6c3(0xa16,'lTg5')+'0'],_0x57b961[_0xaed6c3(0x427,'fY%z')+'1'],_0x57b961[_0xaed6c3(0xfc7,'^WDP')+'2'],_0x57b961['eff_b'+'3']],_0x40e4c2=[_0x57b961['pow_p'+'0'],_0x57b961[_0xaed6c3(0x3c3,'MPp6')+'1'],_0x57b961[_0xaed6c3(0xdc7,'QIf#')+'2']];_0x5a4cd5['q']=_0x3dc18d[_0xaed6c3(0xc25,'FKaL')](_0x4e65c2=>Math[_0xaed6c3(0x571,'o$gV')](_0x4e65c2*0x64)/0x64),_0x5a4cd5['h']=_0x3dc18d[_0xaed6c3(0x1075,'(HU5')](_0x560965=>Math[_0xaed6c3(0x861,'ToWT')](0x0,_0x98c8eb(_0x169d4c,_0x560965))),_0x5a4cd5['eta']=_0x3001b4[_0xaed6c3(0x437,'@(im')+'h']>=0x3?_0x3dc18d[_0xaed6c3(0x228,'8OR)')](_0x11440a=>Math[_0xaed6c3(0x21a,'qape')](0x0,Math[_0xaed6c3(0xb26,'lNG6')](0x64,_0x98c8eb(_0x4f977d,_0x11440a)))):null,_0x5a4cd5[_0xaed6c3(0x3e2,'ayOU')]=_0x3dc18d[_0xaed6c3(0xcc5,'$gCG')](_0x4f5562=>Math[_0xaed6c3(0x644,'lNG6')](0x0,_0x98c8eb(_0x40e4c2,_0x4f5562))),_0x5a4cd5[_0xaed6c3(0x297,'hsDz')+'d']=!![],_0x5a4cd5['raw_q'+'_h']=_0x190873,_0x5a4cd5[_0xaed6c3(0xc5c,'fY%z')+'_eta']=_0x3001b4[_0xaed6c3(0x6b0,'E1r%')+'h']>=0x3?_0x3001b4:null,_0x50944a['class'+'Name']=_0xaed6c3(0x101e,'$gCG')+'-stat'+_0xaed6c3(0xdbf,'o$gV'),_0x50944a[_0xaed6c3(0x263,'(HU5')+_0xaed6c3(0xb63,'LWa7')+'t']=_0xaed6c3(0xe3c,'Hgl$')+_0xaed6c3(0xfea,'8OR)')+_0xaed6c3(0x74a,'lNG6')+'x='+_0x57b961['q_max'][_0xaed6c3(0xb7a,'QIf#')+'ed'](0x1)+(_0xaed6c3(0xa46,'ZQbK')+_0xaed6c3(0xe9b,'fY%z'))+_0x57b961[_0xaed6c3(0x6e7,'ZQbK')+'ep']+(_0xaed6c3(0x8cc,'LWa7')+_0xaed6c3(0xdb6,'O2*S'))+_0x57b961[_0xaed6c3(0x553,'LWa7')],updateCurveCountBadge(),renderAll();}catch(_0x13ede5){_0x50944a[_0xaed6c3(0x6d1,'%iKk')+_0xaed6c3(0xbdd,'^WDP')]=_0xaed6c3(0x3ca,'2j(w')+_0xaed6c3(0x9ef,'9Vcr')+'us\x20er'+_0xaed6c3(0x8c4,'F40Y'),_0x50944a['textC'+_0xaed6c3(0xf4b,'XmTZ')+'t']='✗\x20Net'+_0xaed6c3(0x8a3,'1qzA')+_0xaed6c3(0xb0e,'E7d)')+':\x20'+_0x13ede5[_0xaed6c3(0xd7e,'QIf#')+'ge'];}finally{_0x4980b0[_0xaed6c3(0xb04,'XRBL')+'led']=![];}}function addCustomCurveRow(){const _0x4fa6ed=a0_0x21afb1,_0x3674ad=++_curveIdCounter,_0x12db46=CUSTOM_COLORS[(_0x3674ad-0x1)%CUSTOM_COLORS[_0x4fa6ed(0x1a7,'9Vcr')+'h']];customCurves[_0x4fa6ed(0x2b5,'z2Tr')]({'id':_0x3674ad,'label':_0x4fa6ed(0xcb7,'^WDP')+'\x20'+_0x3674ad,'color':_0x12db46,'fitted':![]});const _0x2d758b=document[_0x4fa6ed(0xe3f,'@(im')+_0x4fa6ed(0xe65,'qape')+_0x4fa6ed(0xe58,'LWa7')](_0x4fa6ed(0xb14,'Hgl$')+_0x4fa6ed(0x4be,'qape')+_0x4fa6ed(0x983,'XRBL')+'t'),_0xb4618d=document[_0x4fa6ed(0x9ec,'z2Tr')+'eElem'+_0x4fa6ed(0x6ba,'fY%z')](_0x4fa6ed(0x2a4,'d4#Z'));_0xb4618d[_0x4fa6ed(0x5d1,'ToWT')+_0x4fa6ed(0xb30,'l0Vk')]=_0x4fa6ed(0x49c,'mIwx')+_0x4fa6ed(0x1022,'O2*S')+_0x4fa6ed(0x655,'F40Y')+_0x4fa6ed(0x399,'QIf#'),_0xb4618d['id']=_0x4fa6ed(0x754,'@(im')+'-entr'+'y-'+_0x3674ad;const _0x26f036=CUSTOM_COLORS['map']((_0x389921,_0x360f6c)=>_0x4fa6ed(0x7fc,'d4#Z')+'\x20clas'+_0x4fa6ed(0x1044,'O2*S')+_0x4fa6ed(0xce2,'d4#Z')+_0x4fa6ed(0x29a,'LWa7')+'swatc'+'h\x20'+(_0x389921===_0x12db46?'activ'+'e':'')+(_0x4fa6ed(0x7de,'@(im')+'\x20\x20\x20\x20\x20'+'\x20\x20sty'+_0x4fa6ed(0x989,'d4#Z')+_0x4fa6ed(0x7dc,'O8jx')+_0x4fa6ed(0x86a,'ayOU'))+_0x389921+(_0x4fa6ed(0x1f3,'E7d)')+_0x4fa6ed(0xd50,'E7d)')+_0x4fa6ed(0x9ac,'$gCG')+_0x4fa6ed(0xb55,'2U4A')+_0x4fa6ed(0x4a6,'hsDz'))+_0x389921+(_0x4fa6ed(0xb0f,'ro@9')+_0x4fa6ed(0x1ec,'O8jx')+_0x4fa6ed(0xcbc,'[GdJ')+'a-cur'+_0x4fa6ed(0x5c9,'Band')+'=\x22')+_0x3674ad+(_0x4fa6ed(0x101b,'MvFO')+_0x4fa6ed(0x3b4,'ToWT')+_0x4fa6ed(0x253,'lTg5')+_0x4fa6ed(0xf20,'2j(w'))+_0x389921+('\x22></s'+_0x4fa6ed(0x513,'W@8N')))[_0x4fa6ed(0x28a,'lNG6')]('');_0xb4618d[_0x4fa6ed(0x5bc,'E7d)')+_0x4fa6ed(0x3a6,'2j(w')]='\x0a\x20\x20\x20\x20'+_0x4fa6ed(0xf74,'%iKk')+_0x4fa6ed(0xf79,'ZQbK')+_0x4fa6ed(0x27f,'W@8N')+_0x4fa6ed(0xf65,'MPp6')+_0x4fa6ed(0xa4d,'lNG6')+_0x4fa6ed(0x6e3,'[GdJ')+'-star'+'t\x20gap'+_0x4fa6ed(0xb33,'ro@9')+_0x4fa6ed(0xe4a,'J$mI')+_0x4fa6ed(0xd32,'F40Y')+'\x20clas'+_0x4fa6ed(0x7b6,'l0Vk')+_0x4fa6ed(0x1036,'zfK(')+_0x4fa6ed(0x822,'1qzA')+'>\x0a\x20\x20\x20'+_0x4fa6ed(0x98b,'W@8N')+_0x4fa6ed(0x729,'MvFO')+_0x4fa6ed(0x1dd,'9Vcr')+_0x4fa6ed(0xadc,'fY%z')+_0x4fa6ed(0x924,'XmTZ')+_0x4fa6ed(0x363,'2U4A')+_0x4fa6ed(0xd2b,'%iKk')+_0x4fa6ed(0x1015,'MvFO')+_0x4fa6ed(0x352,'9Vcr')+_0x4fa6ed(0x92a,'$gCG')+_0x4fa6ed(0x1009,'XmTZ')+_0x4fa6ed(0x458,'[GdJ')+_0x4fa6ed(0xa8f,'o$gV')+_0x4fa6ed(0x89d,'8OR)')+_0x4fa6ed(0x669,'XRBL')+'2\x20mb-'+_0x4fa6ed(0x42a,'ToWT')+_0x4fa6ed(0x467,'FKaL')+_0x4fa6ed(0x666,'FKaL')+_0x4fa6ed(0xebf,'%iKk')+_0x4fa6ed(0x1058,'l0Vk')+_0x4fa6ed(0x43a,'2U4A')+_0x4fa6ed(0x2ac,'W@8N')+'lor-d'+_0x4fa6ed(0x2e8,'$gCG')+_0x4fa6ed(0xf87,'@(im')+_0x4fa6ed(0xbfa,'z2Tr')+_0x4fa6ed(0x21d,'XmTZ')+_0x4fa6ed(0x1054,'$gCG')+_0x4fa6ed(0x475,'[GdJ')+_0x4fa6ed(0x1061,'ZQbK')+_0x4fa6ed(0xf7e,'(7CV')+_0x4fa6ed(0x59f,'XmTZ')+_0x4fa6ed(0x2e1,'WYhc')+_0x4fa6ed(0x9ca,'T)O0')+'2px;h'+_0x4fa6ed(0xebc,'lTg5')+_0x4fa6ed(0xc7a,'(HU5')+_0x4fa6ed(0xf9f,'T)O0')+'er-ra'+_0x4fa6ed(0x419,'zfK(')+_0x4fa6ed(0x414,'lNG6')+'ackgr'+'ound:'+_0x12db46+(';flex'+_0x4fa6ed(0x280,'ToWT')+_0x4fa6ed(0x707,'E1r%')+_0x4fa6ed(0x66b,'E1r%')+_0x4fa6ed(0x1079,'ayOU')+_0x4fa6ed(0x8f1,'F40Y')+_0x4fa6ed(0x5ef,'MvFO')+_0x4fa6ed(0x1a6,'XBWK')+_0x4fa6ed(0x906,'2j(w')+_0x4fa6ed(0xa74,'[GdJ')+_0x4fa6ed(0x3d0,'(7CV')+_0x4fa6ed(0xe45,'QIf#')+_0x4fa6ed(0x108e,'hsDz')+_0x4fa6ed(0x87c,'lNG6')+_0x4fa6ed(0x6f6,'QIf#')+_0x4fa6ed(0xa7b,'O2*S')+_0x4fa6ed(0xd07,'z2Tr')+'-sm\x20f'+_0x4fa6ed(0x3af,'1qzA')+_0x4fa6ed(0x80a,'LWa7')+'l-dar'+_0x4fa6ed(0xca9,'FKaL')+'ve-la'+_0x4fa6ed(0xb6d,'%iKk')+_0x4fa6ed(0xba5,'^WDP')+_0x4fa6ed(0x9bd,'2U4A')+_0x4fa6ed(0xe4a,'J$mI')+_0x4fa6ed(0xd0e,'bMaB')+_0x4fa6ed(0x700,'%iKk')+_0x4fa6ed(0xf80,'%llI')+'Curve'+'\x20')+_0x3674ad+(_0x4fa6ed(0x5a7,'Band')+_0x4fa6ed(0x1b4,'T)O0')+_0x4fa6ed(0xb86,'J$mI')+_0x4fa6ed(0xa97,'8OR)')+_0x4fa6ed(0x101b,'MvFO')+_0x4fa6ed(0x467,'FKaL')+_0x4fa6ed(0xfe0,'1qzA')+_0x4fa6ed(0xc9b,'$gCG')+_0x4fa6ed(0x672,'F40Y')+_0x4fa6ed(0xa6c,'W@8N')+_0x4fa6ed(0x389,'o$gV')+_0x4fa6ed(0xa69,'(7CV')+_0x4fa6ed(0xf19,'XmTZ')+_0x4fa6ed(0xfee,'2j(w')+_0x4fa6ed(0x357,'l0Vk')+'00\x22\x0a\x20'+_0x4fa6ed(0x2a1,'XBWK')+_0x4fa6ed(0xd24,'Band')+_0x4fa6ed(0x1ec,'O8jx')+_0x4fa6ed(0x765,'T)O0')+_0x4fa6ed(0x50b,'W@8N')+'e-id='+'\x22')+_0x3674ad+(_0x4fa6ed(0x952,'^WDP')+'\x20\x20\x20\x20\x20'+'\x20\x20\x20<s'+'pan\x20c'+_0x4fa6ed(0x926,'[GdJ')+_0x4fa6ed(0x39c,'Hgl$')+_0x4fa6ed(0x858,'(HU5')+_0x4fa6ed(0xd36,'fY%z')+_0x4fa6ed(0x215,'O2*S')+_0x4fa6ed(0xa47,'lNG6')+_0x4fa6ed(0xd63,'9Vcr')+_0x4fa6ed(0xcda,'qape')+'n>\x0a\x20\x20'+_0x4fa6ed(0xd52,'o$gV')+_0x4fa6ed(0x7ea,'XRBL')+_0x4fa6ed(0x5ae,'XRBL')+_0x4fa6ed(0xb5f,'ToWT')+_0x4fa6ed(0x733,'^WDP')+'x\x20gap'+'-1\x20al'+_0x4fa6ed(0x75c,'ToWT')+_0x4fa6ed(0xbec,'lTg5')+_0x4fa6ed(0xf6f,'l0Vk')+'r\x20fle'+_0x4fa6ed(0x423,'2j(w')+'p\x22\x20id'+'=\x22swa'+'tches'+'-')+_0x3674ad+('\x22>\x0a\x20\x20'+'\x20\x20\x20\x20\x20'+_0x4fa6ed(0xd24,'Band'))+_0x26f036+(_0x4fa6ed(0x5c0,'MPp6')+_0x4fa6ed(0x755,'QIf#')+_0x4fa6ed(0xb4a,'Hgl$')+_0x4fa6ed(0xdce,'E1r%')+'\x20\x20\x20\x20\x20'+'\x20\x20\x20<b'+'utton'+_0x4fa6ed(0xd4b,'J$mI')+_0x4fa6ed(0x416,'o$gV')+'ton\x22\x20'+_0x4fa6ed(0x4b6,'O8jx')+_0x4fa6ed(0xa93,'o$gV')+_0x4fa6ed(0xf66,'8OR)')+_0x4fa6ed(0x5b7,'@(im')+_0x4fa6ed(0x1e9,'8OR)')+_0x4fa6ed(0x1002,'9Vcr')+_0x4fa6ed(0xc64,'J$mI')+'r\x20py-'+'0\x20px-'+_0x4fa6ed(0xbd5,'^WDP')+'auto\x20'+_0x4fa6ed(0x89c,'(7CV')+_0x4fa6ed(0x39a,'XBWK')+_0x4fa6ed(0x24f,'F40Y')+_0x4fa6ed(0x332,'LWa7')+_0x4fa6ed(0xee6,'8OR)')+'\x20\x20\x20\x20\x20'+_0x4fa6ed(0xc82,'d4#Z')+_0x4fa6ed(0x1bb,'(HU5')+_0x4fa6ed(0xce5,'ToWT')+_0x4fa6ed(0x1c1,'mIwx')+'\x22')+_0x3674ad+(_0x4fa6ed(0x74b,'(HU5')+_0x4fa6ed(0x75b,'XRBL')+_0x4fa6ed(0xd82,'lTg5')+_0x4fa6ed(0x202,'l0Vk')+_0x4fa6ed(0x1fc,'F40Y')+_0x4fa6ed(0xf17,'$gCG')+_0x4fa6ed(0x8cd,'%iKk')+_0x4fa6ed(0x57e,'hsDz')+_0x4fa6ed(0xcb1,'[GdJ')+'iv>\x0a\x20'+_0x4fa6ed(0x1074,'O2*S')+_0x4fa6ed(0xacf,'ZQbK')+_0x4fa6ed(0x428,'J$mI')+_0x4fa6ed(0xdf5,'fY%z')+'ry\x20--'+_0x4fa6ed(0x4e7,'2j(w')+_0x4fa6ed(0xa61,'E1r%')+_0x4fa6ed(0xa2b,'@(im')+_0x4fa6ed(0xf79,'ZQbK')+_0x4fa6ed(0x6a7,'hsDz')+'\x20g-2\x22'+'>\x0a\x20\x20\x20'+_0x4fa6ed(0xea4,'%llI')+_0x4fa6ed(0x7ce,'J$mI')+_0x4fa6ed(0xa9b,'E1r%')+_0x4fa6ed(0xbd2,'bMaB')+'ol-12'+_0x4fa6ed(0x2e5,'O2*S')+_0x4fa6ed(0x70e,'9Vcr')+_0x4fa6ed(0x281,'nlER')+_0x4fa6ed(0x72f,'ayOU')+_0x4fa6ed(0x950,'XmTZ')+_0x4fa6ed(0x2cf,'zfK(')+'orm-l'+_0x4fa6ed(0xda6,'Band')+_0x4fa6ed(0x88c,'%iKk')+_0x4fa6ed(0x2d1,'T)O0')+_0x4fa6ed(0x884,'$gCG')+_0x4fa6ed(0x52b,'Band')+_0x4fa6ed(0xdc1,'l0Vk')+_0x4fa6ed(0xc97,'lTg5')+_0x4fa6ed(0x93d,'T)O0')+_0x4fa6ed(0x58c,'l0Vk')+_0x4fa6ed(0x929,'lTg5')+_0x4fa6ed(0x6e8,'hsDz')+_0x4fa6ed(0xeb3,'8OR)')+_0x4fa6ed(0x748,'XBWK')+_0x4fa6ed(0x7c7,'(7CV')+_0x4fa6ed(0x7c5,'mIwx')+_0x4fa6ed(0x8c1,'2j(w')+'text-'+'muted'+'\x20fw-n'+_0x4fa6ed(0xb69,'^WDP')+_0x4fa6ed(0xd8e,'T)O0')+_0x4fa6ed(0xf16,'XmTZ')+'\x20line'+':\x20<co'+'de\x20st'+_0x4fa6ed(0x1d3,'Band')+_0x4fa6ed(0xad1,'hsDz')+_0x4fa6ed(0x5a8,'mIwx')+_0x4fa6ed(0x89a,'WYhc')+_0x4fa6ed(0x8ee,'LWa7')+_0x4fa6ed(0xb94,'zfK(')+_0x4fa6ed(0xa48,'O2*S')+_0x4fa6ed(0x2eb,'E7d)')+_0x4fa6ed(0xe1a,'W@8N')+_0x4fa6ed(0x7f1,'E7d)')+_0x4fa6ed(0x739,'ToWT')+_0x4fa6ed(0x7d7,'z2Tr')+'de\x20st'+_0x4fa6ed(0xee9,'$gCG')+_0x4fa6ed(0x6ed,'MvFO')+_0x4fa6ed(0x409,'(HU5')+'49e\x22>'+'100,\x20'+'45.2,'+_0x4fa6ed(0xaba,'Band')+_0x4fa6ed(0x3b0,'nlER')+_0x4fa6ed(0xc89,'bMaB')+_0x4fa6ed(0x8b5,'z2Tr')+_0x4fa6ed(0xe99,'l&tG')+'\x20\x20\x20\x20\x20'+_0x4fa6ed(0x5f0,'8OR)')+_0x4fa6ed(0x9dc,'ro@9')+_0x4fa6ed(0x7c8,'(7CV')+'\x20\x20\x20\x20\x20'+_0x4fa6ed(0x408,'o$gV')+_0x4fa6ed(0xade,'E7d)')+_0x4fa6ed(0xfe7,'XBWK')+'ss=\x22f'+_0x4fa6ed(0xb9d,'zfK(')+_0x4fa6ed(0x801,'MPp6')+_0x4fa6ed(0x560,'^WDP')+_0x4fa6ed(0xe7e,'MPp6')+'ta-in'+_0x4fa6ed(0x5b0,'hsDz')+_0x4fa6ed(0xead,'XBWK')+_0x4fa6ed(0x9f1,'FKaL')+_0x4fa6ed(0xc1d,'bMaB')+_0x4fa6ed(0x467,'FKaL')+_0x4fa6ed(0xd50,'E7d)')+_0x4fa6ed(0xee6,'8OR)')+_0x4fa6ed(0x2a1,'XBWK')+_0x4fa6ed(0xffb,'bMaB')+_0x4fa6ed(0xf28,'MPp6')+'der=\x22'+_0x4fa6ed(0xa39,'nlER')+_0x4fa6ed(0xf30,'qape')+_0x4fa6ed(0x8ad,'hsDz')+_0x4fa6ed(0x5a4,'LWa7')+_0x4fa6ed(0x785,'@(im')+_0x4fa6ed(0x935,'ayOU')+_0x4fa6ed(0xe15,'W@8N')+_0x4fa6ed(0x5f9,'zfK(')+_0x4fa6ed(0x7ad,'hsDz')+_0x4fa6ed(0x67f,'LWa7')+_0x4fa6ed(0xa54,'MPp6')+_0x4fa6ed(0x74e,'(HU5')+_0x4fa6ed(0xf22,'E1r%')+'\x20\x20\x20\x20\x20'+_0x4fa6ed(0x7c8,'(7CV')+_0x4fa6ed(0x6ac,'MvFO')+'\x20\x20\x20\x20\x20'+_0x4fa6ed(0x203,'l&tG')+_0x4fa6ed(0x510,'WYhc')+_0x4fa6ed(0x1047,'ToWT')+'a-')+_0x3674ad+(_0x4fa6ed(0x920,'(7CV')+_0x4fa6ed(0x93e,'(HU5')+'ea>\x0a\x20'+_0x4fa6ed(0xbff,'^WDP')+_0x4fa6ed(0xcf0,'ZQbK')+_0x4fa6ed(0x1d6,'ro@9')+_0x4fa6ed(0xb17,'l&tG')+_0x4fa6ed(0x703,'Hgl$')+_0x4fa6ed(0xb25,'zfK(')+_0x4fa6ed(0x1fb,'2j(w')+_0x4fa6ed(0xcad,'Band')+'!--\x20S'+'tatus'+_0x4fa6ed(0xf0e,'nlER')+_0x4fa6ed(0x23d,'QIf#')+'-->\x0a\x20'+_0x4fa6ed(0x281,'nlER')+_0x4fa6ed(0x7a0,'bMaB')+'v\x20cla'+_0x4fa6ed(0x928,'MvFO')+_0x4fa6ed(0x2bc,'8OR)')+_0x4fa6ed(0x590,'XBWK')+_0x4fa6ed(0x760,'W@8N')+_0x4fa6ed(0xdf1,'nlER')+_0x4fa6ed(0xdaf,'l0Vk')+_0x4fa6ed(0xa35,'lTg5')+_0x4fa6ed(0x5d2,'LWa7')+_0x4fa6ed(0x65c,'o$gV')+_0x4fa6ed(0x57e,'hsDz')+_0x4fa6ed(0xb1e,'zfK(')+_0x4fa6ed(0xda7,'hsDz')+_0x4fa6ed(0xb39,'E7d)')+'=\x22but'+_0x4fa6ed(0x7f4,'F40Y')+_0x4fa6ed(0xc23,'9Vcr')+_0x4fa6ed(0xfc6,'Hgl$')+_0x4fa6ed(0x1e1,'z2Tr')+_0x4fa6ed(0xd95,'%iKk')+'n-pri'+_0x4fa6ed(0x680,'8OR)')+_0x4fa6ed(0xb2f,'LWa7')+'lot-c'+'urve\x22'+_0x4fa6ed(0xdb0,'hsDz')+'-curv'+'e-id='+'\x22')+_0x3674ad+(_0x4fa6ed(0x578,'(HU5')+_0x4fa6ed(0xd24,'Band')+_0x4fa6ed(0x1074,'O2*S')+_0x4fa6ed(0x52a,'E1r%')+_0x4fa6ed(0xf1d,'$gCG')+'bi\x20bi'+_0x4fa6ed(0x96b,'W@8N')+_0x4fa6ed(0xb8e,'@(im')+'me-1\x22'+_0x4fa6ed(0x6e4,'[GdJ')+_0x4fa6ed(0xa8a,'fY%z')+_0x4fa6ed(0x929,'lTg5')+'\x20\x20\x20\x20\x20'+'</but'+'ton>\x0a'+_0x4fa6ed(0x542,'[GdJ')+_0x4fa6ed(0x1045,'2j(w')+_0x4fa6ed(0x92e,'lNG6')+_0x4fa6ed(0x4d1,'ZQbK')+_0x4fa6ed(0x28b,'[GdJ')+_0x4fa6ed(0xef2,'W@8N')+_0x4fa6ed(0x259,'hsDz')+_0x4fa6ed(0x61d,'LWa7')+_0x4fa6ed(0x581,'bMaB')+_0x4fa6ed(0x7fd,'l0Vk')+_0x4fa6ed(0xa25,'l&tG'))+_0x3674ad+(_0x4fa6ed(0x2dc,'ZQbK')+'pan>\x0a'+_0x4fa6ed(0xd0e,'bMaB')+_0x4fa6ed(0xe41,'MPp6')+_0x4fa6ed(0xfd8,'XBWK')+_0x4fa6ed(0x1045,'2j(w')+'\x20</di'+_0x4fa6ed(0xc94,'zfK(')+_0x4fa6ed(0xc90,'(HU5')+_0x4fa6ed(0xc3b,'l&tG')),_0x2d758b[_0x4fa6ed(0xec2,'[GdJ')+_0x4fa6ed(0x874,'l&tG')+'d'](_0xb4618d),_0xb4618d['query'+_0x4fa6ed(0x40b,'z2Tr')+_0x4fa6ed(0x829,'%iKk')+'l'](_0x4fa6ed(0x9b7,'bMaB')+_0x4fa6ed(0x75a,'T)O0')+_0x4fa6ed(0x545,'FKaL')+_0x4fa6ed(0x55f,'lNG6'))[_0x4fa6ed(0xc47,'F40Y')+'ch'](_0x4e9a53=>{const _0xad9fd4=_0x4fa6ed;_0x4e9a53[_0xad9fd4(0xc18,'Band')+_0xad9fd4(0xab9,'(HU5')+_0xad9fd4(0xe0d,'hsDz')+'r'](_0xad9fd4(0xcea,'E7d)'),()=>{const _0x29742a=_0xad9fd4,_0x53cd22=parseInt(_0x4e9a53[_0x29742a(0xc6c,'O2*S')+'et'][_0x29742a(0x87e,'FKaL')+'Id']),_0x1ecae6=_0x4e9a53[_0x29742a(0x1ce,'z2Tr')+'et']['color'],_0x1632f4=customCurves[_0x29742a(0xb8c,'E7d)')](_0x39d19c=>_0x39d19c['id']===_0x53cd22);if(!_0x1632f4)return;_0x1632f4[_0x29742a(0x665,'$gCG')]=_0x1ecae6,_0xb4618d[_0x29742a(0x3b8,'ZQbK')+_0x29742a(0x62f,'O8jx')+_0x29742a(0x24c,'^WDP')+'l'](_0x29742a(0x56c,'1qzA')+'e-col'+'or-sw'+'atch')['forEa'+'ch'](_0xf9fee7=>_0xf9fee7['class'+_0x29742a(0x575,'bMaB')][_0x29742a(0xd0a,'XmTZ')+'e'](_0x29742a(0xe6e,'lNG6')+'e')),_0x4e9a53[_0x29742a(0xf5a,'2U4A')+_0x29742a(0xced,'MvFO')]['add'](_0x29742a(0x211,'F40Y')+'e'),_0xb4618d[_0x29742a(0xe43,'MvFO')+'Selec'+_0x29742a(0x974,'mIwx')](_0x29742a(0x20c,'d4#Z')+_0x29742a(0x991,'W@8N')+_0x29742a(0x3f7,'ToWT')+'t')[_0x29742a(0xdb5,'(HU5')][_0x29742a(0x8c2,'l0Vk')+_0x29742a(0xb98,'%iKk')]=_0x1ecae6;if(_0x1632f4[_0x29742a(0xfa0,'$gCG')+'d'])renderAll();});}),_0xb4618d['query'+_0x4fa6ed(0x9aa,'8OR)')+_0x4fa6ed(0x1a1,'lTg5')](_0x4fa6ed(0x941,'E7d)')+_0x4fa6ed(0xb66,'E7d)')+_0x4fa6ed(0x47a,'lTg5')+_0x4fa6ed(0xf2b,'W@8N'))[_0x4fa6ed(0x623,'%llI')+_0x4fa6ed(0x799,'l&tG')+_0x4fa6ed(0x796,'J$mI')+'r']('input',_0x47a952=>{const _0x21528c=_0x4fa6ed,_0x282bfc=parseInt(_0x47a952[_0x21528c(0x1033,'%llI')+'t'][_0x21528c(0xe9e,'(7CV')+'et'][_0x21528c(0x639,'Hgl$')+'Id']),_0x5df261=customCurves['find'](_0x3a8089=>_0x3a8089['id']===_0x282bfc);if(_0x5df261){_0x5df261[_0x21528c(0x95a,'hsDz')]=_0x47a952[_0x21528c(0xd39,'XmTZ')+'t'][_0x21528c(0x7ac,'XmTZ')]||_0x21528c(0x296,'mIwx')+'\x20'+_0x282bfc;if(_0x5df261['fitte'+'d'])renderAll();}}),_0xb4618d[_0x4fa6ed(0x435,'LWa7')+_0x4fa6ed(0xa90,'XRBL')+_0x4fa6ed(0x8bc,'E1r%')](_0x4fa6ed(0x813,'bMaB')+_0x4fa6ed(0xc07,'FKaL')+_0x4fa6ed(0x439,'%iKk'))[_0x4fa6ed(0xa18,'l0Vk')+_0x4fa6ed(0xfa4,'LWa7')+_0x4fa6ed(0x1039,'(7CV')+'r'](_0x4fa6ed(0x977,'o$gV'),_0x4ca965=>{const _0x4712ec=_0x4fa6ed;fitCustomCurve(parseInt(_0x4ca965[_0x4712ec(0x2ba,'WYhc')+_0x4712ec(0x27d,'O8jx')+_0x4712ec(0xe0f,'2U4A')][_0x4712ec(0x2a8,'ayOU')+'et'][_0x4712ec(0x9ed,'^WDP')+'Id']));}),_0xb4618d[_0x4fa6ed(0x1b6,'J$mI')+_0x4fa6ed(0xb8b,'ayOU')+_0x4fa6ed(0x3fc,'FKaL')](_0x4fa6ed(0xa71,'hsDz')+_0x4fa6ed(0xce9,'$gCG')+_0x4fa6ed(0xb7e,'2j(w')+'ve')[_0x4fa6ed(0xdb4,'(7CV')+_0x4fa6ed(0x886,'bMaB')+'stene'+'r'](_0x4fa6ed(0x3b2,'^WDP'),_0x131442=>{const _0x121e01=_0x4fa6ed,_0x148333=parseInt(_0x131442[_0x121e01(0xc30,'1qzA')+_0x121e01(0xd93,'XBWK')+_0x121e01(0xbc3,'8OR)')]['datas'+'et'][_0x121e01(0x5e9,'XRBL')+'Id']);customCurves=customCurves[_0x121e01(0x63e,'l0Vk')+'r'](_0x48eb3b=>_0x48eb3b['id']!==_0x148333),document[_0x121e01(0x653,'T)O0')+_0x121e01(0xc1e,'@(im')+_0x121e01(0x49a,'ToWT')](_0x121e01(0x694,'nlER')+_0x121e01(0x68e,'O2*S')+'y-'+_0x148333)?.[_0x121e01(0xb3a,'WYhc')+'e'](),updateCurveCountBadge(),renderAll();}),updateCurveCountBadge();const _0x26d84a=document['getEl'+_0x4fa6ed(0x783,'z2Tr')+_0x4fa6ed(0x8eb,'2U4A')]('custo'+_0x4fa6ed(0x618,'[GdJ')+_0x4fa6ed(0x777,'bMaB')+'y');!_0x26d84a[_0x4fa6ed(0xa6a,'$gCG')+_0x4fa6ed(0x5c8,'2j(w')][_0x4fa6ed(0xa30,'T)O0')+_0x4fa6ed(0xbb1,'^WDP')](_0x4fa6ed(0x79d,'bMaB'))&&new bootstrap['Colla'+(_0x4fa6ed(0x5e0,'^WDP'))](_0x26d84a,{'toggle':!![]});}if(typeof PUMP_ID!==a0_0x21afb1(0xece,'%llI')+a0_0x21afb1(0xcca,'l&tG')){let currentData=null,singleData=null,viewMode=a0_0x21afb1(0xcb4,'E1r%')+'n';function getParams(){const _0x5acf1f=a0_0x21afb1,_0x573082=document[_0x5acf1f(0x809,'fY%z')+_0x5acf1f(0xa0c,'ayOU')+_0x5acf1f(0xc9e,'lNG6')]('liqui'+_0x5acf1f(0x4dd,'WYhc')+'ct')[_0x5acf1f(0xa2a,'hsDz')],_0x139692=new URLSearchParams({'liquid':_0x573082});if(_0x573082===_0x5acf1f(0x386,'bMaB')+'us')_0x139692[_0x5acf1f(0x676,'E1r%')](_0x5acf1f(0xe04,'(7CV')+'sity_'+_0x5acf1f(0xe1b,'nlER'),document['getEl'+_0x5acf1f(0xc48,'o$gV')+_0x5acf1f(0x45a,'ro@9')]('visco'+'sity')[_0x5acf1f(0x4a0,'Hgl$')]);_0x573082===_0x5acf1f(0xd46,'bMaB')+'y'&&(_0x139692[_0x5acf1f(0x78b,'ZQbK')](_0x5acf1f(0x4e3,'8OR)')+_0x5acf1f(0x53e,'O8jx'),document[_0x5acf1f(0x985,'XmTZ')+_0x5acf1f(0x9bf,'Band')+'ById'](_0x5acf1f(0x4e3,'8OR)')+_0x5acf1f(0x77e,'o$gV'))[_0x5acf1f(0xe57,'MvFO')]),_0x139692[_0x5acf1f(0x5df,'MvFO')](_0x5acf1f(0x6af,'O8jx')+'y_d50',document['getEl'+_0x5acf1f(0x358,'O2*S')+_0x5acf1f(0xe1c,'XBWK')](_0x5acf1f(0x7db,'W@8N')+_0x5acf1f(0x6a3,'E1r%'))['value']),_0x139692[_0x5acf1f(0xf08,'z2Tr')](_0x5acf1f(0x6f9,'ZQbK')+_0x5acf1f(0x675,'XBWK'),document[_0x5acf1f(0x985,'XmTZ')+_0x5acf1f(0xc48,'o$gV')+_0x5acf1f(0xae0,'Band')](_0x5acf1f(0x8a7,'ZQbK')+_0x5acf1f(0x40d,'z2Tr'))['value']));const _0x5abe7b=document[_0x5acf1f(0x7e6,'2U4A')+_0x5acf1f(0xf13,'(HU5')+_0x5acf1f(0x53f,'z2Tr')](_0x5acf1f(0x5a2,'%iKk')+_0x5acf1f(0xb40,'ZQbK'))[_0x5acf1f(0xf03,'XBWK')],_0xba9c8b=document[_0x5acf1f(0x6a2,'$gCG')+_0x5acf1f(0xb2b,'XRBL')+'ById'](_0x5acf1f(0xa05,'W@8N'))[_0x5acf1f(0x634,'Band')];(parseFloat(_0x5abe7b)||parseFloat(_0xba9c8b))&&(_0x139692[_0x5acf1f(0x69e,'bMaB')](_0x5acf1f(0xefb,'@(im')+_0x5acf1f(0x811,'MPp6')+'d',_0x5abe7b||0x0),_0x139692[_0x5acf1f(0x713,'l&tG')](_0x5acf1f(0x762,'XRBL')+'k',_0xba9c8b||0x0));const _0x251832=document[_0x5acf1f(0xc37,'(HU5')+_0x5acf1f(0x870,'l&tG')+_0x5acf1f(0xcb0,'hsDz')](_0x5acf1f(0xfac,'[GdJ')+_0x5acf1f(0x108c,'d4#Z')+'ls')?.[_0x5acf1f(0xe57,'MvFO')]||'',_0x1562c8=document['getEl'+'ement'+'ById'](_0x5acf1f(0xe10,'XmTZ')+_0x5acf1f(0xd0f,'@(im')+'alty')?.[_0x5acf1f(0x476,'W@8N')],_0x86e9bd=document[_0x5acf1f(0x426,'[GdJ')+'ement'+_0x5acf1f(0xcd0,'W@8N')](_0x5acf1f(0x514,'E7d)')+_0x5acf1f(0xba7,'o$gV')+_0x5acf1f(0x22f,'O8jx'))?.[_0x5acf1f(0xf02,'8OR)')]||'',_0x5a2df3=document[_0x5acf1f(0x653,'T)O0')+_0x5acf1f(0xeba,'E1r%')+'ById'](_0x5acf1f(0x7da,'O2*S')+_0x5acf1f(0x323,'9Vcr')+_0x5acf1f(0x792,'XBWK'))?.[_0x5acf1f(0x774,'%llI')]||'';if(_0x251832)_0x139692[_0x5acf1f(0x334,'(HU5')](_0x5acf1f(0xe08,'Band')+_0x5acf1f(0x37d,'(7CV'),_0x251832);if(_0x1562c8!==undefined&&_0x1562c8!=='')_0x139692[_0x5acf1f(0xfcb,'XRBL')](_0x5acf1f(0x31a,'8OR)')+_0x5acf1f(0x503,'QIf#')+'ty',_0x1562c8);if(_0x86e9bd)_0x139692[_0x5acf1f(0xf08,'z2Tr')](_0x5acf1f(0x1d5,'^WDP')+_0x5acf1f(0xc01,'ZQbK')+'ls',_0x86e9bd);if(_0x5a2df3)_0x139692[_0x5acf1f(0xf21,'XmTZ')](_0x5acf1f(0x7c4,'hsDz')+_0x5acf1f(0x7e4,'LWa7')+'s',_0x5a2df3);const _0x21bbee=document[_0x5acf1f(0x254,'W@8N')+'Selec'+_0x5acf1f(0xd8f,'@(im')]('input'+'[name'+'=\x22tri'+'mMode'+_0x5acf1f(0x9ba,'ayOU')+_0x5acf1f(0x1034,'FKaL')+'check'+'ed')?.[_0x5acf1f(0xa81,'F40Y')]||_0x5acf1f(0xaf8,'%iKk');return _0x139692[_0x5acf1f(0xb07,'J$mI')](_0x5acf1f(0x594,'qape')+'_affi'+_0x5acf1f(0x9cc,'lNG6'),_0x21bbee),_0x139692;}function collectGraphOptions(){const _0x149af1=a0_0x21afb1;return{'show_eff_iso':document[_0x149af1(0x653,'T)O0')+_0x149af1(0xb44,'QIf#')+_0x149af1(0xa33,'mIwx')]('chkSh'+_0x149af1(0xbc4,'E1r%')+_0x149af1(0x855,'T)O0'))?.[_0x149af1(0xfd0,'qape')+'ed']!==![],'eff_levels':document[_0x149af1(0x809,'fY%z')+_0x149af1(0x9b6,'hsDz')+_0x149af1(0xf33,'%llI')]('txtEf'+'fLeve'+'ls')?.[_0x149af1(0xcb6,'l0Vk')]||'','trim_penalty':document[_0x149af1(0x8aa,'1qzA')+_0x149af1(0x4eb,'lTg5')+_0x149af1(0x873,'XmTZ')]('numTr'+_0x149af1(0xb00,'lTg5')+_0x149af1(0xad5,'2U4A'))?.[_0x149af1(0xcd7,'MPp6')]!==''&&document['getEl'+_0x149af1(0xe65,'qape')+'ById'](_0x149af1(0xe49,'%iKk')+_0x149af1(0x790,'XmTZ')+_0x149af1(0xa7e,'%iKk'))?.['value']!==undefined?parseFloat(document[_0x149af1(0xdcb,'FKaL')+_0x149af1(0x1fe,'d4#Z')+'ById'](_0x149af1(0xce7,'T)O0')+_0x149af1(0xef6,'2j(w')+_0x149af1(0x67b,'QIf#'))?.[_0x149af1(0xbf0,'ToWT')]):null,'show_power_iso':document[_0x149af1(0xf05,'E1r%')+'ement'+'ById'](_0x149af1(0x61b,'zfK(')+_0x149af1(0x455,'zfK(')+'erIso')?.[_0x149af1(0x429,'ro@9')+'ed']||![],'power_levels':document[_0x149af1(0xe3f,'@(im')+_0x149af1(0xe67,'%llI')+_0x149af1(0xe58,'LWa7')](_0x149af1(0xc06,'o$gV')+'werLe'+'vels')?.['value']||'','show_npsh_iso':document['getEl'+'ement'+_0x149af1(0xc72,'qape')](_0x149af1(0x107e,'9Vcr')+'owNps'+_0x149af1(0x320,'MPp6'))?.[_0x149af1(0xa3f,'$gCG')+'ed']||![],'npsh_levels':document['getEl'+_0x149af1(0x1ee,'nlER')+_0x149af1(0x9a5,'fY%z')](_0x149af1(0xe8b,'XRBL')+_0x149af1(0xde5,'FKaL')+'els')?.[_0x149af1(0x95b,'O2*S')]||'','show_npsh_curve':document[_0x149af1(0xe6c,'z2Tr')+_0x149af1(0xda4,'Hgl$')+_0x149af1(0xc65,'2j(w')]('chkSh'+_0x149af1(0x834,'O8jx')+_0x149af1(0xc2c,'hsDz')+'e')?.[_0x149af1(0x79b,'E7d)')+'ed']||![],'npsh_yaxis':document[_0x149af1(0x5a5,'8OR)')+_0x149af1(0xe30,'O2*S')+_0x149af1(0x106d,'o$gV')]('input'+'[name'+_0x149af1(0xff2,'O2*S')+_0x149af1(0xc6a,'E7d)')+_0x149af1(0xb9f,'T)O0')+_0x149af1(0x980,'Band')+_0x149af1(0x820,'F40Y')+'ed')?.[_0x149af1(0xe57,'MvFO')]||'y2','show_speed_lines':document[_0x149af1(0xdcb,'FKaL')+_0x149af1(0x58a,'lNG6')+'ById']('chkSp'+_0x149af1(0x87f,'mIwx')+_0x149af1(0x44d,'O8jx'))?.['check'+'ed']||![],'show_hq':document[_0x149af1(0x420,'LWa7')+_0x149af1(0x74c,'zfK(')+'ById'](_0x149af1(0xc54,'(HU5')+_0x149af1(0x888,'ZQbK'))?.[_0x149af1(0xc26,'O8jx')+'ed']!==![],'show_other':document['getEl'+_0x149af1(0xbb8,'WYhc')+_0x149af1(0x1af,'nlER')](_0x149af1(0xc54,'(HU5')+'owOth'+'er')?.[_0x149af1(0x701,'ToWT')+'ed']!==![],'show_eff':document[_0x149af1(0x7ee,'MPp6')+_0x149af1(0x5ff,'mIwx')+_0x149af1(0x751,'l&tG')](_0x149af1(0x107e,'9Vcr')+'owEff')?.[_0x149af1(0xb12,'l0Vk')+'ed']!==![],'show_power':document['getEl'+'ement'+_0x149af1(0x599,'ZQbK')](_0x149af1(0xa53,'XRBL')+_0x149af1(0x1b8,'J$mI')+'er')?.['check'+'ed']!==![],'show_npsh':document[_0x149af1(0xdcb,'FKaL')+_0x149af1(0x291,'T)O0')+'ById'](_0x149af1(0xb89,'FKaL')+_0x149af1(0xb71,'zfK(')+'h')?.[_0x149af1(0x474,'W@8N')+'ed']!==![],'combine_eff_power':document[_0x149af1(0x933,'ayOU')+'ement'+_0x149af1(0x2be,'1qzA')](_0x149af1(0x2bb,'$gCG')+_0x149af1(0x6b6,'d4#Z')+_0x149af1(0x2fd,'MPp6')+_0x149af1(0xe2b,'(7CV'))?.[_0x149af1(0xbb9,'MvFO')+'ed']!==![],'trim_model':document[_0x149af1(0xa1b,'ro@9')+_0x149af1(0x2f3,'$gCG')+'tor'](_0x149af1(0x22c,'1qzA')+_0x149af1(0xf09,'8OR)')+_0x149af1(0xac0,'[GdJ')+_0x149af1(0xe12,'zfK(')+'lChoi'+_0x149af1(0xc78,'2U4A')+_0x149af1(0xc26,'O8jx')+'ed')?.['value']||'fit','legend_mode':document[_0x149af1(0xf05,'E1r%')+'ement'+'ById'](_0x149af1(0x6da,'hsDz')+_0x149af1(0xe38,'1qzA')+_0x149af1(0x843,'E1r%'))?.[_0x149af1(0x450,'nlER')]||_0x149af1(0x26c,'2j(w'),'custom_label_pos':customLabelPositions};}function applyGraphOptions(_0x3a9906){const _0x1f41c=a0_0x21afb1;if(!_0x3a9906||typeof _0x3a9906!=='objec'+'t')return;if(_0x3a9906[_0x1f41c(0x899,'qape')+_0x1f41c(0xa91,'2U4A')+_0x1f41c(0xe03,'hsDz')+'s']){let _0x506db4=_0x3a9906['custo'+'m_lab'+'el_po'+'s'];if(typeof _0x506db4==='strin'+'g')try{_0x506db4=JSON[_0x1f41c(0x546,'hsDz')](_0x506db4);}catch(_0x17361f){_0x506db4=null;}_0x506db4&&typeof _0x506db4===_0x1f41c(0x5cb,'WYhc')+'t'&&Object[_0x1f41c(0x76f,'$gCG')](_0x506db4)[_0x1f41c(0x981,'lTg5')+'h']>0x0&&(customLabelPositions=Object[_0x1f41c(0xc0a,'8OR)')+'n']({},customLabelPositions,_0x506db4));}if(_0x3a9906[_0x1f41c(0xd0d,'WYhc')+_0x1f41c(0xd67,'FKaL')+'so']!==undefined&&document[_0x1f41c(0x638,'QIf#')+_0x1f41c(0x870,'l&tG')+'ById'](_0x1f41c(0x722,'[GdJ')+_0x1f41c(0x8af,'Band')+_0x1f41c(0xb5b,'lNG6')))document['getEl'+_0x1f41c(0xbb8,'WYhc')+_0x1f41c(0x873,'XmTZ')](_0x1f41c(0x98f,'ayOU')+_0x1f41c(0xf10,'ZQbK')+_0x1f41c(0xf0d,'nlER'))[_0x1f41c(0x936,'@(im')+'ed']=_0x3a9906[_0x1f41c(0xa76,'lNG6')+_0x1f41c(0xbd3,'LWa7')+'so'];if(_0x3a9906[_0x1f41c(0xa0d,'%llI')+'evels']!==undefined&&document[_0x1f41c(0x6a2,'$gCG')+_0x1f41c(0x7dd,'[GdJ')+'ById'](_0x1f41c(0x81b,'MvFO')+_0x1f41c(0x2fe,'zfK(')+'ls'))document['getEl'+_0x1f41c(0xf13,'(HU5')+'ById'](_0x1f41c(0xf52,'2j(w')+_0x1f41c(0x3f9,'l0Vk')+'ls')[_0x1f41c(0x564,'ayOU')]=_0x3a9906[_0x1f41c(0xa2e,'(HU5')+_0x1f41c(0x84a,'J$mI')];if(_0x3a9906['trim_'+_0x1f41c(0xa27,'9Vcr')+'ty']!==undefined&&_0x3a9906[_0x1f41c(0xc40,'ZQbK')+_0x1f41c(0x2ad,'nlER')+'ty']!==null&&document[_0x1f41c(0x6a2,'$gCG')+'ement'+_0x1f41c(0x5f3,'$gCG')](_0x1f41c(0xeb1,'qape')+_0x1f41c(0x8bd,'$gCG')+'alty'))document[_0x1f41c(0x6a2,'$gCG')+'ement'+_0x1f41c(0xd81,'ayOU')]('numTr'+_0x1f41c(0xb9c,'zfK(')+_0x1f41c(0xf37,'1qzA'))[_0x1f41c(0xe98,'@(im')]=_0x3a9906[_0x1f41c(0x706,'l0Vk')+_0x1f41c(0x486,'qape')+'ty'];if(_0x3a9906[_0x1f41c(0xdff,'XmTZ')+_0x1f41c(0x4d7,'8OR)')+_0x1f41c(0x667,'J$mI')]!==undefined&&document[_0x1f41c(0x638,'QIf#')+_0x1f41c(0x746,'XBWK')+_0x1f41c(0xae0,'Band')]('chkSh'+_0x1f41c(0xb65,'LWa7')+_0x1f41c(0xca6,'qape'))){document[_0x1f41c(0xb90,'^WDP')+_0x1f41c(0xc1e,'@(im')+_0x1f41c(0xdba,'8OR)')](_0x1f41c(0xe7a,'fY%z')+_0x1f41c(0x1b1,'8OR)')+_0x1f41c(0xdd9,'l&tG'))[_0x1f41c(0x699,'Hgl$')+'ed']=_0x3a9906[_0x1f41c(0x40c,'LWa7')+_0x1f41c(0x1086,'mIwx')+_0x1f41c(0xf18,'QIf#')];const _0x399b80=document[_0x1f41c(0x809,'fY%z')+'ement'+_0x1f41c(0xf33,'%llI')](_0x1f41c(0x9cb,'%llI')+_0x1f41c(0x3db,'E7d)')+'Level'+'s');if(_0x399b80)_0x399b80[_0x1f41c(0xf93,'(7CV')][_0x1f41c(0x247,'$gCG')+'ay']=_0x3a9906[_0x1f41c(0xc35,'E7d)')+_0x1f41c(0x1086,'mIwx')+_0x1f41c(0xcf3,'9Vcr')]?'':_0x1f41c(0x471,'Band');}if(_0x3a9906[_0x1f41c(0x592,'2j(w')+_0x1f41c(0xa23,'XBWK')+'ls']!==undefined&&document[_0x1f41c(0x643,'ToWT')+'ement'+_0x1f41c(0xe8e,'E7d)')](_0x1f41c(0x51f,'@(im')+_0x1f41c(0x94a,'J$mI')+_0x1f41c(0xf1e,'lTg5')))document[_0x1f41c(0xbf8,'WYhc')+_0x1f41c(0x532,'MPp6')+_0x1f41c(0xd81,'ayOU')]('txtPo'+_0x1f41c(0xf6e,'XBWK')+_0x1f41c(0x3dc,'ToWT'))['value']=_0x3a9906[_0x1f41c(0xb5e,'l0Vk')+_0x1f41c(0x73c,'T)O0')+'ls'];if(_0x3a9906[_0x1f41c(0xcef,'E1r%')+_0x1f41c(0xb95,'T)O0')+_0x1f41c(0xd53,'J$mI')]!==undefined&&document['getEl'+_0x1f41c(0x291,'T)O0')+_0x1f41c(0xd81,'ayOU')](_0x1f41c(0x74f,'%llI')+_0x1f41c(0x54a,'E7d)')+_0x1f41c(0x1073,'QIf#'))){document[_0x1f41c(0x7e6,'2U4A')+_0x1f41c(0x532,'MPp6')+_0x1f41c(0x7bd,'MvFO')](_0x1f41c(0x62a,'MvFO')+_0x1f41c(0x948,'9Vcr')+'hIso')['check'+'ed']=_0x3a9906[_0x1f41c(0xeb5,'O8jx')+_0x1f41c(0x3a1,'E7d)')+_0x1f41c(0x54f,'O8jx')];const _0x3c213b=document[_0x1f41c(0x424,'9Vcr')+'ement'+_0x1f41c(0x42c,'O8jx')]('group'+_0x1f41c(0x64b,'zfK(')+_0x1f41c(0x5e2,'2U4A'));if(_0x3c213b)_0x3c213b[_0x1f41c(0x57d,'nlER')][_0x1f41c(0x6b5,'XmTZ')+'ay']=_0x3a9906['show_'+_0x1f41c(0x1032,'MPp6')+_0x1f41c(0x4f3,'MvFO')]?'':_0x1f41c(0x2b7,'qape');}if(_0x3a9906[_0x1f41c(0x878,'FKaL')+'level'+'s']!==undefined&&document[_0x1f41c(0x424,'9Vcr')+'ement'+_0x1f41c(0x240,'XRBL')]('txtNp'+_0x1f41c(0xcc9,'@(im')+_0x1f41c(0x750,'F40Y')))document[_0x1f41c(0xea5,'d4#Z')+'ement'+_0x1f41c(0x2be,'1qzA')](_0x1f41c(0xb52,'WYhc')+'shLev'+_0x1f41c(0x1a8,'E7d)'))['value']=_0x3a9906[_0x1f41c(0x6be,'2j(w')+_0x1f41c(0x91c,'fY%z')+'s'];if(_0x3a9906[_0x1f41c(0xdaa,'lTg5')+_0x1f41c(0xf7a,'zfK(')+'curve']!==undefined&&document[_0x1f41c(0xbc7,'J$mI')+_0x1f41c(0xfe9,'9Vcr')+'ById']('chkSh'+_0x1f41c(0x968,'XRBL')+_0x1f41c(0x616,'LWa7')+'e')){document[_0x1f41c(0x863,'ro@9')+_0x1f41c(0x77c,'2j(w')+_0x1f41c(0x751,'l&tG')]('chkSh'+'owNps'+_0x1f41c(0xad2,'o$gV')+'e')[_0x1f41c(0xd59,'1qzA')+'ed']=_0x3a9906['show_'+_0x1f41c(0x9ea,'%llI')+_0x1f41c(0x87e,'FKaL')];const _0x54ad09=document[_0x1f41c(0xfe3,'bMaB')+_0x1f41c(0x58a,'lNG6')+'ById']('group'+_0x1f41c(0x26e,'LWa7')+_0x1f41c(0x8b3,'8OR)'));if(_0x54ad09)_0x54ad09[_0x1f41c(0x5dd,'E1r%')]['displ'+'ay']=_0x3a9906[_0x1f41c(0x97d,'8OR)')+_0x1f41c(0x6be,'2j(w')+_0x1f41c(0x1001,'O8jx')]?'':_0x1f41c(0x213,'l0Vk');}_0x3a9906[_0x1f41c(0xb4e,'^WDP')+_0x1f41c(0x3d5,'z2Tr')]&&document[_0x1f41c(0xe18,'l&tG')+_0x1f41c(0xd08,'%llI')+_0x1f41c(0x520,'XBWK')](_0x1f41c(0xc21,'fY%z')+_0x1f41c(0x278,'%iKk')+_0x1f41c(0xb2d,'E1r%')+_0x1f41c(0xc34,'FKaL')+_0x1f41c(0x5d8,'9Vcr')+_0x1f41c(0xd99,'hsDz')+_0x1f41c(0xa62,'O8jx')+'=\x22'+_0x3a9906[_0x1f41c(0x76c,'[GdJ')+'yaxis']+'\x22]')&&(document[_0x1f41c(0x435,'LWa7')+_0x1f41c(0x1085,'hsDz')+_0x1f41c(0x106d,'o$gV')](_0x1f41c(0x35e,'d4#Z')+_0x1f41c(0xa2d,'E1r%')+_0x1f41c(0xc33,'Band')+_0x1f41c(0xae2,'[GdJ')+_0x1f41c(0x8a8,'XRBL')+_0x1f41c(0xf3b,'XBWK')+'value'+'=\x22'+_0x3a9906[_0x1f41c(0xa8c,'qape')+'yaxis']+'\x22]')['check'+'ed']=!![]);if(_0x3a9906[_0x1f41c(0x257,'Hgl$')+_0x1f41c(0x23c,'O2*S')+_0x1f41c(0x554,'XRBL')+'s']!==undefined&&document[_0x1f41c(0x426,'[GdJ')+_0x1f41c(0x2df,'ToWT')+_0x1f41c(0x9a5,'fY%z')](_0x1f41c(0xcc8,'E1r%')+_0x1f41c(0xe55,'9Vcr')+'nes'))document[_0x1f41c(0x402,'zfK(')+'ement'+_0x1f41c(0x5f3,'$gCG')](_0x1f41c(0x617,'mIwx')+_0x1f41c(0x61c,'QIf#')+_0x1f41c(0x8dc,'8OR)'))['check'+'ed']=_0x3a9906[_0x1f41c(0x3ea,'ToWT')+'speed'+_0x1f41c(0xda1,'@(im')+'s'];if(_0x3a9906['show_'+'hq']!==undefined&&document['getEl'+'ement'+_0x1f41c(0xf33,'%llI')](_0x1f41c(0x3ba,'l&tG')+_0x1f41c(0xf31,'T)O0')))document[_0x1f41c(0xfe3,'bMaB')+_0x1f41c(0x9b6,'hsDz')+_0x1f41c(0x2be,'1qzA')](_0x1f41c(0xe16,'F40Y')+_0x1f41c(0x607,'(HU5'))['check'+'ed']=_0x3a9906[_0x1f41c(0x625,'W@8N')+'hq'];if(_0x3a9906[_0x1f41c(0x7d3,'FKaL')+'other']!==undefined&&document[_0x1f41c(0xe6c,'z2Tr')+_0x1f41c(0xda4,'Hgl$')+_0x1f41c(0x368,'E1r%')](_0x1f41c(0xc9c,'Hgl$')+_0x1f41c(0xe1d,'Hgl$')+'er'))document[_0x1f41c(0x402,'zfK(')+_0x1f41c(0xc28,'l0Vk')+_0x1f41c(0x1af,'nlER')](_0x1f41c(0xbaf,'lNG6')+'owOth'+'er')[_0x1f41c(0x4fe,'T)O0')+'ed']=_0x3a9906[_0x1f41c(0x459,'l&tG')+_0x1f41c(0x5b3,'%iKk')];if(_0x3a9906[_0x1f41c(0xa76,'lNG6')+'eff']!==undefined&&document[_0x1f41c(0x201,'E7d)')+_0x1f41c(0x77c,'2j(w')+'ById'](_0x1f41c(0x5c1,'z2Tr')+'owEff'))document[_0x1f41c(0xa1e,'Hgl$')+_0x1f41c(0x4eb,'lTg5')+_0x1f41c(0xba1,'zfK(')](_0x1f41c(0x7fa,'MPp6')+_0x1f41c(0x1017,'Hgl$'))[_0x1f41c(0xfb7,'(7CV')+'ed']=_0x3a9906[_0x1f41c(0xd0d,'WYhc')+_0x1f41c(0x4b4,'[GdJ')];if(_0x3a9906[_0x1f41c(0x1fd,'mIwx')+_0x1f41c(0xb5e,'l0Vk')]!==undefined&&document[_0x1f41c(0x426,'[GdJ')+_0x1f41c(0xe65,'qape')+_0x1f41c(0x751,'l&tG')](_0x1f41c(0x84e,'W@8N')+_0x1f41c(0xab8,'^WDP')+'er'))document[_0x1f41c(0xd78,'l0Vk')+_0x1f41c(0xb2b,'XRBL')+_0x1f41c(0xcb0,'hsDz')](_0x1f41c(0x1b9,'LWa7')+_0x1f41c(0x552,'(HU5')+'er')[_0x1f41c(0x4fe,'T)O0')+'ed']=_0x3a9906['show_'+'power'];if(_0x3a9906[_0x1f41c(0xd0d,'WYhc')+'npsh']!==undefined&&document[_0x1f41c(0xdcb,'FKaL')+_0x1f41c(0x2a0,'E7d)')+_0x1f41c(0xe8e,'E7d)')](_0x1f41c(0xe7a,'fY%z')+_0x1f41c(0xec0,'(HU5')+'h'))document[_0x1f41c(0x4ec,'l&tG')+_0x1f41c(0xd1e,'W@8N')+_0x1f41c(0x5f3,'$gCG')]('chkSh'+_0x1f41c(0x8f4,'Hgl$')+'h')[_0x1f41c(0xcab,'z2Tr')+'ed']=_0x3a9906[_0x1f41c(0xcc2,'(7CV')+_0x1f41c(0xf64,'F40Y')];if(_0x3a9906[_0x1f41c(0x1f4,'MPp6')+_0x1f41c(0x7fb,'E7d)')+_0x1f41c(0xa13,'[GdJ')+'er']!==undefined&&document[_0x1f41c(0x480,'XBWK')+_0x1f41c(0x783,'z2Tr')+_0x1f41c(0x2be,'1qzA')](_0x1f41c(0xd16,'9Vcr')+'mbine'+_0x1f41c(0x84b,'QIf#')+_0x1f41c(0xed9,'FKaL')))document[_0x1f41c(0xafd,'ZQbK')+'ement'+_0x1f41c(0xcd0,'W@8N')](_0x1f41c(0x572,'LWa7')+_0x1f41c(0xb67,'9Vcr')+_0x1f41c(0xe5f,'E7d)')+_0x1f41c(0x82c,'Hgl$'))[_0x1f41c(0x66a,'FKaL')+'ed']=_0x3a9906['combi'+_0x1f41c(0x66d,'$gCG')+_0x1f41c(0x708,'$gCG')+'er'];_0x3a9906[_0x1f41c(0x881,'fY%z')+_0x1f41c(0xbe9,'T)O0')]&&document[_0x1f41c(0xfa6,'Hgl$')+_0x1f41c(0xb60,'9Vcr')+_0x1f41c(0x230,'O2*S')]('input'+'[name'+_0x1f41c(0xa94,'MPp6')+'mMode'+_0x1f41c(0xe79,'[GdJ')+_0x1f41c(0xd3f,'MvFO')+_0x1f41c(0x657,'ZQbK')+'=\x22'+_0x3a9906[_0x1f41c(0xa7d,'F40Y')+'model']+'\x22]')&&(document[_0x1f41c(0xd00,'qape')+'Selec'+_0x1f41c(0x34a,'nlER')](_0x1f41c(0x763,'l&tG')+_0x1f41c(0xd22,'l0Vk')+_0x1f41c(0xaed,'8OR)')+_0x1f41c(0xb58,'%iKk')+_0x1f41c(0xc59,'nlER')+_0x1f41c(0x47c,'O8jx')+_0x1f41c(0x774,'%llI')+'=\x22'+_0x3a9906[_0x1f41c(0xe92,'ro@9')+'model']+'\x22]')[_0x1f41c(0x3b5,'(HU5')+'ed']=!![]);if(_0x3a9906[_0x1f41c(0xe44,'W@8N')+'d_mod'+'e']&&document[_0x1f41c(0xb90,'^WDP')+'ement'+_0x1f41c(0xae0,'Band')](_0x1f41c(0x957,'zfK(')+'gendM'+_0x1f41c(0x793,'XmTZ'))){document[_0x1f41c(0x2bf,'%llI')+_0x1f41c(0xc1e,'@(im')+_0x1f41c(0x49a,'ToWT')](_0x1f41c(0x3e9,'$gCG')+_0x1f41c(0xc92,'hsDz')+_0x1f41c(0x40e,'lTg5'))[_0x1f41c(0x657,'ZQbK')]=_0x3a9906[_0x1f41c(0xdfc,'%llI')+_0x1f41c(0xf3a,'XmTZ')+'e'];const _0x4b7214=document[_0x1f41c(0x638,'QIf#')+_0x1f41c(0x5da,'$gCG')+_0x1f41c(0xe58,'LWa7')](_0x1f41c(0x690,'z2Tr')+_0x1f41c(0x9c2,'lTg5')+_0x1f41c(0x9c6,'o$gV')+_0x1f41c(0x2c4,'WYhc'));if(_0x4b7214)_0x4b7214[_0x1f41c(0x5dd,'E1r%')]['displ'+'ay']=_0x3a9906[_0x1f41c(0xdfc,'%llI')+'d_mod'+'e']===_0x1f41c(0x639,'Hgl$')+_0x1f41c(0x1011,'lNG6')+'ls'?'':_0x1f41c(0xa86,'@(im');}}async function saveGraphOptions(){const _0x59001e=a0_0x21afb1;if(typeof PUMP_ID===_0x59001e(0xe63,'T)O0')+_0x59001e(0xdc3,'WYhc')||!PUMP_ID)return;const _0x1ab4f3=document[_0x59001e(0x810,'qape')+'ement'+_0x59001e(0xf33,'%llI')](_0x59001e(0x507,'mIwx')+_0x59001e(0xc6d,'J$mI')+_0x59001e(0xf5f,'XmTZ')+_0x59001e(0xed1,'ro@9'));_0x1ab4f3&&(_0x1ab4f3[_0x59001e(0x866,'Band')+_0x59001e(0xa1f,'2j(w')]=!![],_0x1ab4f3[_0x59001e(0xad4,'O2*S')+_0x59001e(0xd7a,'E1r%')]=_0x59001e(0xe88,'9Vcr')+_0x59001e(0xee5,'O2*S')+_0x59001e(0x4f4,'zfK(')+_0x59001e(0x536,'qape')+_0x59001e(0x3c2,'fY%z')+'er\x20sp'+_0x59001e(0x206,'ZQbK')+_0x59001e(0x518,'nlER')+_0x59001e(0xdf3,'QIf#')+_0x59001e(0xb06,'hsDz')+_0x59001e(0x9b1,'MPp6')+_0x59001e(0x1005,'lNG6')+_0x59001e(0x879,'LWa7')+'…');const _0x1f33cd=collectGraphOptions();try{const _0x42fc29=await fetch(_0x59001e(0x541,'ayOU')+_0x59001e(0x258,'fY%z')+'/'+PUMP_ID+(_0x59001e(0x100f,'[GdJ')+_0x59001e(0x51a,'hsDz')+_0x59001e(0x54d,'zfK(')),{'method':_0x59001e(0x1cd,'F40Y'),'headers':{'Content-Type':_0x59001e(0xdef,'ayOU')+'catio'+_0x59001e(0x2e9,'d4#Z')+'n'},'body':JSON[_0x59001e(0x54c,'hsDz')+_0x59001e(0xdbc,'ZQbK')](_0x1f33cd)}),_0x335fa8=await _0x42fc29[_0x59001e(0x65e,'(7CV')]();_0x335fa8[_0x59001e(0xec8,'nlER')+'s']==='ok'&&_0x1ab4f3&&(_0x1ab4f3['class'+_0x59001e(0xc8a,'1qzA')]=_0x59001e(0x256,'MvFO')+_0x59001e(0xdda,'9Vcr')+_0x59001e(0x1076,'E7d)')+'succe'+_0x59001e(0xc52,'2j(w')+_0x59001e(0x1000,'(7CV')+'-2',_0x1ab4f3[_0x59001e(0x452,'QIf#')+_0x59001e(0x3ed,'lTg5')]=_0x59001e(0xfd4,'mIwx')+_0x59001e(0xb53,'%iKk')+'bi\x20bi'+_0x59001e(0x3a0,'QIf#')+'k2\x20me'+_0x59001e(0xdf4,'WYhc')+_0x59001e(0x5ac,'E1r%')+_0x59001e(0x9bb,'mIwx'),setTimeout(()=>{const _0x27c2cf=_0x59001e;_0x1ab4f3[_0x27c2cf(0xfd1,'(HU5')+_0x27c2cf(0x104a,'ToWT')]=_0x27c2cf(0xf8b,'XmTZ')+_0x27c2cf(0x106b,'Band')+_0x27c2cf(0x1e1,'z2Tr')+_0x27c2cf(0x255,'E7d)')+_0x27c2cf(0x901,'lNG6')+_0x27c2cf(0xa4b,'XBWK')+_0x27c2cf(0x30c,'@(im')+'px-2',_0x1ab4f3[_0x27c2cf(0x821,'o$gV')+_0x27c2cf(0xd6f,'zfK(')]=_0x27c2cf(0x1046,'O8jx')+_0x27c2cf(0x697,'zfK(')+_0x27c2cf(0x691,'E7d)')+_0x27c2cf(0xa63,'ZQbK')+_0x27c2cf(0x63d,'(HU5')+_0x27c2cf(0x60e,'[GdJ')+_0x27c2cf(0x262,'2U4A')+_0x27c2cf(0x99f,'LWa7')+'tions';},0x5dc));}catch(_0x431f9a){console[_0x59001e(0xec7,'d4#Z')](_0x59001e(0x209,'[GdJ')+_0x59001e(0x61e,'E7d)')+'save\x20'+_0x59001e(0x5b2,'9Vcr')+'\x20opti'+'ons:',_0x431f9a);}finally{if(_0x1ab4f3)_0x1ab4f3[_0x59001e(0xf85,'^WDP')+_0x59001e(0x5f5,'o$gV')]=![];}}function getDuty(){const _0x2a41cc=a0_0x21afb1;return{'q':parseFloat(document['getEl'+_0x2a41cc(0xc1e,'@(im')+_0x2a41cc(0x51b,'J$mI')](_0x2a41cc(0xd7d,'MPp6'))[_0x2a41cc(0x2e3,'2j(w')])||null,'h':parseFloat(document[_0x2a41cc(0x6f3,'(7CV')+_0x2a41cc(0xd5f,'ZQbK')+_0x2a41cc(0x240,'XRBL')](_0x2a41cc(0x43e,'l0Vk'))[_0x2a41cc(0x7cf,'bMaB')])||null};}function updateLiquidPanels(){const _0x3d1999=a0_0x21afb1,_0x47fb39=document[_0x3d1999(0xc37,'(HU5')+'ement'+_0x3d1999(0xcb0,'hsDz')](_0x3d1999(0xaf3,'(7CV')+_0x3d1999(0x4da,'fY%z')+'ct')[_0x3d1999(0xbf0,'ToWT')];document[_0x3d1999(0x81e,'bMaB')+'Selec'+_0x3d1999(0xed3,'J$mI')+'l'](_0x3d1999(0xacc,'nlER')+'id-pa'+_0x3d1999(0xee1,'l&tG'))[_0x3d1999(0xf6a,'LWa7')+'ch'](_0x2ee05c=>{const _0x3a7ce6=_0x3d1999;_0x2ee05c[_0x3a7ce6(0x57f,'Band')]['displ'+'ay']=_0x2ee05c[_0x3a7ce6(0xdfa,'QIf#')+_0x3a7ce6(0xaac,'$gCG')][_0x3a7ce6(0x8e3,'E1r%')+_0x3a7ce6(0x381,'XRBL')](_0x47fb39)?'':_0x3a7ce6(0x4ce,'ToWT');});}function renderAll(){const _0x4e8324=a0_0x21afb1,_0x3373d4=getDuty(),_0x30bf87=getCustomTracesHQ(),_0x25db13=getCustomTracesEta(),_0x4751c4=getCustomTracesPower(),_0x5d2f58=document[_0x4e8324(0xbc7,'J$mI')+_0x4e8324(0x484,'bMaB')+_0x4e8324(0x751,'l&tG')]('chkSh'+_0x4e8324(0xe3e,'FKaL'))?.['check'+'ed']!==![],_0x578a49=document[_0x4e8324(0xda2,'8OR)')+_0x4e8324(0xfbe,'J$mI')+_0x4e8324(0x2be,'1qzA')](_0x4e8324(0xb7d,'mIwx')+_0x4e8324(0x1017,'Hgl$')+_0x4e8324(0x875,'fY%z'))['check'+'ed'],_0x32e9de=document[_0x4e8324(0x863,'ro@9')+_0x4e8324(0xc48,'o$gV')+_0x4e8324(0x599,'ZQbK')](_0x4e8324(0x1b9,'LWa7')+_0x4e8324(0x4a3,'2U4A')+'erIso')[_0x4e8324(0x820,'F40Y')+'ed'],_0x11d8da=document[_0x4e8324(0xea5,'d4#Z')+'ement'+'ById'](_0x4e8324(0x3ba,'l&tG')+_0x4e8324(0xb71,'zfK(')+_0x4e8324(0xbe2,'[GdJ'))[_0x4e8324(0x32c,'8OR)')+'ed'],_0x5d3591=document[_0x4e8324(0x402,'zfK(')+_0x4e8324(0x77c,'2j(w')+_0x4e8324(0x990,'l0Vk')](_0x4e8324(0x6fd,'(7CV')+'owNps'+_0x4e8324(0x1052,'qape')+'e')[_0x4e8324(0x429,'ro@9')+'ed'],_0x19bccf=document[_0x4e8324(0x201,'E7d)')+_0x4e8324(0xeba,'E1r%')+_0x4e8324(0xe58,'LWa7')](_0x4e8324(0xbed,'2j(w')+_0x4e8324(0x20d,'zfK(')+_0x4e8324(0x9b3,'F40Y'))?.[_0x4e8324(0x32f,'lTg5')+'ed']||document[_0x4e8324(0xa1e,'Hgl$')+_0x4e8324(0x7dd,'[GdJ')+_0x4e8324(0x1c9,'^WDP')](_0x4e8324(0x88b,'LWa7')+_0x4e8324(0xb68,'T)O0')+_0x4e8324(0x9d6,'MPp6'))?.['check'+'ed']||![],_0x128860=document[_0x4e8324(0xbf8,'WYhc')+_0x4e8324(0x533,'fY%z')+_0x4e8324(0x45a,'ro@9')](_0x4e8324(0xb56,'(HU5')+_0x4e8324(0x252,'fY%z')+_0x4e8324(0x9b3,'F40Y'))?.[_0x4e8324(0x7b7,'nlER')+'ed']||![];document['getEl'+_0x4e8324(0xb2b,'XRBL')+'ById']('warma'+_0x4e8324(0xdae,'nlER')+'l')&&(document[_0x4e8324(0x70a,'F40Y')+_0x4e8324(0x870,'l&tG')+_0x4e8324(0x56f,'bMaB')](_0x4e8324(0x96d,'XmTZ')+_0x4e8324(0xddd,'Hgl$')+'l')[_0x4e8324(0x1049,'hsDz')][_0x4e8324(0xf82,'QIf#')+'ay']=_0x5d2f58?'':'none');document[_0x4e8324(0x490,'XRBL')+_0x4e8324(0x876,'2U4A')+_0x4e8324(0xae0,'Band')]('group'+'EffLe'+_0x4e8324(0xdd3,'MvFO'))[_0x4e8324(0xd33,'T)O0')][_0x4e8324(0xc79,'nlER')+'ay']=_0x578a49?'':'none',document[_0x4e8324(0x2ca,'nlER')+_0x4e8324(0xfbe,'J$mI')+_0x4e8324(0x53f,'z2Tr')](_0x4e8324(0xa2f,'ayOU')+'Power'+_0x4e8324(0xdb7,'2U4A')+'s')['style'][_0x4e8324(0xf46,'O8jx')+'ay']=_0x32e9de?'':'none',document[_0x4e8324(0x6f3,'(7CV')+'ement'+_0x4e8324(0xa33,'mIwx')](_0x4e8324(0x5f7,'E7d)')+_0x4e8324(0x373,'hsDz')+_0x4e8324(0x622,'ZQbK'))[_0x4e8324(0xd49,'QIf#')]['displ'+'ay']=_0x11d8da?'':_0x4e8324(0x778,'LWa7'),document['getEl'+_0x4e8324(0xe67,'%llI')+_0x4e8324(0xae0,'Band')]('group'+_0x4e8324(0x1df,'ro@9')+'Axis')[_0x4e8324(0x71f,'E7d)')][_0x4e8324(0x3e3,'l&tG')+'ay']=_0x5d3591?'':_0x4e8324(0x383,'QIf#');const _0x4806ee=document[_0x4e8324(0x925,'lTg5')+_0x4e8324(0x2d6,'2U4A')+'tor']('input'+_0x4e8324(0x582,'l&tG')+_0x4e8324(0x342,'W@8N')+_0x4e8324(0xe26,'ayOU')+_0x4e8324(0x1cb,'E7d)')+_0x4e8324(0x463,'LWa7')+_0x4e8324(0x8b2,'E1r%')+'ed')?.[_0x4e8324(0x450,'nlER')]||'y2';if(document['getEl'+_0x4e8324(0x783,'z2Tr')+_0x4e8324(0x45c,'%iKk')](_0x4e8324(0xa96,'J$mI')+_0x4e8324(0x5d5,'o$gV')+_0x4e8324(0x923,'o$gV')))document[_0x4e8324(0xf05,'E1r%')+_0x4e8324(0x5da,'$gCG')+_0x4e8324(0xac9,'lTg5')](_0x4e8324(0x9d1,'ayOU')+_0x4e8324(0x7ff,'XRBL')+_0x4e8324(0x6ea,'QIf#'))[_0x4e8324(0x71f,'E7d)')][_0x4e8324(0x35a,'lTg5')+'ay']=_0x4e8324(0x249,'E1r%');if(document[_0x4e8324(0xb90,'^WDP')+_0x4e8324(0x4eb,'lTg5')+_0x4e8324(0x751,'l&tG')](_0x4e8324(0x46e,'zfK(')+_0x4e8324(0xb3b,'MPp6')+_0x4e8324(0x4a4,'XRBL')+'l'))document[_0x4e8324(0x355,'2j(w')+_0x4e8324(0x74c,'zfK(')+_0x4e8324(0x6d3,'MPp6')](_0x4e8324(0x1008,'W@8N')+_0x4e8324(0xf70,'LWa7')+_0x4e8324(0xa44,'Hgl$')+'l')[_0x4e8324(0xf93,'(7CV')][_0x4e8324(0x540,'Hgl$')+'ay']=_0x4e8324(0x213,'l0Vk');if(currentData){const _0x13b06b=buildWarmanChart(currentData,{'showIsolines':_0x578a49,'showPowerIso':_0x32e9de,'showNpshIso':_0x11d8da,'showSpeedLines':_0x19bccf,'showDiaOverlay':_0x128860,'showNpshCurve':_0x5d3591,'npshYAxis':_0x4806ee,'dutyQ':_0x3373d4['q'],'dutyH':_0x3373d4['h']});Plotly['react']('chart'+_0x4e8324(0x1be,'E1r%')+'n',[..._0x13b06b[_0x4e8324(0xf94,'1qzA')+'s'],..._0x30bf87],_0x13b06b[_0x4e8324(0x555,'F40Y')+'t'],PLOTLY_CONFIG),_0x13b06b[_0x4e8324(0xc22,'hsDz')+'t'][_0x4e8324(0x353,'F40Y')+_0x4e8324(0xf88,'W@8N')+'s']&&_0x13b06b[_0x4e8324(0xfab,'W@8N')+'t'][_0x4e8324(0x2cd,'LWa7')+_0x4e8324(0x615,'XmTZ')+'s'][_0x4e8324(0xabd,'E7d)')+'h']>0x0&&makeAnnotationsDraggable('chart'+_0x4e8324(0xa68,'hsDz')+'n',_0x13b06b[_0x4e8324(0xf9b,'z2Tr')+'t'][_0x4e8324(0x78f,'XBWK')+'ation'+'s'],PUMP_ID),renderPerfSummary(currentData,_0x4e8324(0x9e1,'O2*S')+'ummar'+'y');}const _0x3b30c5=document[_0x4e8324(0xfa8,'lTg5')+_0x4e8324(0x5ff,'mIwx')+_0x4e8324(0xeb4,'9Vcr')](_0x4e8324(0xea8,'lTg5')+'owOth'+'er')[_0x4e8324(0xec6,'J$mI')+'ed'];document['getEl'+_0x4e8324(0xbb8,'WYhc')+_0x4e8324(0x751,'l&tG')](_0x4e8324(0xdac,'lNG6')+_0x4e8324(0xf1c,'l0Vk')+_0x4e8324(0x62d,'XRBL')+'s')[_0x4e8324(0x57f,'Band')]['displ'+'ay']=_0x3b30c5?'':_0x4e8324(0xa86,'@(im'),document[_0x4e8324(0x643,'ToWT')+_0x4e8324(0x4eb,'lTg5')+'ById'](_0x4e8324(0x853,'XRBL')+_0x4e8324(0xc86,'(HU5')+_0x4e8324(0xa34,'z2Tr')+_0x4e8324(0x752,'E7d)'))[_0x4e8324(0x5ec,'ToWT')][_0x4e8324(0xe13,'(HU5')+'ay']=_0x3b30c5?'':_0x4e8324(0xa4f,'XmTZ');if(_0x3b30c5&&currentData){const _0x53a2f7=document[_0x4e8324(0x6a2,'$gCG')+_0x4e8324(0x533,'fY%z')+_0x4e8324(0x1ab,'O2*S')](_0x4e8324(0xbd4,'qape')+_0x4e8324(0x1003,'O8jx'))?.['check'+'ed'],_0x546ccc=document['getEl'+_0x4e8324(0x1ad,'ro@9')+'ById'](_0x4e8324(0x803,'bMaB')+_0x4e8324(0x56d,'Hgl$')+'er')?.[_0x4e8324(0xdf6,'LWa7')+'ed'],_0x225fdc=document[_0x4e8324(0x420,'LWa7')+_0x4e8324(0xb2b,'XRBL')+_0x4e8324(0xabc,'F40Y')](_0x4e8324(0xa53,'XRBL')+_0x4e8324(0xa51,'2U4A')+'h')?.[_0x4e8324(0x1d8,'[GdJ')+'ed'],_0x2793cc=document[_0x4e8324(0xbf8,'WYhc')+_0x4e8324(0x421,'%iKk')+_0x4e8324(0x25d,'@(im')](_0x4e8324(0xc00,'ZQbK')+'mbine'+'EffPo'+'wer')?.[_0x4e8324(0x701,'ToWT')+'ed'],_0x52d08d=currentData['liqui'+'d']!==_0x4e8324(0x388,'zfK(');if(document[_0x4e8324(0xd78,'l0Vk')+_0x4e8324(0xda4,'Hgl$')+_0x4e8324(0x83b,'QIf#')](_0x4e8324(0x45d,'nlER')+'HQ'))document[_0x4e8324(0x643,'ToWT')+_0x4e8324(0x814,'(7CV')+_0x4e8324(0x8eb,'2U4A')](_0x4e8324(0x1064,'ZQbK')+'HQ')[_0x4e8324(0x5dd,'E1r%')][_0x4e8324(0x35a,'lTg5')+'ay']=_0x4e8324(0xc13,'Hgl$');document['getEl'+_0x4e8324(0x714,'FKaL')+_0x4e8324(0xd58,'Hgl$')](_0x4e8324(0xff7,'bMaB')+_0x4e8324(0x8b4,'2j(w')+_0x4e8324(0xb5c,'QIf#'))[_0x4e8324(0x4ac,'FKaL')]['displ'+'ay']=_0x53a2f7&&_0x546ccc&&_0x2793cc?'':_0x4e8324(0xa4f,'XmTZ'),document[_0x4e8324(0x9b9,'Band')+_0x4e8324(0x5ff,'mIwx')+_0x4e8324(0xd6d,'[GdJ')](_0x4e8324(0x413,'%llI')+'Eff')[_0x4e8324(0x6ee,'XmTZ')][_0x4e8324(0x9d3,'J$mI')+'ay']=_0x53a2f7&&(!_0x546ccc||!_0x2793cc)?'':_0x4e8324(0x5d4,'F40Y'),document['getEl'+_0x4e8324(0x5ff,'mIwx')+_0x4e8324(0x724,'d4#Z')]('panel'+_0x4e8324(0xe40,'XBWK'))[_0x4e8324(0x6ee,'XmTZ')][_0x4e8324(0xb24,'ro@9')+'ay']=_0x546ccc&&(!_0x53a2f7||!_0x2793cc)?'':'none',document[_0x4e8324(0xea5,'d4#Z')+'ement'+_0x4e8324(0x368,'E1r%')](_0x4e8324(0x835,'T)O0')+_0x4e8324(0x32d,'%iKk'))[_0x4e8324(0x549,'%iKk')][_0x4e8324(0xe2c,'T)O0')+'ay']=_0x225fdc?'':_0x4e8324(0x500,'^WDP');if(_0x53a2f7&&_0x546ccc&&_0x2793cc){const _0x44ec57=buildEffPowerChart(currentData,singleData,_0x52d08d);Plotly[_0x4e8324(0x67a,'Hgl$')](_0x4e8324(0x6ec,'%iKk')+_0x4e8324(0x1035,'WYhc')+'wer',[..._0x44ec57[_0x4e8324(0xf5e,'WYhc')+'s'],..._0x25db13,..._0x4751c4],_0x44ec57[_0x4e8324(0x46d,'2j(w')+'t'],PLOTLY_CONFIG);if(_0x44ec57[_0x4e8324(0x333,'2U4A')+'t'][_0x4e8324(0xc0c,'$gCG')+_0x4e8324(0x4a9,'J$mI')+'s'])makeAnnotationsDraggable(_0x4e8324(0xd1d,'ZQbK')+_0x4e8324(0x8b4,'2j(w')+'wer',_0x44ec57['layou'+'t']['annot'+'ation'+'s'],PUMP_ID);}else{if(_0x53a2f7){const _0x2caef=buildEffChart(currentData,singleData,_0x52d08d);Plotly[_0x4e8324(0x76b,'qape')](_0x4e8324(0x8d8,'nlER')+_0x4e8324(0x2ae,'ro@9'),[..._0x2caef[_0x4e8324(0xf41,'9Vcr')+'s'],..._0x25db13],_0x2caef[_0x4e8324(0x566,'fY%z')+'t'],PLOTLY_CONFIG);if(_0x2caef[_0x4e8324(0x85e,'XRBL')+'t'][_0x4e8324(0x9cd,'ZQbK')+_0x4e8324(0x5ce,'nlER')+'s'])makeAnnotationsDraggable('chart'+_0x4e8324(0x838,'%iKk'),_0x2caef[_0x4e8324(0xb97,'qape')+'t'][_0x4e8324(0xee8,'bMaB')+_0x4e8324(0x3eb,'bMaB')+'s'],PUMP_ID);}if(_0x546ccc){const _0x3ef74a=buildPowerChart(currentData,singleData,_0x52d08d);Plotly[_0x4e8324(0x39f,'2j(w')](_0x4e8324(0x1f2,'O2*S')+_0x4e8324(0xab1,'QIf#'),[..._0x3ef74a[_0x4e8324(0x979,'z2Tr')+'s'],..._0x4751c4],_0x3ef74a[_0x4e8324(0xf7b,'QIf#')+'t'],PLOTLY_CONFIG);if(_0x3ef74a[_0x4e8324(0x787,'o$gV')+'t'][_0x4e8324(0x2a7,'%iKk')+_0x4e8324(0x9fa,'@(im')+'s'])makeAnnotationsDraggable(_0x4e8324(0x277,'W@8N')+_0x4e8324(0x1a2,'(HU5'),_0x3ef74a[_0x4e8324(0xac5,'mIwx')+'t'][_0x4e8324(0x836,'XmTZ')+'ation'+'s'],PUMP_ID);}}if(_0x225fdc){const _0x47d1c5=buildNpshChart(currentData,singleData);Plotly[_0x4e8324(0x225,'mIwx')]('chart'+_0x4e8324(0x32d,'%iKk'),_0x47d1c5[_0x4e8324(0xccf,'ro@9')+'s'],_0x47d1c5[_0x4e8324(0x71e,'T)O0')+'t'],PLOTLY_CONFIG);if(_0x47d1c5['layou'+'t']['annot'+_0x4e8324(0xf78,'[GdJ')+'s'])makeAnnotationsDraggable(_0x4e8324(0x105f,'MvFO')+_0x4e8324(0x311,'MPp6'),_0x47d1c5[_0x4e8324(0xea3,'d4#Z')+'t'][_0x4e8324(0x619,'z2Tr')+_0x4e8324(0xe82,'O8jx')+'s'],PUMP_ID);}}}function renderCustomSummary(){}async function fetchAndRender(){const _0x3986aa=a0_0x21afb1,_0x3f6ca0=getParams(),_0x13e1c5=document['getEl'+'ement'+_0x3986aa(0x2be,'1qzA')](_0x3986aa(0x8b9,'LWa7')+_0x3986aa(0x396,'QIf#'));_0x13e1c5[_0x3986aa(0x48e,'MPp6')+_0x3986aa(0x3b9,'(HU5')]=!![],_0x13e1c5[_0x3986aa(0xe01,'lTg5')+_0x3986aa(0x934,'MvFO')]=_0x3986aa(0x2aa,'XBWK')+_0x3986aa(0xfd3,'ToWT')+_0x3986aa(0xaf0,'%iKk')+_0x3986aa(0x8ec,'l0Vk')+_0x3986aa(0x6ab,'ayOU')+'er\x20sp'+_0x3986aa(0x5c3,'bMaB')+_0x3986aa(0x841,'2j(w')+_0x3986aa(0x38e,'zfK(')+'\x20me-1'+'\x22></s'+_0x3986aa(0x51e,'FKaL')+'oadin'+'g…';try{const [_0xb5d05c,_0x5972c7]=await Promise[_0x3986aa(0x1f7,'F40Y')]([fetch(_0x3986aa(0x6bb,'T)O0')+_0x3986aa(0x64e,'9Vcr')+_0x3986aa(0x367,'MPp6')+'art/'+PUMP_ID+'?'+_0x3f6ca0),fetch(_0x3986aa(0x94f,'WYhc')+_0x3986aa(0xad0,'O8jx')+_0x3986aa(0x4f2,'ZQbK')+'a/'+PUMP_ID+'?'+_0x3f6ca0)]);currentData=await _0xb5d05c['json'](),singleData=await _0x5972c7[_0x3986aa(0x1053,'@(im')]();if(currentData&&currentData[_0x3986aa(0x907,'8OR)')+_0x3986aa(0xf8a,'Band')+_0x3986aa(0x208,'F40Y')+_0x3986aa(0xf9c,'Hgl$')]!==undefined){const _0x4722f5=document[_0x3986aa(0xb90,'^WDP')+_0x3986aa(0x77c,'2j(w')+'ById'](_0x3986aa(0xbba,'ayOU')+_0x3986aa(0x4ed,'o$gV')+_0x3986aa(0xb49,'fY%z'));if(_0x4722f5)_0x4722f5['place'+_0x3986aa(0xa82,'^WDP')+'r']='Auto\x20'+'('+currentData['defau'+_0x3986aa(0xfde,'J$mI')+_0x3986aa(0x5a9,'o$gV')+_0x3986aa(0x64d,'qape')]+'%)';}currentData&&currentData[_0x3986aa(0xca2,'mIwx')+_0x3986aa(0xbab,'nlER')+_0x3986aa(0xf3c,'9Vcr')]&&applyGraphOptions(currentData[_0x3986aa(0xd0c,'[GdJ')+_0x3986aa(0x3d8,'@(im')+_0x3986aa(0x4a1,'z2Tr')]),renderAll();}catch(_0x80a625){console[_0x3986aa(0x511,'z2Tr')](_0x80a625);}finally{_0x13e1c5[_0x3986aa(0x1c4,'fY%z')+_0x3986aa(0xb99,'d4#Z')]=![],_0x13e1c5[_0x3986aa(0x1026,'FKaL')+_0x3986aa(0xfb6,'E7d)')]=_0x3986aa(0x52a,'E1r%')+_0x3986aa(0x1070,'hsDz')+'bi\x20bi'+_0x3986aa(0xb6c,'ayOU')+_0x3986aa(0xb7c,'lNG6')+_0x3986aa(0x6eb,'$gCG')+_0x3986aa(0xf97,'o$gV')+_0x3986aa(0x4ca,'WYhc')+_0x3986aa(0x6bd,'9Vcr')+_0x3986aa(0xd26,'XBWK');}}const isCurvesPage=!!document[a0_0x21afb1(0x490,'XRBL')+a0_0x21afb1(0x7dd,'[GdJ')+a0_0x21afb1(0x873,'XmTZ')]('btnUp'+a0_0x21afb1(0x396,'QIf#'));if(isCurvesPage){const onOptionChange=()=>{renderAll(),saveGraphOptions();},onOptionFetchChange=()=>{fetchAndRender(),saveGraphOptions();};[a0_0x21afb1(0xffc,'hsDz')+a0_0x21afb1(0x3b3,'F40Y'),'chkSh'+'owEff'+a0_0x21afb1(0x7eb,'(HU5'),a0_0x21afb1(0x50a,'Band')+a0_0x21afb1(0xd86,'FKaL')+'erIso',a0_0x21afb1(0x37e,'$gCG')+'owNps'+a0_0x21afb1(0xbe2,'[GdJ'),a0_0x21afb1(0x3ba,'l&tG')+a0_0x21afb1(0xe8a,'hsDz')+a0_0x21afb1(0xf55,'8OR)')+'e',a0_0x21afb1(0x1018,'MPp6')+a0_0x21afb1(0x3e1,'d4#Z')+a0_0x21afb1(0xd19,'$gCG'),a0_0x21afb1(0x6fd,'(7CV')+a0_0x21afb1(0xc80,'J$mI')+'er',a0_0x21afb1(0x71a,'2j(w')+'gendM'+a0_0x21afb1(0x1d9,'Band')]['forEa'+'ch'](_0x4ada16=>{const _0xb83cc1=a0_0x21afb1,_0x5bd980=document['getEl'+_0xb83cc1(0x586,'^WDP')+_0xb83cc1(0xcb0,'hsDz')](_0x4ada16);_0x5bd980&&(_0x5bd980[_0xb83cc1(0x2f5,'z2Tr')+_0xb83cc1(0x812,'z2Tr')+_0xb83cc1(0xdd6,'l&tG')+'r'](_0xb83cc1(0x942,'l0Vk')+'e',()=>{const _0xd4b6ab=_0xb83cc1;if(_0x4ada16==='chkSh'+_0xd4b6ab(0x1bc,'zfK(')+_0xd4b6ab(0xfd6,'MvFO')){const _0x2ecb7c=document[_0xd4b6ab(0xbc7,'J$mI')+_0xd4b6ab(0x1a4,'F40Y')+_0xd4b6ab(0xcd0,'W@8N')](_0xd4b6ab(0x5fa,'XRBL')+_0xd4b6ab(0x6de,'O2*S')+_0xd4b6ab(0x59a,'9Vcr'));_0x2ecb7c&&(_0x2ecb7c[_0xd4b6ab(0x4e9,'o$gV')]['displ'+'ay']=_0x5bd980[_0xd4b6ab(0x820,'F40Y')+'ed']?'':_0xd4b6ab(0x1042,'lTg5'),_0x2ecb7c[_0xd4b6ab(0x66c,'ro@9')+_0xd4b6ab(0xc87,'MPp6')][_0xd4b6ab(0x7a3,'LWa7')+'e'](_0xd4b6ab(0x62c,'nlER')+'n',!_0x5bd980[_0xd4b6ab(0x4f0,'mIwx')+'ed']));}if(_0x4ada16===_0xd4b6ab(0xf98,'o$gV')+_0xd4b6ab(0x295,'bMaB')+_0xd4b6ab(0x3a3,'O2*S')){const _0x101d82=document[_0xd4b6ab(0xc37,'(HU5')+_0xd4b6ab(0xe67,'%llI')+_0xd4b6ab(0xdba,'8OR)')](_0xd4b6ab(0x806,'bMaB')+'Power'+'Level'+'s');_0x101d82&&(_0x101d82['style'][_0xd4b6ab(0x69d,'l0Vk')+'ay']=_0x5bd980[_0xd4b6ab(0x474,'W@8N')+'ed']?'':_0xd4b6ab(0x508,'FKaL'),_0x101d82[_0xd4b6ab(0x6d1,'%iKk')+_0xd4b6ab(0xbf5,'O2*S')][_0xd4b6ab(0xf11,'lTg5')+'e'](_0xd4b6ab(0xecd,'MPp6')+'n',!_0x5bd980[_0xd4b6ab(0x769,'%llI')+'ed']));}if(_0x4ada16===_0xd4b6ab(0xea8,'lTg5')+_0xd4b6ab(0x46f,'qape')+_0xd4b6ab(0x4ff,'ayOU')){const _0x4e1933=document[_0xd4b6ab(0x23f,'mIwx')+_0xd4b6ab(0xda4,'Hgl$')+_0xd4b6ab(0x724,'d4#Z')]('group'+'NpshL'+_0xd4b6ab(0x56a,'FKaL'));_0x4e1933&&(_0x4e1933[_0xd4b6ab(0x2f4,'[GdJ')][_0xd4b6ab(0xa0e,'%iKk')+'ay']=_0x5bd980[_0xd4b6ab(0x3de,'MPp6')+'ed']?'':_0xd4b6ab(0x50d,'XBWK'),_0x4e1933['class'+_0xd4b6ab(0x839,'LWa7')]['toggl'+'e'](_0xd4b6ab(0xe68,'8OR)')+'n',!_0x5bd980[_0xd4b6ab(0x936,'@(im')+'ed']));}if(_0x4ada16===_0xd4b6ab(0x7ba,'T)O0')+_0xd4b6ab(0x948,'9Vcr')+_0xd4b6ab(0xbcf,'QIf#')+'e'){const _0x24710e=document[_0xd4b6ab(0xfa8,'lTg5')+_0xd4b6ab(0x58a,'lNG6')+'ById'](_0xd4b6ab(0x996,'l0Vk')+_0xd4b6ab(0xf5d,'fY%z')+'Axis');_0x24710e&&(_0x24710e[_0xd4b6ab(0xb47,'ro@9')][_0xd4b6ab(0x3bf,'LWa7')+'ay']=_0x5bd980[_0xd4b6ab(0xa3f,'$gCG')+'ed']?'':_0xd4b6ab(0xb9e,'9Vcr'),_0x24710e[_0xd4b6ab(0xc6e,'^WDP')+_0xd4b6ab(0x8df,'F40Y')][_0xd4b6ab(0x5ad,'(HU5')+'e'](_0xd4b6ab(0x4c3,'9Vcr')+'n',!_0x5bd980[_0xd4b6ab(0xa3f,'$gCG')+'ed']));}if(_0x4ada16==='selLe'+_0xd4b6ab(0xf44,'[GdJ')+_0xd4b6ab(0xce3,'l&tG')){const _0x31668d=document[_0xd4b6ab(0x863,'ro@9')+_0xd4b6ab(0xb44,'QIf#')+_0xd4b6ab(0x7bd,'MvFO')](_0xd4b6ab(0xff1,'WYhc')+_0xd4b6ab(0xc7b,'9Vcr')+_0xd4b6ab(0xa28,'%llI')+'Pos');if(_0x31668d)_0x31668d[_0xd4b6ab(0xa84,'2j(w')][_0xd4b6ab(0x3bf,'LWa7')+'ay']=_0x5bd980[_0xd4b6ab(0xa2a,'hsDz')]===_0xd4b6ab(0x3bd,'o$gV')+_0xd4b6ab(0xc5e,'ro@9')+'ls'?'':_0xd4b6ab(0x66f,'2j(w');}onOptionChange();}),_0x4ada16==='txtCu'+_0xb83cc1(0xd77,'XRBL')+_0xb83cc1(0xd1a,'d4#Z')+_0xb83cc1(0x9f4,'E7d)')&&(_0x5bd980[_0xb83cc1(0xb0d,'XRBL')+'entLi'+_0xb83cc1(0xa66,'XBWK')+'r'](_0xb83cc1(0xc0f,'ZQbK'),onOptionChange),_0x5bd980[_0xb83cc1(0x827,'(HU5')+_0xb83cc1(0x539,'2j(w')+_0xb83cc1(0x604,'%iKk')+'r'](_0xb83cc1(0xbae,'1qzA'),onOptionChange)));}),document[a0_0x21afb1(0x384,'(HU5')+a0_0x21afb1(0x5af,'^WDP')+a0_0x21afb1(0x635,'9Vcr')+'l'](a0_0x21afb1(0xd72,'XRBL')+a0_0x21afb1(0xe89,'XmTZ')+'hsOpt'+a0_0x21afb1(0x3fa,'lTg5')+a0_0x21afb1(0xdbb,'E7d)')+a0_0x21afb1(0x483,'fY%z')+a0_0x21afb1(0xfe5,'2U4A')+a0_0x21afb1(0x21c,'2U4A')+a0_0x21afb1(0xdc2,'T)O0')+a0_0x21afb1(0x4e0,'%iKk')+a0_0x21afb1(0x5ab,'hsDz')+a0_0x21afb1(0x465,'T)O0')+a0_0x21afb1(0x319,'LWa7')+a0_0x21afb1(0x889,'2U4A')+a0_0x21afb1(0x6b2,'zfK('))[a0_0x21afb1(0x9c0,'d4#Z')+'ch'](_0x15679b=>{const _0x2d1bb8=a0_0x21afb1;_0x15679b[_0x2d1bb8(0x66e,'zfK(')+_0x2d1bb8(0x812,'z2Tr')+_0x2d1bb8(0x30e,'z2Tr')+'r'](_0x2d1bb8(0x289,'ayOU')+'e',onOptionChange);}),document[a0_0x21afb1(0xe18,'l&tG')+a0_0x21afb1(0x645,'fY%z')+a0_0x21afb1(0x7ec,'[GdJ')+'l']('input'+a0_0x21afb1(0xd37,'lTg5')+a0_0x21afb1(0xd43,'z2Tr')+'mMode'+a0_0x21afb1(0x9f9,'XRBL')+a0_0x21afb1(0x817,'MvFO'))[a0_0x21afb1(0x995,'mIwx')+'ch'](_0x12e10b=>{const _0x344140=a0_0x21afb1;_0x12e10b[_0x344140(0xdf2,'ayOU')+_0x344140(0x1055,'1qzA')+_0x344140(0x1039,'(7CV')+'r'](_0x344140(0xfcf,'F40Y')+'e',onOptionFetchChange);}),[a0_0x21afb1(0x1006,'d4#Z')+a0_0x21afb1(0x250,'MPp6')+'ls',a0_0x21afb1(0x42e,'nlER')+a0_0x21afb1(0xba7,'o$gV')+a0_0x21afb1(0xd56,'bMaB'),a0_0x21afb1(0x1f0,'[GdJ')+a0_0x21afb1(0x79c,'O8jx')+a0_0x21afb1(0x1e2,'O8jx'),a0_0x21afb1(0xff9,'zfK(')+a0_0x21afb1(0xef6,'2j(w')+a0_0x21afb1(0x718,'F40Y')][a0_0x21afb1(0xf49,'ToWT')+'ch'](_0x324b61=>{const _0x5bd7ff=a0_0x21afb1,_0x20de0d=document[_0x5bd7ff(0xea5,'d4#Z')+_0x5bd7ff(0x1a4,'F40Y')+_0x5bd7ff(0xeb4,'9Vcr')](_0x324b61);_0x20de0d&&(_0x20de0d[_0x5bd7ff(0x840,'XBWK')+_0x5bd7ff(0xddb,'zfK(')+_0x5bd7ff(0xe0d,'hsDz')+'r']('chang'+'e',onOptionFetchChange),_0x20de0d['addEv'+_0x5bd7ff(0x886,'bMaB')+'stene'+'r'](_0x5bd7ff(0x241,'d4#Z')+_0x5bd7ff(0xab6,'bMaB'),_0x4f3128=>{const _0x10fa86=_0x5bd7ff;_0x4f3128['key']===_0x10fa86(0xd9f,'%iKk')&&(_0x4f3128[_0x10fa86(0x857,'zfK(')+_0x10fa86(0xc7f,'ro@9')+'ault'](),onOptionFetchChange());}));}),document[a0_0x21afb1(0x490,'XRBL')+a0_0x21afb1(0x2df,'ToWT')+a0_0x21afb1(0xe58,'LWa7')](a0_0x21afb1(0xa0f,'@(im')+a0_0x21afb1(0xfaf,'XRBL')+'ct')[a0_0x21afb1(0x1043,'Hgl$')+a0_0x21afb1(0xe70,'ro@9')+a0_0x21afb1(0x25a,'lNG6')+'r'](a0_0x21afb1(0xd41,'WYhc')+'e',updateLiquidPanels),document[a0_0x21afb1(0x6f3,'(7CV')+a0_0x21afb1(0x586,'^WDP')+'ById'](a0_0x21afb1(0x2ee,'^WDP')+'date')['addEv'+'entLi'+'stene'+'r'](a0_0x21afb1(0xde2,'O2*S'),fetchAndRender);const saveOptBtn=document[a0_0x21afb1(0x490,'XRBL')+a0_0x21afb1(0xeba,'E1r%')+a0_0x21afb1(0x751,'l&tG')](a0_0x21afb1(0x60d,'%iKk')+a0_0x21afb1(0xb64,'d4#Z')+a0_0x21afb1(0x5fe,'Band')+a0_0x21afb1(0x593,'lTg5'));saveOptBtn&&saveOptBtn[a0_0x21afb1(0xa18,'l0Vk')+'entLi'+a0_0x21afb1(0x49d,'1qzA')+'r'](a0_0x21afb1(0x9de,'fY%z'),saveGraphOptions);const resetPosBtn=document[a0_0x21afb1(0x490,'XRBL')+a0_0x21afb1(0xbb8,'WYhc')+a0_0x21afb1(0xae0,'Band')](a0_0x21afb1(0x235,'T)O0')+a0_0x21afb1(0xa95,'F40Y')+a0_0x21afb1(0x3d7,'%llI')+'s');resetPosBtn&&resetPosBtn[a0_0x21afb1(0x1fa,'T)O0')+'entLi'+a0_0x21afb1(0xb83,'FKaL')+'r']('click',async()=>{const _0x38b629=a0_0x21afb1;customLabelPositions={};if(typeof PUMP_ID!==_0x38b629(0x6d5,'ayOU')+_0x38b629(0xf77,'ToWT')&&PUMP_ID){const _0x28cc08=collectGraphOptions();_0x28cc08[_0x38b629(0xbb0,'E7d)')+'_labe'+_0x38b629(0xa75,'mIwx')]=!![],_0x28cc08[_0x38b629(0x86b,'z2Tr')+_0x38b629(0x1e5,'ToWT')+_0x38b629(0x971,'ayOU')+'s']={};try{await fetch('/papi'+_0x38b629(0xa6b,'ro@9')+'/'+PUMP_ID+(_0x38b629(0x569,'LWa7')+'h-opt'+_0x38b629(0x219,'O2*S')),{'method':_0x38b629(0x9f0,'hsDz'),'headers':{'Content-Type':_0x38b629(0xdef,'ayOU')+_0x38b629(0x824,'WYhc')+_0x38b629(0x5dc,'T)O0')+'n'},'body':JSON[_0x38b629(0x5ee,'lTg5')+'gify'](_0x28cc08)});}catch(_0x4d271c){}}renderAll();});document[a0_0x21afb1(0x9b9,'Band')+a0_0x21afb1(0x77c,'2j(w')+'ById'](a0_0x21afb1(0xe21,'lNG6')+a0_0x21afb1(0xfe6,'Band')+'e')[a0_0x21afb1(0xec3,'[GdJ')+a0_0x21afb1(0x6b4,'XmTZ')+a0_0x21afb1(0xa66,'XBWK')+'r'](a0_0x21afb1(0x2a2,'Band'),addCustomCurveRow),document[a0_0x21afb1(0xa1e,'Hgl$')+a0_0x21afb1(0x291,'T)O0')+a0_0x21afb1(0xe8e,'E7d)')]('custo'+a0_0x21afb1(0xe9a,'T)O0')+a0_0x21afb1(0xda9,'O2*S')+'y')[a0_0x21afb1(0xb22,'fY%z')+a0_0x21afb1(0xc71,'MvFO')+a0_0x21afb1(0xe81,'^WDP')+'r'](a0_0x21afb1(0xc3e,'XRBL')+a0_0x21afb1(0xae9,'LWa7')+a0_0x21afb1(0xbe8,'%iKk')+'e',()=>{const _0x2c9499=a0_0x21afb1;document[_0x2c9499(0xe3f,'@(im')+_0x2c9499(0x358,'O2*S')+_0x2c9499(0xae0,'Band')](_0x2c9499(0x614,'W@8N')+_0x2c9499(0x7a5,'1qzA')+_0x2c9499(0xc0e,'E1r%')+_0x2c9499(0x5f1,'O8jx'))[_0x2c9499(0xd34,'%llI')+_0x2c9499(0xd09,'zfK(')]=_0x2c9499(0x4c1,'fY%z')+_0x2c9499(0x970,'z2Tr')+'ron-u'+'p';}),document[a0_0x21afb1(0xf05,'E1r%')+a0_0x21afb1(0x814,'(7CV')+a0_0x21afb1(0xc9e,'lNG6')](a0_0x21afb1(0xf76,'9Vcr')+'mCurv'+'esBod'+'y')[a0_0x21afb1(0x204,'FKaL')+a0_0x21afb1(0xaf9,'8OR)')+a0_0x21afb1(0x558,'8OR)')+'r'](a0_0x21afb1(0x735,'2j(w')+a0_0x21afb1(0xe11,'@(im')+a0_0x21afb1(0xc81,'%llI')+'e',()=>{const _0x27f69e=a0_0x21afb1;document[_0x27f69e(0x51d,'W@8N')+_0x27f69e(0x1ad,'ro@9')+_0x27f69e(0xeb4,'9Vcr')](_0x27f69e(0x65b,'(HU5')+_0x27f69e(0x3e0,'zfK(')+_0x27f69e(0xe17,'LWa7')+_0x27f69e(0xd61,'ayOU'))[_0x27f69e(0xfd1,'(HU5')+'Name']=_0x27f69e(0x2ec,'mIwx')+_0x27f69e(0x961,'(HU5')+'ron-d'+_0x27f69e(0x4ef,'E7d)');});const savedGraphOpts=document[a0_0x21afb1(0x1060,'hsDz')+a0_0x21afb1(0x814,'(7CV')+a0_0x21afb1(0x5f3,'$gCG')]('pump-'+a0_0x21afb1(0x632,'J$mI'))?.[a0_0x21afb1(0x8c9,'lNG6')+'et'][a0_0x21afb1(0xc24,'qape')+a0_0x21afb1(0x61a,'lTg5')+'ns'];if(savedGraphOpts)try{applyGraphOptions(JSON[a0_0x21afb1(0xbfe,'E1r%')](savedGraphOpts));}catch(a0_0x23b05b){}updateLiquidPanels(),fetchAndRender();}}
+/**
+ * pump_curves.js — Warman-style pump curve rendering with Plotly
+ * Covers: Warman performance map, standalone curves, isoline overlay, comparison helpers
+ */
+
+/* ── Plotly dark theme ────────────────────────────────────────────────────── */
+const PLOTLY_LAYOUT_BASE = {
+  paper_bgcolor: 'transparent',
+  plot_bgcolor: '#0d1117',
+  font: { color: '#8b949e', size: 11, family: 'system-ui, sans-serif' },
+  xaxis: {
+    gridcolor: '#21262d', zerolinecolor: '#30363d',
+    showline: true, linewidth: 1.5, linecolor: '#30363d', mirror: true,
+    tickfont: { color: '#8b949e' }, titlefont: { color: '#c9d1d9', size: 12 }
+  },
+  yaxis: {
+    gridcolor: '#21262d', zerolinecolor: '#30363d',
+    showline: true, linewidth: 1.5, linecolor: '#30363d', mirror: true,
+    tickfont: { color: '#8b949e' }, titlefont: { color: '#c9d1d9', size: 12 }
+  },
+  margin: { l: 58, r: 24, t: 28, b: 52 },
+  showlegend: true,
+  legend: {
+    bgcolor: 'rgba(22,27,34,0.88)', bordercolor: '#30363d', borderwidth: 1,
+    font: { color: '#c9d1d9', size: 10 }, x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top'
+  },
+  hovermode: 'closest',
+  hoverlabel: { bgcolor: '#161b22', bordercolor: '#58a6ff', font: { color: '#e6edf3', size: 11 } },
+};
+
+const PLOTLY_CONFIG = {
+  responsive: true,
+  displayModeBar: true,
+  editable: true,
+  edits: {
+    annotationPosition: true,
+    annotationText: false,
+    annotationTail: false,
+    axisTitleText: false,
+    colorbarPosition: false,
+    colorbarTitleText: false,
+    legendPosition: false,
+    titleText: false,
+    shapePosition: false
+  },
+  modeBarButtonsToRemove: ['select2d', 'lasso2d'],
+  displaylogo: false,
+  toImageButtonOptions: { format: 'png', width: 1400, height: 800 }
+};
+
+/* ── Diameter family colour palette ──────────────────────────────────────── */
+// Blues for H-Q curves (darker = larger diameter)
+const DIA_BLUES = ['#1c6fbf', '#2a85d4', '#3fa0e8', '#58b8ff', '#82cdff', '#b3e0ff'];
+const PUMP_COLORS = ['#58a6ff', '#3fb950', '#f0c040', '#f85149', '#bc8cff', '#39d3c0'];
+
+// Efficiency isoline palette — warm yellows → greens
+function isoColor(eta, etaMin, etaMax) {
+  const t = etaMax > etaMin ? (eta - etaMin) / (etaMax - etaMin) : 0.5;
+  // lerp: yellow (#f0c040) → green (#3fb950)
+  const r = Math.round(240 + t * (63 - 240));
+  const g = Math.round(192 + t * (185 - 192));
+  const b = Math.round(64 + t * (80 - 64));
+  return `rgb(${r},${g},${b})`;
+}
+
+/* ── Generic layout builder ──────────────────────────────────────────────── */
+function getUnitScaleRatio(axisName, pumpObj = {}) {
+  if (axisName === 'eff') return 1.0;
+
+  const convMap = {
+    q: { m3h: 1.0, ls: 0.2777777777777778, gpm: 4.402917396, lmin: 16.6666666667 },
+    h: { m: 1.0, ft: 3.280839895 },
+    npsh: { m: 1.0, ft: 3.280839895 },
+    pow: { kw: 1.0, hp: 1.34102209 }
+  };
+
+  const previewQ = document.getElementById('preview-unit-q')?.value;
+  const previewH = document.getElementById('preview-unit-h')?.value;
+  const previewNpsh = document.getElementById('preview-unit-npsh')?.value;
+  const previewPow = document.getElementById('preview-unit-pow')?.value;
+
+  let typeKey = 'q';
+  let targetDisplayUnit = previewQ || 'm3h';
+  let baseUnit = pumpObj.unit_q || document.getElementById('unit_q_field')?.value || 'm3h';
+
+  if (axisName === 'head') {
+    typeKey = 'h';
+    targetDisplayUnit = previewH || 'm';
+    baseUnit = pumpObj.unit_h || document.getElementById('unit_h_field')?.value || 'm';
+  } else if (axisName === 'npsh') {
+    typeKey = 'npsh';
+    targetDisplayUnit = previewNpsh || 'm';
+    baseUnit = pumpObj.unit_npsh || document.getElementById('unit_npsh_field')?.value || 'm';
+  } else if (axisName === 'power') {
+    typeKey = 'pow';
+    targetDisplayUnit = previewPow || 'kw';
+    baseUnit = pumpObj.unit_pow || pumpObj.unit_power || document.getElementById('unit_pow_field')?.value || 'kw';
+  }
+
+  const factorBase = convMap[typeKey]?.[baseUnit] || 1.0;
+  const factorDisplay = convMap[typeKey]?.[targetDisplayUnit] || 1.0;
+
+  return factorDisplay / factorBase;
+}
+
+/**
+ * Normalizes axis bounds and major step intervals to standard clean engineering round numbers
+ * (multiples of 1, 1.5, 2, 2.5, 5, 10 * 10^k), ensuring axes end on clean fives/tens (e.g. 110, 120)
+ * rather than awkward converted numbers (e.g. 108, 116).
+ */
+function getCleanAxisScale(rawMin, rawMax, majorDivisions, minorSubticks, isConverted = false) {
+  if (rawMax === null || rawMax === undefined) {
+    return { min: rawMin, max: rawMax, dtick: null, minor: minorSubticks };
+  }
+
+  const minVal = (rawMin !== null && rawMin !== undefined) ? Number(rawMin) : 0;
+  const maxVal = Number(rawMax);
+  const span = maxVal - minVal;
+
+  if (span <= 0) {
+    return { min: minVal, max: maxVal, dtick: null, minor: minorSubticks };
+  }
+
+  // Calculate target step from major divisions
+  let targetStep;
+  if (majorDivisions !== null && majorDivisions !== undefined && Number(majorDivisions) > 0) {
+    targetStep = span / Number(majorDivisions);
+  } else {
+    targetStep = span / 5.0;
+  }
+
+  // Standard clean multipliers across decades: 1, 1.5, 2, 2.5, 5, 10
+  const multipliers = [1.0, 1.5, 2.0, 2.5, 5.0, 10.0];
+  const mag = Math.pow(10, Math.floor(Math.log10(targetStep > 0 ? targetStep : 1.0)));
+
+  let candidates = [];
+  [0.1, 1.0, 10.0].forEach(decade => {
+    multipliers.forEach(m => {
+      const c = m * mag * decade;
+      if (c > 0) candidates.push(Math.round(c * 1000000) / 1000000);
+    });
+  });
+
+  candidates = Array.from(new Set(candidates)).sort((a, b) => a - b);
+  let reasonable = candidates.filter(c => (span / c) >= 2.5 && (span / c) <= 12.0);
+  if (reasonable.length === 0) reasonable = candidates;
+
+  // Pick candidate step with MINIMAL change from targetStep
+  let cleanStep = reasonable[0];
+  let minDiff = Math.abs(cleanStep - targetStep);
+  for (let i = 1; i < reasonable.length; i++) {
+    const diff = Math.abs(reasonable[i] - targetStep);
+    if (diff < minDiff) {
+      minDiff = diff;
+      cleanStep = reasonable[i];
+    }
+  }
+
+  // Clean max: ceil to nearest multiple of cleanStep so all data fits and ends on clean round number (e.g. 110, 120, 150)
+  const numSteps = Math.ceil((maxVal - minVal) / cleanStep - 1e-5);
+  const cleanMax = minVal + numSteps * cleanStep;
+
+  return {
+    min: minVal,
+    max: cleanMax,
+    dtick: cleanStep,
+    minor: minorSubticks
+  };
+}
+
+/**
+ * Applies custom axis scaling settings (min, max, major ticks, minor ticks) to a Plotly axis layout object.
+ * Automatically accounts for active unit conversions and standard clean round numbers (matching reports).
+ *
+ * @param {Object} axisObj - Plotly axis configuration object (e.g., layout.xaxis, layout.yaxis)
+ * @param {string} axisName - The axis name identifier ('flow', 'head', 'eff', 'power', 'npsh')
+ * @param {Object} [pumpObj] - Optional pump data dictionary containing axis scale values
+ */
+function applyAxisScaleSettings(axisObj, axisName, pumpObj = {}) {
+  if (!axisObj) return axisObj;
+
+  const getScaleVal = (prop, isInt = false) => {
+    const fieldId = `axis_${axisName}_${prop}`;
+    const domEl = document.getElementById(fieldId);
+    if (domEl && domEl.value !== undefined && domEl.value.trim() !== '') {
+      const parsed = isInt ? parseInt(domEl.value.trim(), 10) : parseFloat(domEl.value.trim());
+      if (!isNaN(parsed)) return parsed;
+    }
+    const propKey = `axis_${axisName}_${prop}`;
+    if (pumpObj && pumpObj[propKey] !== undefined && pumpObj[propKey] !== null) {
+      const parsed = isInt ? parseInt(pumpObj[propKey], 10) : parseFloat(pumpObj[propKey]);
+      if (!isNaN(parsed)) return parsed;
+    }
+    return null;
+  };
+
+  const rawMin = getScaleVal('min');
+  const rawMax = getScaleVal('max');
+  const majorVal = getScaleVal('major');
+  const minorVal = getScaleVal('minor', true);
+
+  const unitRatio = getUnitScaleRatio(axisName, pumpObj);
+  const isConverted = Math.abs(unitRatio - 1.0) > 1e-4;
+
+  const minVal = rawMin !== null ? rawMin * unitRatio : null;
+  const maxVal = rawMax !== null ? rawMax * unitRatio : null;
+
+  // 1. Clean Min & Max Range Bounds and Step Intervals
+  if (minVal !== null || maxVal !== null) {
+    const currentMin = minVal !== null ? minVal : (axisObj.range ? axisObj.range[0] : 0);
+    const currentMax = maxVal !== null ? maxVal : (axisObj.range ? axisObj.range[1] : 100);
+
+    const clean = getCleanAxisScale(currentMin, currentMax, majorVal, minorVal, isConverted);
+
+    axisObj.range = [clean.min, clean.max];
+    axisObj.autorange = false;
+    delete axisObj.rangemode;
+
+    if (clean.dtick !== null && clean.dtick > 0) {
+      axisObj.dtick = clean.dtick;
+      axisObj.tickmode = 'linear';
+    }
+  } else if (majorVal !== null && majorVal > 0) {
+    axisObj.nticks = Math.round(majorVal) + 1;
+  }
+
+  // 2. Minor Subticks
+  if (minorVal !== null && minorVal > 0) {
+    axisObj.minor = {
+      nticks: minorVal + 1,
+      showgrid: true,
+      gridcolor: '#21262d',
+      gridwidth: 1,
+      ticks: 'inside',
+      ticklen: 4,
+      tickcolor: '#30363d'
+    };
+  }
+
+  return axisObj;
+}
+
+function makeLayout(xTitle, yTitle, extra = {}, pumpObj = {}) {
+  const layout = Object.assign({}, PLOTLY_LAYOUT_BASE, {
+    xaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.xaxis, { title: xTitle }),
+    yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { title: yTitle }),
+  }, extra);
+
+  applyAxisScaleSettings(layout.xaxis, 'flow', pumpObj);
+
+  const yLower = (typeof yTitle === 'string' ? yTitle : (yTitle.text || '')).toLowerCase();
+  if (yLower.includes('head')) applyAxisScaleSettings(layout.yaxis, 'head', pumpObj);
+  else if (yLower.includes('eff')) applyAxisScaleSettings(layout.yaxis, 'eff', pumpObj);
+  else if (yLower.includes('power')) applyAxisScaleSettings(layout.yaxis, 'power', pumpObj);
+  else if (yLower.includes('npsh')) applyAxisScaleSettings(layout.yaxis, 'npsh', pumpObj);
+
+  if (layout.yaxis2) {
+    const y2Lower = (typeof layout.yaxis2.title === 'string' ? layout.yaxis2.title : (layout.yaxis2.title?.text || '')).toLowerCase();
+    if (y2Lower.includes('eff')) applyAxisScaleSettings(layout.yaxis2, 'eff', pumpObj);
+    else if (y2Lower.includes('power')) applyAxisScaleSettings(layout.yaxis2, 'power', pumpObj);
+    else if (y2Lower.includes('npsh')) applyAxisScaleSettings(layout.yaxis2, 'npsh', pumpObj);
+  }
+
+  return layout;
+}
+
+/* ── Duty point marker ───────────────────────────────────────────────────── */
+function dutyTrace(q, h) {
+  return {
+    type: 'scatter', mode: 'markers', name: 'Duty Point',
+    x: [q], y: [h],
+    marker: { size: 14, color: '#ffffff', symbol: 'cross-open', line: { color: '#ff4444', width: 2.5 } },
+    hovertemplate: `Duty<br>Q = ${q} m³/h<br>H = ${h} m<extra></extra>`,
+  };
+}
+
+let customLabelPositions = {};
+
+function getLabelUnitScaleFactors() {
+  const convMap = {
+    q: { m3h: 1.0, ls: 0.2777777777777778, gpm: 4.402917396, lmin: 16.6666666667 },
+    h: { m: 1.0, ft: 3.280839895 },
+    npsh: { m: 1.0, ft: 3.280839895 },
+    pow: { kw: 1.0, hp: 1.34102209 }
+  };
+
+  const previewQ = document.getElementById('preview-unit-q')?.value || 'm3h';
+  const previewH = document.getElementById('preview-unit-h')?.value || 'm';
+  const previewNpsh = document.getElementById('preview-unit-npsh')?.value || 'm';
+  const previewPow = document.getElementById('preview-unit-pow')?.value || 'kw';
+
+  return {
+    fQ: convMap.q[previewQ] || 1.0,
+    fH: convMap.h[previewH] || 1.0,
+    fNpsh: convMap.npsh[previewNpsh] || 1.0,
+    fPow: convMap.pow[previewPow] || 1.0
+  };
+}
+
+function getCustomLabelPosition(key, pumpObj = {}, yAxisType = 'h') {
+  if (!customLabelPositions || !customLabelPositions[key]) return null;
+  const raw = customLabelPositions[key];
+  if (raw.x === undefined || raw.y === undefined) return null;
+
+  const scales = getLabelUnitScaleFactors();
+  let scaleY = scales.fH;
+  if (yAxisType === 'npsh') scaleY = scales.fNpsh;
+  else if (yAxisType === 'pow' || yAxisType === 'power') scaleY = scales.fPow;
+  else if (yAxisType === 'eff' || yAxisType === 'eta') scaleY = 1.0;
+
+  return {
+    x: raw.x * scales.fQ,
+    y: raw.y * scaleY
+  };
+}
+
+function _parseStyleField(fieldId, fallbackColor, fallbackWeight, fallbackStyle) {
+  const val = document.getElementById(fieldId)?.value;
+  if (val && val.includes(';') && val.includes(',')) {
+    try {
+      const parts = val.split(';');
+      const color = parts[0].trim() || fallbackColor;
+      const subparts = (parts[1] || '').split(',');
+      const weight = parseFloat(subparts[0]) || fallbackWeight;
+      const style = (subparts[1] || '').trim() || fallbackStyle;
+      return { color, weight, style };
+    } catch (e) {}
+  }
+  return { color: fallbackColor, weight: fallbackWeight, style: fallbackStyle };
+}
+
+function getGraphDisplayUnits() {
+  const getStyleObj = (colorId, weightId, styleId, fieldId, defColor, defWeight, defStyle) => {
+    const colorEl = document.getElementById(colorId);
+    const weightEl = document.getElementById(weightId);
+    const styleEl = document.getElementById(styleId);
+
+    if (colorEl || weightEl || styleEl) {
+      return {
+        color: colorEl?.value || defColor,
+        weight: parseFloat(weightEl?.value) || defWeight,
+        style: styleEl?.value || defStyle
+      };
+    }
+    return _parseStyleField(fieldId, defColor, defWeight, defStyle);
+  };
+
+  const headStyleObj = getStyleObj('clrHeadColor', 'selHeadWeight', 'selHeadStyle', 'head_curve_style_field', '#58a6ff', 2.0, 'solid');
+  const effStyleObj = getStyleObj('clrEffColor', 'selEffWeight', 'selEffStyle', 'eff_curve_style_field', '#3fb950', 1.5, 'dot');
+  const powStyleObj = getStyleObj('clrPowColor', 'selPowWeight', 'selPowStyle', 'power_curve_style_field', '#f85149', 1.5, 'longdash');
+  const npshStyleObj = getStyleObj('clrNpshColor', 'selNpshWeight', 'selNpshStyle', 'npsh_curve_style_field', '#39d3c0', 1.5, 'dashdot');
+
+  return {
+    q: document.getElementById('preview-unit-q')?.value || 'm3h',
+    h: document.getElementById('preview-unit-h')?.value || 'm',
+    npsh: document.getElementById('preview-unit-npsh')?.value || 'm',
+    labelFormat: document.getElementById('selLabelFormat')?.value || 'percent',
+    pow: document.getElementById('preview-unit-pow')?.value || 'kw',
+    legendMode: document.getElementById('selLegendMode')?.value || 'each',
+
+    headColor: headStyleObj.color,
+    headWeight: headStyleObj.weight,
+    headStyle: headStyleObj.style,
+
+    effColor: effStyleObj.color,
+    effWeight: effStyleObj.weight,
+    effStyle: effStyleObj.style,
+
+    powColor: powStyleObj.color,
+    powWeight: powStyleObj.weight,
+    powStyle: powStyleObj.style,
+
+    npshColor: npshStyleObj.color,
+    npshWeight: npshStyleObj.weight,
+    npshStyle: npshStyleObj.style
+  };
+}
+
+/* ── Annotation Move, Drag & Keyboard Helper ──────────────────────────────── */
+// Beginner Note: This function makes all graph label badges (like Ø228 mm or 78%) interactive!
+// It allows users to:
+if (!window._globalLabelSelectionManager) {
+  window._globalLabelSelectionManager = {
+    activeState: null,
+    select(state) {
+      if (this.activeState && this.activeState !== state) {
+        this.deselect();
+      }
+      this.activeState = state;
+    },
+    deselect() {
+      if (!this.activeState) return;
+      const st = this.activeState;
+      this.activeState = null;
+      try {
+        st.showToast('');
+        st.container.style.cursor = '';
+        const cleanAnnotations = (st.annotations || []).map(a => Object.assign({}, a));
+        Plotly.relayout(st.container, { annotations: cleanAnnotations }).then(() => {
+          if (typeof st.setupSvgEvents === 'function') {
+            st.setupSvgEvents();
+          }
+        });
+      } catch (e) {}
+    }
+  };
+
+  document.addEventListener('keydown', (e) => {
+    const st = window._globalLabelSelectionManager.activeState;
+    if (!st || !st.annObj) return;
+
+    if (e.key === 'Escape') {
+      window._globalLabelSelectionManager.deselect();
+      return;
+    }
+
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+
+      const container = st.container;
+      const selectedAnn = st.annObj;
+      const fullLayout = container._fullLayout;
+      const xDomain = (fullLayout?.xaxis?.range) ? Math.abs(fullLayout.xaxis.range[1] - fullLayout.xaxis.range[0]) : 100;
+      const yDomain = (fullLayout?.yaxis?.range) ? Math.abs(fullLayout.yaxis.range[1] - fullLayout.yaxis.range[0]) : 50;
+
+      const stepMult = e.shiftKey ? 5 : 1;
+      const stepX = (xDomain / 200) * stepMult;
+      const stepY = (yDomain / 200) * stepMult;
+
+      let newX = selectedAnn.x;
+      let newY = selectedAnn.y;
+
+      if (e.key === 'ArrowLeft')  newX = Math.max(0, newX - stepX);
+      if (e.key === 'ArrowRight') newX = newX + stepX;
+      if (e.key === 'ArrowDown')  newY = Math.max(0, newY - stepY);
+      if (e.key === 'ArrowUp')    newY = newY + stepY;
+
+      newX = Math.round(newX * 100) / 100;
+      newY = Math.round(newY * 100) / 100;
+
+      selectedAnn.x = newX;
+      selectedAnn.y = newY;
+      selectedAnn.xanchor = 'center';
+      selectedAnn.yanchor = 'middle';
+      selectedAnn.xshift = 0;
+      selectedAnn.yshift = 0;
+
+      st.savePosition(selectedAnn.name, newX, newY);
+      Plotly.relayout(container, { annotations: st.annotations }).then(() => {
+        st.setupSvgEvents();
+      });
+    }
+  });
+
+  document.addEventListener('mousedown', (e) => {
+    const isAnn = e.target.closest('.annotation-text, [class*="annotation"]');
+    if (!isAnn && window._globalLabelSelectionManager.activeState) {
+      window._globalLabelSelectionManager.deselect();
+    }
+  });
+}
+
+// Beginner Note: Enables dragging and keyboard arrow tuning for labels on any graph.
+function makeAnnotationsDraggable(chartId, annotations, pumpId) {
+  const container = document.getElementById(chartId);
+  if (!container) return;
+
+  // Cleanup old listeners if re-initializing
+  if (container._annCleanups) {
+    container._annCleanups.forEach(fn => { try { fn(); } catch(e){} });
+  }
+  container._annCleanups = [];
+
+  // Clear _dragBound flags so fresh event handlers can be bound with the new annotations closure
+  const oldAnnotEls = container.querySelectorAll('.annotation-text, [class*="annotation"]');
+  oldAnnotEls.forEach(el => {
+    let g = el.closest('g.annotation') || el.closest('g');
+    if (g) g._dragBound = false;
+  });
+
+  function screenToDataCoords(e) {
+    const fullLayout = container._fullLayout;
+    if (!fullLayout || !fullLayout.xaxis || !fullLayout.yaxis) return null;
+    const xaxis = fullLayout.xaxis;
+    const yaxis = fullLayout.yaxis;
+    const containerRect = container.getBoundingClientRect();
+
+    const relX = e.clientX - containerRect.left - xaxis._offset;
+    const relY = e.clientY - containerRect.top - yaxis._offset;
+
+    const clampedRelX = Math.max(0, Math.min(xaxis._length || 9999, relX));
+    const clampedRelY = Math.max(0, Math.min(yaxis._length || 9999, relY));
+
+    const dataX = Math.max(0, Math.round(xaxis.p2c(clampedRelX) * 100) / 100);
+    const dataY = Math.max(0, Math.round(yaxis.p2c(clampedRelY) * 100) / 100);
+    return { x: dataX, y: dataY };
+  }
+
+  let toast = container.querySelector('._ann-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.className = '_ann-toast';
+    toast.style.cssText = [
+      'position:absolute', 'top:8px', 'left:50%', 'transform:translateX(-50%)',
+      'background:rgba(22, 27, 34, 0.95)', 'color:#58a6ff', 'padding:6px 16px',
+      'border:1px solid #30363d', 'border-radius:6px', 'font-size:12px', 'font-weight:600',
+      'z-index:9999', 'pointer-events:none', 'display:none', 'white-space:nowrap',
+      'box-shadow:0 4px 12px rgba(0,0,0,0.5)'
+    ].join(';');
+    container.style.position = 'relative';
+    container.appendChild(toast);
+  }
+
+  const showToast = (msg) => { toast.innerHTML = msg; toast.style.display = msg ? 'block' : 'none'; };
+
+  let saveTimer = null;
+  function savePosition(annName, xVal, yVal) {
+    const scales = getLabelUnitScaleFactors(typeof window.pumpObj !== 'undefined' ? window.pumpObj : {});
+    let scaleY = scales.fH;
+    if (annName && (annName.startsWith('npsh') || annName.includes('npsh'))) scaleY = scales.fNpsh;
+    else if (annName && (annName.startsWith('pow') || annName.includes('pow'))) scaleY = scales.fPow;
+    else if (annName && (annName.startsWith('eta') || annName.startsWith('eff'))) scaleY = 1.0;
+
+    const baseSavedX = Math.round((xVal / (scales.fQ || 1.0)) * 100) / 100;
+    const baseSavedY = Math.round((yVal / (scaleY || 1.0)) * 100) / 100;
+
+    if (!customLabelPositions[annName]) customLabelPositions[annName] = {};
+    customLabelPositions[annName].x = baseSavedX;
+    customLabelPositions[annName].y = baseSavedY;
+
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      if (!pumpId) return;
+      fetch(`/papi/pump/${pumpId}/label-pos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [annName]: { x: baseSavedX, y: baseSavedY } })
+      }).catch(() => {});
+    }, 150);
+  }
+
+  function selectAnnotation(ann) {
+    if (!ann) return;
+    const currentState = { chartId, container, annotations, annObj: ann, savePosition, showToast, setupSvgEvents };
+    window._globalLabelSelectionManager.select(currentState);
+
+    showToast(`<strong>"${ann.name}"</strong> selected &mdash; Drag mouse or use Arrow keys (&larr; &uarr; &rarr; &darr;) to adjust`);
+
+    const idx = annotations.indexOf(ann);
+    if (idx >= 0) {
+      const updated = annotations.map((a, i) => {
+        if (i === idx) {
+          return Object.assign({}, a, {
+            bgcolor: 'rgba(88,166,255,0.45)',
+            bordercolor: '#58a6ff',
+            borderwidth: 2
+          });
+        }
+        return Object.assign({}, a);
+      });
+      Plotly.relayout(container, { annotations: updated }).then(() => {
+        setupSvgEvents();
+      });
+    }
+  }
+
+  function deselectAnnotation() {
+    window._globalLabelSelectionManager.deselect();
+  }
+
+  function cleanStr(s) {
+    return (s || '').replace(/<[^>]*>/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  }
+
+  const setupSvgEvents = () => {
+    const annElements = container.querySelectorAll('.annotation-text, [class*="annotation"]');
+    annElements.forEach(el => {
+      let g = el.closest('g.annotation') || el.closest('g');
+      if (!g || g._dragBound) return;
+
+      const textEl = g.querySelector('text');
+      if (!textEl) return;
+      const rawText = textEl.textContent.trim();
+      const cleanRaw = cleanStr(rawText);
+      const numRaw = rawText.replace(/[^0-9.]/g, '');
+
+      const candidates = annotations.filter(a => {
+        if (!a || !a.name) return false;
+        if (a.name === rawText) return true;
+        const cleanName = cleanStr(a.name);
+        const cleanText = cleanStr(a.text);
+        if (cleanName === cleanRaw || cleanText === cleanRaw) return true;
+        if (a.name.startsWith('eta_') || a.name.startsWith('pow_') || a.name.startsWith('npsh_')) {
+          const numName = a.name.replace(/[^0-9.]/g, '');
+          if (numRaw && numName && numRaw === numName) return true;
+        }
+        return false;
+      });
+
+      let annObj = candidates[0];
+      if (candidates.length > 1) {
+        let minDist = Infinity;
+        const elRect = textEl.getBoundingClientRect();
+        const coords = screenToDataCoords({ clientX: elRect.left + elRect.width / 2, clientY: elRect.top + elRect.height / 2 });
+        if (coords) {
+          candidates.forEach(cand => {
+            const dist = Math.hypot(cand.x - coords.x, cand.y - coords.y);
+            if (dist < minDist) {
+              minDist = dist;
+              annObj = cand;
+            }
+          });
+        }
+      }
+
+      if (!annObj || !annObj.name) return;
+
+      g._dragBound = true;
+      g.style.cursor = 'grab';
+
+      let isDragging = false;
+      let startX = 0, startY = 0;
+
+      const onMouseDown = (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        isDragging = false;
+        startX = e.clientX;
+        startY = e.clientY;
+
+        g.style.cursor = 'grabbing';
+        document.body.style.userSelect = 'none';
+
+        selectAnnotation(annObj);
+
+        const onMouseMove = (me) => {
+          const dx = me.clientX - startX;
+          const dy = me.clientY - startY;
+          if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+            isDragging = true;
+            g.style.transform = `translate(${dx}px, ${dy}px)`;
+          }
+        };
+
+        const onMouseUp = (ue) => {
+          window.removeEventListener('mousemove', onMouseMove);
+          window.removeEventListener('mouseup', onMouseUp);
+          g.style.cursor = 'grab';
+          g.style.transform = '';
+          document.body.style.userSelect = '';
+
+          if (isDragging) {
+            const coords = screenToDataCoords(ue);
+            if (coords) {
+              annObj.x = coords.x;
+              annObj.y = coords.y;
+              annObj.xanchor = 'center';
+              annObj.yanchor = 'middle';
+              annObj.xshift = 0;
+              annObj.yshift = 0;
+
+              savePosition(annObj.name, coords.x, coords.y);
+              Plotly.relayout(container, { annotations }).then(() => {
+                deselectAnnotation();
+                setupSvgEvents();
+              });
+            }
+          }
+        };
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+      };
+
+      g.addEventListener('mousedown', onMouseDown);
+    });
+  };
+
+  if (container.on) {
+    try {
+      // Remove the PREVIOUS afterplot handler if it exists (stored on container)
+      if (container._annAfterplotHandler) {
+        container.removeListener?.('plotly_afterplot', container._annAfterplotHandler);
+      }
+      // Store the new handler reference so we can remove it next time
+      container._annAfterplotHandler = setupSvgEvents;
+      container.on('plotly_afterplot', setupSvgEvents);
+    } catch (e) {}
+  }
+
+  setTimeout(() => {
+    setupSvgEvents();
+  }, 250);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   WARMAN PERFORMANCE MAP
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Speed-line colour palette — warm oranges ────────────────────────────── */
+const SPD_COLORS = ['#664400', '#995500', '#cc7700', '#ff9900'];  // 70%→80%→90%→100%
+
+function isDuplicateOverlay(overlayLine, family, isVarSpeed, isSecondaryDia) {
+  if (!family || family.length === 0) return false;
+  return family.some(fam => {
+    if (isVarSpeed && !isSecondaryDia) {
+      // Family is RPM and overlay is RPM
+      const oRpm = overlayLine.rpm !== undefined ? overlayLine.rpm : (overlayLine.speed_rpm !== undefined ? overlayLine.speed_rpm : overlayLine.val);
+      const fRpm = fam.rpm !== undefined ? fam.rpm : fam.dia;
+      if (oRpm !== undefined && fRpm !== undefined && Math.abs(fRpm - oRpm) < 2) {
+        return true;
+      }
+    } else if (!isVarSpeed && isSecondaryDia) {
+      // Family is diameter mm and overlay is diameter mm
+      const oDia = overlayLine.dia !== undefined ? overlayLine.dia : overlayLine.val;
+      const fDia = fam.dia;
+      if (oDia !== undefined && fDia !== undefined && Math.abs(fDia - oDia) < 1) {
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+function filterOverlayLines(overlayList, family, isVarSpeed, isSecondaryDia) {
+  if (!overlayList || overlayList.length === 0) return [];
+  if (!family || family.length === 0) return overlayList;
+  return overlayList.filter(ol => !isDuplicateOverlay(ol, family, isVarSpeed, isSecondaryDia));
+}
+
+function getCurveDisplaySelection(data, opts = {}) {
+  const famType = data?.pump?.family_type || 'trimmed_impeller';
+  const isVarSpeed = (famType === 'variable_speed');
+
+  const rpmEl = typeof document !== 'undefined' ? document.getElementById('chkRpmOverlay') : null;
+  const diaEl = typeof document !== 'undefined' ? document.getElementById('chkDiaOverlay') : null;
+
+  const showSpeedLines = opts.showSpeedLines !== undefined ? Boolean(opts.showSpeedLines) : Boolean(rpmEl ? rpmEl.checked : isVarSpeed);
+  const showDiaOverlay = opts.showDiaOverlay !== undefined ? Boolean(opts.showDiaOverlay) : Boolean(diaEl ? diaEl.checked : !isVarSpeed);
+
+  const showPrimary = isVarSpeed ? showSpeedLines : showDiaOverlay;
+  const showSecondary = isVarSpeed ? showDiaOverlay : showSpeedLines;
+
+  const primaryFamily = data?.family || [];
+  const raw_spd_lines = data?.speed_lines || data?.rpm_overlay || [];
+  const raw_dia_overlay = data?.dia_overlay || [];
+
+  const spd_lines = filterOverlayLines(raw_spd_lines, primaryFamily, isVarSpeed, false);
+  const dia_overlay = filterOverlayLines(raw_dia_overlay, primaryFamily, isVarSpeed, true);
+  const secondaryLines = isVarSpeed ? dia_overlay : spd_lines;
+
+  return {
+    famType,
+    isVarSpeed,
+    showSpeedLines,
+    showDiaOverlay,
+    showPrimary,
+    showSecondary,
+    primaryFamily,
+    secondaryLines,
+    spd_lines,
+    dia_overlay
+  };
+}
+
+function buildWarmanChart(data, opts = {}) {
+  const { showIsolines = true, showPowerIso = false, showNpshIso = false, showNpshCurve = false, npshYAxis = 'y2', dutyQ, dutyH } = opts;
+  const units = getGraphDisplayUnits();
+  const lblQ = typeof getUnitLabel === 'function' ? getUnitLabel('q', units.q) : units.q;
+  const lblH = typeof getUnitLabel === 'function' ? getUnitLabel('h', units.h) : units.h;
+  const lblNpsh = typeof getUnitLabel === 'function' ? getUnitLabel('npsh', units.npsh) : units.npsh;
+  const lblPow = typeof getUnitLabel === 'function' ? getUnitLabel('pow', units.pow) : units.pow;
+
+  const traces = [];
+  const annotations = [];
+
+  const sel = getCurveDisplaySelection(data, opts);
+  const { isVarSpeed, showPrimary, showSecondary, primaryFamily, secondaryLines } = sel;
+
+  const labelFormat = units.labelFormat || 'percent';
+  const baseRpmForLabel = data.pump?.speed_rpm || 1450;
+  const maxDiaForLabel = data.pump?.impeller_dia_mm || 300;
+
+  const formatLineLabel = (lineObj, isDia) => {
+    if (lineObj.label) return lineObj.label;
+    if (isDia) {
+      const d = lineObj.dia !== undefined ? lineObj.dia : (lineObj.val !== undefined ? lineObj.val : lineObj.rpm);
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (d / maxDiaForLabel));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormat === 'percent' ? `Ø${d} mm (${pct}%)` : `Ø${d} mm`;
+    } else {
+      const r = lineObj.rpm !== undefined ? lineObj.rpm : (lineObj.speed_rpm !== undefined ? lineObj.speed_rpm : (lineObj.val !== undefined ? lineObj.val : lineObj.dia));
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (r / baseRpmForLabel));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormat === 'percent' ? `${r} RPM (${pct}%)` : `${r} RPM`;
+    }
+  };
+
+  const isolines = data.isolines || [];
+  const pwr_iso = data.power_isolines || [];
+  const npsh_iso = data.npsh_isolines || [];
+
+  const legendMode = units.legendMode || 'each';
+  const headColor = units.headColor || '#58a6ff';
+  const headWeight = units.headWeight || 2.0;
+  const headStyle = units.headStyle || 'solid';
+
+  const effColor = units.effColor || '#3fb950';
+  const effWeight = units.effWeight || 1.5;
+  const effStyle = units.effStyle || 'dot';
+
+  const powColor = units.powColor || '#f85149';
+  const powWeight = units.powWeight || 1.5;
+  const powStyle = units.powStyle || 'longdash';
+
+  const npshColor = units.npshColor || '#39d3c0';
+  const npshWeight = units.npshWeight || 1.5;
+  const npshStyle = units.npshStyle || 'dashdot';
+
+  /* ── 1. Determine active main curves vs secondary overlay curves ── */
+  let activeMainCurves = [];
+  let activeOverlayCurves = [];
+  let isMainDia = !isVarSpeed;
+
+  if (showPrimary && !showSecondary) {
+    activeMainCurves = primaryFamily;
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
+  } else if (!showPrimary && showSecondary) {
+    activeMainCurves = secondaryLines;
+    activeOverlayCurves = [];
+    isMainDia = isVarSpeed; // Secondary on VS is diameter; on ISF is RPM
+  } else if (showPrimary && showSecondary) {
+    activeMainCurves = primaryFamily;
+    activeOverlayCurves = secondaryLines;
+    isMainDia = !isVarSpeed;
+  } else {
+    // Neither selected -> show base curve only
+    activeMainCurves = primaryFamily.slice(0, 1);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
+  }
+
+  /* ── 2. Render Main H-Q Curves ── */
+  activeMainCurves.forEach((d, i) => {
+    const isMax = d.is_max || i === 0;
+    const tag = d.label_tag || (d.curve_mode === 'fit' ? ' (Fitted)' : '');
+    const useCustom = d.use_custom_style || d.style_mode === 'custom';
+    const col = (useCustom && d.color) ? d.color : headColor;
+    const lw = (useCustom && d.weight) ? d.weight : (isMax ? headWeight : Math.max(1.0, headWeight - 0.5));
+    const dash = (useCustom && d.style) ? d.style : (d.label_tag ? 'dash' : headStyle);
+
+    const lblText = formatLineLabel(d, isMainDia);
+    const showInLegend = (legendMode === 'curve_labels') ? (i === 0) : (legendMode !== 'curve_labels');
+    const traceName = (legendMode === 'curve_labels') ? 'Head H' : `${lblText}${tag}`;
+
+    traces.push({
+      type: 'scatter', mode: 'lines',
+      name: traceName,
+      x: d.q, y: d.h,
+      line: { color: col, width: lw, dash: dash },
+      showlegend: showInLegend,
+      hovertemplate: `${lblText}${tag}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
+    });
+
+    /* BEP star marker on each main curve */
+    const bepObj = d.bep;
+    if (bepObj && bepObj.q !== undefined && bepObj.h !== undefined) {
+      traces.push({
+        type: 'scatter', mode: 'markers',
+        name: `BEP ${lblText}${tag}`,
+        x: [bepObj.q], y: [bepObj.h],
+        marker: {
+          size: isMax ? 10 : 7, color: col, symbol: 'star',
+          line: { color: '#fff', width: 1 }
+        },
+        showlegend: false,
+        hovertemplate: `BEP ${lblText}${tag}<br>Q=${bepObj.q} ${lblQ}<br>H=${bepObj.h} ${lblH}${bepObj.eta ? `<br>η=${bepObj.eta}%` : ''}<extra></extra>`,
+      });
+    }
+
+    /* Direct Curve Labels (Mode 3: curve_labels) */
+    if (legendMode === 'curve_labels' && d.q && d.q.length > 0) {
+      const curveKey = `${lblText}${tag}`;
+      let targetQ = 0, targetH = 0;
+      let xanchor = 'left', yanchor = 'bottom', xshift = 4, yshift = 4;
+
+      const idxKey = isMainDia ? `dia_lbl_${i}` : `spd_lbl_${i}`;
+      const pos = getCustomLabelPosition(curveKey, data.pump, 'h') ||
+                  getCustomLabelPosition(lblText, data.pump, 'h') ||
+                  getCustomLabelPosition(idxKey, data.pump, 'h');
+      if (pos) {
+        targetQ = pos.x;
+        targetH = pos.y;
+        xanchor = 'center'; yanchor = 'middle'; xshift = 0; yshift = 0;
+      } else {
+        const lastIdx = d.q.length - 1;
+        targetQ = d.q[lastIdx];
+        targetH = d.h[lastIdx];
+      }
+
+      annotations.push({
+        x: targetQ, y: targetH,
+        text: `<b>${curveKey}</b>`,
+        showarrow: false, captureevents: true,
+        font: { color: '#ffffff', size: 10, family: 'Arial, sans-serif' },
+        bgcolor: 'rgba(22, 27, 34, 0.92)',
+        bordercolor: col, borderwidth: 1.5, borderpad: 4,
+        xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
+        name: curveKey
+      });
+    }
+  });
+
+  /* ── 3. Render Secondary Overlay Curves (when both are enabled) ── */
+  if (activeOverlayCurves.length > 0) {
+    const isOverlayDia = isVarSpeed; // Secondary overlay on VS is diameter; on ISF is RPM
+    activeOverlayCurves.forEach((ol, i) => {
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const lw = (ol.ratio === 1.0 || ol.speed_ratio === 1.0) ? 2.0 : 1.5;
+      const lineLabel = formatLineLabel(ol, isOverlayDia);
+      const dash = isOverlayDia ? 'dash' : ((ol.ratio === 1.0 || ol.speed_ratio === 1.0) ? 'solid' : 'dot');
+
+      traces.push({
+        type: 'scatter', mode: 'lines',
+        name: lineLabel,
+        x: ol.q, y: ol.h,
+        line: { color: col, width: lw, dash: dash },
+        showlegend: legendMode !== 'curve_labels',
+        hovertemplate: `${lineLabel}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
+      });
+
+      /* BEP tick marker on overlay curve */
+      const bepObj = ol.bep;
+      if (bepObj && bepObj.q !== undefined && bepObj.h !== undefined) {
+        traces.push({
+          type: 'scatter', mode: 'markers',
+          name: `BEP ${lineLabel}`,
+          x: [bepObj.q], y: [bepObj.h],
+          marker: {
+            size: 6, color: col, symbol: 'diamond',
+            line: { color: '#fff', width: 0.8 }
+          },
+          showlegend: false,
+          hovertemplate: `BEP ${lineLabel}<br>Q=${bepObj.q} ${lblQ}<br>H=${bepObj.h} ${lblH}<extra></extra>`,
+        });
+      }
+
+      /* Direct label badge on each overlay curve */
+      if (ol.q && ol.q.length > 0 && ol.h && ol.h.length > 0) {
+        const lastIdx = Math.floor(ol.q.length * 0.90);
+        const curveKey = isOverlayDia ? `dia_lbl_${i}` : `spd_lbl_${i}`;
+        const pos = getCustomLabelPosition(curveKey, data.pump, 'h') ||
+                    getCustomLabelPosition(lineLabel, data.pump, 'h') ||
+                    getCustomLabelPosition(`ol_lbl_${i}`, data.pump, 'h');
+        const targetQ = pos ? pos.x : ol.q[lastIdx];
+        const targetH = pos ? pos.y : ol.h[lastIdx];
+
+        annotations.push({
+          x: targetQ, y: targetH,
+          text: `<b>${lineLabel}</b>`,
+          showarrow: false, captureevents: true,
+          font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
+          bgcolor: 'rgba(15, 23, 42, 0.90)',
+          bordercolor: col, borderwidth: 1, borderpad: 2,
+          xanchor: 'center', yanchor: 'middle',
+          name: curveKey
+        });
+      }
+    });
+  }
+
+  /* ── 4. Efficiency isolines ──── */
+  if (showIsolines && isolines.length > 0) {
+    isolines.forEach((iso, idx) => {
+      const showInLegend = (legendMode === 'curve_labels') ? (idx === 0) : false;
+      const traceName = (legendMode === 'curve_labels') ? 'Efficiency η' : `η = ${iso.eta}%`;
+
+      traces.push({
+        type: 'scatter', mode: 'lines',
+        name: traceName,
+        x: iso.q, y: iso.h,
+        line: { color: effColor, width: effWeight, dash: effStyle },
+        fill: 'none',
+        hovertemplate: `η = ${iso.eta}%<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
+        showlegend: showInLegend,
+      });
+
+      /* Non-clashing Efficiency Label Badge Annotation */
+      if (iso.label_q !== undefined && iso.label_h !== undefined) {
+        const branchKey = iso.branch ? `_${iso.branch}` : `_${idx}`;
+        const key = `eta_${iso.eta}${branchKey}`;
+        const legacyKey = `eta_${iso.eta}`;
+
+        const pos = getCustomLabelPosition(key, data.pump, 'h') || (idx === 0 ? getCustomLabelPosition(legacyKey, data.pump, 'h') : null);
+        const targetQ = pos ? pos.x : iso.label_q;
+        const targetH = pos ? pos.y : iso.label_h;
+
+        annotations.push({
+          x: targetQ, y: targetH,
+          text: `<b>${iso.label_text || `${iso.eta}%`}</b>`,
+          showarrow: false,
+          captureevents: true,
+          font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
+          bgcolor: 'rgba(15, 23, 42, 0.92)',
+          bordercolor: effColor,
+          borderwidth: 1,
+          borderpad: 3,
+          xanchor: 'center',
+          yanchor: 'middle',
+          name: key
+        });
+      }
+    });
+  }
+
+  /* ── 5. Power isolines ──── */
+  if (showPowerIso && pwr_iso.length > 0) {
+    pwr_iso.forEach((pl, idx) => {
+      const showInLegend = (legendMode === 'curve_labels') ? (idx === 0) : false;
+      const traceName = (legendMode === 'curve_labels') ? 'Power P' : `P = ${pl.power} ${lblPow}`;
+
+      traces.push({
+        type: 'scatter', mode: 'lines',
+        name: traceName,
+        x: pl.q, y: pl.h,
+        line: { color: powColor, width: powWeight, dash: powStyle },
+        showlegend: showInLegend,
+        hovertemplate: `P = ${pl.power} ${lblPow}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
+      });
+      if (pl.q.length > 0) {
+        const branchKey = pl.branch ? `_${pl.branch}` : `_${idx}`;
+        const key = `pow_${pl.power}${branchKey}`;
+        const mi = Math.floor(pl.q.length / 2);
+        const pos = getCustomLabelPosition(key, data.pump, 'h');
+        const targetQ = pos ? pos.x : pl.q[mi];
+        const targetH = pos ? pos.y : pl.h[mi];
+
+        annotations.push({
+          x: targetQ, y: targetH,
+          text: `<b>${pl.power}${lblPow}</b>`,
+          showarrow: false,
+          captureevents: true,
+          font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
+          bgcolor: 'rgba(15, 23, 42, 0.92)',
+          bordercolor: '#f85149',
+          borderwidth: 1,
+          borderpad: 3,
+          xanchor: 'center',
+          yanchor: 'middle',
+          name: key
+        });
+      }
+    });
+  }
+
+  /* ── 6. NPSH isolines ──── */
+  if (showNpshIso && npsh_iso.length > 0) {
+    npsh_iso.forEach((nl, idx) => {
+      const showInLegend = (legendMode === 'curve_labels') ? (idx === 0) : false;
+      const traceName = (legendMode === 'curve_labels') ? 'NPSHr' : `NPSHr = ${nl.npsh} ${lblNpsh}`;
+
+      traces.push({
+        type: 'scatter', mode: 'lines',
+        name: traceName,
+        x: nl.q, y: nl.h,
+        line: { color: npshColor, width: npshWeight, dash: npshStyle },
+        showlegend: showInLegend,
+        hovertemplate: `NPSHr = ${nl.npsh} ${lblNpsh}<br>Q=%{x:.1f} ${lblQ}<br>H=%{y:.2f} ${lblH}<extra></extra>`,
+      });
+      if (nl.q.length > 0) {
+        const branchKey = nl.branch ? `_${nl.branch}` : `_${idx}`;
+        const key = `npsh_${nl.npsh}${branchKey}`;
+        const mi = Math.floor(nl.q.length / 2);
+        const pos = getCustomLabelPosition(key, data.pump, 'h');
+        const targetQ = pos ? pos.x : nl.q[mi];
+        const targetH = pos ? pos.y : nl.h[mi];
+
+        annotations.push({
+          x: targetQ, y: targetH,
+          text: `<b>${nl.npsh}${lblNpsh}</b>`,
+          showarrow: false,
+          captureevents: true,
+          font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
+          bgcolor: 'rgba(15, 23, 42, 0.92)',
+          bordercolor: '#39d3c0',
+          borderwidth: 1,
+          borderpad: 3,
+          xanchor: 'center',
+          yanchor: 'middle',
+          name: key
+        });
+      }
+    });
+  }
+
+  /* ── Representative Legend Traces for Mode 2 (hq_only) ──── */
+  if (legendMode === 'hq_only') {
+    if (showIsolines && isolines.length > 0) {
+      traces.push({
+        type: 'scatter', mode: 'lines', name: 'Efficiency Isolines (%)',
+        x: [null], y: [null],
+        line: { color: '#e3b341', width: 1.8, dash: 'dot' },
+        showlegend: true
+      });
+    }
+    if (showPowerIso && pwr_iso.length > 0) {
+      traces.push({
+        type: 'scatter', mode: 'lines', name: `Power Isolines (${lblPow})`,
+        x: [null], y: [null],
+        line: { color: '#f85149', width: 1.8, dash: 'longdash' },
+        showlegend: true
+      });
+    }
+    if (showNpshIso && npsh_iso.length > 0) {
+      traces.push({
+        type: 'scatter', mode: 'lines', name: `NPSH Isolines (${lblNpsh})`,
+        x: [null], y: [null],
+        line: { color: '#39d3c0', width: 1.8, dash: 'dashdot' },
+        showlegend: true
+      });
+    }
+  }
+
+  /* ── 7. NPSH standard curves (secondary or same axis) ── */
+  if (showNpshCurve) {
+    const npshCurves = [...activeMainCurves, ...activeOverlayCurves];
+    npshCurves.forEach((d, i) => {
+      if (!d.npsh) return;
+      const lblText = formatLineLabel(d, isMainDia);
+      traces.push({
+        type: 'scatter', mode: 'lines',
+        name: `NPSHr ${lblText}`,
+        x: d.q, y: d.npsh,
+        line: { color: DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)], width: 1.5, dash: 'dashdot' },
+        yaxis: npshYAxis,
+        showlegend: legendMode === 'hq_only',
+        hovertemplate: `${lblText} NPSHr<br>Q=%{x:.1f} ${lblQ}<br>NPSHr=%{y:.2f} ${lblNpsh}<extra></extra>`
+      });
+    });
+  }
+
+  /* ── 8. System curve ──── */
+  if (data.system_q && data.system_h) {
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'System Curve',
+      x: data.system_q, y: data.system_h,
+      line: { color: '#bc8cff', width: 2, dash: 'dash' },
+      showlegend: legendMode !== 'curve_labels',
+      hovertemplate: `System<br>Q=%{x:.1f} ${lblQ}<br>H_sys=%{y:.2f} ${lblH}<extra></extra>`,
+    });
+  }
+
+  /* ── 9. Duty point ──── */
+  if (dutyQ && dutyH) traces.push(dutyTrace(dutyQ, dutyH));
+
+  const layout = makeLayout('Flow Q (m³/h)', 'Head H (m)', {
+    yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { title: 'Head H (m)', rangemode: 'tozero' }),
+  });
+
+  if (legendMode === 'curve_labels') {
+    layout.showlegend = true;
+    layout.legend = Object.assign({}, layout.legend || {}, {
+      bgcolor: 'rgba(22, 27, 34, 0.88)',
+      bordercolor: '#30363d',
+      borderwidth: 1,
+      font: { color: '#c9d1d9', size: 10 }
+    });
+  }
+  if (annotations.length > 0) {
+    layout.annotations = annotations;
+  }
+
+  if (showNpshCurve && npshYAxis === 'y2') {
+    layout.yaxis2 = {
+      title: 'NPSHr (m)', overlaying: 'y', side: 'right',
+      rangemode: 'tozero', showgrid: false,
+      titlefont: { color: '#39d3c0', size: 12 }, tickfont: { color: '#39d3c0' }
+    };
+  }
+
+  return { traces, layout };
+}
+
+/* ── NPSH family chart ───────────────────────────────────────────────────── */
+function buildNpshFamilyChart(family) {
+  const traces = family.map((d, i) => {
+    const col = d.color || DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)];
+    const tag = d.curve_mode === 'fit' ? ' (Fitted)' : '';
+    return {
+      type: 'scatter', mode: 'lines',
+      name: `Ø${d.dia} mm${tag}`,
+      x: d.q, y: d.npsh,
+      line: { color: col, width: 1.8 },
+      hovertemplate: `Ø${d.dia}${tag}<br>Q=%{x:.1f}<br>NPSHr=%{y:.2f} m<extra></extra>`,
+    };
+  });
+  return {
+    traces, layout: makeLayout('Flow Q (m³/h)', 'NPSHr (m)',
+      { yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { rangemode: 'tozero' }) })
+  };
+}
+
+/* ── Power family chart ──────────────────────────────────────────────────── */
+function buildPowerFamilyChart(family) {
+  const traces = family.map((d, i) => {
+    const col = d.color || DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)];
+    const tag = d.curve_mode === 'fit' ? ' (Fitted)' : '';
+    return {
+      type: 'scatter', mode: 'lines',
+      name: `Ø${d.dia} mm${tag}`,
+      x: d.q, y: d.power,
+      line: { color: col, width: 1.8 },
+      hovertemplate: `Ø${d.dia}${tag}<br>Q=%{x:.1f}<br>P=%{y:.2f} kW<extra></extra>`,
+    };
+  });
+  return {
+    traces, layout: makeLayout('Flow Q (m³/h)', 'Shaft Power P (kW)',
+      { yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { rangemode: 'tozero' }) })
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   STANDALONE SINGLE-DIAMETER CURVES (max impeller)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+function buildHQChart(data, showSystem, showClean) {
+  const traces = [];
+  traces.push({
+    type: 'scatter', mode: 'lines',
+    name: 'H-Q ' + (data.liquid !== 'water' ? `(${data.liquid})` : ''),
+    x: data.q, y: data.h,
+    line: { color: '#58a6ff', width: 2.5 },
+    hovertemplate: 'Q=%{x:.1f} m³/h<br>H=%{y:.2f} m<extra></extra>',
+  });
+  if (showClean && data.h_clean) {
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'H-Q (water ref)',
+      x: data.q, y: data.h_clean,
+      line: { color: '#58a6ff', width: 1.5, dash: 'dot' }, opacity: 0.45, showlegend: true,
+      hovertemplate: 'Q=%{x:.1f}<br>H(clean)=%{y:.2f}<extra></extra>'
+    });
+  }
+  if (showSystem && data.system_h) {
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'System Curve',
+      x: data.q, y: data.system_h, line: { color: '#bc8cff', width: 2, dash: 'dash' },
+      hovertemplate: 'Q=%{x:.1f}<br>H_sys=%{y:.2f}<extra></extra>'
+    });
+  }
+  if (data.bep) {
+    traces.push({
+      type: 'scatter', mode: 'markers', name: 'BEP',
+      x: [data.bep.q], y: [data.bep.h],
+      marker: { size: 10, color: '#3fb950', symbol: 'star', line: { color: '#fff', width: 1 } },
+      hovertemplate: `BEP<br>Q=${data.bep.q}<br>H=${data.bep.h}<extra></extra>`
+    });
+  }
+  const layout = makeLayout('Flow Q (m³/h)', 'Head H (m)');
+  layout.yaxis.rangemode = 'tozero';
+  return { traces, layout };
+}
+
+/* ── Helper: Get active overlay lines (RPM or Diameter Overlay) based on test basis and form toggles ── */
+function getActiveOverlayLines(familyData, opts = {}) {
+  if (!familyData) return [];
+  const sel = getCurveDisplaySelection(familyData, opts);
+  return sel.secondaryLines || [];
+}
+
+/* ── Build Efficiency Chart ── */
+function buildEffChart(familyData, singleData, showClean, opts = {}) {
+  const traces = [];
+  const sel = getCurveDisplaySelection(familyData || singleData, opts);
+  const { isVarSpeed, showPrimary, showSecondary, primaryFamily, secondaryLines } = sel;
+
+  let activeMainCurves = [];
+  let activeOverlayCurves = [];
+  let isMainDia = !isVarSpeed;
+
+  if (showPrimary && !showSecondary) {
+    activeMainCurves = primaryFamily.length ? primaryFamily : (familyData ? [familyData] : []);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
+  } else if (!showPrimary && showSecondary) {
+    activeMainCurves = secondaryLines;
+    activeOverlayCurves = [];
+    isMainDia = isVarSpeed;
+  } else if (showPrimary && showSecondary) {
+    activeMainCurves = primaryFamily.length ? primaryFamily : (familyData ? [familyData] : []);
+    activeOverlayCurves = secondaryLines;
+    isMainDia = !isVarSpeed;
+  } else {
+    activeMainCurves = primaryFamily.length ? primaryFamily.slice(0, 1) : (familyData ? [familyData] : []);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
+  }
+
+  const units = getGraphDisplayUnits();
+  const effColor = units.effColor || '#3fb950';
+  const effWeight = units.effWeight || 1.5;
+  const effStyle = units.effStyle || 'dot';
+
+  const labelFormat = (typeof getGraphDisplayUnits === 'function' ? getGraphDisplayUnits().labelFormat : 'percent') || 'percent';
+  const baseRpmE = familyData?.pump?.speed_rpm || singleData?.pump?.speed_rpm || 1450;
+  const maxDiaE = familyData?.pump?.impeller_dia_mm || singleData?.pump?.impeller_dia_mm || 300;
+
+  const formatLineLabel = (lineObj, isDia) => {
+    if (lineObj.label) return lineObj.label;
+    if (isDia) {
+      const d = lineObj.dia !== undefined ? lineObj.dia : (lineObj.val !== undefined ? lineObj.val : lineObj.rpm);
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (d / maxDiaE));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormat === 'percent' ? `Ø${d} mm (${pct}%)` : `Ø${d} mm`;
+    } else {
+      const r = lineObj.rpm !== undefined ? lineObj.rpm : (lineObj.speed_rpm !== undefined ? lineObj.speed_rpm : (lineObj.val !== undefined ? lineObj.val : lineObj.dia));
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (r / baseRpmE));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormat === 'percent' ? `${r} RPM (${pct}%)` : `${r} RPM`;
+    }
+  };
+
+  activeMainCurves.forEach((fam, idx) => {
+    if (!fam.eta) return;
+    const isMax = fam.is_max || idx === 0;
+    const lw = isMax ? (effWeight + 0.7) : effWeight;
+    const showInLegend = (units.legendMode === 'curve_labels') ? (idx === 0) : (units.legendMode === 'each');
+    const lblText = formatLineLabel(fam, isMainDia);
+    const traceName = (units.legendMode === 'curve_labels') ? 'Efficiency η' : `η ${lblText}`;
+
+    traces.push({
+      type: 'scatter', mode: 'lines',
+      name: traceName,
+      x: fam.q, y: fam.eta,
+      line: { color: effColor, width: lw, dash: effStyle },
+      showlegend: showInLegend,
+      hovertemplate: `${lblText}<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
+    });
+
+    const bepObj = fam.bep;
+    if (bepObj && bepObj.q !== undefined && bepObj.eta !== undefined) {
+      traces.push({
+        type: 'scatter', mode: 'markers',
+        name: `BEP ${lblText}`,
+        x: [bepObj.q], y: [bepObj.eta],
+        marker: { size: isMax ? 10 : 7, color: effColor, symbol: 'star', line: { color: '#fff', width: 1 } },
+        showlegend: false,
+        hovertemplate: `BEP ${lblText}<br>Q=${bepObj.q}<br>η=${bepObj.eta}%<extra></extra>`
+      });
+    }
+  });
+
+  if (activeOverlayCurves.length > 0) {
+    const isOverlayDia = isVarSpeed;
+    activeOverlayCurves.forEach((sl, i) => {
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const lineLabel = formatLineLabel(sl, isOverlayDia);
+
+      if (sl.eta) {
+        traces.push({
+          type: 'scatter', mode: 'lines',
+          name: `η ${lineLabel}`,
+          x: sl.q, y: sl.eta,
+          line: { color: col, width: 1.5, dash: 'dot' },
+          showlegend: false,
+          hovertemplate: `${lineLabel} η<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
+        });
+      }
+    });
+  }
+
+  if (showClean && singleData && singleData.eta_clean) {
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'η (water ref)',
+      x: singleData.q, y: singleData.eta_clean,
+      line: { color: '#f0c040', width: 1.5, dash: 'dot' }, opacity: 0.45,
+      hovertemplate: 'Q=%{x:.1f}<br>η(clean)=%{y:.1f}%<extra></extra>'
+    });
+  }
+
+  const layout = makeLayout('Flow Q (m³/h)', 'Efficiency η (%)');
+  layout.yaxis = Object.assign({}, layout.yaxis, { range: [0, 100] });
+  if (units.legendMode === 'hq_only' || units.legendMode === 'curve_labels') {
+    layout.showlegend = false;
+  }
+
+  layout.annotations = layout.annotations || [];
+
+  activeMainCurves.forEach((fam, idx) => {
+    if (!fam.q || fam.q.length === 0 || !fam.eta) return;
+    const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+    const lblText = formatLineLabel(fam, isMainDia);
+    const curveKey = `eff_${lblText}`;
+    const altKey = lblText;
+    const idxKey = isMainDia ? `dia_lbl_${idx}` : `spd_lbl_${idx}`;
+
+    let targetQ = 0, targetEta = 0, xanchor = 'left', yanchor = 'bottom', xshift = 4, yshift = 4;
+    const pos = getCustomLabelPosition(curveKey, familyData?.pump, 'eff') ||
+                getCustomLabelPosition(altKey, familyData?.pump, 'eff') ||
+                getCustomLabelPosition(`eff_${idxKey}`, familyData?.pump, 'eff') ||
+                getCustomLabelPosition(idxKey, familyData?.pump, 'eff');
+    if (pos) {
+      targetQ = pos.x;
+      targetEta = pos.y;
+      xanchor = 'center'; yanchor = 'middle'; xshift = 0; yshift = 0;
+    } else {
+      const lastIdx = Math.floor(fam.q.length * 0.95);
+      targetQ = fam.q[lastIdx];
+      targetEta = fam.eta[lastIdx];
+    }
+
+    layout.annotations.push({
+      x: targetQ, y: targetEta,
+      text: `<b>η ${lblText}</b>`,
+      showarrow: false, captureevents: true,
+      font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
+      bgcolor: 'rgba(15, 23, 42, 0.92)',
+      bordercolor: col, borderwidth: 1.5, borderpad: 3,
+      xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
+      name: curveKey
+    });
+  });
+
+  if (activeOverlayCurves.length > 0) {
+    const isOverlayDia = isVarSpeed;
+    activeOverlayCurves.forEach((sl, i) => {
+      if (!sl.q || sl.q.length === 0 || !sl.eta) return;
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const lineLabel = formatLineLabel(sl, isOverlayDia);
+      const curveKey = isOverlayDia ? `eff_dia_${i}` : `eff_spd_${i}`;
+
+      const pos = getCustomLabelPosition(curveKey, familyData?.pump, 'eff') ||
+                  getCustomLabelPosition(`eff_${lineLabel}`, familyData?.pump, 'eff') ||
+                  getCustomLabelPosition(lineLabel, familyData?.pump, 'eff') ||
+                  getCustomLabelPosition(`eff_spd_${i}`, familyData?.pump, 'eff');
+      const lastIdx = Math.floor(sl.q.length * 0.90);
+      const targetQ = pos ? pos.x : sl.q[lastIdx];
+      const targetEta = pos ? pos.y : sl.eta[lastIdx];
+
+      layout.annotations.push({
+        x: targetQ, y: targetEta,
+        text: `<b>η ${lineLabel}</b>`,
+        showarrow: false, captureevents: true,
+        font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
+        bgcolor: 'rgba(15, 23, 42, 0.90)',
+        bordercolor: col, borderwidth: 1, borderpad: 2,
+        xanchor: 'center', yanchor: 'middle',
+        name: curveKey
+      });
+    });
+  }
+
+  return { traces, layout };
+}
+
+/* ── Build Efficiency & Power Combined Chart ── */
+function buildEffPowerChart(familyData, singleData, showClean, opts = {}) {
+  const traces = [];
+  const sel = getCurveDisplaySelection(familyData || singleData, opts);
+  const { isVarSpeed, showPrimary, showSecondary, primaryFamily, secondaryLines } = sel;
+
+  let activeMainCurves = [];
+  let activeOverlayCurves = [];
+  let isMainDia = !isVarSpeed;
+
+  if (showPrimary && !showSecondary) {
+    activeMainCurves = primaryFamily.length ? primaryFamily : (familyData ? [familyData] : []);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
+  } else if (!showPrimary && showSecondary) {
+    activeMainCurves = secondaryLines;
+    activeOverlayCurves = [];
+    isMainDia = isVarSpeed;
+  } else if (showPrimary && showSecondary) {
+    activeMainCurves = primaryFamily.length ? primaryFamily : (familyData ? [familyData] : []);
+    activeOverlayCurves = secondaryLines;
+    isMainDia = !isVarSpeed;
+  } else {
+    activeMainCurves = primaryFamily.length ? primaryFamily.slice(0, 1) : (familyData ? [familyData] : []);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
+  }
+
+  const unitsEP = getGraphDisplayUnits();
+  const effColor = unitsEP.effColor || '#3fb950';
+  const effWeight = unitsEP.effWeight || 1.5;
+  const effStyle = unitsEP.effStyle || 'dot';
+
+  const powColor = unitsEP.powColor || '#f85149';
+  const powWeight = unitsEP.powWeight || 1.5;
+  const powStyle = unitsEP.powStyle || 'longdash';
+
+  const labelFormatEP = (typeof getGraphDisplayUnits === 'function' ? getGraphDisplayUnits().labelFormat : 'percent') || 'percent';
+  const baseRpmEP = familyData?.pump?.speed_rpm || singleData?.pump?.speed_rpm || 1450;
+  const maxDiaEP = familyData?.pump?.impeller_dia_mm || singleData?.pump?.impeller_dia_mm || 300;
+
+  const formatLineLabel = (lineObj, isDia) => {
+    if (lineObj.label) return lineObj.label;
+    if (isDia) {
+      const d = lineObj.dia !== undefined ? lineObj.dia : (lineObj.val !== undefined ? lineObj.val : lineObj.rpm);
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (d / maxDiaEP));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormatEP === 'percent' ? `Ø${d} mm (${pct}%)` : `Ø${d} mm`;
+    } else {
+      const r = lineObj.rpm !== undefined ? lineObj.rpm : (lineObj.speed_rpm !== undefined ? lineObj.speed_rpm : (lineObj.val !== undefined ? lineObj.val : lineObj.dia));
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (r / baseRpmEP));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormatEP === 'percent' ? `${r} RPM (${pct}%)` : `${r} RPM`;
+    }
+  };
+
+  activeMainCurves.forEach((fam, idx) => {
+    const isMax = fam.is_max || idx === 0;
+    const showEffLegend = (unitsEP.legendMode === 'curve_labels') ? (idx === 0) : (unitsEP.legendMode === 'each');
+    const lblText = formatLineLabel(fam, isMainDia);
+
+    // Efficiency on y1 (left side)
+    if (fam.eta) {
+      traces.push({
+        type: 'scatter', mode: 'lines',
+        name: (unitsEP.legendMode === 'curve_labels') ? 'Efficiency η' : `η ${lblText}`,
+        x: fam.q, y: fam.eta,
+        line: { color: effColor, width: isMax ? (effWeight + 0.7) : effWeight, dash: effStyle },
+        yaxis: 'y1',
+        showlegend: showEffLegend,
+        hovertemplate: `${lblText} η<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
+      });
+
+      const bepObj = fam.bep;
+      if (bepObj && bepObj.q !== undefined && bepObj.eta !== undefined) {
+        traces.push({
+          type: 'scatter', mode: 'markers',
+          name: `BEP ${lblText}`,
+          x: [bepObj.q], y: [bepObj.eta],
+          marker: { size: isMax ? 10 : 7, color: effColor, symbol: 'star', line: { color: '#fff', width: 1 } },
+          yaxis: 'y1',
+          showlegend: false,
+          hovertemplate: `BEP ${lblText}<br>Q=${bepObj.q}<br>η=${bepObj.eta}%<extra></extra>`
+        });
+      }
+    }
+
+    // Power on y2 (right side)
+    const pwrArr = fam.power || fam.pow;
+    if (pwrArr) {
+      traces.push({
+        type: 'scatter', mode: 'lines',
+        name: `P ${lblText}`,
+        x: fam.q, y: pwrArr,
+        line: { color: powColor, width: isMax ? (powWeight + 0.7) : powWeight, dash: powStyle },
+        yaxis: 'y2',
+        showlegend: false,
+        hovertemplate: `${lblText} P<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
+      });
+    }
+  });
+
+  if (activeOverlayCurves.length > 0) {
+    const isOverlayDia = isVarSpeed;
+    activeOverlayCurves.forEach((sl, i) => {
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const lineLabel = formatLineLabel(sl, isOverlayDia);
+      const pwrArr = sl.pow || sl.power;
+
+      if (sl.eta) {
+        traces.push({
+          type: 'scatter', mode: 'lines',
+          name: `η ${lineLabel}`,
+          x: sl.q, y: sl.eta,
+          line: { color: col, width: 1.5, dash: 'dot' },
+          yaxis: 'y1', showlegend: false,
+          hovertemplate: `${lineLabel} η<br>Q=%{x:.1f} m³/h<br>η=%{y:.1f}%<extra></extra>`
+        });
+      }
+      if (pwrArr) {
+        traces.push({
+          type: 'scatter', mode: 'lines',
+          name: `P ${lineLabel}`,
+          x: sl.q, y: pwrArr,
+          line: { color: col, width: 1.5, dash: 'dashdot' },
+          yaxis: 'y2', showlegend: false,
+          hovertemplate: `${lineLabel} P<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
+        });
+      }
+    });
+  }
+
+  if (showClean && singleData) {
+    if (singleData.eta_clean) {
+      traces.push({
+        type: 'scatter', mode: 'lines', name: 'η (water ref)',
+        x: singleData.q, y: singleData.eta_clean,
+        line: { color: '#f0c040', width: 1.5, dash: 'dot' }, opacity: 0.45,
+        yaxis: 'y1',
+        hovertemplate: 'Q=%{x:.1f}<br>η(clean)=%{y:.1f}%<extra></extra>'
+      });
+    }
+    if (singleData.power_clean) {
+      traces.push({
+        type: 'scatter', mode: 'lines', name: 'P (water ref)',
+        x: singleData.q, y: singleData.power_clean,
+        line: { color: '#f85149', width: 1.5, dash: 'dot' }, opacity: 0.45,
+        yaxis: 'y2',
+        hovertemplate: 'Q=%{x:.1f}<br>P(clean)=%{y:.2f} kW<extra></extra>'
+      });
+    }
+  }
+
+  const layout = Object.assign({}, PLOTLY_LAYOUT_BASE, {
+    xaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.xaxis, { title: 'Flow Q (m³/h)' }),
+    yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { title: 'Efficiency η (%)', range: [0, 105] }),
+    yaxis2: {
+      title: 'Shaft Power P (kW)', overlaying: 'y', side: 'right',
+      rangemode: 'tozero', showgrid: false,
+      titlefont: { color: '#f85149', size: 12 }, tickfont: { color: '#f85149' }
+    }
+  });
+  applyAxisScaleSettings(layout.xaxis, 'flow', familyData?.pump);
+  applyAxisScaleSettings(layout.yaxis, 'eff', familyData?.pump);
+  applyAxisScaleSettings(layout.yaxis2, 'power', familyData?.pump);
+  if (unitsEP.legendMode === 'hq_only' || unitsEP.legendMode === 'curve_labels') {
+    layout.showlegend = false;
+  }
+
+  layout.annotations = layout.annotations || [];
+
+  activeMainCurves.forEach((fam, idx) => {
+    if (!fam.q || fam.q.length === 0 || !fam.eta) return;
+    const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+    const lblText = formatLineLabel(fam, isMainDia);
+    const curveKey = `eff_${lblText}`;
+    const altKey = lblText;
+
+    let targetQ = 0, targetEta = 0, xanchor = 'left', yanchor = 'bottom', xshift = 4, yshift = 4;
+    const pos = getCustomLabelPosition(curveKey, familyData?.pump, 'eff') || getCustomLabelPosition(altKey, familyData?.pump, 'eff');
+    if (pos) {
+      targetQ = pos.x;
+      targetEta = pos.y;
+      xanchor = 'center'; yanchor = 'middle'; xshift = 0; yshift = 0;
+    } else {
+      const lastIdx = Math.floor(fam.q.length * 0.95);
+      targetQ = fam.q[lastIdx];
+      targetEta = fam.eta[lastIdx];
+    }
+
+    layout.annotations.push({
+      x: targetQ, y: targetEta,
+      text: `<b>η ${lblText}</b>`,
+      showarrow: false, captureevents: true,
+      font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
+      bgcolor: 'rgba(15, 23, 42, 0.92)',
+      bordercolor: col, borderwidth: 1.5, borderpad: 3,
+      xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
+      name: curveKey
+    });
+  });
+
+  if (activeOverlayCurves.length > 0) {
+    const isOverlayDia = isVarSpeed;
+    activeOverlayCurves.forEach((sl, i) => {
+      if (!sl.q || sl.q.length === 0 || !sl.eta) return;
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const lineLabel = formatLineLabel(sl, isOverlayDia);
+      const curveKey = `eff_spd_${i}`;
+
+      const pos = getCustomLabelPosition(curveKey, familyData?.pump, 'eff');
+      const lastIdx = Math.floor(sl.q.length * 0.90);
+      const targetQ = pos ? pos.x : sl.q[lastIdx];
+      const targetEta = pos ? pos.y : sl.eta[lastIdx];
+
+      layout.annotations.push({
+        x: targetQ, y: targetEta,
+        text: `<b>η ${lineLabel}</b>`,
+        showarrow: false, captureevents: true,
+        font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
+        bgcolor: 'rgba(15, 23, 42, 0.90)',
+        bordercolor: col, borderwidth: 1, borderpad: 2,
+        xanchor: 'center', yanchor: 'middle',
+        name: curveKey
+      });
+    });
+  }
+
+  return { traces, layout };
+}
+
+/* ── Build Shaft Power Chart ── */
+function buildPowerChart(familyData, singleData, showClean, opts = {}) {
+  const traces = [];
+  const sel = getCurveDisplaySelection(familyData || singleData, opts);
+  const { isVarSpeed, showPrimary, showSecondary, primaryFamily, secondaryLines } = sel;
+
+  let activeMainCurves = [];
+  let activeOverlayCurves = [];
+  let isMainDia = !isVarSpeed;
+
+  if (showPrimary && !showSecondary) {
+    activeMainCurves = primaryFamily.length ? primaryFamily : (familyData ? [familyData] : []);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
+  } else if (!showPrimary && showSecondary) {
+    activeMainCurves = secondaryLines;
+    activeOverlayCurves = [];
+    isMainDia = isVarSpeed;
+  } else if (showPrimary && showSecondary) {
+    activeMainCurves = primaryFamily.length ? primaryFamily : (familyData ? [familyData] : []);
+    activeOverlayCurves = secondaryLines;
+    isMainDia = !isVarSpeed;
+  } else {
+    activeMainCurves = primaryFamily.length ? primaryFamily.slice(0, 1) : (familyData ? [familyData] : []);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
+  }
+
+  const unitsP = getGraphDisplayUnits();
+  const powColor = unitsP.powColor || '#f85149';
+  const powWeight = unitsP.powWeight || 1.5;
+  const powStyle = unitsP.powStyle || 'longdash';
+
+  const labelFormatP = (typeof getGraphDisplayUnits === 'function' ? getGraphDisplayUnits().labelFormat : 'percent') || 'percent';
+  const baseRpmP = familyData?.pump?.speed_rpm || singleData?.pump?.speed_rpm || 1450;
+  const maxDiaP = familyData?.pump?.impeller_dia_mm || singleData?.pump?.impeller_dia_mm || 300;
+
+  const formatLineLabel = (lineObj, isDia) => {
+    if (lineObj.label) return lineObj.label;
+    if (isDia) {
+      const d = lineObj.dia !== undefined ? lineObj.dia : (lineObj.val !== undefined ? lineObj.val : lineObj.rpm);
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (d / maxDiaP));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormatP === 'percent' ? `Ø${d} mm (${pct}%)` : `Ø${d} mm`;
+    } else {
+      const r = lineObj.rpm !== undefined ? lineObj.rpm : (lineObj.speed_rpm !== undefined ? lineObj.speed_rpm : (lineObj.val !== undefined ? lineObj.val : lineObj.dia));
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (r / baseRpmP));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormatP === 'percent' ? `${r} RPM (${pct}%)` : `${r} RPM`;
+    }
+  };
+
+  activeMainCurves.forEach((fam, idx) => {
+    const isMax = fam.is_max || idx === 0;
+    const showInLegend = (unitsP.legendMode === 'curve_labels') ? (idx === 0) : (unitsP.legendMode === 'each');
+    const lblText = formatLineLabel(fam, isMainDia);
+    const traceName = (unitsP.legendMode === 'curve_labels') ? 'Power P' : `P ${lblText}`;
+    const pwrArr = fam.power || fam.pow;
+
+    if (pwrArr) {
+      traces.push({
+        type: 'scatter', mode: 'lines',
+        name: traceName,
+        x: fam.q, y: pwrArr,
+        line: { color: powColor, width: isMax ? (powWeight + 0.7) : powWeight, dash: powStyle },
+        showlegend: showInLegend,
+        hovertemplate: `${lblText}<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
+      });
+    }
+  });
+
+  if (activeOverlayCurves.length > 0) {
+    const isOverlayDia = isVarSpeed;
+    activeOverlayCurves.forEach((sl, i) => {
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const lineLabel = formatLineLabel(sl, isOverlayDia);
+      const pwrArr = sl.pow || sl.power;
+
+      if (pwrArr) {
+        traces.push({
+          type: 'scatter', mode: 'lines',
+          name: `P ${lineLabel}`,
+          x: sl.q, y: pwrArr,
+          line: { color: col, width: 1.5, dash: 'dashdot' },
+          showlegend: false,
+          hovertemplate: `${lineLabel} P<br>Q=%{x:.1f} m³/h<br>P=%{y:.2f} kW<extra></extra>`
+        });
+      }
+    });
+  }
+
+  if (showClean && singleData && singleData.power_clean) {
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'Power (water ref)',
+      x: singleData.q, y: singleData.power_clean,
+      line: { color: '#f85149', width: 1.5, dash: 'dot' }, opacity: 0.45,
+      hovertemplate: 'Q=%{x:.1f}<br>P(clean)=%{y:.2f} kW<extra></extra>'
+    });
+  }
+
+  const layout = makeLayout('Flow Q (m³/h)', 'Shaft Power P (kW)');
+  layout.yaxis.rangemode = 'tozero';
+  if (unitsP.legendMode === 'hq_only' || unitsP.legendMode === 'curve_labels') {
+    layout.showlegend = false;
+  }
+
+  layout.annotations = layout.annotations || [];
+
+  activeMainCurves.forEach((fam, idx) => {
+    const pwrArr = fam.power || fam.pow;
+    if (!fam.q || fam.q.length === 0 || !pwrArr) return;
+    const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+    const lblText = formatLineLabel(fam, isMainDia);
+    const curveKey = `pow_${lblText}`;
+    const altKey = lblText;
+    const idxKey = isMainDia ? `dia_lbl_${idx}` : `spd_lbl_${idx}`;
+
+    let targetQ = 0, targetPow = 0, xanchor = 'left', yanchor = 'bottom', xshift = 4, yshift = 4;
+    const pos = getCustomLabelPosition(curveKey, familyData?.pump, 'pow') ||
+                getCustomLabelPosition(altKey, familyData?.pump, 'pow') ||
+                getCustomLabelPosition(`pow_${idxKey}`, familyData?.pump, 'pow') ||
+                getCustomLabelPosition(idxKey, familyData?.pump, 'pow');
+    if (pos) {
+      targetQ = pos.x;
+      targetPow = pos.y;
+      xanchor = 'center'; yanchor = 'middle'; xshift = 0; yshift = 0;
+    } else {
+      const lastIdx = Math.floor(fam.q.length * 0.95);
+      targetQ = fam.q[lastIdx];
+      targetPow = pwrArr[lastIdx];
+    }
+
+    layout.annotations.push({
+      x: targetQ, y: targetPow,
+      text: `<b>P ${lblText}</b>`,
+      showarrow: false, captureevents: true,
+      font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
+      bgcolor: 'rgba(15, 23, 42, 0.92)',
+      bordercolor: col, borderwidth: 1.5, borderpad: 3,
+      xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
+      name: curveKey
+    });
+  });
+
+  if (activeOverlayCurves.length > 0) {
+    const isOverlayDia = isVarSpeed;
+    activeOverlayCurves.forEach((sl, i) => {
+      const pwrArr = sl.pow || sl.power;
+      if (!sl.q || sl.q.length === 0 || !pwrArr) return;
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const lineLabel = formatLineLabel(sl, isOverlayDia);
+      const curveKey = isOverlayDia ? `pow_dia_${i}` : `pow_spd_${i}`;
+
+      const pos = getCustomLabelPosition(curveKey, familyData?.pump, 'pow') ||
+                  getCustomLabelPosition(`pow_${lineLabel}`, familyData?.pump, 'pow') ||
+                  getCustomLabelPosition(lineLabel, familyData?.pump, 'pow') ||
+                  getCustomLabelPosition(`pow_spd_${i}`, familyData?.pump, 'pow');
+      const lastIdx = Math.floor(sl.q.length * 0.90);
+      const targetQ = pos ? pos.x : sl.q[lastIdx];
+      const targetPow = pos ? pos.y : pwrArr[lastIdx];
+
+      layout.annotations.push({
+        x: targetQ, y: targetPow,
+        text: `<b>P ${lineLabel}</b>`,
+        showarrow: false, captureevents: true,
+        font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
+        bgcolor: 'rgba(15, 23, 42, 0.90)',
+        bordercolor: col, borderwidth: 1, borderpad: 2,
+        xanchor: 'center', yanchor: 'middle',
+        name: curveKey
+      });
+    });
+  }
+
+  return { traces, layout };
+}
+
+/* ── Build NPSHr Chart ── */
+function buildNpshChart(familyData, singleData, opts = {}) {
+  const traces = [];
+  const sel = getCurveDisplaySelection(familyData || singleData, opts);
+  const { isVarSpeed, showPrimary, showSecondary, primaryFamily, secondaryLines } = sel;
+
+  let activeMainCurves = [];
+  let activeOverlayCurves = [];
+  let isMainDia = !isVarSpeed;
+
+  if (showPrimary && !showSecondary) {
+    activeMainCurves = primaryFamily.length ? primaryFamily : (familyData ? [familyData] : []);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
+  } else if (!showPrimary && showSecondary) {
+    activeMainCurves = secondaryLines;
+    activeOverlayCurves = [];
+    isMainDia = isVarSpeed;
+  } else if (showPrimary && showSecondary) {
+    activeMainCurves = primaryFamily.length ? primaryFamily : (familyData ? [familyData] : []);
+    activeOverlayCurves = secondaryLines;
+    isMainDia = !isVarSpeed;
+  } else {
+    activeMainCurves = primaryFamily.length ? primaryFamily.slice(0, 1) : (familyData ? [familyData] : []);
+    activeOverlayCurves = [];
+    isMainDia = !isVarSpeed;
+  }
+
+  const unitsN = getGraphDisplayUnits();
+  const npshColor = unitsN.npshColor || '#39d3c0';
+  const npshWeight = unitsN.npshWeight || 1.5;
+  const npshStyle = unitsN.npshStyle || 'dashdot';
+
+  const labelFormatN = (typeof getGraphDisplayUnits === 'function' ? getGraphDisplayUnits().labelFormat : 'percent') || 'percent';
+  const baseRpmN = familyData?.pump?.speed_rpm || singleData?.pump?.speed_rpm || 1450;
+  const maxDiaN = familyData?.pump?.impeller_dia_mm || singleData?.pump?.impeller_dia_mm || 300;
+
+  const formatLineLabel = (lineObj, isDia) => {
+    if (lineObj.label) return lineObj.label;
+    if (isDia) {
+      const d = lineObj.dia !== undefined ? lineObj.dia : (lineObj.val !== undefined ? lineObj.val : lineObj.rpm);
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (d / maxDiaN));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormatN === 'percent' ? `Ø${d} mm (${pct}%)` : `Ø${d} mm`;
+    } else {
+      const r = lineObj.rpm !== undefined ? lineObj.rpm : (lineObj.speed_rpm !== undefined ? lineObj.speed_rpm : (lineObj.val !== undefined ? lineObj.val : lineObj.dia));
+      const ratio = lineObj.ratio !== undefined ? lineObj.ratio : (lineObj.speed_ratio !== undefined ? lineObj.speed_ratio : (r / baseRpmN));
+      const pct = Math.round((ratio || 1.0) * 100);
+      return labelFormatN === 'percent' ? `${r} RPM (${pct}%)` : `${r} RPM`;
+    }
+  };
+
+  activeMainCurves.forEach((fam, idx) => {
+    if (!fam.npsh) return;
+    const isMax = fam.is_max || idx === 0;
+    const showInLegend = (unitsN.legendMode === 'curve_labels') ? (idx === 0) : (unitsN.legendMode === 'each');
+    const lblText = formatLineLabel(fam, isMainDia);
+    const traceName = (unitsN.legendMode === 'curve_labels') ? 'NPSHr' : `NPSHr ${lblText}`;
+
+    traces.push({
+      type: 'scatter', mode: 'lines',
+      name: traceName,
+      x: fam.q, y: fam.npsh,
+      line: { color: npshColor, width: isMax ? (npshWeight + 0.7) : npshWeight, dash: npshStyle },
+      showlegend: showInLegend,
+      hovertemplate: `${lblText}<br>Q=%{x:.1f} m³/h<br>NPSHr=%{y:.2f} m<extra></extra>`
+    });
+  });
+
+  if (activeOverlayCurves.length > 0) {
+    const isOverlayDia = isVarSpeed;
+    activeOverlayCurves.forEach((sl, i) => {
+      const col = SPD_COLORS[Math.min(i, SPD_COLORS.length - 1)];
+      const lineLabel = formatLineLabel(sl, isOverlayDia);
+
+      if (sl.npsh) {
+        traces.push({
+          type: 'scatter', mode: 'lines',
+          name: `NPSHr ${lineLabel}`,
+          x: sl.q, y: sl.npsh,
+          line: { color: col, width: 1.5, dash: 'dashdot' },
+          showlegend: false,
+          hovertemplate: `${lineLabel} NPSHr<br>Q=%{x:.1f} m³/h<br>NPSHr=%{y:.2f} m<extra></extra>`
+        });
+      }
+    });
+  }
+
+  const layout = makeLayout('Flow Q (m³/h)', 'NPSHr (m)');
+  layout.yaxis.rangemode = 'tozero';
+  if (unitsN.legendMode === 'hq_only' || unitsN.legendMode === 'curve_labels') {
+    layout.showlegend = false;
+  }
+
+  // Add direct curve label badges if Mode 3 (curve_labels) is active
+  if (unitsN.legendMode === 'curve_labels' && activeMainCurves.length > 0) {
+    layout.annotations = layout.annotations || [];
+    activeMainCurves.forEach((fam, idx) => {
+      if (!fam.q || fam.q.length === 0 || !fam.npsh) return;
+      const col = DIA_BLUES[Math.min(idx, DIA_BLUES.length - 1)];
+      const lblText = formatLineLabel(fam, isMainDia);
+      const curveKey = `npsh_${lblText}`;
+      const altKey = lblText;
+      const idxKey = isMainDia ? `dia_lbl_${idx}` : `spd_lbl_${idx}`;
+
+      let targetQ = 0, targetNpsh = 0;
+      let xanchor = 'left', yanchor = 'bottom', xshift = 4, yshift = 4;
+      const pos = getCustomLabelPosition(curveKey, familyData?.pump, 'npsh') ||
+                  getCustomLabelPosition(altKey, familyData?.pump, 'npsh') ||
+                  getCustomLabelPosition(`npsh_${idxKey}`, familyData?.pump, 'npsh') ||
+                  getCustomLabelPosition(idxKey, familyData?.pump, 'npsh');
+      if (pos) {
+        targetQ = pos.x;
+        targetNpsh = pos.y;
+        xanchor = 'center'; yanchor = 'middle'; xshift = 0; yshift = 0;
+      } else {
+        const lastIdx = fam.q.length - 1;
+        targetQ = fam.q[lastIdx];
+        targetNpsh = fam.npsh[lastIdx];
+      }
+
+      layout.annotations.push({
+        x: targetQ, y: targetNpsh,
+        text: `<b>${lblText}</b>`,
+        showarrow: false, captureevents: true,
+        font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
+        bgcolor: 'rgba(22, 27, 34, 0.92)',
+        bordercolor: col, borderwidth: 1.5, borderpad: 3,
+        xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
+        name: curveKey
+      });
+    });
+  }
+
+  return { traces, layout };
+}
+
+function buildOverlayChart(data, showEff, showPow, showNpsh) {
+  const traces = [];
+  traces.push({
+    type: 'scatter', mode: 'lines', name: 'H-Q',
+    x: data.q, y: data.h, line: { color: '#58a6ff', width: 3 },
+    hovertemplate: 'Q=%{x:.1f}<br>H=%{y:.2f} m<extra></extra>'
+  });
+  if (data.system_h) {
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'System Curve',
+      x: data.q, y: data.system_h, line: { color: '#bc8cff', width: 2, dash: 'dash' },
+      hovertemplate: 'Q=%{x:.1f}<br>H_sys=%{y:.2f}<extra></extra>'
+    });
+  }
+  if (showEff) {
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'η (%)', yaxis: 'y2',
+      x: data.q, y: data.eta, line: { color: '#f0c040', width: 2, dash: 'longdash' },
+      hovertemplate: 'η=%{y:.1f}%<extra></extra>'
+    });
+  }
+  if (showPow && data.power) {
+    const pMax = Math.max(...data.power), hMax = Math.max(...data.h);
+    const sc = pMax > 0 ? hMax / pMax * 0.55 : 1;
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'Power (scaled)',
+      x: data.q, y: data.power.map(p => p * sc),
+      line: { color: '#f85149', width: 1.5, dash: 'dot' },
+      customdata: data.power,
+      hovertemplate: 'P=%{customdata:.2f} kW<extra></extra>'
+    });
+  }
+  if (showNpsh) {
+    const useY2 = !showEff && !showPow;
+    traces.push({
+      type: 'scatter', mode: 'lines', name: 'NPSHr', yaxis: useY2 ? 'y2' : 'y1',
+      x: data.q, y: data.npsh, line: { color: '#39d3c0', width: 2, dash: 'dashdot' },
+      hovertemplate: 'NPSHr=%{y:.2f} m<extra></extra>'
+    });
+  }
+  if (data.bep) {
+    traces.push({
+      type: 'scatter', mode: 'markers', name: 'BEP',
+      x: [data.bep.q], y: [data.bep.h],
+      marker: { size: 10, color: '#3fb950', symbol: 'star', line: { color: '#fff', width: 1 } },
+      hovertemplate: `BEP Q=${data.bep.q} H=${data.bep.h}<extra></extra>`
+    });
+  }
+  const layout = Object.assign({}, PLOTLY_LAYOUT_BASE, {
+    xaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.xaxis, { title: 'Flow Q (m³/h)' }),
+    yaxis: Object.assign({}, PLOTLY_LAYOUT_BASE.yaxis, { title: 'Head H (m)', rangemode: 'tozero' }),
+  });
+  applyAxisScaleSettings(layout.xaxis, 'flow', data?.pump);
+  applyAxisScaleSettings(layout.yaxis, 'head', data?.pump);
+  if (showEff) {
+    layout.yaxis2 = {
+      title: 'Efficiency η (%)', overlaying: 'y', side: 'right',
+      range: [0, 105], showgrid: false,
+      titlefont: { color: '#f0c040', size: 12 }, tickfont: { color: '#f0c040' },
+      ticksuffix: '%'
+    };
+    applyAxisScaleSettings(layout.yaxis2, 'eff', data?.pump);
+  } else if (showNpsh) {
+    layout.yaxis2 = {
+      title: 'NPSHr (m)', overlaying: 'y', side: 'right',
+      rangemode: 'tozero', showgrid: false,
+      titlefont: { color: '#39d3c0', size: 12 }, tickfont: { color: '#39d3c0' }
+    };
+    applyAxisScaleSettings(layout.yaxis2, 'npsh', data?.pump);
+  }
+  return { traces, layout };
+}
+
+/* ── Performance summary table ───────────────────────────────────────────── */
+function renderPerfSummary(warmanData, containerId) {
+  const family = warmanData.family || [];
+  const baseDia = warmanData.pump?.impeller_dia_mm || 1.0;
+
+  let htmlRows = '';
+
+  // 1. Auto-generated family curves
+  family.forEach((d, i) => {
+    const b = d.bep || {};
+    const col = DIA_BLUES[Math.min(i, DIA_BLUES.length - 1)];
+    let rowLabel;
+    if (d.is_max) {
+      // Use the user-specified main curve label/diameter if available
+      const mainLabel = (typeof PUMP_MAIN_LABEL !== 'undefined' && PUMP_MAIN_LABEL)
+        ? PUMP_MAIN_LABEL
+        : '';
+      const mainDia = (typeof PUMP_MAIN_DIA !== 'undefined' && PUMP_MAIN_DIA)
+        ? PUMP_MAIN_DIA
+        : d.dia;
+      const diaStr = `Ø${mainDia} mm`;
+      rowLabel = mainLabel
+        ? `<strong>${diaStr}</strong> <span class="text-muted small">(${mainLabel})</span>`
+        : `<strong>${diaStr}</strong>`;
+    } else {
+      rowLabel = `<strong>Ø${d.dia} mm</strong>`;
+    }
+
+    htmlRows += `<tr>
+      <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${col};margin-right:6px;"></span>
+        ${rowLabel}${d.is_max ? ' <span class="badge bg-secondary ms-1" style="font-size:0.65rem">BASE</span>' : ''}</td>
+      <td class="text-center">${(d.ratio * 100).toFixed(1)}%</td>
+      <td class="text-center fw-semibold">${b.q ?? '—'}</td>
+      <td class="text-center">${b.h ?? '—'}</td>
+      <td class="text-center text-warning fw-semibold">${b.eta ?? '—'}%</td>
+      <td class="text-center">${b.power ?? '—'}</td>
+    </tr>`;
+  });
+
+  // 2. Manually entered custom / additional curves
+  const fittedCustom = customCurves.filter(c => c.fitted);
+  fittedCustom.forEach(c => {
+    let bepQ = '—', bepH = '—', bepEta = '—', bepP = '—';
+    if (c.eta && c.eta.length) {
+      const maxEta = Math.max(...c.eta);
+      const idx = c.eta.indexOf(maxEta);
+      bepQ = c.q[idx]?.toFixed(1) ?? '—';
+      bepH = c.h[idx]?.toFixed(2) ?? '—';
+      bepEta = c.eta[idx]?.toFixed(1) ?? '—';
+      bepP = c.power?.[idx]?.toFixed(2) ?? '—';
+    }
+
+    const dia = c.diameter || null;
+    const ratioStr = dia ? `${((dia / baseDia) * 100).toFixed(1)}%` : '—';
+    const labelStr = dia ? `<strong>Ø${dia} mm</strong> (Manual)` : `<strong>${c.label}</strong>`;
+
+    htmlRows += `<tr>
+      <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c.color};margin-right:6px;"></span>
+        ${labelStr}</td>
+      <td class="text-center">${ratioStr}</td>
+      <td class="text-center fw-semibold">${bepQ}</td>
+      <td class="text-center">${bepH}</td>
+      <td class="text-center text-warning fw-semibold">${bepEta}%</td>
+      <td class="text-center">${bepP}</td>
+    </tr>`;
+  });
+
+  if (!family.length && !fittedCustom.length) {
+    document.getElementById(containerId).innerHTML = '<p class="text-muted">No data.</p>';
+    return;
+  }
+
+  document.getElementById(containerId).innerHTML = `
+    <div class="table-responsive">
+      <table class="table table-dark table-hover align-middle mb-0" style="font-size:0.88rem">
+        <thead><tr>
+          <th>Impeller</th>
+          <th class="text-center">Trim %</th>
+          <th class="text-center">Q<sub>BEP</sub> (m³/h)</th>
+          <th class="text-center">H<sub>BEP</sub> (m)</th>
+          <th class="text-center">η<sub>BEP</sub></th>
+          <th class="text-center">P<sub>BEP</sub> (kW)</th>
+        </tr></thead>
+        <tbody>${htmlRows}</tbody>
+      </table>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CUSTOM CURVES MODULE
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const CUSTOM_COLORS = [
+  '#58a6ff', // blue
+  '#3fb950', // green
+  '#f0c040', // yellow
+  '#f85149', // red
+  '#bc8cff', // purple
+  '#39d3c0', // teal
+  '#ff9900', // orange
+  '#e879f9', // pink
+];
+
+let customCurves = [];   // [{id, label, color, q, h, eta, fitted}]
+let _curveIdCounter = 0;
+
+/* ── Parse user-entered data text ────────────────────────────────────────── */
+function parseDataText(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  const q_h = [], q_eta = [];
+  for (const line of lines) {
+    const parts = line.split(/[\s,;]+/).map(Number);
+    if (parts.length >= 2 && !parts.some(isNaN)) {
+      q_h.push([parts[0], parts[1]]);
+      if (parts.length >= 3 && !isNaN(parts[2])) {
+        q_eta.push([parts[0], parts[2]]);
+      }
+    }
+  }
+  return { q_h, q_eta };
+}
+
+/* ── Update the curve-count badge ─────────────────────────────────────────── */
+function updateCurveCountBadge() {
+  const badge = document.getElementById('customCurveCount');
+  const n = customCurves.filter(c => c.fitted).length;
+  badge.textContent = n;
+  badge.style.display = n > 0 ? '' : 'none';
+  document.getElementById('customCurvesEmpty').style.display =
+    customCurves.length === 0 ? '' : 'none';
+}
+
+function getUnitLabel(type, unitValue) {
+  if (!unitValue) {
+    if (type === 'q') return 'm³/h';
+    if (type === 'h' || type === 'npsh') return 'm';
+    if (type === 'pow') return 'kW';
+    if (type === 'dia') return 'mm';
+    return '';
+  }
+  if (type === 'q') {
+    if (unitValue === 'm3h') return 'm³/h';
+    if (unitValue === 'ls') return 'L/s';
+    if (unitValue === 'gpm') return 'gpm';
+    if (unitValue === 'lmin') return 'L/min';
+  }
+  if (type === 'h' || type === 'npsh') {
+    if (unitValue === 'm') return 'm';
+    if (unitValue === 'ft') return 'ft';
+  }
+  if (type === 'pow') {
+    if (unitValue === 'kw') return 'kW';
+    if (unitValue === 'hp') return 'hp';
+  }
+  if (type === 'dia') {
+    if (unitValue === 'mm') return 'mm';
+    if (unitValue === 'in') return 'in';
+    if (unitValue === 'm') return 'm';
+  }
+  return unitValue;
+}
+
+const CURVE_CONVERSIONS = {
+  q: { m3h: 1.0, ls: 0.2777777777777778, gpm: 4.402917396, lmin: 16.6666666667 },
+  h: { m: 1.0, ft: 3.280839895 },
+  npsh: { m: 1.0, ft: 3.280839895 },
+  pow: { kw: 1.0, hp: 1.34102209 }
+};
+
+/* ── Build Plotly traces for a fitted custom curve ───────────────────────── */
+function buildCustomTraces(curve) {
+  if (!curve.fitted) return [];
+  const { label, color, weight, style, use_custom_style, style_mode, q, h, eta } = curve;
+  const units = getGraphDisplayUnits();
+  const fQ = CURVE_CONVERSIONS.q[units.q] || 1.0;
+  const fH = CURVE_CONVERSIONS.h[units.h] || 1.0;
+  const labelH = typeof getUnitLabel === 'function' ? getUnitLabel('h', units.h) : units.h;
+
+  const useCustom = use_custom_style || style_mode === 'custom';
+  const cColor = useCustom && color ? color : units.headColor;
+  const cWeight = useCustom && weight ? weight : units.headWeight;
+  const cStyle = useCustom && style ? style : units.headStyle;
+
+  const qConv = q.map(v => v * fQ);
+  const hConv = h.map(v => v * fH);
+
+  const traces = [];
+
+  // H-Q line (drawn solid to match the impeller family)
+  traces.push({
+    type: 'scatter', mode: 'lines',
+    name: label || 'Custom',
+    x: qConv, y: hConv,
+    line: { color: cColor, width: cWeight, dash: cStyle },
+    legendgroup: `custom_${curve.id}`,
+    hovertemplate: `${label || 'Custom'}<br>Q=%{x:.1f}<br>H=%{y:.2f} ${labelH}<extra></extra>`,
+  });
+
+  // η line (if available)
+  if (eta && eta.length) {
+    traces.push({
+      type: 'scatter', mode: 'lines',
+      name: `${label || 'Custom'} η`,
+      x: qConv, y: eta,
+      line: { color, width: 1.5, dash: 'dot' },
+      legendgroup: `custom_${curve.id}`,
+      hovertemplate: `${label || 'Custom'}<br>η=%{y:.1f}%<extra></extra>`,
+      showlegend: false,
+    });
+  }
+
+  return traces;
+}
+
+/* ── Get all custom traces (optionally filtered for a yaxis) ─────────────── */
+function getCustomTracesHQ() {
+  return customCurves.flatMap(c => buildCustomTraces(c).filter(t => !t.yaxis || t.yaxis === 'y'));
+}
+
+function getCustomTracesEta() {
+  const units = getGraphDisplayUnits();
+  const fQ = CURVE_CONVERSIONS.q[units.q] || 1.0;
+  return customCurves.flatMap(c => {
+    if (!c.fitted || !c.eta || !c.eta.length) return [];
+    return [{
+      type: 'scatter', mode: 'lines',
+      name: `${c.label || 'Custom'} η`,
+      x: c.q.map(v => v * fQ), y: c.eta,
+      line: { color: c.color, width: 1.8, dash: 'dashdot' },
+      legendgroup: `custom_${c.id}`,
+      hovertemplate: `${c.label || 'Custom'}<br>η=%{y:.1f}%<extra></extra>`,
+    }];
+  });
+}
+
+function getCustomTracesPower() {
+  const units = getGraphDisplayUnits();
+  const fQ = CURVE_CONVERSIONS.q[units.q] || 1.0;
+  const fP = CURVE_CONVERSIONS.pow[units.pow] || 1.0;
+  const labelP = typeof getUnitLabel === 'function' ? getUnitLabel('pow', units.pow) : units.pow;
+  return customCurves.flatMap(c => {
+    if (!c.fitted || !c.power || !c.power.length) return [];
+    return [{
+      type: 'scatter', mode: 'lines',
+      name: `${c.label || 'Custom'} P`,
+      x: c.q.map(v => v * fQ), y: c.power.map(v => v * fP),
+      line: { color: c.color, width: 1.8, dash: 'dashdot' },
+      legendgroup: `custom_${c.id}`,
+      hovertemplate: `${c.label || 'Custom'}<br>P=%{y:.2f} ${labelP}<extra></extra>`,
+    }];
+  });
+}
+
+/* ── Fit a custom curve via the existing API endpoint ────────────────────── */
+async function fitCustomCurve(curveId) {
+  const curve = customCurves.find(c => c.id === curveId);
+  if (!curve) return;
+
+  const entry = document.getElementById(`curve-entry-${curveId}`);
+  const statusEl = entry.querySelector('.curve-status');
+  const plotBtn = entry.querySelector('.btn-plot-curve');
+  const textarea = entry.querySelector('.curve-data-input');
+
+  const { q_h, q_eta } = parseDataText(textarea.value);
+
+  if (q_h.length < 3) {
+    statusEl.className = 'curve-status error';
+    statusEl.textContent = '✗ Need at least 3 Q,H data points';
+    return;
+  }
+
+  statusEl.className = 'curve-status busy';
+  statusEl.textContent = '⟳ Fitting curve…';
+  plotBtn.disabled = true;
+
+  const payload = { q_h };
+  if (q_eta.length >= 3) payload.q_eta = q_eta;
+  else {
+    // Synthesise flat η so the API doesn't reject
+    payload.q_eta = q_h.map(([q]) => [q, 70]);
+  }
+
+  try {
+    const res = await fetch('/papi/fit-curves', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const d = await res.json();
+
+    if (!d.ok) {
+      statusEl.className = 'curve-status error';
+      statusEl.textContent = `✗ ${d.error || 'Fit failed'}`;
+      return;
+    }
+
+    // Evaluate smooth curve from coefficients
+    const qMax = d.q_max;
+    const qArr = Array.from({ length: 80 }, (_, i) => (i / 79) * qMax);
+    const evalP = (coeffs, q) => coeffs.reduce((s, c, i) => s + c * Math.pow(q, i), 0);
+    const a = [d.hq_a0, d.hq_a1, d.hq_a2, d.hq_a3];
+    const b = [d.eff_b0, d.eff_b1, d.eff_b2, d.eff_b3];
+    const pp = [d.pow_p0, d.pow_p1, d.pow_p2];
+
+    curve.q = qArr.map(q => Math.round(q * 100) / 100);
+    curve.h = qArr.map(q => Math.max(0, evalP(a, q)));
+    curve.eta = q_eta.length >= 3 ? qArr.map(q => Math.max(0, Math.min(100, evalP(b, q)))) : null;
+    curve.power = qArr.map(q => Math.max(0, evalP(pp, q)));
+    curve.fitted = true;
+
+    // Also store raw points for scatter markers
+    curve.raw_q_h = q_h;
+    curve.raw_q_eta = q_eta.length >= 3 ? q_eta : null;
+
+    statusEl.className = 'curve-status ok';
+    statusEl.textContent = `✓ Fitted — Q_max=${d.q_max.toFixed(1)}, η_BEP=${d.eta_bep}%, R²(H)=${d.r2_hq}`;
+
+    updateCurveCountBadge();
+    renderAll();   // re-render all charts with the new curve
+
+  } catch (e) {
+    statusEl.className = 'curve-status error';
+    statusEl.textContent = `✗ Network error: ${e.message}`;
+  } finally {
+    plotBtn.disabled = false;
+  }
+}
+
+/* ── Add a new curve UI row ──────────────────────────────────────────────── */
+function addCustomCurveRow() {
+  const id = ++_curveIdCounter;
+  const color = CUSTOM_COLORS[(id - 1) % CUSTOM_COLORS.length];
+
+  customCurves.push({ id, label: `Curve ${id}`, color, fitted: false });
+
+  const list = document.getElementById('customCurvesList');
+  const div = document.createElement('div');
+  div.className = 'custom-curve-entry';
+  div.id = `curve-entry-${id}`;
+
+  const colorSwatches = CUSTOM_COLORS.map((c, ci) =>
+    `<span class="curve-color-swatch ${c === color ? 'active' : ''}"
+          style="background:${c}"
+          data-color="${c}"
+          data-curve-id="${id}"
+          title="${c}"></span>`
+  ).join('');
+
+  div.innerHTML = `
+    <div class="d-flex align-items-start gap-3">
+      <div class="flex-grow-1">
+        <!-- Header row -->
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="curve-color-dot"
+                style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${color};flex-shrink:0"></span>
+          <input type="text" class="form-control form-control-sm form-control-dark curve-label-input"
+                 value="Curve ${id}" placeholder="Label"
+                 style="max-width:160px;font-weight:600"
+                 data-curve-id="${id}">
+          <span class="text-muted small ms-1">Color:</span>
+          <div class="d-flex gap-1 align-items-center flex-wrap" id="swatches-${id}">
+            ${colorSwatches}
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 ms-auto btn-remove-curve"
+                  data-curve-id="${id}" title="Remove curve">×</button>
+        </div>
+        <!-- Data entry -->
+        <div class="row g-2">
+          <div class="col-12">
+            <label class="form-label form-label-sm text-muted mb-1">
+              Q, H data pairs <span class="text-muted fw-normal">(one per line: <code style="color:#8b949e">100, 45.2</code> — optionally add η: <code style="color:#8b949e">100, 45.2, 78</code>)</span>
+            </label>
+            <textarea class="form-control curve-data-input w-100" rows="5"
+                      placeholder="0, 55&#10;50, 52&#10;100, 45&#10;150, 34&#10;200, 18&#10;220, 0"
+                      id="curve-data-${id}"></textarea>
+          </div>
+        </div>
+        <!-- Status + action -->
+        <div class="d-flex align-items-center gap-2 mt-2">
+          <button type="button" class="btn btn-sm btn-primary btn-plot-curve" data-curve-id="${id}">
+            <i class="bi bi-graph-up me-1"></i>Plot
+          </button>
+          <span class="curve-status" id="curve-status-${id}"></span>
+        </div>
+      </div>
+    </div>`;
+
+  list.appendChild(div);
+
+  // Bind color swatch clicks
+  div.querySelectorAll('.curve-color-swatch').forEach(swatch => {
+    swatch.addEventListener('click', () => {
+      const cid = parseInt(swatch.dataset.curveId);
+      const newColor = swatch.dataset.color;
+      const curve = customCurves.find(c => c.id === cid);
+      if (!curve) return;
+      curve.color = newColor;
+      div.querySelectorAll('.curve-color-swatch').forEach(s => s.classList.remove('active'));
+      swatch.classList.add('active');
+      div.querySelector('.curve-color-dot').style.background = newColor;
+      if (curve.fitted) renderAll();
+    });
+  });
+
+  // Bind label input
+  div.querySelector('.curve-label-input').addEventListener('input', (e) => {
+    const cid = parseInt(e.target.dataset.curveId);
+    const curve = customCurves.find(c => c.id === cid);
+    if (curve) {
+      curve.label = e.target.value || `Curve ${cid}`;
+      if (curve.fitted) renderAll();
+    }
+  });
+
+  // Bind Plot button
+  div.querySelector('.btn-plot-curve').addEventListener('click', (e) => {
+    fitCustomCurve(parseInt(e.currentTarget.dataset.curveId));
+  });
+
+  // Bind Remove button
+  div.querySelector('.btn-remove-curve').addEventListener('click', (e) => {
+    const cid = parseInt(e.currentTarget.dataset.curveId);
+    customCurves = customCurves.filter(c => c.id !== cid);
+    document.getElementById(`curve-entry-${cid}`)?.remove();
+    updateCurveCountBadge();
+    renderAll();
+  });
+
+  updateCurveCountBadge();
+
+  // Auto-open the collapse if not already open
+  const body = document.getElementById('customCurvesBody');
+  if (!body.classList.contains('show')) {
+    new bootstrap.Collapse(body, { toggle: true });
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PUMP CURVE PAGE CONTROLLER
+   ══════════════════════════════════════════════════════════════════════════ */
+
+if (typeof PUMP_ID !== 'undefined') {
+
+  let currentData = null;   // Warman chart data (family + isolines)
+  let singleData = null;   // Single-dia curve data (max impeller)
+  let viewMode = 'warman';
+
+  /* ── Query params ──── */
+  function getParams() {
+    const liquid = document.getElementById('liquidSelect').value;
+    const p = new URLSearchParams({ liquid });
+    if (liquid === 'viscous') p.set('viscosity_cSt', document.getElementById('viscosity').value);
+    if (liquid === 'slurry') {
+      p.set('slurry_cv', document.getElementById('slurryCv').value);
+      p.set('slurry_d50', document.getElementById('slurryD50').value);
+      p.set('rho_solid', document.getElementById('rhoSolid').value);
+    }
+    const sh = document.getElementById('staticHead').value;
+    const pk = document.getElementById('pipeK').value;
+    if (parseFloat(sh) || parseFloat(pk)) {
+      p.set('static_head', sh || 0);
+      p.set('pipe_k', pk || 0);
+    }
+
+    const effL = document.getElementById('txtEffLevels')?.value || '';
+    const tpVal = document.getElementById('numTrimPenalty')?.value;
+    const powL = document.getElementById('txtPowerLevels')?.value || '';
+    const npshL = document.getElementById('txtNpshLevels')?.value || '';
+    if (effL) p.set('eff_levels', effL);
+    if (tpVal !== undefined && tpVal !== '') p.set('trim_penalty', tpVal);
+    if (powL) p.set('power_levels', powL);
+    if (npshL) p.set('npsh_levels', npshL);
+
+    const trimModel = document.querySelector('input[name="trimModelChoice"]:checked')?.value || 'fit';
+    p.set('force_affinity', trimModel);
+
+    return p;
+  }
+
+  function collectGraphOptions() {
+    return {
+      show_eff_iso: document.getElementById('chkShowEffIso')?.checked !== false,
+      eff_levels: document.getElementById('txtEffLevels')?.value || '',
+      trim_penalty: document.getElementById('numTrimPenalty')?.value !== '' && document.getElementById('numTrimPenalty')?.value !== undefined ? parseFloat(document.getElementById('numTrimPenalty')?.value) : null,
+      show_power_iso: document.getElementById('chkShowPowerIso')?.checked || false,
+      power_levels: document.getElementById('txtPowerLevels')?.value || '',
+      show_npsh_iso: document.getElementById('chkShowNpshIso')?.checked || false,
+      npsh_levels: document.getElementById('txtNpshLevels')?.value || '',
+      show_npsh_curve: document.getElementById('chkShowNpshCurve')?.checked || false,
+      npsh_yaxis: document.querySelector('input[name="npshYAxisChoice"]:checked')?.value || 'y2',
+      show_speed_lines: document.getElementById('chkSpeedLines')?.checked || false,
+      show_hq: document.getElementById('chkShowHQ')?.checked !== false,
+      show_other: document.getElementById('chkShowOther')?.checked !== false,
+      show_eff: document.getElementById('chkShowEff')?.checked !== false,
+      show_power: document.getElementById('chkShowPower')?.checked !== false,
+      show_npsh: document.getElementById('chkShowNpsh')?.checked !== false,
+      combine_eff_power: document.getElementById('chkCombineEffPower')?.checked !== false,
+      trim_model: document.querySelector('input[name="trimModelChoice"]:checked')?.value || 'fit',
+      legend_mode: document.getElementById('selLegendMode')?.value || 'each',
+      custom_label_pos: customLabelPositions
+    };
+  }
+
+  function applyGraphOptions(opts) {
+    if (!opts || typeof opts !== 'object') return;
+    if (opts.custom_label_pos) {
+      let pos = opts.custom_label_pos;
+      if (typeof pos === 'string') {
+        try { pos = JSON.parse(pos); } catch (e) { pos = null; }
+      }
+      if (pos && typeof pos === 'object' && Object.keys(pos).length > 0) {
+        customLabelPositions = Object.assign({}, customLabelPositions, pos);
+      }
+    }
+    if (opts.show_eff_iso !== undefined && document.getElementById('chkShowEffIso')) document.getElementById('chkShowEffIso').checked = opts.show_eff_iso;
+    if (opts.eff_levels !== undefined && document.getElementById('txtEffLevels')) document.getElementById('txtEffLevels').value = opts.eff_levels;
+    if (opts.trim_penalty !== undefined && opts.trim_penalty !== null && document.getElementById('numTrimPenalty')) document.getElementById('numTrimPenalty').value = opts.trim_penalty;
+
+    if (opts.show_power_iso !== undefined && document.getElementById('chkShowPowerIso')) {
+      document.getElementById('chkShowPowerIso').checked = opts.show_power_iso;
+      const g = document.getElementById('groupPowerLevels');
+      if (g) g.style.display = opts.show_power_iso ? '' : 'none';
+    }
+    if (opts.power_levels !== undefined && document.getElementById('txtPowerLevels')) document.getElementById('txtPowerLevels').value = opts.power_levels;
+
+    if (opts.show_npsh_iso !== undefined && document.getElementById('chkShowNpshIso')) {
+      document.getElementById('chkShowNpshIso').checked = opts.show_npsh_iso;
+      const g = document.getElementById('groupNpshLevels');
+      if (g) g.style.display = opts.show_npsh_iso ? '' : 'none';
+    }
+    if (opts.npsh_levels !== undefined && document.getElementById('txtNpshLevels')) document.getElementById('txtNpshLevels').value = opts.npsh_levels;
+
+    if (opts.show_npsh_curve !== undefined && document.getElementById('chkShowNpshCurve')) {
+      document.getElementById('chkShowNpshCurve').checked = opts.show_npsh_curve;
+      const g = document.getElementById('groupNpshYAxis');
+      if (g) g.style.display = opts.show_npsh_curve ? '' : 'none';
+    }
+    if (opts.npsh_yaxis && document.querySelector(`input[name="npshYAxisChoice"][value="${opts.npsh_yaxis}"]`)) {
+      document.querySelector(`input[name="npshYAxisChoice"][value="${opts.npsh_yaxis}"]`).checked = true;
+    }
+    if (opts.show_speed_lines !== undefined && document.getElementById('chkSpeedLines')) document.getElementById('chkSpeedLines').checked = opts.show_speed_lines;
+    if (opts.show_hq !== undefined && document.getElementById('chkShowHQ')) document.getElementById('chkShowHQ').checked = opts.show_hq;
+    if (opts.show_other !== undefined && document.getElementById('chkShowOther')) document.getElementById('chkShowOther').checked = opts.show_other;
+    if (opts.show_eff !== undefined && document.getElementById('chkShowEff')) document.getElementById('chkShowEff').checked = opts.show_eff;
+    if (opts.show_power !== undefined && document.getElementById('chkShowPower')) document.getElementById('chkShowPower').checked = opts.show_power;
+    if (opts.show_npsh !== undefined && document.getElementById('chkShowNpsh')) document.getElementById('chkShowNpsh').checked = opts.show_npsh;
+    if (opts.combine_eff_power !== undefined && document.getElementById('chkCombineEffPower')) document.getElementById('chkCombineEffPower').checked = opts.combine_eff_power;
+    if (opts.trim_model && document.querySelector(`input[name="trimModelChoice"][value="${opts.trim_model}"]`)) {
+      document.querySelector(`input[name="trimModelChoice"][value="${opts.trim_model}"]`).checked = true;
+    }
+    if (opts.legend_mode && document.getElementById('selLegendMode')) {
+      document.getElementById('selLegendMode').value = opts.legend_mode;
+      const g = document.getElementById('groupCurveLabelPos');
+      if (g) g.style.display = opts.legend_mode === 'curve_labels' ? '' : 'none';
+    }
+  }
+
+  async function saveGraphOptions() {
+    if (typeof PUMP_ID === 'undefined' || !PUMP_ID) return;
+    const btn = document.getElementById('btnSaveGraphOptions');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+    }
+    const opts = collectGraphOptions();
+    try {
+      const res = await fetch(`/papi/pump/${PUMP_ID}/graph-options`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(opts)
+      });
+      const json = await res.json();
+      if (json.status === 'ok' && btn) {
+        btn.className = 'btn btn-sm btn-success py-0 px-2';
+        btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Saved!';
+        setTimeout(() => {
+          btn.className = 'btn btn-sm btn-outline-accent py-0 px-2';
+          btn.innerHTML = '<i class="bi bi-floppy me-1"></i>Save Options';
+        }, 1500);
+      }
+    } catch (e) {
+      console.error('Failed to save graph options:', e);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function getDuty() {
+    return {
+      q: parseFloat(document.getElementById('dutyQ').value) || null,
+      h: parseFloat(document.getElementById('dutyH').value) || null,
+    };
+  }
+
+  /* ── Liquid param panels ──── */
+  function updateLiquidPanels() {
+    const liquid = document.getElementById('liquidSelect').value;
+    document.querySelectorAll('.liquid-param').forEach(el => {
+      el.style.display = el.classList.contains(liquid) ? '' : 'none';
+    });
+  }
+
+  /* ── Render all charts for current display option (+ custom curves) ──── */
+  function renderAll() {
+    const duty = getDuty();
+    const customHQ = getCustomTracesHQ();
+    const customEta = getCustomTracesEta();
+    const customPow = getCustomTracesPower();
+
+    const showHQ = document.getElementById('chkShowHQ')?.checked !== false;
+    const showEffIso = document.getElementById('chkShowEffIso').checked;
+    const showPowerIso = document.getElementById('chkShowPowerIso').checked;
+    const showNpshIso = document.getElementById('chkShowNpshIso').checked;
+    const showNpshCurve = document.getElementById('chkShowNpshCurve').checked;
+    const showSpeedLines = (document.getElementById('chkRpmOverlay')?.checked || document.getElementById('chkSpeedLines')?.checked) || false;
+    const showDiaOverlay = document.getElementById('chkDiaOverlay')?.checked || false;
+
+    // Toggle main Performance Map panel
+    if (document.getElementById('warmanPanel')) {
+      document.getElementById('warmanPanel').style.display = showHQ ? '' : 'none';
+    }
+
+    // Toggle custom inputs visibility based on checkboxes
+    document.getElementById('groupEffLevels').style.display = showEffIso ? '' : 'none';
+    document.getElementById('groupPowerLevels').style.display = showPowerIso ? '' : 'none';
+    document.getElementById('groupNpshLevels').style.display = showNpshIso ? '' : 'none';
+    document.getElementById('groupNpshYAxis').style.display = showNpshCurve ? '' : 'none';
+
+    const npshYAxis = document.querySelector('input[name="npshYAxisChoice"]:checked')?.value || 'y2';
+
+    // Ensure family subpanels are hidden
+    if (document.getElementById('npshFamilyPanel')) document.getElementById('npshFamilyPanel').style.display = 'none';
+    if (document.getElementById('powerFamilyPanel')) document.getElementById('powerFamilyPanel').style.display = 'none';
+
+    // RENDER MAIN Performance Map
+    if (currentData) {
+      const wc = buildWarmanChart(currentData, {
+        showIsolines: showEffIso,
+        showPowerIso: showPowerIso,
+        showNpshIso: showNpshIso,
+        showSpeedLines: showSpeedLines,
+        showDiaOverlay: showDiaOverlay,
+        showNpshCurve: showNpshCurve,
+        npshYAxis: npshYAxis,
+        dutyQ: duty.q, dutyH: duty.h
+      });
+      Plotly.react('chartWarman', [...wc.traces, ...customHQ], wc.layout, PLOTLY_CONFIG);
+      if (wc.layout.annotations && wc.layout.annotations.length > 0) {
+        makeAnnotationsDraggable('chartWarman', wc.layout.annotations, PUMP_ID);
+      }
+      renderPerfSummary(currentData, 'perfSummary');
+    }
+
+    // Toggle additional performance graphs below
+    const showOther = document.getElementById('chkShowOther').checked;
+    document.getElementById('standalonePanels').style.display = showOther ? '' : 'none';
+    document.getElementById('otherGraphsOptions').style.display = showOther ? '' : 'none';
+
+    if (showOther && currentData) {
+      const showEff = document.getElementById('chkShowEff')?.checked;
+      const showPower = document.getElementById('chkShowPower')?.checked;
+      const showNpsh = document.getElementById('chkShowNpsh')?.checked;
+      const combineEffPower = document.getElementById('chkCombineEffPower')?.checked;
+
+      const showClean = currentData.liquid !== 'water';
+
+      // Toggle panel columns
+      if (document.getElementById('panelHQ')) document.getElementById('panelHQ').style.display = 'none';
+      document.getElementById('panelEffPower').style.display = (showEff && showPower && combineEffPower) ? '' : 'none';
+      document.getElementById('panelEff').style.display = (showEff && (!showPower || !combineEffPower)) ? '' : 'none';
+      document.getElementById('panelPower').style.display = (showPower && (!showEff || !combineEffPower)) ? '' : 'none';
+      document.getElementById('panelNpsh').style.display = showNpsh ? '' : 'none';
+
+      if (showEff && showPower && combineEffPower) {
+        const effPow = buildEffPowerChart(currentData, singleData, showClean);
+        Plotly.react('chartEffPower', [...effPow.traces, ...customEta, ...customPow], effPow.layout, PLOTLY_CONFIG);
+        if (effPow.layout.annotations) makeAnnotationsDraggable('chartEffPower', effPow.layout.annotations, PUMP_ID);
+      } else {
+        if (showEff) {
+          const eff = buildEffChart(currentData, singleData, showClean);
+          Plotly.react('chartEff', [...eff.traces, ...customEta], eff.layout, PLOTLY_CONFIG);
+          if (eff.layout.annotations) makeAnnotationsDraggable('chartEff', eff.layout.annotations, PUMP_ID);
+        }
+        if (showPower) {
+          const power = buildPowerChart(currentData, singleData, showClean);
+          Plotly.react('chartPower', [...power.traces, ...customPow], power.layout, PLOTLY_CONFIG);
+          if (power.layout.annotations) makeAnnotationsDraggable('chartPower', power.layout.annotations, PUMP_ID);
+        }
+      }
+
+      if (showNpsh) {
+        const npsh = buildNpshChart(currentData, singleData);
+        Plotly.react('chartNpsh', npsh.traces, npsh.layout, PLOTLY_CONFIG);
+        if (npsh.layout.annotations) makeAnnotationsDraggable('chartNpsh', npsh.layout.annotations, PUMP_ID);
+      }
+    }
+  }
+
+  /* ── Custom curve summary table below the standard perfSummary ──────────── */
+  function renderCustomSummary() {
+    // Disabled - custom/additional curves are now grouped in the main perfSummary table
+  }
+
+  /* ── Fetch both endpoints in parallel ──── */
+  async function fetchAndRender() {
+    const params = getParams();
+    const btn = document.getElementById('btnUpdate');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Loading…';
+
+    try {
+      const [warmanRes, singleRes] = await Promise.all([
+        fetch(`/papi/warman-chart/${PUMP_ID}?${params}`),
+        fetch(`/papi/curve-data/${PUMP_ID}?${params}`)
+      ]);
+      currentData = await warmanRes.json();
+      singleData = await singleRes.json();
+      if (currentData && currentData.default_trim_penalty !== undefined) {
+        const numTP = document.getElementById('numTrimPenalty');
+        if (numTP) numTP.placeholder = `Auto (${currentData.default_trim_penalty}%)`;
+      }
+      if (currentData && currentData.graph_options) {
+        applyGraphOptions(currentData.graph_options);
+      }
+      renderAll();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Update';
+    }
+  }
+
+  const isCurvesPage = !!document.getElementById('btnUpdate');
+  if (isCurvesPage) {
+    const onOptionChange = () => {
+      renderAll();
+      saveGraphOptions();
+    };
+    const onOptionFetchChange = () => {
+      fetchAndRender();
+      saveGraphOptions();
+    };
+
+    // Bind change event to checkboxes and select dropdowns that change overlays
+    ['chkShowHQ', 'chkShowEffIso', 'chkShowPowerIso', 'chkShowNpshIso', 'chkShowNpshCurve', 'chkSpeedLines', 'chkShowOther', 'selLegendMode'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => {
+          if (id === 'chkShowEffIso') {
+            const g = document.getElementById('groupEffLevels');
+            if (g) { g.style.display = el.checked ? '' : 'none'; g.classList.toggle('hidden', !el.checked); }
+          }
+          if (id === 'chkShowPowerIso') {
+            const g = document.getElementById('groupPowerLevels');
+            if (g) { g.style.display = el.checked ? '' : 'none'; g.classList.toggle('hidden', !el.checked); }
+          }
+          if (id === 'chkShowNpshIso') {
+            const g = document.getElementById('groupNpshLevels');
+            if (g) { g.style.display = el.checked ? '' : 'none'; g.classList.toggle('hidden', !el.checked); }
+          }
+          if (id === 'chkShowNpshCurve') {
+            const g = document.getElementById('groupNpshYAxis');
+            if (g) { g.style.display = el.checked ? '' : 'none'; g.classList.toggle('hidden', !el.checked); }
+          }
+          if (id === 'selLegendMode') {
+            const g = document.getElementById('groupCurveLabelPos');
+            if (g) g.style.display = el.value === 'curve_labels' ? '' : 'none';
+          }
+          onOptionChange();
+        });
+        if (id === 'txtCurveLabelFlowPct') {
+          el.addEventListener('input', onOptionChange);
+          el.addEventListener('keyup', onOptionChange);
+        }
+      }
+    });
+
+    // Bind change event to other layout checkboxes & radios
+    document.querySelectorAll('#otherGraphsOptions input[type="checkbox"], input[name="npshYAxisChoice"]').forEach(input => {
+      input.addEventListener('change', onOptionChange);
+    });
+
+    document.querySelectorAll('input[name="trimModelChoice"]').forEach(input => {
+      input.addEventListener('change', onOptionFetchChange);
+    });
+
+    // Bind change/keypress event to custom levels to automatically fetch
+    ['txtEffLevels', 'txtPowerLevels', 'txtNpshLevels', 'numTrimPenalty'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', onOptionFetchChange);
+        el.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            onOptionFetchChange();
+          }
+        });
+      }
+    });
+
+    document.getElementById('liquidSelect').addEventListener('change', updateLiquidPanels);
+    document.getElementById('btnUpdate').addEventListener('click', fetchAndRender);
+    const saveOptBtn = document.getElementById('btnSaveGraphOptions');
+    if (saveOptBtn) {
+      saveOptBtn.addEventListener('click', saveGraphOptions);
+    }
+
+    const resetPosBtn = document.getElementById('btnResetLabelPos');
+    if (resetPosBtn) {
+      resetPosBtn.addEventListener('click', async () => {
+        customLabelPositions = {};
+        if (typeof PUMP_ID !== 'undefined' && PUMP_ID) {
+          const opts = collectGraphOptions();
+          opts.reset_label_pos = true;
+          opts.custom_label_pos = {};
+          try {
+            await fetch(`/papi/pump/${PUMP_ID}/graph-options`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(opts)
+            });
+          } catch (e) { }
+        }
+        renderAll();
+      });
+    }
+
+    // Custom curves: Add Curve button + chevron toggle
+    document.getElementById('btnAddCurve').addEventListener('click', addCustomCurveRow);
+
+    document.getElementById('customCurvesBody').addEventListener('show.bs.collapse', () => {
+      document.getElementById('customCurvesChevron').className = 'bi bi-chevron-up';
+    });
+    document.getElementById('customCurvesBody').addEventListener('hide.bs.collapse', () => {
+      document.getElementById('customCurvesChevron').className = 'bi bi-chevron-down';
+    });
+
+    // Initial setup: apply saved options from dataset if available
+    const savedGraphOpts = document.getElementById('pump-meta')?.dataset.graphOptions;
+    if (savedGraphOpts) {
+      try {
+        applyGraphOptions(JSON.parse(savedGraphOpts));
+      } catch (e) { }
+    }
+    updateLiquidPanels();
+    fetchAndRender();
+  }
+}

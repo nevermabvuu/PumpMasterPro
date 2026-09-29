@@ -27,6 +27,9 @@ from utils import (
     UNITS_FLOW, UNITS_HEAD, UNITS_POWER, UNITS_DENSITY, UNITS_SIZE, convert_unit
 )
 from pump_selection import select_pumps, get_filter_options
+from services.fire_protection import (
+    NFPA_13_HAZARDS, NFPA_14_STANDPIPE, EN_12845_HAZARDS, AS_2941_CRITERIA
+)
 
 selection_bp = Blueprint('selection', __name__)
 
@@ -343,6 +346,17 @@ def run_selection_from_form(f, all_pumps=None, current_org=None):
             raw_np = r.get('op_npsh')
             r['disp_npshr']    = convert_unit(raw_np, 'm', unit_npsh, 'head') if raw_np is not None else None
 
+            # Fire Protection NFPA 20 Unit Conversions
+            if r.get('nfpa20_eval'):
+                ev = r['nfpa20_eval']
+                ev['disp_h_churn'] = round(convert_unit(ev.get('h_churn_m', 0.0), 'm', unit_h, 'head'), 1) if ev.get('h_churn_m') is not None else None
+                ev['disp_h_rated'] = round(convert_unit(ev.get('h_rated_m', 0.0), 'm', unit_h, 'head'), 1) if ev.get('h_rated_m') is not None else None
+                ev['disp_h_overload'] = round(convert_unit(ev.get('h_overload_m', 0.0), 'm', unit_h, 'head'), 1) if ev.get('h_overload_m') is not None else None
+                ev['disp_unit_h'] = UNITS_HEAD.get(unit_h, {}).get('name', unit_h)
+                if ev.get('rec_driver_kw'):
+                    ev['disp_driver_power'] = round(convert_unit(ev['rec_driver_kw'], 'kw', unit_pow, 'power'), 1)
+                    ev['disp_unit_pow'] = UNITS_POWER.get(unit_pow, {}).get('name', unit_pow)
+
     ctx = {
         'unit_system': unit_system,
         'unit_q': unit_q,
@@ -564,6 +578,13 @@ def pump_selection():
         'feat_pipe_parallel':      _hf('pipe_network', 'simple_parallel'),
     }
 
+    fire_standards_json = json.dumps({
+        'nfpa13': NFPA_13_HAZARDS,
+        'nfpa14': NFPA_14_STANDPIPE,
+        'en12845': EN_12845_HAZARDS,
+        'as2941': AS_2941_CRITERIA,
+    })
+
     # ── Render template with results and filter options ─────────────────────
     return render_template('pump_selection.html',
                            results=results,
@@ -586,6 +607,7 @@ def pump_selection():
                            standard_pipes_json=standard_pipes_json,
                            fittings_json=fittings_json,
                            materials_json=materials_json,
+                           fire_standards_json=fire_standards_json,
                            active_selection_json=active_selection_json,
                            selection_form_data_json=selection_form_data_json,
                            active_selection=active_sel,

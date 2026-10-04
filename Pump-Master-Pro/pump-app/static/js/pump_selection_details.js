@@ -248,6 +248,80 @@ function buildBorderShapes(mode, activeDomains, color) {
 }
 
 /**
+ * Generates background shaded bands for fire operating regions:
+ * 1. Churn / Low Flow Zone (0 to 25% Q_duty)
+ * 2. Operating Zone (Most Remote to Most Favourable)
+ * 3. Overload Zone (>150% Q_duty)
+ */
+function getFireRegionShapes(domainHead) {
+  if (!window.fireProtectionGeometry || !domainHead) return [];
+  const geom = window.fireProtectionGeometry;
+  const y0 = domainHead[0];
+  const y1 = domainHead[1];
+  const qDuty = geom.qDuty || 0;
+  const qFav = geom.qFav || (qDuty * 1.35);
+  const q150 = geom.q150 || (qDuty * 1.5);
+
+  return [
+    {
+      type: 'rect',
+      xref: 'x',
+      yref: 'paper',
+      x0: 0,
+      x1: qDuty * 0.25,
+      y0: y0,
+      y1: y1,
+      fillcolor: 'rgba(239, 68, 68, 0.08)',
+      line: { width: 1, dash: 'dot', color: 'rgba(239, 68, 68, 0.3)' },
+      layer: 'below'
+    },
+    {
+      type: 'rect',
+      xref: 'x',
+      yref: 'paper',
+      x0: qDuty * 0.85,
+      x1: Math.max(qFav, qDuty * 1.25),
+      y0: y0,
+      y1: y1,
+      fillcolor: 'rgba(16, 185, 129, 0.08)',
+      line: { width: 1, dash: 'dot', color: 'rgba(16, 185, 129, 0.3)' },
+      layer: 'below'
+    },
+    {
+      type: 'rect',
+      xref: 'x',
+      yref: 'paper',
+      x0: q150,
+      x1: q150 * 1.35,
+      y0: y0,
+      y1: y1,
+      fillcolor: 'rgba(245, 158, 11, 0.08)',
+      line: { width: 1, dash: 'dot', color: 'rgba(245, 158, 11, 0.3)' },
+      layer: 'below'
+    }
+  ];
+}
+
+/**
+ * Combines plot border shapes and active fire region background shapes.
+ */
+function getActiveShapes() {
+  const mode = window.currentGraphBorderMode || 'both';
+  const activeDomains = window.activeGraphDomains || [];
+  const color = window.currentAxisLineColor || '#30363d';
+  let shapes = buildBorderShapes(mode, activeDomains, color);
+
+  const vis = window.curveVisibility || {};
+  if (vis.fire_regions !== false && window.fireProtectionGeometry && activeDomains.length > 0) {
+    const headDom = activeDomains.find(d => d.key === 'head');
+    if (headDom && headDom.domain) {
+      shapes = shapes.concat(getFireRegionShapes(headDom.domain));
+    }
+  }
+  return shapes;
+}
+
+/**
  * Updates the graph border mode interactively on the live Plotly chart
  * and persists the user preference in localStorage.
  *
@@ -269,8 +343,7 @@ window.setGraphBorderMode = function(mode) {
 
   const chartEl = document.getElementById('chartComp');
   if (chartEl && chartEl.layout && window.activeGraphDomains) {
-    const shapes = buildBorderShapes(mode, window.activeGraphDomains, window.currentAxisLineColor || '#30363d');
-    Plotly.relayout(chartEl, { shapes: shapes });
+    Plotly.relayout(chartEl, { shapes: getActiveShapes() });
   }
 };
 
@@ -673,8 +746,23 @@ function renderAll() {
 
   traces.push({ x: [null], y: [null], name: 'System Curve', type: 'scatter', mode: 'lines', line: { color: sysColor, width: 2.2, dash: sysStyle }, showlegend: true, curveGroup: 'system', legendgroup: 'system' });
 
+  const isFireSelection = Boolean(
+    cfg.IS_FIRE_PUMP
+    || (pumpObj.app_modules && pumpObj.app_modules.toLowerCase().includes('fire'))
+    || (cfg.APPLICATION && cfg.APPLICATION.toLowerCase().includes('fire'))
+    || (window.location.search && window.location.search.toLowerCase().includes('app=fire'))
+  );
+
   if (cfg.Q_DUTY && cfg.H_DUTY) {
-    if (isMultiPump) {
+    if (isFireSelection) {
+      // Fire Protection Legend Proxies
+      traces.push({ x: [null], y: [null], name: 'Most Remote Duty (100% Q)', type: 'scatter', mode: 'markers', marker: { color: '#ef4444', size: 12, symbol: 'star' }, showlegend: true, curveGroup: 'fire_remote', legendgroup: 'fire_remote' });
+      traces.push({ x: [null], y: [null], name: 'Shutoff / Churn Point (0% Q)', type: 'scatter', mode: 'markers', marker: { color: '#f59e0b', size: 11, symbol: 'circle' }, showlegend: true, curveGroup: 'fire_churn', legendgroup: 'fire_churn' });
+      traces.push({ x: [null], y: [null], name: 'Most Favourable Point', type: 'scatter', mode: 'markers', marker: { color: '#06b6d4', size: 12, symbol: 'diamond' }, showlegend: true, curveGroup: 'fire_fav', legendgroup: 'fire_fav' });
+      traces.push({ x: [null], y: [null], name: '150% Overload Test Point', type: 'scatter', mode: 'markers', marker: { color: '#8b5cf6', size: 11, symbol: 'square' }, showlegend: true, curveGroup: 'fire_overload', legendgroup: 'fire_overload' });
+      traces.push({ x: [null], y: [null], name: 'NFPA 20 Code Envelope', type: 'scatter', mode: 'lines', line: { color: '#f43f5e', width: 2.2, dash: 'dash' }, showlegend: true, curveGroup: 'fire_envelope', legendgroup: 'fire_envelope' });
+      traces.push({ x: [null], y: [null], name: 'Most Favourable Curve', type: 'scatter', mode: 'lines', line: { color: '#06b6d4', width: 2.2, dash: 'dot' }, showlegend: true, curveGroup: 'fav_curve', legendgroup: 'fav_curve' });
+    } else if (isMultiPump) {
       traces.push({ x: [null], y: [null], name: '1x Pump Duty Point', type: 'scatter', mode: 'markers', marker: { color: ratedColor, size: 10, symbol: 'star' }, showlegend: true, curveGroup: 'duty_ind', legendgroup: 'duty_ind' });
       traces.push({ x: [null], y: [null], name: `Station Total Duty (${stationN}x)`, type: 'scatter', mode: 'markers', marker: { color: isParallel ? '#22c55e' : '#a855f7', size: 11, symbol: 'diamond' }, showlegend: true, curveGroup: 'duty_station', legendgroup: 'duty_station' });
     } else {
@@ -684,7 +772,182 @@ function renderAll() {
 
   // ── Operating Duty Points (Geometry & Annotations) ──
   if (cfg.Q_DUTY && cfg.H_DUTY) {
-    if (isParallel) {
+    if (isFireSelection) {
+      const qDuty = cfg.Q_DUTY;
+      const hDuty = cfg.H_DUTY;
+
+      // 1. Churn head (0% flow)
+      const hChurn = (pumpObj.hq_a0 ? pumpObj.hq_a0 * multH * Math.pow(dutyScaleRatio, 2) : (active1xH[0] || hDuty * 1.15));
+      const maxChurnLimit = hDuty * 1.40;
+
+      // 2. Overload head at 150% flow
+      const q150 = qDuty * 1.50;
+      let h150 = 0.0;
+      for (let i = 0; i < active1xQ.length - 1; i++) {
+        if (active1xQ[i] <= q150 && active1xQ[i + 1] >= q150) {
+          const t = (q150 - active1xQ[i]) / (active1xQ[i + 1] - active1xQ[i]);
+          h150 = active1xH[i] + t * (active1xH[i + 1] - active1xH[i]);
+          break;
+        }
+      }
+      if (h150 <= 0 && active1xH.length > 0) {
+        h150 = Math.max(0, active1xH[active1xH.length - 1]);
+      }
+      const minOverloadLimit = hDuty * 0.65;
+
+      // 3. Most Favourable Operating Point (Closest Sprinklers / Lowest Resistance)
+      const hStatic = (cfg.STATIC_HEAD != null ? cfg.STATIC_HEAD : (hDuty * 0.25)) * multH;
+      const hStaticFav = Math.max(2.0 * multH, hStatic * 0.20);
+      const kRemote = (hDuty > hStatic) ? ((hDuty - hStatic) / Math.pow(qDuty, 2)) : (0.75 * hDuty / Math.pow(qDuty, 2));
+      const kFav = kRemote * 0.42;
+
+      const favSysQ = [];
+      const favSysH = [];
+      const maxFavQ = Math.max(q150 * 1.05, Math.max(...active1xQ));
+      const favPtsCount = 40;
+      for (let i = 0; i <= favPtsCount; i++) {
+        const qVal = (i / favPtsCount) * maxFavQ;
+        const hVal = hStaticFav + kFav * Math.pow(qVal, 2);
+        if (hVal <= Math.max(...active1xH) * 1.25) {
+          favSysQ.push(qVal);
+          favSysH.push(hVal);
+        }
+      }
+
+      let qFav = qDuty * 1.30;
+      let hFav = hDuty * 0.85;
+      for (let i = 0; i < active1xQ.length - 1; i++) {
+        const qA = active1xQ[i];
+        const qB = active1xQ[i + 1];
+        if (qB > qDuty) {
+          const hPumpA = active1xH[i];
+          const hPumpB = active1xH[i + 1];
+          const hFavA = hStaticFav + kFav * Math.pow(qA, 2);
+          const hFavB = hStaticFav + kFav * Math.pow(qB, 2);
+          const diffA = hPumpA - hFavA;
+          const diffB = hPumpB - hFavB;
+          if (diffA >= 0 && diffB <= 0) {
+            const t = diffA / (diffA - diffB);
+            qFav = qA + t * (qB - qA);
+            hFav = hPumpA + t * (hPumpB - hPumpA);
+            break;
+          }
+        }
+      }
+
+      // Most Remote Operating Duty Point
+      traces.push({
+        x: [qDuty], y: [hDuty], name: 'Most Remote Duty (100% Q)',
+        type: 'scatter', mode: 'markers',
+        marker: { color: '#ef4444', size: 14, symbol: 'star', line: { color: '#ffffff', width: 1.5 } },
+        yaxis: 'y4', showlegend: false,
+        curveGroup: 'fire_remote', legendgroup: 'fire_remote',
+        hovertemplate: `<b>Most Remote Operating Point (100% Demand)</b><br>Flow: %{x:.1f} ${lblQ}<br>Required Head: %{y:.1f} ${lblH}<br>Status: Certified Design Point<extra></extra>`
+      });
+      // Most Remote Operating Duty Point ([B])
+      traces.push({
+        x: [qDuty], y: [hDuty], name: '[B] Rated Duty (100% Q)',
+        type: 'scatter', mode: 'markers',
+        marker: { color: '#ef4444', size: 14, symbol: 'circle', line: { color: '#ffffff', width: 2 } },
+        yaxis: 'y4', showlegend: false,
+        curveGroup: 'fire_remote', legendgroup: 'fire_remote',
+        hovertemplate: `<b>[B] Rated Duty Point (100% Demand)</b><br>Flow: %{x:.1f} ${lblQ}<br>Required Head: %{y:.1f} ${lblH}<br>Status: Certified Design Point<extra></extra>`
+      });
+      annotations.push({
+        x: qDuty, y: hDuty, xref: 'x', yref: 'y4',
+        text: '<b>B</b>', showarrow: true, arrowcolor: '#ef4444',
+        ax: -20, ay: -20, font: { color: '#ffffff', size: 11, weight: 'bold' },
+        bgcolor: '#ef4444', bordercolor: '#ffffff', borderwidth: 1.5, borderpad: 3,
+        curveGroup: 'fire_remote'
+      });
+
+      // Shutoff / Churn Point (0% Q) ([A])
+      traces.push({
+        x: [0], y: [hChurn], name: '[A] Shutoff / Churn Point (0% Q)',
+        type: 'scatter', mode: 'markers',
+        marker: { color: '#ef4444', size: 13, symbol: 'circle', line: { color: '#ffffff', width: 2 } },
+        yaxis: 'y4', showlegend: false,
+        curveGroup: 'fire_churn', legendgroup: 'fire_churn',
+        hovertemplate: `<b>[A] Shutoff / Churn Point (0% Flow)</b><br>Churn Head: %{y:.1f} ${lblH}<br>NFPA 20 Limit: ≤ ${maxChurnLimit.toFixed(1)} ${lblH} (140%)<br>Actual Churn: ${((hChurn / hDuty) * 100).toFixed(1)}%<extra></extra>`
+      });
+      annotations.push({
+        x: 0, y: hChurn, xref: 'x', yref: 'y4',
+        text: '<b>A</b>', showarrow: true, arrowcolor: '#ef4444',
+        ax: 24, ay: -18, font: { color: '#ffffff', size: 11, weight: 'bold' },
+        bgcolor: '#ef4444', bordercolor: '#ffffff', borderwidth: 1.5, borderpad: 3,
+        curveGroup: 'fire_churn'
+      });
+
+      // Operating Point ([C])
+      traces.push({
+        x: [qFav], y: [hFav], name: '[C] Operating Point',
+        type: 'scatter', mode: 'markers',
+        marker: { color: '#16a34a', size: 14, symbol: 'circle', line: { color: '#ffffff', width: 2 } },
+        yaxis: 'y4', showlegend: false,
+        curveGroup: 'fire_fav', legendgroup: 'fire_fav',
+        hovertemplate: `<b>[C] Operating Point (System Intersection)</b><br>Flow: %{x:.1f} ${lblQ} (${((qFav / qDuty) * 100).toFixed(0)}% Q)<br>Head: %{y:.1f} ${lblH}<br>Zone: Operating Intersection<extra></extra>`
+      });
+      annotations.push({
+        x: qFav, y: hFav, xref: 'x', yref: 'y4',
+        text: '<b>C</b>', showarrow: true, arrowcolor: '#16a34a',
+        ax: 20, ay: -20, font: { color: '#ffffff', size: 11, weight: 'bold' },
+        bgcolor: '#16a34a', bordercolor: '#ffffff', borderwidth: 1.5, borderpad: 3,
+        curveGroup: 'fire_fav'
+      });
+
+      // 150% Overload Test Point ([D])
+      traces.push({
+        x: [q150], y: [h150], name: '[D] 150% Overload Test Point',
+        type: 'scatter', mode: 'markers',
+        marker: { color: '#ef4444', size: 13, symbol: 'circle', line: { color: '#ffffff', width: 2 } },
+        yaxis: 'y4', showlegend: false,
+        curveGroup: 'fire_overload', legendgroup: 'fire_overload',
+        hovertemplate: `<b>[D] 150% Overload Test Point (NFPA 20)</b><br>Test Flow: %{x:.1f} ${lblQ} (150%)<br>Pump Head: %{y:.1f} ${lblH}<br>NFPA 20 Minimum: ≥ ${minOverloadLimit.toFixed(1)} ${lblH} (65%)<br>Actual Ratio: ${((h150 / hDuty) * 100).toFixed(1)}%<extra></extra>`
+      });
+      annotations.push({
+        x: q150, y: h150, xref: 'x', yref: 'y4',
+        text: '<b>D</b>', showarrow: true, arrowcolor: '#ef4444',
+        ax: 20, ay: 18, font: { color: '#ffffff', size: 11, weight: 'bold' },
+        bgcolor: '#ef4444', bordercolor: '#ffffff', borderwidth: 1.5, borderpad: 3,
+        curveGroup: 'fire_overload'
+      });
+
+      // NFPA 20 Code Limit Envelope (Dashed Boundary with Letters E, F, G)
+      const envQ = [0, qDuty, q150];
+      const envH = [maxChurnLimit, hDuty, minOverloadLimit];
+      traces.push({
+        x: envQ, y: envH, name: 'NFPA 20 Limits [E, F, G]',
+        type: 'scatter', mode: 'lines+markers',
+        line: { color: '#f43f5e', width: 2.2, dash: 'dash' },
+        marker: { color: '#f43f5e', size: 7, symbol: 'circle' },
+        yaxis: 'y4', showlegend: false,
+        curveGroup: 'fire_envelope', legendgroup: 'fire_envelope',
+        hovertemplate: `<b>NFPA 20 Limit Boundary</b><br>Flow: %{x:.1f} ${lblQ}<br>Code Limit Head: %{y:.1f} ${lblH}<extra></extra>`
+      });
+
+      // System Curve (Green Dashed)
+      traces.push({
+        x: favSysQ, y: favSysH, name: 'System Curve',
+        type: 'scatter', mode: 'lines',
+        line: { color: '#16a34a', width: 2.2, dash: 'dash' },
+        yaxis: 'y4', showlegend: false,
+        curveGroup: 'fav_curve', legendgroup: 'fav_curve',
+        hovertemplate: `<b>System Curve</b><br>Flow: %{x:.1f} ${lblQ}<br>System Head: %{y:.1f} ${lblH}<extra></extra>`
+      });
+
+      // Store Fire Geometry for dynamic shape rendering
+      window.fireProtectionGeometry = {
+        qDuty: qDuty,
+        hDuty: hDuty,
+        qFav: qFav,
+        hFav: hFav,
+        q150: q150,
+        h150: h150,
+        hChurn: hChurn,
+        maxH: Math.max(...active1xH) * 1.15
+      };
+
+    } else if (isParallel) {
       const perQ = (cfg.EVAL_Q_DUTY != null && cfg.EVAL_Q_DUTY !== '') ? cfg.EVAL_Q_DUTY : (cfg.Q_DUTY / stationN);
       const perH = cfg.H_DUTY;
 
@@ -810,7 +1073,7 @@ function renderAll() {
     borderSelectEl.value = preferredBorderMode;
   }
 
-  const initialShapes = buildBorderShapes(preferredBorderMode, activeDomains, axisLineColor);
+  const initialShapes = getActiveShapes();
 
   const layout = {
     paper_bgcolor: 'rgba(0,0,0,0)',
@@ -917,7 +1180,14 @@ function renderAll() {
     system: true,
     duty_ind: true,
     duty_station: true,
-    duty: true
+    duty: true,
+    fire_remote: true,
+    fire_churn: true,
+    fire_fav: true,
+    fire_150: true,
+    fire_envelope: true,
+    fav_curve: true,
+    fire_regions: true
   };
 
   const chartEl = document.getElementById('chartComp');
@@ -1030,6 +1300,88 @@ window.toggleMaxCurves = function () {
 };
 
 /**
+ * Toggles all fire operating points simultaneously (Most Remote, Churn, Most Favourable, 150% Overload).
+ */
+window.toggleFirePoints = function () {
+  const vis = window.curveVisibility || {};
+  const anyVisible = (vis.fire_remote !== false) || (vis.fire_churn !== false) || (vis.fire_fav !== false) || (vis.fire_150 !== false);
+  const target = !anyVisible;
+
+  ['fire_remote', 'fire_churn', 'fire_fav', 'fire_150'].forEach(grp => {
+    setGroupVisibility(grp, target);
+  });
+  updateChartAnnotations();
+  updateToolbarButtonsState();
+  updateReportLinks();
+};
+
+/**
+ * Toggles fire operating regions (NFPA 20 code limit envelope and background operating zone bands).
+ */
+window.toggleFireRegions = function () {
+  const vis = window.curveVisibility || {};
+  const anyVisible = (vis.fire_envelope !== false) || (vis.fire_regions !== false);
+  const target = !anyVisible;
+
+  setGroupVisibility('fire_envelope', target);
+  vis.fire_regions = target;
+
+  const chartEl = document.getElementById('chartComp');
+  if (chartEl && chartEl.layout) {
+    Plotly.relayout(chartEl, { shapes: getActiveShapes() });
+  }
+
+  updateChartAnnotations();
+  updateToolbarButtonsState();
+  updateReportLinks();
+};
+
+/**
+ * Toggles the Hydraulically Most Favourable system curve.
+ */
+window.toggleFavCurve = function () {
+  const vis = window.curveVisibility || {};
+  const current = vis.fav_curve !== false;
+  setGroupVisibility('fav_curve', !current);
+  updateChartAnnotations();
+  updateToolbarButtonsState();
+  updateReportLinks();
+};
+
+/**
+ * Toggles individual fire item from the dropdown menu checkboxes.
+ */
+window.toggleIndividualFireItem = function (itemKey, isChecked) {
+  const vis = window.curveVisibility || {};
+  const keyMap = {
+    remote: 'fire_remote',
+    churn: 'fire_churn',
+    fav: 'fire_fav',
+    overload: 'fire_150',
+    fav_curve: 'fav_curve',
+    envelope: 'fire_envelope',
+    zones: 'fire_regions'
+  };
+
+  const grp = keyMap[itemKey];
+  if (!grp) return;
+
+  if (grp === 'fire_regions') {
+    vis.fire_regions = isChecked;
+    const chartEl = document.getElementById('chartComp');
+    if (chartEl && chartEl.layout) {
+      Plotly.relayout(chartEl, { shapes: getActiveShapes() });
+    }
+  } else {
+    setGroupVisibility(grp, isChecked);
+  }
+
+  updateChartAnnotations();
+  updateToolbarButtonsState();
+  updateReportLinks();
+};
+
+/**
  * Updates the visual active/inactive states of the curve toggle buttons above the chart.
  */
 function updateToolbarButtonsState() {
@@ -1060,6 +1412,30 @@ function updateToolbarButtonsState() {
 
   const maxActive = (vis.hq !== false) || (vis.eta !== false) || (vis.pow !== false);
   setBtnState('btn-toggle-max', maxActive);
+
+  // Fire buttons & dropdown checkboxes
+  const firePtsActive = (vis.fire_remote !== false) || (vis.fire_churn !== false) || (vis.fire_fav !== false) || (vis.fire_150 !== false);
+  setBtnState('btn-toggle-fire-points', firePtsActive);
+
+  const fireRegActive = (vis.fire_envelope !== false) || (vis.fire_regions !== false);
+  setBtnState('btn-toggle-fire-regions', fireRegActive);
+
+  setBtnState('btn-toggle-fav-curve', vis.fav_curve !== false);
+
+  const chkRemote = document.getElementById('chk-fire-remote');
+  if (chkRemote) chkRemote.checked = (vis.fire_remote !== false);
+  const chkChurn = document.getElementById('chk-fire-churn');
+  if (chkChurn) chkChurn.checked = (vis.fire_churn !== false);
+  const chkFav = document.getElementById('chk-fire-fav');
+  if (chkFav) chkFav.checked = (vis.fire_fav !== false);
+  const chkOverload = document.getElementById('chk-fire-overload');
+  if (chkOverload) chkOverload.checked = (vis.fire_150 !== false);
+  const chkFavCurve = document.getElementById('chk-fire-fav-curve');
+  if (chkFavCurve) chkFavCurve.checked = (vis.fav_curve !== false);
+  const chkEnv = document.getElementById('chk-fire-envelope');
+  if (chkEnv) chkEnv.checked = (vis.fire_envelope !== false);
+  const chkZones = document.getElementById('chk-fire-zones');
+  if (chkZones) chkZones.checked = (vis.fire_regions !== false);
 }
 
 // Beginners Note: Opens the report with a 100% clean URL (/reports/view) with zero parameters.
@@ -1079,6 +1455,13 @@ window.openSessionReport = function (event, reportId) {
   if (vis.duty === false) hidden.push('duty');
   if (vis.duty_ind === false) hidden.push('duty_ind');
   if (vis.duty_station === false) hidden.push('duty_station');
+  if (vis.fire_remote === false) hidden.push('fire_remote');
+  if (vis.fire_churn === false) hidden.push('fire_churn');
+  if (vis.fire_fav === false) hidden.push('fire_fav');
+  if (vis.fire_150 === false) hidden.push('fire_150');
+  if (vis.fire_envelope === false) hidden.push('fire_envelope');
+  if (vis.fav_curve === false) hidden.push('fav_curve');
+  if (vis.fire_regions === false) hidden.push('fire_regions');
 
   const params = {
     show_hq: (vis.hq !== false) ? '1' : '0',
@@ -1091,6 +1474,13 @@ window.openSessionReport = function (event, reportId) {
     show_duty: (vis.duty !== false) ? '1' : '0',
     show_duty_ind: (vis.duty_ind !== false) ? '1' : '0',
     show_duty_station: (vis.duty_station !== false) ? '1' : '0',
+    show_fire_remote: (vis.fire_remote !== false) ? '1' : '0',
+    show_fire_churn: (vis.fire_churn !== false) ? '1' : '0',
+    show_fire_fav: (vis.fire_fav !== false) ? '1' : '0',
+    show_fire_150: (vis.fire_150 !== false) ? '1' : '0',
+    show_fire_envelope: (vis.fire_envelope !== false) ? '1' : '0',
+    show_fav_curve: (vis.fav_curve !== false) ? '1' : '0',
+    show_fire_regions: (vis.fire_regions !== false) ? '1' : '0',
     hidden_curves: hidden.join(',')
   };
 
@@ -1122,6 +1512,13 @@ function updateReportLinks() {
   if (vis.duty === false) hidden.push('duty');
   if (vis.duty_ind === false) hidden.push('duty_ind');
   if (vis.duty_station === false) hidden.push('duty_station');
+  if (vis.fire_remote === false) hidden.push('fire_remote');
+  if (vis.fire_churn === false) hidden.push('fire_churn');
+  if (vis.fire_fav === false) hidden.push('fire_fav');
+  if (vis.fire_150 === false) hidden.push('fire_150');
+  if (vis.fire_envelope === false) hidden.push('fire_envelope');
+  if (vis.fav_curve === false) hidden.push('fav_curve');
+  if (vis.fire_regions === false) hidden.push('fire_regions');
 
   const params = {
     show_hq: (vis.hq !== false) ? '1' : '0',
@@ -1134,6 +1531,13 @@ function updateReportLinks() {
     show_duty: (vis.duty !== false) ? '1' : '0',
     show_duty_ind: (vis.duty_ind !== false) ? '1' : '0',
     show_duty_station: (vis.duty_station !== false) ? '1' : '0',
+    show_fire_remote: (vis.fire_remote !== false) ? '1' : '0',
+    show_fire_churn: (vis.fire_churn !== false) ? '1' : '0',
+    show_fire_fav: (vis.fire_fav !== false) ? '1' : '0',
+    show_fire_150: (vis.fire_150 !== false) ? '1' : '0',
+    show_fire_envelope: (vis.fire_envelope !== false) ? '1' : '0',
+    show_fav_curve: (vis.fav_curve !== false) ? '1' : '0',
+    show_fire_regions: (vis.fire_regions !== false) ? '1' : '0',
     hidden_curves: hidden.join(',')
   };
 

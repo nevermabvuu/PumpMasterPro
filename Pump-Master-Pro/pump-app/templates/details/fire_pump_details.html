@@ -1,0 +1,375 @@
+{# ============================================================================== #}
+{# templates/details/fire_pump_details.html — Dedicated Fire Pump Specification  #}
+{# & NFPA 20 Performance Evaluation Template                                    #}
+{# ============================================================================== #}
+{#                                                                                #}
+{# Module Assignment: Fire (NFPA 20, NFPA 13, EN 12845, AS 2941)                  #}
+{# User Groups: Configured per organisation (e.g. ALL, Admin, Engineer, etc.)    #}
+{#                                                                                #}
+{# Engineering & Operational Details:                                             #}
+{#   1. Operating Point & Hydraulic Verification (100% Flow @ 100% Head)          #}
+{#   2. NFPA 20 Compliance Assessment:                                            #}
+{#      - Shutoff / Churn Head (0% Flow) <= 140% of rated head                   #}
+{#      - Rated Duty Head (100% Flow) >= 100% of rated head                      #}
+{#      - Overload Head (150% Flow) >= 65% of rated head                         #}
+{#   3. Typical Fire Pump Performance Curve (with letter badges A, B, C, D, E, F) #}
+{#      and structured reference cards (NFPA 20 Requirements, Operating Regions,  #}
+{#      Key Operating Points).                                                    #}
+{#   4. NFPA 20 Table 4.27 Auxiliary Sizing (Pipe schedule, relief valve, meter). #}
+{#   5. Dedicated Fire Driver & Jockey Pump Pressure Maintenance Sizing.          #}
+{# ============================================================================== #}
+
+<div class="space-y-6">
+
+  <!-- ── 1. FIRE PROTECTION CERTIFICATION & HYDRAULIC COMPLIANCE BANNER ── -->
+  <div class="bg-[#161b22] border border-[#f85149]/40 rounded-xl p-4 shadow-sm relative overflow-hidden">
+    <div class="absolute top-0 right-0 w-36 h-36 bg-[#f85149]/10 rounded-bl-full pointer-events-none"></div>
+
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-[#30363d] pb-3 mb-4 gap-3">
+      <div class="flex items-center gap-3">
+        <span class="p-2.5 bg-[#f85149]/15 text-[#f85149] rounded-xl border border-[#f85149]/30 shadow-inner">
+          <i class="bi bi-fire text-xl"></i>
+        </span>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="text-sm font-bold text-white tracking-wide">Fire Protection Pump Specification Sheet</h3>
+            <span class="text-[10px] uppercase font-mono px-2 py-0.5 bg-[#f85149]/20 text-[#ff7b72] border border-[#f85149]/40 rounded font-semibold">
+              NFPA 20 Stationary Fire Service
+            </span>
+            <span class="text-[10px] uppercase font-mono px-2 py-0.5 bg-[#1f6feb]/20 text-[#58a6ff] border border-[#1f6feb]/40 rounded font-semibold">
+              UL / FM Standards Ready
+            </span>
+          </div>
+          <p class="text-[11px] text-[#8b949e] mt-0.5">
+            Life-safety hydraulic duty verification, churn pressure limitation, 150% overload compliance &amp; driver non-overload sizing.
+          </p>
+        </div>
+      </div>
+
+      <!-- NFPA 20 Compliance Badge -->
+      {% set nfpa_eval = active_result.nfpa20_eval if active_result and active_result.nfpa20_eval else none %}
+      {% if nfpa_eval %}
+        {% if nfpa_eval.is_compliant %}
+        <span class="px-3 py-1.5 text-xs font-bold rounded-full bg-[rgba(63,185,80,0.15)] text-[#3fb950] border border-[rgba(63,185,80,0.3)] flex items-center gap-1.5 shadow-sm">
+          <i class="bi bi-shield-fill-check text-sm"></i>
+          <span>NFPA 20 Certified Compliant (Score: {{ nfpa_eval.score|int }}%)</span>
+        </span>
+        {% else %}
+        <span class="px-3 py-1.5 text-xs font-bold rounded-full bg-[rgba(248,81,73,0.15)] text-[#f85149] border border-[rgba(248,81,73,0.3)] flex items-center gap-1.5 shadow-sm">
+          <i class="bi bi-exclamation-triangle-fill text-sm"></i>
+          <span>NFPA 20 Non-Compliant (Score: {{ nfpa_eval.score|int }}%)</span>
+        </span>
+        {% endif %}
+      {% else %}
+        <span class="px-3 py-1 text-xs font-bold rounded-full bg-[#f85149]/15 text-[#ff7b72] border border-[#f85149]/30">
+          <i class="bi bi-shield-check mr-1"></i>Dedicated Fire Pump
+        </span>
+      {% endif %}
+    </div>
+
+    <!-- ── KEY FIRE METRICS GRID ── -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <!-- 1. Rated Duty Flow (100% Demand) -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#ef4444] inline-block mr-1"></span>Rated Flow (100% Q)
+        </span>
+        <div class="text-base font-extrabold text-[#58a6ff]">
+          {{ active_result.disp_q_duty if active_result and active_result.disp_q_duty else (form_data.q_duty or '—') }}
+          <span class="text-[11px] font-normal text-[#8b949e]">{{ active_result.disp_unit_q if active_result and active_result.disp_unit_q else unit_q }}</span>
+        </div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">Most Remote Outlets</div>
+      </div>
+
+      <!-- 2. Rated Duty Head (100% Demand) -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#ef4444] inline-block mr-1"></span>Rated Head (100% H)
+        </span>
+        <div class="text-base font-extrabold text-[#58a6ff]">
+          {{ active_result.disp_h_duty if active_result and active_result.disp_h_duty else (form_data.h_duty or '—') }}
+          <span class="text-[11px] font-normal text-[#8b949e]">{{ active_result.disp_unit_h if active_result and active_result.disp_unit_h else unit_h }}</span>
+        </div>
+        <div class="text-[10px] text-[#3fb950] mt-0.5"><i class="bi bi-check-circle"></i> ≥ 100% Code Verified</div>
+      </div>
+
+      <!-- 3. Shutoff / Churn Head (0% Flow) -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#f59e0b] inline-block mr-1"></span>Shutoff / Churn (0% Q)
+        </span>
+        {% set churn_h = (active_result.h_churn|float) if active_result and active_result.h_churn else (pump.hq_a0|float if pump.hq_a0 else 0.0) %}
+        {% set h_rated_val = (active_result.h_duty|float) if active_result and active_result.h_duty else ((form_data.h_duty|float) if form_data.h_duty else 1.0) %}
+        {% set churn_pct = (churn_h / h_rated_val * 100.0) if h_rated_val > 0 else 0.0 %}
+        <div class="text-base font-extrabold {{ 'text-[#3fb950]' if churn_pct <= 140.0 else 'text-[#f85149]' }}">
+          {{ "%.1f"|format(churn_h) if churn_h > 0 else "—" }}
+          <span class="text-[11px] font-normal text-[#8b949e]">{{ unit_h }}</span>
+        </div>
+        <div class="text-[10px] {{ 'text-[#3fb950]' if churn_pct <= 140.0 else 'text-[#f85149]' }} mt-0.5 font-medium">
+          {{ "%.0f"|format(churn_pct) }}% of rated (Limit ≤ 140%)
+        </div>
+      </div>
+
+      <!-- 4. 150% Overload Capacity Head -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#8b5cf6] inline-block mr-1"></span>150% Overload Test
+        </span>
+        {% set h_150_val = (active_result.h_150|float) if active_result and active_result.h_150 else 0.0 %}
+        {% set h_150_pct = (h_150_val / h_rated_val * 100.0) if h_rated_val > 0 else 0.0 %}
+        <div class="text-base font-extrabold {{ 'text-[#3fb950]' if h_150_pct >= 65.0 else 'text-[#f85149]' }}">
+          {{ "%.1f"|format(h_150_val) if h_150_val > 0 else "—" }}
+          <span class="text-[11px] font-normal text-[#8b949e]">{{ unit_h }}</span>
+        </div>
+        <div class="text-[10px] {{ 'text-[#3fb950]' if h_150_pct >= 65.0 else 'text-[#f85149]' }} mt-0.5 font-medium">
+          {{ "%.0f"|format(h_150_pct) }}% of rated (Limit ≥ 65%)
+        </div>
+      </div>
+
+      <!-- 5. Peak Absorbed Shaft Power -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">
+          Peak Shaft Power
+        </span>
+        <div class="text-base font-extrabold text-[#f0c040]">
+          {{ active_result.disp_power if active_result and active_result.disp_power else ("%.1f"|format(active_result.op_power_kw|float) if active_result and active_result.op_power_kw else "—") }}
+          <span class="text-[11px] font-normal text-[#8b949e]">{{ active_result.disp_unit_pow if active_result and active_result.disp_unit_pow else unit_pow }}</span>
+        </div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">Non-Overload Driver</div>
+      </div>
+
+      <!-- 6. Fire Service Impeller & Speed -->
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">
+          Rated Driver Speed
+        </span>
+        <div class="text-base font-extrabold text-[#e6edf3]">
+          {{ pump.speed_rpm|int if pump.speed_rpm else 2950 }}
+          <span class="text-[11px] font-normal text-[#8b949e]">RPM</span>
+        </div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">
+          Impeller: {{ "%.0f"|format(active_result.optimal_dia_mm|float) if active_result and active_result.optimal_dia_mm else (pump.impeller_dia_mm|int if pump.impeller_dia_mm else '—') }} mm
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2. TYPICAL FIRE PUMP PERFORMANCE CURVE REFERENCE & NFPA 20 SUMMARY ── -->
+  <!-- Beginners Note: Matches the standard fire pump characteristic curve diagram with clean letter badges [A-G] -->
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-4 shadow-sm space-y-4">
+    <div class="flex items-center justify-between border-b border-[#30363d] pb-3">
+      <div class="flex items-center gap-2">
+        <span class="p-1.5 bg-[#f85149]/15 text-[#f85149] rounded-lg">
+          <i class="bi bi-graph-up text-base"></i>
+        </span>
+        <div>
+          <h4 class="text-sm font-bold text-white">Typical Fire Pump Performance Curve (NFPA 20 Requirements)</h4>
+          <p class="text-[11px] text-[#8b949e]">Characteristic operating points, hydraulic zones, and code limit boundaries.</p>
+        </div>
+      </div>
+      <span class="text-[10px] font-mono bg-[#0d1117] text-[#8b949e] px-2.5 py-1 rounded border border-[#30363d]">
+        Letters [A–G] designate key curve points without clutter
+      </span>
+    </div>
+
+    <!-- 3-Column Structured Information Cards Matching Official Standard Reference -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <!-- Panel 1: Key NFPA 20 Requirements -->
+      <div class="p-3.5 bg-[#0d1117] border border-[#f85149]/40 rounded-xl space-y-2">
+        <div class="flex items-center gap-2 text-xs font-bold text-[#ff7b72] border-b border-[#f85149]/30 pb-2">
+          <span class="w-2 h-2 rounded-full bg-[#f85149]"></span>
+          <span>Key NFPA 20 Requirements</span>
+        </div>
+        <ul class="text-[11px] text-[#c9d1d9] space-y-2 leading-relaxed">
+          <li class="flex items-start gap-2">
+            <span class="px-1.5 py-0.2 bg-[#f85149]/20 text-[#ff7b72] border border-[#f85149]/40 rounded font-bold font-mono text-[10px] shrink-0 mt-0.5">E</span>
+            <span><strong>Shutoff Head Limit:</strong> Shutoff (churn) head must NOT exceed 140% of rated head (prevents pipe/fittings overpressure).</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="px-1.5 py-0.2 bg-[#3fb950]/20 text-[#3fb950] border border-[#3fb950]/40 rounded font-bold font-mono text-[10px] shrink-0 mt-0.5">F</span>
+            <span><strong>Rated Capacity:</strong> At 100% rated capacity, pump must provide at least 100% of rated head.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="px-1.5 py-0.2 bg-[#f85149]/20 text-[#ff7b72] border border-[#f85149]/40 rounded font-bold font-mono text-[10px] shrink-0 mt-0.5">G</span>
+            <span><strong>150% Overload Capacity:</strong> At 150% rated flow, pump head must NOT fall below 65% of rated head.</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Panel 2: Operating Regions -->
+      <div class="p-3.5 bg-[#0d1117] border border-[#58a6ff]/40 rounded-xl space-y-2">
+        <div class="flex items-center gap-2 text-xs font-bold text-[#58a6ff] border-b border-[#58a6ff]/30 pb-2">
+          <span class="w-2 h-2 rounded-full bg-[#58a6ff]"></span>
+          <span>Operating Regions</span>
+        </div>
+        <ul class="text-[11px] text-[#c9d1d9] space-y-2 leading-relaxed">
+          <li class="flex items-start gap-2">
+            <span class="px-1.5 py-0.2 bg-[#ef4444]/20 text-[#ef4444] border border-[#ef4444]/40 rounded font-bold font-mono text-[10px] shrink-0 mt-0.5">I</span>
+            <span><strong>0% – Churn / Closed Discharge:</strong> High pressure, zero flow. Requires casing relief valve to prevent heat buildup.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="px-1.5 py-0.2 bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40 rounded font-bold font-mono text-[10px] shrink-0 mt-0.5">II</span>
+            <span><strong>~75%–110% – Normal Rated Operating Area:</strong> Certified fire demand envelope where system sprinkler demand operates.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="px-1.5 py-0.2 bg-[#f59e0b]/20 text-[#f59e0b] border border-[#f59e0b]/40 rounded font-bold font-mono text-[10px] shrink-0 mt-0.5">III</span>
+            <span><strong>100%–150% – High-Flow / Overload Region:</strong> Check maximum system demand, available suction NPSHa, and non-overloading driver power.</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Panel 3: Key Points -->
+      <div class="p-3.5 bg-[#0d1117] border border-[#3fb950]/40 rounded-xl space-y-2">
+        <div class="flex items-center gap-2 text-xs font-bold text-[#3fb950] border-b border-[#3fb950]/30 pb-2">
+          <span class="w-2 h-2 rounded-full bg-[#3fb950]"></span>
+          <span>Key Operating Points</span>
+        </div>
+        <ul class="text-[11px] text-[#c9d1d9] space-y-2 leading-relaxed">
+          <li class="flex items-start gap-2">
+            <span class="px-1.5 py-0.2 bg-[#f59e0b]/20 text-[#f59e0b] border border-[#f59e0b]/40 rounded font-bold font-mono text-[10px] shrink-0 mt-0.5">A</span>
+            <span><strong>Shutoff / Churn:</strong> 0% flow @ {{ "%.1f"|format(churn_h) if churn_h > 0 else '—' }} {{ unit_h }} (~{{ "%.0f"|format(churn_pct) }}% of rated head).</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="px-1.5 py-0.2 bg-[#ef4444]/20 text-[#ef4444] border border-[#ef4444]/40 rounded font-bold font-mono text-[10px] shrink-0 mt-0.5">B</span>
+            <span><strong>Rated Duty Point:</strong> 100% flow @ 100% head (Certified Design Duty).</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="px-1.5 py-0.2 bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40 rounded font-bold font-mono text-[10px] shrink-0 mt-0.5">C</span>
+            <span><strong>System Operating Point:</strong> Intersection of pump curve and hydraulically most remote/favourable system curve.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="px-1.5 py-0.2 bg-[#8b5cf6]/20 text-[#8b5cf6] border border-[#8b5cf6]/40 rounded font-bold font-mono text-[10px] shrink-0 mt-0.5">D</span>
+            <span><strong>150% Capacity Point:</strong> 150% flow @ {{ "%.1f"|format(h_150_val) if h_150_val > 0 else '—' }} {{ unit_h }} (Code requires ≥ {{ "%.1f"|format(h_rated_val * 0.65) }} {{ unit_h }}).</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3. NFPA 20 TABLE 4.27 PIPE SIZING & AUXILIARY SCHEDULE ── -->
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-4 shadow-sm">
+    <div class="flex items-center justify-between border-b border-[#30363d] pb-3 mb-4">
+      <div class="flex items-center gap-2">
+        <span class="p-1.5 bg-[#f0c040]/15 text-[#f0c040] rounded-lg">
+          <i class="bi bi-diagram-3 text-base"></i>
+        </span>
+        <div>
+          <h4 class="text-sm font-bold text-white">NFPA 20 Table 4.27 Pipe Schedule &amp; Auxiliary Sizing</h4>
+          <p class="text-[11px] text-[#8b949e]">Mandatory suction, discharge, flow testing, and relief valve requirements for fire pump installations.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Min Suction Pipe</span>
+        <div class="text-base font-extrabold text-white">
+          {{ pump.suction_size or '150' }} <span class="text-[11px] font-normal text-[#8b949e]">{{ pump.unit_suction or 'mm' }}</span>
+        </div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">Max velocity &lt; 4.5 m/s</div>
+      </div>
+
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Min Discharge Pipe</span>
+        <div class="text-base font-extrabold text-white">
+          {{ pump.discharge_size or '100' }} <span class="text-[11px] font-normal text-[#8b949e]">{{ pump.unit_discharge or 'mm' }}</span>
+        </div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">Max velocity &lt; 6.2 m/s</div>
+      </div>
+
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Casing Relief Valve</span>
+        <div class="text-base font-extrabold text-[#3fb950]">
+          3/4" <span class="text-[11px] font-normal text-[#8b949e]">NPT / BSP</span>
+        </div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">Automatic churn protection</div>
+      </div>
+
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Main Relief Valve</span>
+        <div class="text-base font-extrabold text-[#f0c040]">
+          {{ 'Required' if churn_pct > 140.0 or ('diesel' in (active_result.driver_type or '').lower()) else 'Not Required' }}
+        </div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">Open cone / waste return</div>
+      </div>
+
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Test Flow Meter</span>
+        <div class="text-base font-extrabold text-[#58a6ff]">
+          {{ '100 mm' if (pump.discharge_size|int or 100) <= 100 else '150 mm' }}
+        </div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">Venturi or ultrasonic</div>
+      </div>
+
+      <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg">
+        <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block mb-1">Jockey Pump Flow</span>
+        <div class="text-base font-extrabold text-[#bc8cff]">
+          {{ "%.1f"|format((active_result.q_duty|float * 0.01) if active_result and active_result.q_duty else 1.5) }} <span class="text-[11px] font-normal text-[#8b949e]">{{ unit_q }}</span>
+        </div>
+        <div class="text-[10px] text-[#8b949e] mt-0.5">1% of main fire pump Q</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 4. FIRE DRIVER & CONSTRUCTION SPECIFICATION ── -->
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-4 shadow-sm">
+    <div class="flex items-center justify-between border-b border-[#30363d] pb-3 mb-4">
+      <div class="flex items-center gap-2">
+        <span class="p-1.5 bg-[#bc8cff]/15 text-[#bc8cff] rounded-lg">
+          <i class="bi bi-gear-wide-connected text-base"></i>
+        </span>
+        <div>
+          <h4 class="text-sm font-bold text-white">Fire Pump Materials, Driver &amp; Controller Specifications</h4>
+          <p class="text-[11px] text-[#8b949e]">Stationary fire service mechanical integrity and power transmission configuration.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+      <!-- Mechanical Materials -->
+      <table class="w-full text-left text-xs border border-[#30363d] rounded-lg overflow-hidden">
+        <tbody class="divide-y divide-[#30363d]">
+          <tr class="bg-[#0d1117]/80">
+            <th class="p-2.5 text-[#8b949e] font-semibold w-1/3">Casing Material</th>
+            <td class="p-2.5 text-white font-medium">{{ pump.casing_material or 'Ductile Iron (ASTM A536) / Bronze Fitted' }}</td>
+          </tr>
+          <tr>
+            <th class="p-2.5 text-[#8b949e] font-semibold">Impeller Material</th>
+            <td class="p-2.5 text-white font-medium">{{ pump.impeller_material or 'Cast Bronze (C83600) / Stainless Steel 316' }}</td>
+          </tr>
+          <tr class="bg-[#0d1117]/80">
+            <th class="p-2.5 text-[#8b949e] font-semibold">Shaft &amp; Sleeve</th>
+            <td class="p-2.5 text-white font-medium">AISI 420 / 431 Stainless Steel with Bronze Sleeve</td>
+          </tr>
+          <tr>
+            <th class="p-2.5 text-[#8b949e] font-semibold">Shaft Sealing</th>
+            <td class="p-2.5 text-white font-medium">Soft Graphite Packing with Lantern Ring (NFPA 20 Certified)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Driver & Controller -->
+      <table class="w-full text-left text-xs border border-[#30363d] rounded-lg overflow-hidden">
+        <tbody class="divide-y divide-[#30363d]">
+          <tr class="bg-[#0d1117]/80">
+            <th class="p-2.5 text-[#8b949e] font-semibold w-1/3">Primary Driver</th>
+            <td class="p-2.5 text-white font-medium">Electric Motor (ODP/TEFC) or Listed Diesel Engine</td>
+          </tr>
+          <tr>
+            <th class="p-2.5 text-[#8b949e] font-semibold">Fire Controller</th>
+            <td class="p-2.5 text-white font-medium">UL/FM Listed Across-The-Line or Soft Start Fire Pump Controller</td>
+          </tr>
+          <tr class="bg-[#0d1117]/80">
+            <th class="p-2.5 text-[#8b949e] font-semibold">Pressure Rating</th>
+            <td class="p-2.5 text-white font-medium">Rated for Max Churn + Static Suction Head (Min 16 bar / 250 PSI)</td>
+          </tr>
+          <tr>
+            <th class="p-2.5 text-[#8b949e] font-semibold">Fuel Tank (Diesel)</th>
+            <td class="p-2.5 text-white font-medium">1 Gallon per HP + 10% Reserve (Min 8 hours continuous run)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

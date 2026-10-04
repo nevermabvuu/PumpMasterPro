@@ -344,13 +344,23 @@
     <div style="margin-top: {{ report.graph_area_top or '4px' }}; margin-left: {{ report.graph_area_left or '0px' }}; width: {{ report.graph_area_width or '100%' }}; {% if report.graph_area_height and report.graph_area_height != 'auto' %}height: {{ report.graph_area_height }};{% endif %}">
       <div class="section-header">📈 Exact Performance Curves (Evaluated for {{ pump.name }})</div>
 
-      <!-- Proposal Master Legend (Matching Details Page Exactly) -->
-      {% if curves and curves.is_proposal and curves.proposal_legend_items %}
-      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 16px; padding: 6px 12px; margin-bottom: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 8pt; font-family: sans-serif;">
+      <!-- Proposal / Fire Master Legend (Matching Details Page Exactly) -->
+      {% if curves and (curves.is_proposal or curves.is_fire) and curves.proposal_legend_items %}
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 14px; padding: 6px 12px; margin-bottom: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 8pt; font-family: sans-serif;">
         {% for leg in curves.proposal_legend_items %}
         <div style="display: inline-flex; align-items: center; gap: 6px;">
           {% if leg.type == 'marker' %}
-          <span style="color: {{ leg.color }}; font-size: 10pt; line-height: 1;">★</span>
+            {% if leg.symbol == 'diamond' %}
+            <span style="color: {{ leg.color }}; font-size: 11pt; line-height: 1;">◆</span>
+            {% elif leg.symbol == 'triangle' %}
+            <span style="color: {{ leg.color }}; font-size: 10pt; line-height: 1;">▲</span>
+            {% elif leg.symbol == 'target' %}
+            <span style="color: {{ leg.color }}; font-size: 11pt; line-height: 1;">◉</span>
+            {% else %}
+            <span style="color: {{ leg.color }}; font-size: 11pt; line-height: 1;">★</span>
+            {% endif %}
+          {% elif leg.type == 'rect' %}
+          <span style="display: inline-block; width: 12px; height: 10px; background: rgba(16, 185, 129, 0.22); border: 1px dashed {{ leg.stroke or leg.color }}; border-radius: 2px;"></span>
           {% elif leg.style == 'dashed' %}
           <svg width="22" height="6" style="display: inline-block; vertical-align: middle;"><line x1="0" y1="3" x2="22" y2="3" stroke="{{ leg.color }}" stroke-width="2.5" stroke-dasharray="5,3" stroke-linecap="round" /></svg>
           {% elif leg.style == 'dotted' %}
@@ -381,6 +391,51 @@
       {% else %}
       <div class="graph-card" style="padding: 16px; text-align: center; color: #64748b;">
         No active performance graphs selected for this report.
+      </div>
+      {% endif %}
+
+      <!-- Fire Proposal Performance & NFPA 20 Reference Cards (Letters A-G) -->
+      {% if curves and (curves.is_fire or curves.is_proposal) and curves.fire_data %}
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; font-size: 7.5pt; font-family: sans-serif;">
+        <!-- Card 1: Key NFPA 20 Requirements -->
+        <div style="background: #fff5f5; border: 1px solid #fecdd3; border-radius: 6px; padding: 6px 8px;">
+          <div style="color: #e11d48; font-weight: 800; font-size: 8pt; text-transform: uppercase; margin-bottom: 4px; display: flex; items-center; gap: 4px;">
+            <span style="display: inline-block; width: 6px; height: 6px; background: #e11d48; border-radius: 50%; margin-top: 2px;"></span>
+            <span>Key NFPA 20 Requirements</span>
+          </div>
+          <ul style="margin: 0; padding-left: 14px; color: #334155; line-height: 1.35;">
+            <li><strong>[E] Shutoff Head Limit:</strong> Must not exceed 140% of rated head (Limit ≤ {{ "%.1f"|format(curves.fire_data.max_churn_limit) }} {{ curves.rep_unit_h }}; Actual: {{ "%.1f"|format(curves.fire_data.h_churn) }} {{ curves.rep_unit_h }} / {{ "%.0f"|format(curves.fire_data.churn_pct) }}%).</li>
+            <li><strong>[F] Rated Capacity:</strong> At rated capacity, pump must provide at least 100% rated head ({{ "%.1f"|format(curves.fire_data.q_duty) }} {{ curves.rep_unit_q }} @ {{ "%.1f"|format(curves.fire_data.h_duty) }} {{ curves.rep_unit_h }}).</li>
+            <li><strong>[G] 150% Overload Capacity:</strong> At 150% flow, pump must provide at least 65% of rated head (Limit ≥ {{ "%.1f"|format(curves.fire_data.min_overload_limit) }} {{ curves.rep_unit_h }}; Actual: {{ "%.1f"|format(curves.fire_data.h_150) }} {{ curves.rep_unit_h }} / {{ "%.0f"|format(curves.fire_data.h_150_pct) }}%).</li>
+          </ul>
+        </div>
+
+        <!-- Card 2: Operating Regions -->
+        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 6px 8px;">
+          <div style="color: #0284c7; font-weight: 800; font-size: 8pt; text-transform: uppercase; margin-bottom: 4px; display: flex; items-center; gap: 4px;">
+            <span style="display: inline-block; width: 6px; height: 6px; background: #0284c7; border-radius: 50%; margin-top: 2px;"></span>
+            <span>Operating Regions</span>
+          </div>
+          <ul style="margin: 0; padding-left: 14px; color: #334155; line-height: 1.35;">
+            <li><strong>[Reg I] 0% – Shutoff / Churn:</strong> High pressure, zero flow. Requires casing relief valve to prevent overheating.</li>
+            <li><strong>[Reg II] ~75%–110% – Normal Rated Operating Area:</strong> Certified fire demand envelope where system sprinkler demand operates.</li>
+            <li><strong>[Reg III] 100%–150% – High-Flow / Overload:</strong> Check system demand, available suction NPSHa, and non-overloading driver power.</li>
+          </ul>
+        </div>
+
+        <!-- Card 3: Key Points -->
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px 8px;">
+          <div style="color: #16a34a; font-weight: 800; font-size: 8pt; text-transform: uppercase; margin-bottom: 4px; display: flex; items-center; gap: 4px;">
+            <span style="display: inline-block; width: 6px; height: 6px; background: #16a34a; border-radius: 50%; margin-top: 2px;"></span>
+            <span>Key Operating Points</span>
+          </div>
+          <ul style="margin: 0; padding-left: 14px; color: #334155; line-height: 1.35;">
+            <li><strong>[A] Shutoff / Churn:</strong> 0% flow @ {{ "%.1f"|format(curves.fire_data.h_churn) }} {{ curves.rep_unit_h }} (~{{ "%.0f"|format(curves.fire_data.churn_pct) }}% of rated head).</li>
+            <li><strong>[B] Rated Duty Point:</strong> 100% flow @ 100% head ({{ "%.1f"|format(curves.fire_data.q_duty) }} {{ curves.rep_unit_q }} @ {{ "%.1f"|format(curves.fire_data.h_duty) }} {{ curves.rep_unit_h }}).</li>
+            <li><strong>[C] Operating Point:</strong> System curve intersection (~{{ "%.1f"|format(curves.fire_data.q_fav) }} {{ curves.rep_unit_q }} @ {{ "%.1f"|format(curves.fire_data.h_fav) }} {{ curves.rep_unit_h }}).</li>
+            <li><strong>[D] 150% Capacity Point:</strong> 150% flow @ {{ "%.1f"|format(curves.fire_data.h_150) }} {{ curves.rep_unit_h }} (~{{ "%.0f"|format(curves.fire_data.h_150_pct) }}% of rated head).</li>
+          </ul>
+        </div>
       </div>
       {% endif %}
     </div>

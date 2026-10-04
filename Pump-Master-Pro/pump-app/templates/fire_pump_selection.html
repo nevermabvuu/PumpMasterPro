@@ -374,7 +374,11 @@
         </p>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-3">
+        <label class="flex items-center gap-1.5 text-xs text-[#8b949e] hover:text-white cursor-pointer select-none bg-[#0d1117] px-2.5 py-1 rounded-lg border border-[#30363d] transition-colors" title="Filter to only show pumps explicitly tagged as fire pumps">
+          <input type="checkbox" id="chk_dedicated_only" class="rounded border-[#30363d] text-[#f85149] focus:ring-0 bg-[#161b22] cursor-pointer" onchange="triggerRecalculate()">
+          <span>Dedicated Fire Pumps Only</span>
+        </label>
         <span id="candidates_count_badge" class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-[#21262d] text-[#58a6ff] border border-[#30363d]">
           0 Pumps Found
         </span>
@@ -607,6 +611,7 @@ function runCalculation() {
     residual_pressure_bar: parseFloat(formData.get('residual_pressure_bar')) || null,
     custom_flow_m3h: parseFloat(formData.get('custom_flow_m3h')) || null,
     custom_head_m: parseFloat(formData.get('custom_head_m')) || null,
+    dedicated_only: document.getElementById('chk_dedicated_only')?.checked ? 1 : 0,
     unit_system: currentUnitSystem
   };
 

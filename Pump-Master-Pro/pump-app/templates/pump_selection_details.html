@@ -226,6 +226,95 @@
           <i class="bi bi-sliders text-[#8b949e]"></i>
           <span>Max Baseline</span>
         </button>
+
+        <!-- Fire Protection Toolbar Controls (Shown when Fire application is active) -->
+        {% if is_fire_pump or (active_result and active_result.nfpa20_eval) %}
+        <div class="h-4 w-px bg-[#30363d] mx-1"></div>
+
+        <!-- Fire Points Toggle Button -->
+        <button type="button"
+                id="btn-toggle-fire-points"
+                onclick="window.toggleFirePoints()"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-[#f85149] bg-[#21262d] text-white hover:bg-[#30363d] transition-all cursor-pointer shadow-sm active"
+                title="Toggle Fire Operating Points (Most Remote, Most Favourable, Churn, 150% Overload)">
+          <i class="bi bi-fire text-[#f85149]"></i>
+          <span>Fire Points</span>
+        </button>
+
+        <!-- Fire Regions / NFPA 20 Envelope Toggle Button -->
+        <button type="button"
+                id="btn-toggle-fire-regions"
+                onclick="window.toggleFireRegions()"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-[#f85149]/60 bg-[#21262d] text-white hover:bg-[#30363d] transition-all cursor-pointer shadow-sm active"
+                title="Toggle NFPA 20 Code Limit Envelope &amp; Fire Operating Regions (Churn Zone, Operating Zone, Overload Zone)">
+          <i class="bi bi-shield-shaded text-[#f85149]"></i>
+          <span>Fire Regions</span>
+        </button>
+
+        <!-- Most Favourable System Curve Toggle Button -->
+        <button type="button"
+                id="btn-toggle-fav-curve"
+                onclick="window.toggleFavCurve()"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-[#06b6d4]/70 bg-[#21262d] text-white hover:bg-[#30363d] transition-all cursor-pointer shadow-sm active"
+                title="Toggle Hydraulically Most Favourable System Curve (Closest Sprinkler Heads)">
+          <span class="w-2 h-2 rounded-full bg-[#06b6d4] inline-block shadow-sm"></span>
+          <span>Favourable Curve</span>
+        </button>
+
+        <!-- Granular Fire Options Dropdown -->
+        <div class="relative inline-block text-left" id="fireOptionsDropdownContainer">
+          <button type="button"
+                  onclick="toggleFireOptionsDropdown(event)"
+                  id="btnFireOptionsDropdown"
+                  class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border border-[#30363d] bg-[#161b22] text-[#c9d1d9] hover:text-white hover:border-[#f85149]/60 transition-all cursor-pointer"
+                  title="Configure Individual Fire Operating Points &amp; Regions">
+            <i class="bi bi-sliders text-[#f85149]"></i>
+            <span class="hidden xl:inline">Fire Options</span>
+            <i class="bi bi-chevron-down text-[9px] text-[#8b949e]"></i>
+          </button>
+
+          <div id="fireOptionsDropdown"
+               class="hidden absolute left-0 sm:right-0 sm:left-auto top-full mt-1.5 w-64 bg-[#161b22] border border-[#30363d] rounded-xl shadow-2xl p-2.5 z-50 text-xs space-y-2">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-[#f85149] pb-1 border-b border-[#30363d] flex items-center justify-between">
+              <span>Fire Points &amp; Regions</span>
+              <span class="font-mono text-[9px] bg-[#f85149]/20 text-[#f85149] px-1 rounded">NFPA 20</span>
+            </div>
+
+            <!-- Granular Checkboxes -->
+            <div class="space-y-1.5 font-medium text-[#c9d1d9]">
+              <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+                <input type="checkbox" id="chk-fire-remote" checked onchange="window.toggleIndividualFireItem('remote', this.checked)" class="accent-[#ef4444] rounded">
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#ef4444]"></span>Most Remote Duty (100%)</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+                <input type="checkbox" id="chk-fire-churn" checked onchange="window.toggleIndividualFireItem('churn', this.checked)" class="accent-[#f59e0b] rounded">
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#f59e0b]"></span>Shutoff / Churn Point (0%)</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+                <input type="checkbox" id="chk-fire-fav" checked onchange="window.toggleIndividualFireItem('fav', this.checked)" class="accent-[#06b6d4] rounded">
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#06b6d4]"></span>Most Favourable Point</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+                <input type="checkbox" id="chk-fire-overload" checked onchange="window.toggleIndividualFireItem('overload', this.checked)" class="accent-[#8b5cf6] rounded">
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#8b5cf6]"></span>150% Overload Test Point</span>
+              </label>
+              <div class="pt-1 border-t border-[#30363d]/60"></div>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+                <input type="checkbox" id="chk-fire-fav-curve" checked onchange="window.toggleIndividualFireItem('fav_curve', this.checked)" class="accent-[#06b6d4] rounded">
+                <span class="flex items-center gap-1.5"><span class="w-2 h-0.5 bg-[#06b6d4]"></span>Most Favourable System Curve</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+                <input type="checkbox" id="chk-fire-envelope" checked onchange="window.toggleIndividualFireItem('envelope', this.checked)" class="accent-[#f43f5e] rounded">
+                <span class="flex items-center gap-1.5"><span class="w-2 h-0.5 bg-[#f43f5e]"></span>NFPA 20 Code Limit Envelope</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+                <input type="checkbox" id="chk-fire-zones" checked onchange="window.toggleIndividualFireItem('zones', this.checked)" class="accent-[#10b981] rounded">
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded bg-[#10b981]/40 border border-[#10b981]"></span>Operating Zones / Regions</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        {% endif %}
       </div>
 
       <div class="text-[11px] text-[#8b949e] italic hidden sm:flex items-center gap-1">
@@ -298,12 +387,28 @@
     }
   }
 
+  function toggleFireOptionsDropdown(e) {
+    if (e) e.stopPropagation();
+    const drop = document.getElementById('fireOptionsDropdown');
+    if (drop) {
+      drop.classList.toggle('hidden');
+    }
+  }
+
   document.addEventListener('click', function(e) {
     const drop = document.getElementById('selection-report-dropdown');
     const btn = document.getElementById('reportDropdownBtn');
     if (drop && !drop.classList.contains('hidden')) {
       if (!drop.contains(e.target) && (!btn || !btn.contains(e.target))) {
         drop.classList.add('hidden');
+      }
+    }
+
+    const fireDrop = document.getElementById('fireOptionsDropdown');
+    const fireBtn = document.getElementById('btnFireOptionsDropdown');
+    if (fireDrop && !fireDrop.classList.contains('hidden')) {
+      if (!fireDrop.contains(e.target) && (!fireBtn || !fireBtn.contains(e.target))) {
+        fireDrop.classList.add('hidden');
       }
     }
   });

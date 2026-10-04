@@ -403,7 +403,7 @@ def _dash_style_to_svg(style_name, default=''):
     return default
 
 
-def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", custom_range=None, width=720, height=240, isolines_list=None, show_legend=True, legend_position='top_right', legend_mode='each', custom_label_pos=None, label_format='auto', chart_type='hq', graph_styles=None, duty_point=None):
+def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", custom_range=None, width=720, height=240, isolines_list=None, show_legend=True, legend_position='top_right', legend_mode='each', custom_label_pos=None, label_format='auto', chart_type='hq', graph_styles=None, duty_point=None, fire_data=None):
     """
     Beginners Note: Generates pure inline SVG XML vector markup for single or multi-curve pump charts in Ultra-HD resolution.
     Applies custom visual styles (per-chart colors, max/min/trim curve thickness & styles, custom typography, and axes/grid styles).
@@ -539,6 +539,41 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             py = padding_top + plot_h - ((val - y_min) / (y_max - y_min)) * plot_h
             if maj_grid_style != 'none':
                 grid_lines.append(f'<line x1="{padding_left}" y1="{py:.1f}" x2="{VIEW_W - padding_right}" y2="{py:.1f}" stroke="{maj_grid_col}" {maj_grid_dash} stroke-width="{maj_grid_w}" />')
+
+    # ── Fire Protection Operating Region Shading (Background Bands) ──
+    regions_svg = []
+    if fire_data and chart_type == 'hq':
+        reg_info = fire_data.get('regions') or {}
+        if reg_info.get('show', True):
+            # 1. Churn / Closed Discharge Zone (0 to ~15% Q_duty)
+            ch_q = float(reg_info.get('churn_max_q', 0) or 0)
+            if ch_q > 0 and x_min <= ch_q:
+                w_px = min(plot_w, ((ch_q - x_min) / (x_max - x_min)) * plot_w)
+                if w_px > 0:
+                    regions_svg.append(f'<rect x="{padding_left:.1f}" y="{padding_top:.1f}" width="{w_px:.1f}" height="{plot_h:.1f}" fill="#ef4444" fill-opacity="0.08" stroke="#ef4444" stroke-width="0.8" stroke-dasharray="2,2" />')
+                    regions_svg.append(f'<text x="{padding_left + 4:.1f}" y="{padding_top + 13:.1f}" font-size="7.5" font-family="{font_family}" font-weight="700" fill="#ef4444" opacity="0.85">Reg I: Churn</text>')
+
+            # 2. Normal Rated Operating Area (~75% to 110% Q_duty)
+            op_min = float(reg_info.get('op_min_q', 0) or 0)
+            op_max = float(reg_info.get('op_max_q', 0) or 0)
+            if op_max > op_min and x_min <= op_max and op_min <= x_max:
+                x0_px = padding_left + max(0.0, ((op_min - x_min) / (x_max - x_min)) * plot_w)
+                x1_px = padding_left + min(plot_w, ((op_max - x_min) / (x_max - x_min)) * plot_w)
+                w_op = max(0.0, x1_px - x0_px)
+                if w_op > 0:
+                    regions_svg.append(f'<rect x="{x0_px:.1f}" y="{padding_top:.1f}" width="{w_op:.1f}" height="{plot_h:.1f}" fill="#38bdf8" fill-opacity="0.09" stroke="#38bdf8" stroke-width="0.8" stroke-dasharray="2,2" />')
+                    regions_svg.append(f'<text x="{x0_px + 4:.1f}" y="{padding_top + 13:.1f}" font-size="7.5" font-family="{font_family}" font-weight="700" fill="#0284c7" opacity="0.85">Reg II: Normal Operating Area</text>')
+
+            # 3. High-Flow / Overload Region (100% to 150% Q_duty)
+            ov_min = float(reg_info.get('overload_min_q', 0) or 0)
+            ov_max = float(reg_info.get('overload_max_q', 0) or 0)
+            if ov_min > 0 and ov_min <= x_max:
+                x0_px = padding_left + max(0.0, ((ov_min - x_min) / (x_max - x_min)) * plot_w)
+                x1_px = padding_left + min(plot_w, ((ov_max - x_min) / (x_max - x_min)) * plot_w) if ov_max > 0 else (padding_left + plot_w)
+                w_ov = max(0.0, x1_px - x0_px)
+                if w_ov > 0:
+                    regions_svg.append(f'<rect x="{x0_px:.1f}" y="{padding_top:.1f}" width="{w_ov:.1f}" height="{plot_h:.1f}" fill="#f59e0b" fill-opacity="0.08" stroke="#f59e0b" stroke-width="0.8" stroke-dasharray="2,2" />')
+                    regions_svg.append(f'<text x="{x0_px + 4:.1f}" y="{padding_top + 13:.1f}" font-size="7.5" font-family="{font_family}" font-weight="700" fill="#d97706" opacity="0.85">Reg III: High-Flow Region</text>')
 
     paths_svg = []
     legend_items = []
@@ -861,6 +896,62 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                 labels.append(f'<rect x="{lx - tw/2:.1f}" y="{ly - 11:.1f}" width="{tw:.1f}" height="14" fill="{chart_bg}" fill-opacity="0.95" stroke="{color}" stroke-width="1.0" rx="3.5" />')
                 labels.append(f'<text x="{lx:.1f}" y="{ly - 1.5:.1f}" font-size="{9 * f_scale:.1f}" font-weight="700" font-family="{font_family}" fill="{color}" text-anchor="middle">{display_text}</text>')
 
+    # ── Fire Protection Curves (NFPA 20 Limits & System Curve with Reference Letters E, F, G) ──
+    if fire_data and chart_type == 'hq':
+        # 1. NFPA 20 Code Limit Boundaries
+        env_info = fire_data.get('envelope') or {}
+        if env_info.get('show', True):
+            fh_duty_val = float(fire_data.get('h_duty') or 0.0)
+            fq_duty_val = float(fire_data.get('q_duty') or 0.0)
+            q_150_val = float(fire_data.get('q_150') or (fq_duty_val * 1.5))
+            max_churn_lim = float(env_info.get('max_churn_limit') or (fh_duty_val * 1.4))
+            min_ovl_lim = float(env_info.get('min_overload_limit') or (fh_duty_val * 0.65))
+
+            # Limit E: Maximum Shutoff Head (140% of rated head)
+            if max_churn_lim > 0 and y_min <= max_churn_lim <= y_max:
+                epy_140 = padding_top + plot_h - ((max_churn_lim - y_min) / (y_max - y_min)) * plot_h
+                paths_svg.append(f'<line x1="{padding_left:.1f}" y1="{epy_140:.1f}" x2="{VIEW_W - padding_right:.1f}" y2="{epy_140:.1f}" stroke="#f43f5e" stroke-width="1.8" stroke-dasharray="6,3" opacity="0.9" />')
+                # Badge E
+                labels.append(f'<circle cx="{VIEW_W - padding_right - 12:.1f}" cy="{epy_140:.1f}" r="6.5" fill="#f43f5e" stroke="#ffffff" stroke-width="1.2" />')
+                labels.append(f'<text x="{VIEW_W - padding_right - 12:.1f}" y="{epy_140 + 3.0:.1f}" font-size="7.5" font-weight="800" font-family="{font_family}" fill="#ffffff" text-anchor="middle">E</text>')
+
+            # Limit F: Rated Duty Minimum (100% rated head @ 100% flow)
+            if fq_duty_val > 0 and fh_duty_val > 0 and x_min <= fq_duty_val <= x_max and y_min <= fh_duty_val <= y_max:
+                epx_100 = padding_left + ((fq_duty_val - x_min) / (x_max - x_min)) * plot_w
+                epy_100 = padding_top + plot_h - ((fh_duty_val - y_min) / (y_max - y_min)) * plot_h
+                paths_svg.append(f'<line x1="{padding_left:.1f}" y1="{epy_100:.1f}" x2="{epx_100:.1f}" y2="{epy_100:.1f}" stroke="#16a34a" stroke-width="1.6" stroke-dasharray="5,3" opacity="0.85" />')
+                paths_svg.append(f'<line x1="{epx_100:.1f}" y1="{epy_100:.1f}" x2="{epx_100:.1f}" y2="{padding_top + plot_h:.1f}" stroke="#16a34a" stroke-width="1.6" stroke-dasharray="5,3" opacity="0.85" />')
+                # Badge F
+                labels.append(f'<circle cx="{epx_100 - 14:.1f}" cy="{epy_100:.1f}" r="6.5" fill="#16a34a" stroke="#ffffff" stroke-width="1.2" />')
+                labels.append(f'<text x="{epx_100 - 14:.1f}" y="{epy_100 + 3.0:.1f}" font-size="7.5" font-weight="800" font-family="{font_family}" fill="#ffffff" text-anchor="middle">F</text>')
+
+            # Limit G: 150% Overload Minimum (65% of rated head @ 150% flow)
+            if q_150_val > 0 and min_ovl_lim > 0 and x_min <= q_150_val <= x_max and y_min <= min_ovl_lim <= y_max:
+                epx_150 = padding_left + ((q_150_val - x_min) / (x_max - x_min)) * plot_w
+                epy_65 = padding_top + plot_h - ((min_ovl_lim - y_min) / (y_max - y_min)) * plot_h
+                paths_svg.append(f'<line x1="{padding_left:.1f}" y1="{epy_65:.1f}" x2="{epx_150:.1f}" y2="{epy_65:.1f}" stroke="#f43f5e" stroke-width="1.6" stroke-dasharray="5,3" opacity="0.85" />')
+                paths_svg.append(f'<line x1="{epx_150:.1f}" y1="{padding_top:.1f}" x2="{epx_150:.1f}" y2="{padding_top + plot_h:.1f}" stroke="#f43f5e" stroke-width="1.6" stroke-dasharray="5,3" opacity="0.85" />')
+                # Badge G
+                labels.append(f'<circle cx="{epx_150 + 12:.1f}" cy="{epy_65:.1f}" r="6.5" fill="#f43f5e" stroke="#ffffff" stroke-width="1.2" />')
+                labels.append(f'<text x="{epx_150 + 12:.1f}" y="{epy_65 + 3.0:.1f}" font-size="7.5" font-weight="800" font-family="{font_family}" fill="#ffffff" text-anchor="middle">G</text>')
+
+        # 2. Hydraulically Most Favourable / Fire System Curve (Green Dashed)
+        fav_c = fire_data.get('fav_curve') or {}
+        if fav_c.get('show', True) and fav_c.get('x') and fav_c.get('y'):
+            fc_x = fav_c['x']
+            fc_y = fav_c['y']
+            fc_coords = []
+            for fq, fh in zip(fc_x, fc_y):
+                if x_min <= fq <= x_max and y_min <= fh <= y_max:
+                    fpx = padding_left + ((fq - x_min) / (x_max - x_min)) * plot_w
+                    fpy = padding_top + plot_h - ((fh - y_min) / (y_max - y_min)) * plot_h
+                    fc_coords.append((fpx, fpy))
+            if len(fc_coords) > 1:
+                fc_d = f"M {fc_coords[0][0]:.1f},{fc_coords[0][1]:.1f}"
+                for fpx, fpy in fc_coords[1:]:
+                    fc_d += f" L {fpx:.1f},{fpy:.1f}"
+                paths_svg.append(f'<path d="{fc_d}" fill="none" stroke="#16a34a" stroke-width="2.2" stroke-dasharray="5,3" stroke-linecap="round" stroke-linejoin="round" />')
+
     # Render Multi-Curve Legend Box with customizable positioning
     legend_svg = ""
     if show_legend and legend_mode != 'curve_labels' and legend_mode != 'none' and len(legend_items) >= 1:
@@ -909,9 +1000,11 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
     # Supports both a single duty point (single pump) and multiple duty points (e.g. 1x per-pump duty + station total duty).
     # Draws engineering dashed crosshairs, custom marker icons (target bullseye or diamond), and non-colliding coordinate badges.
     duty_svg = ""
+    duty_parts = []
+
+    # 1. Standard Duty Point(s)
     if duty_point and chart_type == 'hq':
         pt_list = duty_point if isinstance(duty_point, list) else [duty_point]
-        duty_parts = []
         for p_idx, pt in enumerate(pt_list):
             if not isinstance(pt, dict):
                 continue
@@ -960,9 +1053,63 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             except Exception as e:
                 print(f"Duty point {p_idx} render notice:", e)
 
-        duty_svg = "".join(duty_parts)
+    # 2. Fire Operating Points (Lettered Pins: [A] Churn, [B] Rated Duty, [C] Operating Point, [D] 150% Overload)
+    if fire_data and chart_type == 'hq':
+        fire_pts = fire_data.get('points') or []
+        for fp_idx, fpt in enumerate(fire_pts):
+            if not fpt.get('show', True):
+                continue
+            try:
+                fq = float(fpt.get('q', 0))
+                fh = float(fpt.get('h', 0))
+                if x_min <= fq <= x_max and y_min <= fh <= y_max:
+                    fpx = padding_left + ((fq - x_min) / (x_max - x_min)) * plot_w
+                    fpy = padding_top + plot_h - ((fh - y_min) / (y_max - y_min)) * plot_h
+                    fcol = fpt.get('color', '#ef4444')
+                    letter = fpt.get('letter') or (['A', 'B', 'C', 'D'][fp_idx] if fp_idx < 4 else chr(65 + fp_idx))
+
+                    # 1. Subtle Projections to Axes
+                    duty_parts.append(
+                        f'<line x1="{padding_left}" y1="{fpy:.1f}" x2="{fpx:.1f}" y2="{fpy:.1f}" stroke="{fcol}" stroke-width="1.1" stroke-dasharray="3,3" opacity="0.65" />'
+                        f'<line x1="{fpx:.1f}" y1="{fpy:.1f}" x2="{fpx:.1f}" y2="{padding_top + plot_h}" stroke="{fcol}" stroke-width="1.1" stroke-dasharray="3,3" opacity="0.65" />'
+                    )
+
+                    # 2. Operating Point Dot Marker
+                    duty_parts.append(
+                        f'<circle cx="{fpx:.1f}" cy="{fpy:.1f}" r="5.0" fill="{fcol}" stroke="#ffffff" stroke-width="1.5" />'
+                    )
+
+                    # 3. Clean Letter Badge (avoiding clutter, positioned adjacent to marker)
+                    if letter == 'A':    # Churn point at x=0
+                        fb_x = padding_left + 15
+                        fb_y = fpy - 10
+                    elif letter == 'B':  # Rated duty point
+                        fb_x = fpx - 14
+                        fb_y = fpy - 14
+                    elif letter == 'C':  # Operating point
+                        fb_x = fpx + 14
+                        fb_y = fpy - 14
+                    elif letter == 'D':  # 150% Overload point
+                        fb_x = fpx + 14
+                        fb_y = fpy - 10
+                    else:
+                        fb_x = fpx + 14
+                        fb_y = fpy - 12
+
+                    fb_x = min(max(float(padding_left + 10), float(fb_x)), float(VIEW_W - padding_right - 10))
+                    fb_y = min(max(float(padding_top + 10), float(fb_y)), float(padding_top + plot_h - 6))
+
+                    duty_parts.append(
+                        f'<circle cx="{fb_x:.1f}" cy="{fb_y:.1f}" r="7.5" fill="{fcol}" stroke="#ffffff" stroke-width="1.4" filter="drop-shadow(0 1px 2px rgba(0,0,0,0.2))" />'
+                        f'<text x="{fb_x:.1f}" y="{fb_y + 3.2:.1f}" font-size="8.5" font-weight="800" font-family="{font_family}" fill="#ffffff" text-anchor="middle">{letter}</text>'
+                    )
+            except Exception as e:
+                print("Fire point render notice:", e)
+
+    duty_svg = "".join(duty_parts)
 
     svg_code = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {VIEW_W} {VIEW_H}" preserveAspectRatio="none" width="100%" height="100%" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" style="background:{chart_bg}; border-radius:4px; display:block; width:100%; height:100%; max-height:{height}px;">
+  {''.join(regions_svg)}
   {''.join(grid_lines)}
   {''.join(paths_svg)}
   {duty_svg}
@@ -1038,6 +1185,10 @@ def _build_report_curve_context(pump, report, params_override=None):
             return params_override[k]
         if request and request.args and k in request.args:
             return request.args.get(k)
+        if session:
+            s_sel = session.get('active_selection')
+            if isinstance(s_sel, dict) and k in s_sel and s_sel[k] is not None:
+                return s_sel[k]
         return default
 
     # Detect catalogue source
@@ -1247,6 +1398,15 @@ def _build_report_curve_context(pump, report, params_override=None):
     pumps_operating = int(_param('pumps_operating') or session_sel.get('pumps_operating') or 1)
     pumps_standby = int(_param('pumps_standby') or session_sel.get('pumps_standby') or 0)
     is_multi_pump = (pumps_operating > 1 and pump_arr in ('parallel', 'series'))
+    is_fire = bool(
+        _param('is_fire_pump') in ('1', 'true', 'True', True) or
+        _param('IS_FIRE_PUMP') in ('1', 'true', 'True', True) or
+        _param('app_mode') == 'fire' or
+        _param('fire_standard') or
+        (isinstance(session_sel, dict) and (session_sel.get('is_fire_pump') or session_sel.get('IS_FIRE_PUMP') or session_sel.get('app_mode') == 'fire' or session_sel.get('fire_standard'))) or
+        ('fire' in (getattr(pump, 'application', '') or '').lower()) or
+        ('fire' in (getattr(pump, 'app_modules', '') or '').lower())
+    )
 
     q_duty_val = None
     h_duty_val = None
@@ -1550,6 +1710,12 @@ def _build_report_curve_context(pump, report, params_override=None):
         req_x_max = q_duty_val * 1.25
         if x_clean['max'] < req_x_max:
             x_clean['max'] = float(round(req_x_max, 1))
+
+    # In fire mode, 150% overload requires flow axis extension so the entire curve and 150% point fit
+    if is_fire and q_duty_val:
+        req_fire_x = q_duty_val * 1.65
+        if x_clean['max'] < req_fire_x:
+            x_clean['max'] = float(round(req_fire_x, 1))
     
     x_common = {
         'x_min': x_clean['min'],
@@ -1577,6 +1743,12 @@ def _build_report_curve_context(pump, report, params_override=None):
         req_h_max = h_duty_val * 1.25
         if h_clean['max'] < req_h_max:
             h_clean['max'] = float(round(req_h_max, 1))
+
+    # In fire mode, NFPA 20 churn limit allows up to 140% rated head; ensure head axis fits churn
+    if is_fire and h_duty_val:
+        req_fire_h = max(h_duty_val * 1.45, (h_pts[0] if h_pts else 10.0) * 1.08)
+        if h_clean['max'] < req_fire_h:
+            h_clean['max'] = float(round(req_fire_h, 1))
 
     h_custom_range = dict(x_common)
     h_custom_range.update({
@@ -1950,6 +2122,88 @@ def _build_report_curve_context(pump, report, params_override=None):
         except Exception as e:
             print("System curve render notice:", e)
 
+    # ── Fire Protection Performance Geometry (NFPA 20 Standards) ──
+    fire_data = None
+    if is_fire and q_duty_val and h_duty_val:
+        try:
+            fq_duty = float(q_duty_val)
+            fh_duty = float(h_duty_val)
+            ref_q = rated_c_q if ('rated_c_q' in locals() and rated_c_q) else q_pts
+            ref_h = rated_c_h if ('rated_c_h' in locals() and rated_c_h) else h_pts
+
+            h_churn = round(float(ref_h[0]), 1)
+            max_churn_limit = round(fh_duty * 1.40, 1)
+            q_150 = round(fq_duty * 1.50, 1)
+            min_overload_limit = round(fh_duty * 0.65, 1)
+            h_150 = round(float(np.interp(q_150, ref_q, ref_h)), 1)
+
+            # Most Favourable Point
+            static_h = _safe_float(_param('static_head')) or 0.0
+            k_remote = (fh_duty - static_h) / (fq_duty ** 2) if fq_duty > 0 else 0.0
+            h_static_fav = static_h * 0.5
+            k_fav = 0.42 * k_remote
+
+            fav_q_candidates = np.linspace(fq_duty, q_150, 50)
+            fav_diffs = [abs(np.interp(qv, ref_q, ref_h) - (h_static_fav + k_fav * (qv ** 2))) for qv in fav_q_candidates]
+            min_diff_idx = int(np.argmin(fav_diffs))
+            q_fav = round(float(fav_q_candidates[min_diff_idx]), 1)
+            h_fav = round(float(np.interp(q_fav, ref_q, ref_h)), 1)
+
+            fav_sys_q = list(np.linspace(0, max(q_150 * 1.1, q_max * fQ_curve), 30))
+            fav_sys_h = [round(float(h_static_fav + k_fav * (qv ** 2)), 2) for qv in fav_sys_q]
+
+            show_fire_remote = _param('show_fire_remote', '1') not in ('0', 'false', 'False') and 'fire_remote' not in hidden_set
+            show_fire_churn = _param('show_fire_churn', '1') not in ('0', 'false', 'False') and 'fire_churn' not in hidden_set
+            show_fire_fav = _param('show_fire_fav', '1') not in ('0', 'false', 'False') and 'fire_fav' not in hidden_set
+            show_fire_150 = _param('show_fire_150', '1') not in ('0', 'false', 'False') and 'fire_150' not in hidden_set
+            show_fire_envelope = _param('show_fire_envelope', '1') not in ('0', 'false', 'False') and 'fire_envelope' not in hidden_set
+            show_fav_curve = _param('show_fav_curve', '1') not in ('0', 'false', 'False') and 'fav_curve' not in hidden_set
+            show_fire_regions = _param('show_fire_regions', '1') not in ('0', 'false', 'False') and 'fire_regions' not in hidden_set
+
+            fire_data = {
+                'is_fire': True,
+                'q_duty': fq_duty,
+                'h_duty': fh_duty,
+                'h_churn': h_churn,
+                'max_churn_limit': max_churn_limit,
+                'q_150': q_150,
+                'h_150': h_150,
+                'min_overload_limit': min_overload_limit,
+                'q_fav': q_fav,
+                'h_fav': h_fav,
+                'churn_pct': round(h_churn / fh_duty * 100.0, 1) if fh_duty > 0 else 0.0,
+                'h_150_pct': round(h_150 / fh_duty * 100.0, 1) if fh_duty > 0 else 0.0,
+                'points': [
+                    {'q': 0.0, 'h': h_churn, 'letter': 'A', 'title': 'Shutoff / Churn Point', 'desc': f'0% flow, {round(h_churn,1)} {lbl_h}', 'label': 'A', 'color': '#ef4444', 'symbol': 'circle', 'show': show_fire_churn},
+                    {'q': fq_duty, 'h': fh_duty, 'letter': 'B', 'title': 'Rated Duty Point', 'desc': f'100% flow ({round(fq_duty,1)} {lbl_q}) @ 100% head ({round(fh_duty,1)} {lbl_h})', 'label': 'B', 'color': '#ef4444', 'symbol': 'circle', 'show': show_fire_remote},
+                    {'q': q_fav, 'h': h_fav, 'letter': 'C', 'title': 'Operating Point', 'desc': f'System curve operating point (~{round(q_fav,1)} {lbl_q} @ {round(h_fav,1)} {lbl_h})', 'label': 'C', 'color': '#16a34a', 'symbol': 'circle', 'show': show_fire_fav},
+                    {'q': q_150, 'h': h_150, 'letter': 'D', 'title': '150% Overload Test Point', 'desc': f'150% flow ({round(q_150,1)} {lbl_q}) @ {round(h_150,1)} {lbl_h}', 'label': 'D', 'color': '#ef4444', 'symbol': 'circle', 'show': show_fire_150}
+                ],
+                'envelope': {
+                    'pts': [(0.0, max_churn_limit), (fq_duty, fh_duty), (q_150, min_overload_limit)],
+                    'max_churn_limit': max_churn_limit,
+                    'min_overload_limit': min_overload_limit,
+                    'color': '#f43f5e',
+                    'show': show_fire_envelope
+                },
+                'fav_curve': {
+                    'x': fav_sys_q,
+                    'y': fav_sys_h,
+                    'color': '#16a34a',
+                    'show': show_fav_curve
+                },
+                'regions': {
+                    'churn_max_q': fq_duty * 0.15,
+                    'op_min_q': fq_duty * 0.75,
+                    'op_max_q': fq_duty * 1.10,
+                    'overload_min_q': fq_duty * 1.00,
+                    'overload_max_q': q_150,
+                    'show': show_fire_regions
+                }
+            }
+        except Exception as e:
+            print("Fire curves context calculation notice:", e)
+
     # ── Operating Duty Point Marker(s) Context ──
     # For multi-pump installations, both the individual pump duty point (where each pump operates)
     # and the station total duty point (combined station delivery) are displayed.
@@ -1992,7 +2246,8 @@ def _build_report_curve_context(pump, report, params_override=None):
                 custom_range=h_custom_range, height=h, isolines_list=hq_isolines_list,
                 show_legend=show_leg_hq, legend_position=leg_pos, legend_mode=effective_legend_mode,
                 custom_label_pos=custom_pos_hq, label_format=label_fmt, chart_type='hq', graph_styles=graph_styles,
-                duty_point=duty_pt_dict
+                duty_point=None if fire_data else duty_pt_dict,
+                fire_data=fire_data
             )
         },
         'eta': {
@@ -2186,20 +2441,30 @@ def _build_report_curve_context(pump, report, params_override=None):
                 'style': 'dashed',
                 'type': 'line'
             })
-        if not is_from_catalogue and (is_proposal or (request and request.args.get('show_sys') == '1')) and show_sys_effective and q_duty_val and h_duty_val:
-            proposal_legend_items.append({
-                'name': 'System Curve',
-                'color': graph_styles.get('system_curve_color', '#8b949e') or '#8b949e',
-                'style': 'dotted',
-                'type': 'line'
-            })
-        if not is_from_catalogue and show_duty_effective and q_duty_val and h_duty_val:
-            proposal_legend_items.append({
-                'name': 'Duty Point',
-                'color': '#ef4444',
-                'style': 'solid',
-                'type': 'marker'
-            })
+        if is_fire and fire_data:
+            proposal_legend_items = [
+                {'name': 'Pump Curve', 'color': graph_styles.get('hq_color', '#1e3a8a') or '#1e3a8a', 'style': 'solid', 'type': 'line'},
+                {'name': 'System Curve', 'color': '#16a34a', 'style': 'dashed', 'type': 'line'},
+                {'name': 'NFPA 20 Limits [E, F, G]', 'color': '#f43f5e', 'style': 'dashed', 'type': 'line'},
+                {'name': 'Key Pump Points [A, B, D]', 'color': '#ef4444', 'type': 'marker', 'symbol': 'circle'},
+                {'name': 'Operating Point [C]', 'color': '#16a34a', 'type': 'marker', 'symbol': 'circle'},
+                {'name': 'Operating Regions [I, II, III]', 'color': '#38bdf8', 'type': 'rect', 'stroke': '#38bdf8'}
+            ]
+        else:
+            if not is_from_catalogue and (is_proposal or (request and request.args.get('show_sys') == '1')) and show_sys_effective and q_duty_val and h_duty_val:
+                proposal_legend_items.append({
+                    'name': 'System Curve',
+                    'color': graph_styles.get('system_curve_color', '#8b949e') or '#8b949e',
+                    'style': 'dotted',
+                    'type': 'line'
+                })
+            if not is_from_catalogue and show_duty_effective and q_duty_val and h_duty_val:
+                proposal_legend_items.append({
+                    'name': 'Duty Point',
+                    'color': '#ef4444',
+                    'style': 'solid',
+                    'type': 'marker'
+                })
 
     return {
         'q_max': q_max,
@@ -2221,6 +2486,8 @@ def _build_report_curve_context(pump, report, params_override=None):
         'is_proposal': is_proposal,
         'is_from_catalogue': is_from_catalogue,
         'proposal_legend_items': proposal_legend_items,
+        'is_fire': is_fire,
+        'fire_data': fire_data,
         # Multi-pump context attributes for reports
         'is_multi_pump': is_multi_pump,
         'pump_arrangement': pump_arr,
@@ -2537,7 +2804,8 @@ def view_report_clean():
         pump=pump,
         supplier=report.supplier,
         report_content=report_content,
-        is_clean_session=True
+        is_clean_session=True,
+        curves=curves_ctx
     )
 
 
@@ -2593,7 +2861,8 @@ def view_report_token(token=None):
         pump=pump,
         supplier=report.supplier,
         report_content=report_content,
-        report_token=token
+        report_token=token,
+        curves=curves_ctx
     )
 
 

@@ -786,7 +786,27 @@ def pump_selection_details(pump_id):
         'size':    UNITS_SIZE
     }
 
-    details_template = current_org.get_pump_details_template() if current_org else 'details/default_pump_details.html'
+    active_sel_current = session.get('active_selection') or {}
+    is_fire = bool(
+        active_sel_current.get('is_fire_pump')
+        or (pump.app_modules and 'fire' in pump.app_modules.lower())
+        or (f.get('application') and 'fire' in str(f.get('application')).lower())
+        or (f.get('filter_application') and 'fire' in str(f.get('filter_application')).lower())
+        or (request.args.get('app') == 'fire')
+    )
+    if is_fire and 'active_selection' in session:
+        session['active_selection']['is_fire_pump'] = True
+        session.modified = True
+
+    from routes.auth import get_current_user
+    current_u = get_current_user()
+    target_module = 'fire' if is_fire else (pump.pump_type or 'centrifugal')
+    details_template = current_org.get_pump_details_template(
+        module=target_module,
+        user_role=current_u,
+        is_fire=is_fire,
+        pump=pump
+    ) if current_org else ('details/fire_pump_details.html' if is_fire else 'details/default_pump_details.html')
 
     def _safe_float(val, fallback=None):
         if val is None or val == '':
@@ -838,7 +858,14 @@ def pump_selection_details(pump_id):
         'MANUAL_SPEED_RPM': _safe_float(f.get('manual_pump_speed_rpm') or f.get('manual_speed_rpm')),
         'RATED_SPEED': round(_safe_float(active_result.get('optimal_speed_rpm')), 1) if (active_result and active_result.get('optimal_speed_rpm')) else None,
         'RATED_TRIM': round(_safe_float(active_result.get('optimal_trim_dia_mm')), 1) if (active_result and active_result.get('optimal_trim_dia_mm')) else None,
-        'ORG_STYLES': org_styles or {}
+        'ORG_STYLES': org_styles or {},
+        'IS_FIRE_PUMP': is_fire,
+        'FIRE_STANDARD': active_sel_current.get('fire_standard', 'nfpa13'),
+        'FIRE_HAZARD_CLASS': active_sel_current.get('fire_hazard_class', ''),
+        'STATIC_HEAD': _safe_float(active_sel_current.get('static_elevation_m') or f.get('static_elevation_m') or f.get('static_head'), 15.0),
+        'FRICTION_LOSS': _safe_float(active_sel_current.get('friction_loss_m') or f.get('friction_loss_m'), 5.0),
+        'RESIDUAL_PRESSURE': _safe_float(active_sel_current.get('residual_pressure_m') or f.get('residual_pressure_m'), 10.0),
+        'NFPA20_COMPLIANCE': active_sel_current.get('nfpa20_compliance') or (active_result.get('nfpa20_eval') if active_result else None)
     }
     pump_details_config_json = json.dumps(pump_details_config)
 
@@ -858,6 +885,7 @@ def pump_selection_details(pump_id):
                            unit_h=unit_h,
                            unit_npsh=unit_npsh,
                            unit_pow=unit_pow,
+                           is_fire_pump=is_fire,
                            pump_details_config_json=pump_details_config_json)
 
 

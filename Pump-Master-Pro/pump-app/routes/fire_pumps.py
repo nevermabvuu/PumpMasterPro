@@ -122,16 +122,23 @@ def index():
     target_head = default_calc['head_m']
 
     for p in all_pumps:
-        apps = (p.app_modules or '').lower() + ' ' + (p.application or '').lower()
+        full_meta = ((p.app_modules or '') + ' ' + (p.application or '') + ' ' + (p.pump_type or '') + ' ' + (p.name or '')).lower()
+        is_dedicated = 'fire' in ((p.app_modules or '') + ' ' + (p.application or '') + ' ' + (p.pump_type or '')).lower()
+        is_slurry_or_dirty = any(t in full_meta for t in ['slurry', 'sump', 'sewage', 'sludge', 'dredge', 'froth'])
+
+        # Avoid slurry and sump pumps for fire protection unless explicitly designated for fire service
+        if is_slurry_or_dirty and not is_dedicated:
+            continue
+
         eval_res = evaluate_pump_nfpa20_compliance(p, target_flow, target_head)
         item = {
             'pump': p,
             'eval': eval_res,
-            'is_dedicated_fire': 'fire' in apps
+            'is_dedicated_fire': is_dedicated
         }
-        if 'fire' in apps:
+        if is_dedicated:
             fire_pumps.append(item)
-        elif eval_res['pass_rated'] and 'slurry' not in apps:
+        elif eval_res['pass_rated']:
             other_candidates.append(item)
 
     # Sort: dedicated fire pumps first, then by compliance score descending
@@ -239,17 +246,26 @@ def api_calculate():
     # 2. Query Catalogue Pumps & Evaluate NFPA 20 Compliance
     all_pumps = get_visible_pumps_query().all()
 
+    dedicated_only = bool(data.get('dedicated_only') in (True, 'true', '1', 1))
+
     candidates = []
     for p in all_pumps:
-        apps = ((p.app_modules or '') + ' ' + (p.application or '')).lower()
-        # Avoid dedicated slurry pumps for fire protection unless explicitly designated
-        if 'slurry' in apps and 'fire' not in apps:
+        full_meta = ((p.app_modules or '') + ' ' + (p.application or '') + ' ' + (p.pump_type or '') + ' ' + (p.name or '')).lower()
+        is_dedicated = 'fire' in ((p.app_modules or '') + ' ' + (p.application or '') + ' ' + (p.pump_type or '')).lower()
+        is_slurry_or_dirty = any(t in full_meta for t in ['slurry', 'sump', 'sewage', 'sludge', 'dredge', 'froth'])
+
+        # Exclude dirty water/slurry/sump pumps from fire applications unless explicitly certified
+        if is_slurry_or_dirty and not is_dedicated:
+            continue
+
+        # If user selected Dedicated Fire Pumps Only, filter out general water pumps
+        if dedicated_only and not is_dedicated:
             continue
 
         eval_res = evaluate_pump_nfpa20_compliance(p, q_duty_m3h, h_duty_m)
 
         # Include if pump passes rated head or is a dedicated fire pump
-        if eval_res['pass_rated'] or 'fire' in apps:
+        if eval_res['pass_rated'] or is_dedicated:
             candidates.append({
                 'pump_id': p.id,
                 'name': p.name,
@@ -258,7 +274,7 @@ def api_calculate():
                 'pump_type': p.pump_type or 'centrifugal',
                 'speed_rpm': p.speed_rpm,
                 'impeller_dia_mm': p.impeller_dia_mm,
-                'is_dedicated_fire': 'fire' in apps,
+                'is_dedicated_fire': is_dedicated,
                 'app_modules': p.app_modules or '',
                 'suction_size': p.suction_size or '',
                 'discharge_size': p.discharge_size or '',

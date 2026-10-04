@@ -164,10 +164,49 @@
             </div>
             <div>
               <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">
-                <i class="bi bi-file-earmark-code text-[#58a6ff] mr-1"></i>Pump Details Template
+                <i class="bi bi-file-earmark-code text-[#58a6ff] mr-1"></i>Fallback Pump Details Template
               </label>
               <input type="text" name="pump_details_template" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#58a6ff]" value="{{ current_org.pump_details_template if current_org and current_org.pump_details_template else 'details/default_pump_details.html' }}" placeholder="details/default_pump_details.html">
-              <span class="text-[10px] text-[#8b949e]">Jinja2 template inside <code>templates/</code> (e.g. <code>details/default_pump_details.html</code>).</span>
+              <span class="text-[10px] text-[#8b949e]">Default fallback template inside <code>templates/</code> (e.g. <code>details/default_pump_details.html</code>).</span>
+            </div>
+          </div>
+
+          <!-- ── CUSTOM PUMP DETAILS TEMPLATES BY MODULE & USER GROUP ── -->
+          <div class="mt-3 p-3.5 bg-[#0d1117] border border-[#30363d] rounded-xl space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#30363d] pb-2.5 gap-2">
+              <div>
+                <label class="text-xs font-bold text-white flex items-center gap-1.5">
+                  <i class="bi bi-layers-fill text-[#58a6ff]"></i>
+                  <span>Custom Pump Details Templates by Module &amp; User Group</span>
+                </label>
+                <p class="text-[11px] text-[#8b949e] mt-0.5">
+                  Specify customized templates for each pump module (Fire, Centrifugal, Vertical Line Shaft, Slurry, or ALL) and restrict view access by user groups.
+                </p>
+              </div>
+              {% if can_edit_org %}
+              <button type="button" onclick="openAddTemplateRuleModal()" class="px-2.5 py-1.5 bg-[#1f6feb]/20 hover:bg-[#1f6feb]/30 text-[#58a6ff] border border-[#1f6feb]/40 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0">
+                <i class="bi bi-plus-circle"></i> Add Template Rule
+              </button>
+              {% endif %}
+            </div>
+
+            <input type="hidden" name="pump_details_templates_json" id="pump_details_templates_json" value="{{ current_org.pump_details_templates_json if current_org and current_org.pump_details_templates_json else '[]' }}">
+
+            <!-- Template Rules Table -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border border-[#30363d] rounded-lg overflow-hidden">
+                <thead class="bg-[#161b22] text-[#8b949e] font-semibold text-[10px] uppercase tracking-wider">
+                  <tr>
+                    <th class="p-2.5">Target Module</th>
+                    <th class="p-2.5">Jinja2 Template Path</th>
+                    <th class="p-2.5">Authorized User Groups</th>
+                    <th class="p-2.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="templateRulesTableBody" class="divide-y divide-[#30363d]">
+                  <!-- Populated via JavaScript -->
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -1963,6 +2002,104 @@
     </form>
   </div>
 </div>
+
+<!-- MODAL: ADD / EDIT PUMP DETAILS TEMPLATE RULE -->
+<div id="templateRuleModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
+    <div class="px-5 py-3.5 bg-[#1c2330] border-b border-[#30363d] flex items-center justify-between">
+      <h3 class="text-sm font-bold text-white flex items-center gap-2">
+        <i class="bi bi-file-earmark-code text-[#58a6ff]"></i>
+        <span id="templateRuleModalTitle">Add Pump Details Template Rule</span>
+      </h3>
+      <button type="button" onclick="closeTemplateRuleModal()" class="text-[#8b949e] hover:text-white text-xl leading-none cursor-pointer">
+        &times;
+      </button>
+    </div>
+
+    <div class="p-5 overflow-y-auto space-y-4">
+      <input type="hidden" id="rule_index" value="-1">
+
+      <!-- Target Module -->
+      <div>
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">
+          Target Pump Module *
+        </label>
+        <select id="rule_module_select" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-[#58a6ff]" onchange="onRuleModuleSelectChange(this.value)">
+          <option value="fire">Fire Protection (NFPA 20 / Sprinkler / Hydrant)</option>
+          <option value="centrifugal">Centrifugal (Clean Water / End Suction / Multistage)</option>
+          <option value="vertical line shaft">Vertical Line Shaft (Deep Well Turbine / Sump)</option>
+          <option value="slurry">Slurry / Dredge / Solids Handling</option>
+          <option value="all">ALL Modules (General Fallback)</option>
+          <option value="custom">Other / Custom Module...</option>
+        </select>
+        <input type="text" id="rule_module_custom" placeholder="e.g. submersible, axial, vacuum" class="hidden mt-2 w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#58a6ff]">
+        <p class="text-[10px] text-[#8b949e] mt-1">Select the engineering module to which this template applies.</p>
+      </div>
+
+      <!-- Jinja2 Template Path -->
+      <div>
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">
+          Jinja2 Template Path *
+        </label>
+        <select id="rule_template_select" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-[#58a6ff]" onchange="onRuleTemplateSelectChange(this.value)">
+          <option value="details/fire_pump_details.html">details/fire_pump_details.html (Dedicated Fire Pump Spec &amp; NFPA 20)</option>
+          <option value="details/default_pump_details.html">details/default_pump_details.html (Standard Industrial Clean / Viscous)</option>
+          <option value="details/lytrose_pump_details.html">details/lytrose_pump_details.html (Lytrose Custom Complete Spec Sheet)</option>
+          <option value="custom">Custom Template Path...</option>
+        </select>
+        <input type="text" id="rule_template_custom" placeholder="details/my_company_fire.html" class="hidden mt-2 w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-[#58a6ff]">
+        <p class="text-[10px] text-[#8b949e] mt-1">Relative template file path inside <code>pump-app/templates/</code>.</p>
+      </div>
+
+      <!-- Authorized User Groups / Roles -->
+      <div>
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1.5">
+          Authorized User Groups / Roles *
+        </label>
+        <p class="text-[10px] text-[#8b949e] mb-2">Select user groups that have permission to view this template:</p>
+        <div class="grid grid-cols-2 gap-2 bg-[#0d1117] border border-[#30363d] p-3 rounded-lg text-xs">
+          <label class="flex items-center gap-2 text-white font-semibold cursor-pointer col-span-2 pb-1.5 border-b border-[#30363d]/60">
+            <input type="checkbox" id="role_all" class="accent-[#58a6ff] w-4 h-4 cursor-pointer" onchange="onRoleAllToggle(this.checked)">
+            <span>ALL (All logged-in users &amp; roles)</span>
+          </label>
+          <label class="flex items-center gap-2 text-[#c9d1d9] cursor-pointer">
+            <input type="checkbox" name="rule_roles" value="admin" class="accent-[#58a6ff] w-3.5 h-3.5 role-cb cursor-pointer">
+            <span>Admin / Org Admin</span>
+          </label>
+          <label class="flex items-center gap-2 text-[#c9d1d9] cursor-pointer">
+            <input type="checkbox" name="rule_roles" value="engineer" class="accent-[#58a6ff] w-3.5 h-3.5 role-cb cursor-pointer">
+            <span>Engineer / Technical</span>
+          </label>
+          <label class="flex items-center gap-2 text-[#c9d1d9] cursor-pointer">
+            <input type="checkbox" name="rule_roles" value="technician" class="accent-[#58a6ff] w-3.5 h-3.5 role-cb cursor-pointer">
+            <span>Technician / Field</span>
+          </label>
+          <label class="flex items-center gap-2 text-[#c9d1d9] cursor-pointer">
+            <input type="checkbox" name="rule_roles" value="viewer" class="accent-[#58a6ff] w-3.5 h-3.5 role-cb cursor-pointer">
+            <span>Viewer / Guest</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Optional Friendly Label / Notes -->
+      <div>
+        <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">
+          Friendly Rule Name / Description (Optional)
+        </label>
+        <input type="text" id="rule_name" placeholder="e.g. Fire Pump NFPA 20 Spec Sheet for Engineering Team" class="w-full bg-[#0d1117] border border-[#30363d] rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]">
+      </div>
+    </div>
+
+    <div class="px-5 py-3 bg-[#1c2330] border-t border-[#30363d] flex justify-end gap-2 shrink-0">
+      <button type="button" onclick="closeTemplateRuleModal()" class="px-3.5 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs text-[#c9d1d9] rounded-lg border border-[#30363d] cursor-pointer">
+        Cancel
+      </button>
+      <button type="button" onclick="saveTemplateRule()" class="px-4 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded-lg flex items-center gap-1.5 shadow-sm cursor-pointer">
+        <i class="bi bi-check-lg"></i> Apply Rule
+      </button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -2668,5 +2805,263 @@
     syncOrgSlurryReadOnlyState();
     updateOrgSlurryCalculator();
   }
+
+  // =========================================================================
+  // CUSTOM PUMP DETAILS TEMPLATE ROUTING RULES (BY MODULE & USER GROUP)
+  // =========================================================================
+  // Beginners & Engineering Note:
+  // Allows organisations to define modular template rules:
+  // - Target Module: 'fire', 'centrifugal', 'vertical line shaft', 'slurry', or 'all'
+  // - Jinja2 Template: 'details/fire_pump_details.html', etc.
+  // - User Groups: Array of roles permitted to view this template (e.g. ['ALL'], ['admin', 'engineer'])
+  // =========================================================================
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  let templateRules = [];
+  try {
+    const rawVal = document.getElementById('pump_details_templates_json')?.value || '[]';
+    templateRules = JSON.parse(rawVal);
+    if (!Array.isArray(templateRules)) templateRules = [];
+  } catch (e) {
+    templateRules = [];
+  }
+
+  function getModuleBadgeHtml(mod) {
+    const m = (mod || 'all').toLowerCase();
+    if (m === 'fire') {
+      return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#f85149]/15 text-[#ff7b72] border border-[#f85149]/30"><i class="bi bi-fire"></i> Fire Protection</span>';
+    } else if (m === 'centrifugal') {
+      return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#1f6feb]/15 text-[#58a6ff] border border-[#1f6feb]/30"><i class="bi bi-droplet-half"></i> Centrifugal</span>';
+    } else if (m.includes('vertical')) {
+      return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#a371f7]/15 text-[#d2a8ff] border border-[#a371f7]/30"><i class="bi bi-arrow-down-up"></i> Vertical Line Shaft</span>';
+    } else if (m === 'slurry') {
+      return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#d29922]/15 text-[#e3b341] border border-[#d29922]/30"><i class="bi bi-layers"></i> Slurry</span>';
+    } else if (m === 'all') {
+      return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#6e7681]/20 text-[#8b949e] border border-[#6e7681]/30"><i class="bi bi-globe"></i> ALL Modules</span>';
+    } else {
+      return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#238636]/15 text-[#3fb950] border border-[#238636]/30"><i class="bi bi-gear"></i> ${escapeHtml(mod)}</span>`;
+    }
+  }
+
+  function getUserGroupsBadgesHtml(groups) {
+    if (!groups || groups.length === 0 || groups.includes('ALL') || groups.includes('all')) {
+      return '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-[#388bfd]/10 text-[#58a6ff] border border-[#388bfd]/20"><i class="bi bi-people"></i> ALL</span>';
+    }
+    return groups.map(g => `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-[#21262d] text-[#c9d1d9] border border-[#30363d]">${escapeHtml(g)}</span>`).join(' ');
+  }
+
+  function renderTemplateRules() {
+    const tbody = document.getElementById('templateRulesTableBody');
+    if (!tbody) return;
+    if (templateRules.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="4" class="p-4 text-center text-xs text-[#8b949e]">
+            <i class="bi bi-info-circle text-[#58a6ff] mr-1"></i> No custom rules defined yet.
+            The default template will be used for all modules and user groups.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = templateRules.map((rule, idx) => {
+      return `
+        <tr class="hover:bg-[#161b22]/50 transition-colors">
+          <td class="p-2.5 align-middle">
+            <div class="flex flex-col gap-1">
+              <div>${getModuleBadgeHtml(rule.module)}</div>
+              ${rule.name ? `<span class="text-[10px] text-[#8b949e]">${escapeHtml(rule.name)}</span>` : ''}
+            </div>
+          </td>
+          <td class="p-2.5 align-middle">
+            <div class="flex items-center gap-1.5 font-mono text-xs text-white">
+              <i class="bi bi-file-earmark-code text-[#58a6ff]"></i>
+              <span>${escapeHtml(rule.template)}</span>
+            </div>
+          </td>
+          <td class="p-2.5 align-middle">
+            <div class="flex flex-wrap gap-1">
+              ${getUserGroupsBadgesHtml(rule.user_groups)}
+            </div>
+          </td>
+          <td class="p-2.5 align-middle text-right whitespace-nowrap">
+            <button type="button" onclick="openAddTemplateRuleModal(${idx})" class="p-1 hover:bg-[#30363d] text-[#58a6ff] rounded transition-colors cursor-pointer" title="Edit Rule">
+              <i class="bi bi-pencil-square"></i>
+            </button>
+            <button type="button" onclick="deleteTemplateRule(${idx})" class="p-1 hover:bg-[#30363d] text-[#f85149] rounded transition-colors ml-1 cursor-pointer" title="Delete Rule">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function updateTemplateRulesJson() {
+    const input = document.getElementById('pump_details_templates_json');
+    if (input) {
+      input.value = JSON.stringify(templateRules);
+    }
+  }
+
+  window.openAddTemplateRuleModal = function(idx = -1) {
+    const modal = document.getElementById('templateRuleModal');
+    if (!modal) return;
+    document.getElementById('rule_index').value = idx;
+    const isEdit = idx >= 0 && idx < templateRules.length;
+    document.getElementById('templateRuleModalTitle').textContent = isEdit ? 'Edit Pump Details Template Rule' : 'Add Pump Details Template Rule';
+
+    const rule = isEdit ? templateRules[idx] : {
+      module: 'fire',
+      template: 'details/fire_pump_details.html',
+      user_groups: ['ALL'],
+      name: ''
+    };
+
+    // Populate module
+    const modSelect = document.getElementById('rule_module_select');
+    const modCustom = document.getElementById('rule_module_custom');
+    const knownMods = ['fire', 'centrifugal', 'vertical line shaft', 'slurry', 'all'];
+    const curMod = (rule.module || 'fire').toLowerCase();
+    if (knownMods.includes(curMod)) {
+      modSelect.value = curMod;
+      modCustom.classList.add('hidden');
+      modCustom.value = '';
+    } else {
+      modSelect.value = 'custom';
+      modCustom.classList.remove('hidden');
+      modCustom.value = rule.module || '';
+    }
+
+    // Populate template
+    const tmplSelect = document.getElementById('rule_template_select');
+    const tmplCustom = document.getElementById('rule_template_custom');
+    const knownTmpls = ['details/fire_pump_details.html', 'details/default_pump_details.html', 'details/lytrose_pump_details.html'];
+    if (knownTmpls.includes(rule.template)) {
+      tmplSelect.value = rule.template;
+      tmplCustom.classList.add('hidden');
+      tmplCustom.value = '';
+    } else {
+      tmplSelect.value = 'custom';
+      tmplCustom.classList.remove('hidden');
+      tmplCustom.value = rule.template || '';
+    }
+
+    // Populate roles
+    const ug = rule.user_groups || ['ALL'];
+    const isAll = ug.includes('ALL') || ug.includes('all');
+    document.getElementById('role_all').checked = isAll;
+    document.querySelectorAll('.role-cb').forEach(cb => {
+      cb.checked = isAll || ug.map(u => u.toLowerCase()).includes(cb.value.toLowerCase());
+      cb.disabled = isAll;
+    });
+
+    document.getElementById('rule_name').value = rule.name || '';
+
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  };
+
+  window.closeTemplateRuleModal = function() {
+    const modal = document.getElementById('templateRuleModal');
+    if (modal) modal.classList.add('hidden');
+    document.body.style.overflow = '';
+  };
+
+  window.onRuleModuleSelectChange = function(val) {
+    const custom = document.getElementById('rule_module_custom');
+    if (val === 'custom') {
+      custom.classList.remove('hidden');
+      custom.focus();
+    } else {
+      custom.classList.add('hidden');
+    }
+  };
+
+  window.onRuleTemplateSelectChange = function(val) {
+    const custom = document.getElementById('rule_template_custom');
+    if (val === 'custom') {
+      custom.classList.remove('hidden');
+      custom.focus();
+    } else {
+      custom.classList.add('hidden');
+    }
+  };
+
+  window.onRoleAllToggle = function(checked) {
+    document.querySelectorAll('.role-cb').forEach(cb => {
+      cb.disabled = checked;
+      if (checked) cb.checked = true;
+    });
+  };
+
+  window.saveTemplateRule = function() {
+    const idx = parseInt(document.getElementById('rule_index').value, 10);
+    const modSelect = document.getElementById('rule_module_select').value;
+    const targetModule = modSelect === 'custom' ? (document.getElementById('rule_module_custom').value.trim() || 'all') : modSelect;
+
+    const tmplSelect = document.getElementById('rule_template_select').value;
+    let templatePath = tmplSelect === 'custom' ? document.getElementById('rule_template_custom').value.trim() : tmplSelect;
+    if (!templatePath) {
+      alert('Please specify a valid Jinja2 template path.');
+      return;
+    }
+    if (!templatePath.endsWith('.html')) {
+      templatePath += '.html';
+    }
+
+    let userGroups = [];
+    if (document.getElementById('role_all').checked) {
+      userGroups = ['ALL'];
+    } else {
+      document.querySelectorAll('.role-cb:checked').forEach(cb => {
+        userGroups.push(cb.value);
+      });
+      if (userGroups.length === 0) {
+        userGroups = ['ALL'];
+      }
+    }
+
+    const ruleName = document.getElementById('rule_name').value.trim();
+
+    const ruleObj = {
+      module: targetModule,
+      template: templatePath,
+      user_groups: userGroups,
+      name: ruleName
+    };
+
+    if (idx >= 0 && idx < templateRules.length) {
+      templateRules[idx] = ruleObj;
+    } else {
+      templateRules.push(ruleObj);
+    }
+
+    updateTemplateRulesJson();
+    renderTemplateRules();
+    closeTemplateRuleModal();
+  };
+
+  window.deleteTemplateRule = function(idx) {
+    if (!confirm('Are you sure you want to remove this template routing rule?')) return;
+    if (idx >= 0 && idx < templateRules.length) {
+      templateRules.splice(idx, 1);
+      updateTemplateRulesJson();
+      renderTemplateRules();
+    }
+  };
+
+  // Render template rules on page load
+  renderTemplateRules();
 </script>
 {% endblock %}

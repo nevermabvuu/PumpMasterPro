@@ -122,6 +122,20 @@ with app.app_context():
                         ))
                         mig_conn.commit()
                     print("Migrated: Added selection_defaults_json to organisations")
+                if tbl_name == 'organisations' and 'pump_details_template' not in existing_cols:
+                    with db.engine.connect() as mig_conn:
+                        mig_conn.execute(sa_text(
+                            f"ALTER TABLE organisations ADD pump_details_template {'NVARCHAR(255)' if dialect_name == 'mssql' else 'VARCHAR(255)'} DEFAULT 'details/default_pump_details.html'"
+                        ))
+                        mig_conn.commit()
+                    print("Migrated: Added pump_details_template to organisations")
+                if tbl_name == 'organisations' and 'pump_details_templates_json' not in existing_cols:
+                    with db.engine.connect() as mig_conn:
+                        mig_conn.execute(sa_text(
+                            f"ALTER TABLE organisations ADD pump_details_templates_json {'NVARCHAR(MAX)' if dialect_name == 'mssql' else 'TEXT'} DEFAULT '[]'"
+                        ))
+                        mig_conn.commit()
+                    print("Migrated: Added pump_details_templates_json to organisations")
 
         if 'organisations' in inspector.get_table_names():
             existing_org_cols = [c['name'] for c in inspector.get_columns('organisations')]
@@ -191,6 +205,8 @@ with app.app_context():
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN graph_styles_json TEXT DEFAULT '{}'"))
             if 'pump_details_template' not in org_cols:
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN pump_details_template VARCHAR(255) DEFAULT 'details/default_pump_details.html'"))
+            if 'pump_details_templates_json' not in org_cols:
+                conn.execute(text("ALTER TABLE organisations ADD COLUMN pump_details_templates_json TEXT DEFAULT '[]'"))
             if 'access_levels_json' not in org_cols:
                 conn.execute(text("ALTER TABLE organisations ADD COLUMN access_levels_json TEXT DEFAULT '{}'"))
             if 'feature_flags_json' not in org_cols:

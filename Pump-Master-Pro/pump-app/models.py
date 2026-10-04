@@ -1363,6 +1363,10 @@ class Organisation(db.Model):
     # e.g., 'details/default_pump_details.html' or 'details/lytrose_pump_details.html'
     pump_details_template = db.Column(db.String(255), default='details/default_pump_details.html')
 
+    # Multi-template routing configuration by module (Fire, Centrifugal, Vertical Line Shaft, etc.)
+    # and user groups (Admin, Engineer, etc.)
+    pump_details_templates_json = db.Column(db.Text, default='[]')
+
     # Custom Organisation Pump Attribute Definitions (PumpAttributeName1 to 30)
     PumpAttributeName1  = db.Column(db.String(100), default='')
     PumpAttributeName2  = db.Column(db.String(100), default='')
@@ -1505,18 +1509,161 @@ class Organisation(db.Model):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def get_pump_details_template(self):
+    def get_pump_details_rules(self):
         """
-        Beginners Note: Returns the Jinja2 template path for the organisation's pump details view.
-        Defaults to 'details/default_pump_details.html' if not specified or empty.
+        Returns list of configured pump details template routing rules for this organisation.
+        Each rule contains:
+          - 'template': Jinja2 template path (e.g. 'details/fire_pump_details.html', 'details/default_pump_details.html')
+          - 'module': target pump module ('Fire', 'Centrifugal', 'Vertical Line Shaft', 'Slurry', 'ALL', etc.)
+          - 'user_groups': list of allowed user groups/roles (e.g. ['ALL'], ['admin', 'engineer'], etc.)
+          - 'name': display label
         """
+        import json
+        raw = getattr(self, 'pump_details_templates_json', None)
+        rules = []
+        if raw and str(raw).strip():
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    rules = parsed
+            except Exception:
+                pass
+        return rules
+
+    def set_pump_details_rules(self, rules_list):
+        """
+        Persists list of pump details template routing rules as JSON.
+        """
+        import json
+        if not isinstance(rules_list, list):
+            rules_list = []
+        self.pump_details_templates_json = json.dumps(rules_list)
+
+    def get_pump_details_template(self, module=None, user_role=None, is_fire=False, pump=None):
+        """
+        Determines the appropriate pump details Jinja2 template path for this company/organisation.
+
+        Beginners & Engineering Note:
+            Pump detail sheets can be customized per organisation and tailored according to:
+            1. Target Pump Module:
+               - 'Fire' (NFPA 20, fire protection, standpipe, sprinkler pumps)
+               - 'Centrifugal' (Standard end-suction, split-case, multistage water pumps)
+               - 'Vertical Line Shaft' (Deep well turbine, sump, vertical borehole pumps)
+               - 'Slurry' (Heavy-duty slurry, froth, tailings, dredging)
+               - 'ALL' (Applies to all pump types / general default)
+            2. User Groups (Role Permissions):
+               - Restricts template visibility to authorized user groups:
+                 e.g. ['ALL'], ['admin'], ['engineer'], ['technician'], ['viewer'], or SuperAdmin.
+                 If the user's role is not permitted, the system falls back to an accessible template
+                 or 'details/default_pump_details.html'.
+
+        Parameters:
+            module (str|None): Pump module name, e.g. 'Fire', 'Centrifugal', 'Vertical Line Shaft'.
+            user_role (str|User|Role|None): User instance, Role instance, or role code string.
+            is_fire (bool): True if selection is a fire pump or fire mode is active.
+            pump (Pump|None): Pump instance being rendered.
+
+        Returns:
+            str: Resolved Jinja2 template path (e.g. 'details/fire_pump_details.html').
+        """
+        # 1. Normalize Candidate Module
+        target_mod = 'centrifugal'
+        if is_fire or (module and 'fire' in str(module).lower()) or (pump and 'fire' in ((getattr(pump, 'app_modules', '') or '') + ' ' + (getattr(pump, 'application', '') or '')).lower()):
+            target_mod = 'fire'
+        elif module:
+            target_mod = str(module).strip().lower()
+        elif pump and getattr(pump, 'pump_type', None):
+            p_type = str(pump.pump_type).strip().lower()
+            if 'vertical' in p_type or 'shaft' in p_type or 'turbine' in p_type:
+                target_mod = 'vertical line shaft'
+            elif 'slurry' in p_type:
+                target_mod = 'slurry'
+            else:
+                target_mod = p_type
+
+        # 2. Normalize User Role & SuperAdmin Status
+        role_str = ''
+        is_super = False
+        if user_role is not None:
+            if hasattr(user_role, 'is_super_admin_user') and user_role.is_super_admin_user:
+                is_super = True
+            role_str = (getattr(user_role, 'role', '') or getattr(user_role, 'code', '') or str(user_role)).strip().lower()
+            if role_str in ('superadmin', 'super_admin', 'super engineer', 'super_engineer'):
+                is_super = True
+        else:
+            # Try to resolve currently logged-in user from request context if available
+            try:
+                from routes.auth import get_current_user
+                cur_u = get_current_user()
+                if cur_u:
+                    is_super = bool(getattr(cur_u, 'is_super_admin_user', False))
+                    role_str = (getattr(cur_u, 'role', '') or '').strip().lower()
+                    if role_str in ('superadmin', 'super_admin', 'super engineer'):
+                        is_super = True
+            except Exception:
+                pass
+
+        def _clean_tmpl_path(p):
+            if not p or not str(p).strip():
+                return None
+            clean_p = str(p).strip().replace('\\', '/')
+            if not clean_p.endswith('.html'):
+                clean_p += '.html'
+            if not clean_p.startswith('details/') and '/' not in clean_p:
+                clean_p = f'details/{clean_p}'
+            return clean_p
+
+        # 3. Check Company Configured Routing Rules
+        rules = self.get_pump_details_rules()
+        fallback_all_match = None
+        module_rule_matched_but_denied = False
+
+        for r in rules:
+            if not isinstance(r, dict):
+                continue
+            r_tmpl = _clean_tmpl_path(r.get('template'))
+            if not r_tmpl:
+                continue
+
+            r_mod = (r.get('module') or 'all').strip().lower()
+            is_mod_match = (r_mod == target_mod or (target_mod != 'all' and r_mod in target_mod) or (target_mod != 'all' and target_mod in r_mod))
+
+            raw_groups = r.get('user_groups', ['all'])
+            if isinstance(raw_groups, list):
+                r_groups = [str(g).strip().lower() for g in raw_groups]
+            else:
+                r_groups = [str(g).strip().lower() for g in str(raw_groups).split(',')]
+
+            # Access check: SuperAdmin always has access; 'all' means public to all roles; otherwise role must match
+            has_access = is_super or ('all' in r_groups) or (role_str in r_groups) or (not r_groups)
+
+            if not has_access:
+                if is_mod_match:
+                    module_rule_matched_but_denied = True
+                continue
+
+            # Exact module match
+            if is_mod_match:
+                return r_tmpl
+
+            # Save general 'all' rule match as potential fallback
+            if r_mod == 'all' and fallback_all_match is None:
+                fallback_all_match = r_tmpl
+
+        if fallback_all_match:
+            return fallback_all_match
+
+        # 4. Standard Smart Fallback
+        # If fire pump selection, use dedicated fire details template (unless explicitly restricted by access rules)
+        if target_mod == 'fire' and not module_rule_matched_but_denied:
+            return 'details/fire_pump_details.html'
+
+        # If company configured a legacy single pump_details_template
         if self.pump_details_template and self.pump_details_template.strip():
-            tmpl = self.pump_details_template.strip().replace('\\', '/')
-            if not tmpl.endswith('.html'):
-                tmpl += '.html'
-            if not tmpl.startswith('details/') and '/' not in tmpl:
-                tmpl = f'details/{tmpl}'
-            return tmpl
+            clean_legacy = _clean_tmpl_path(self.pump_details_template)
+            if clean_legacy:
+                return clean_legacy
+
         return 'details/default_pump_details.html'
 
     def get_graph_styles(self):

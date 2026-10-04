@@ -164,7 +164,10 @@ def save_profile():
         current_org.default_unit_power = request.form.get('default_unit_power', 'kw').strip()
     if 'default_unit_npsh' in request.form:
         current_org.default_unit_npsh = request.form.get('default_unit_npsh', 'm').strip()
-    current_org.pump_details_template = request.form.get('pump_details_template', 'details/default_pump_details.html').strip()
+    if 'pump_details_template' in request.form:
+        current_org.pump_details_template = request.form.get('pump_details_template', 'details/default_pump_details.html').strip()
+    if 'pump_details_templates_json' in request.form:
+        current_org.pump_details_templates_json = request.form.get('pump_details_templates_json', '[]').strip()
     current_org.notes = request.form.get('notes', '').strip()
 
     # Synchronize primary unit columns with selection_defaults_json if units were submitted
@@ -455,6 +458,8 @@ def save_organisation():
     org.default_unit_power = request.form.get('default_unit_power', 'kw').strip()
     org.default_unit_npsh = request.form.get('default_unit_npsh', 'm').strip()
     org.pump_details_template = request.form.get('pump_details_template', 'details/default_pump_details.html').strip()
+    if 'pump_details_templates_json' in request.form:
+        org.pump_details_templates_json = request.form.get('pump_details_templates_json', '[]').strip()
     org.notes = request.form.get('notes', '').strip()
 
     db.session.commit()

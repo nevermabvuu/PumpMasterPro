@@ -369,6 +369,14 @@
         </a>
         {% endif %}
 
+        {% if not current_user %}
+        <a class="nav-link-anim {% if request.endpoint and 'feature' in request.endpoint %}tw-active{% endif %}"
+           href="{{ url_for('main.features_overview') }}"
+           title="Software Modules &amp; Capabilities">
+          <i class="bi bi-grid-fill"></i>Features
+        </a>
+        {% endif %}
+
         {% if current_user and (current_user.can_access('pump_data') or current_user.can_access('pump_catalogue')) %}
         <a class="nav-link-anim {% if request.endpoint and ('pump_data' in request.endpoint or 'pump_new' in request.endpoint or 'pump_edit' in request.endpoint or 'pump_view' in request.endpoint) %}tw-active{% endif %}"
            href="{{ url_for('pump_data') }}"
@@ -613,6 +621,13 @@
     <a href="{{ url_for('index') }}"
        class="mobile-nav-link {% if request.endpoint == 'index' %}tw-active{% endif %}">
       <i class="bi bi-house-door"></i>Dashboard
+    </a>
+    {% endif %}
+
+    {% if not current_user %}
+    <a href="{{ url_for('main.features_overview') }}"
+       class="mobile-nav-link {% if request.endpoint and 'feature' in request.endpoint %}tw-active{% endif %}">
+      <i class="bi bi-grid-fill"></i>Features &amp; Modules
     </a>
     {% endif %}
 

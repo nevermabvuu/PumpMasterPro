@@ -1,148 +1,424 @@
 {% extends "base.html" %}
-{% block title %}Dashboard — Pump Master Pro | Pump Selection & Curve Fitting Software{% endblock %}
-{% block meta_description %}Pump Master Pro dashboard — access pump catalogue, performance curve analysis, duty point selection, pipe network design, and multi-pump comparison tools. Free online pump sizing software for mechanical and hydraulic engineers.{% endblock %}
+{% block title %}{% if current_user %}Dashboard — Pump Master Pro | Pump Selection & Curve Fitting Software{% else %}Pump Master Pro | Industrial Pump Selection, Fire Protection & Hydraulic Sizing Software{% endif %}{% endblock %}
+
+{% block meta_description %}{% if current_user %}Pump Master Pro dashboard — access pump catalogue, performance curve analysis, duty point selection, pipe network design, and multi-pump comparison tools.{% else %}Pump Master Pro is the complete cloud engineering suite for centrifugal pump selection, NFPA 20 fire pump sizing, slurry derating, interactive pipe network modeling, and automated submittal reports.{% endif %}{% endblock %}
+
+{% block extra_head %}
+<!-- Structured JSON-LD for Search Engines -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Pump Master Pro",
+  "applicationCategory": "EngineeringSoftware",
+  "operatingSystem": "Web Browser",
+  "description": "Professional hydraulic calculation and centrifugal pump selection software covering water, slurry, viscous fluids, NFPA 20 fire pumps, and pipe networks.",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "featureList": [
+    "Centrifugal Pump Sizing & BEP Optimization",
+    "NFPA 20 and EN 12845 Fire Protection Sizing",
+    "PumpMasterPro Slurry and ANSI/HI Viscosity Derating",
+    "Interactive Darcy-Weisbach Pipe Network Designer",
+    "Automated Impeller Trim and VFD Speed Modulation",
+    "Multi-Pump Series and Parallel Array Analysis",
+    "Branded Technical PDF Datasheet Submittals",
+    "Engineering Project Portfolios and Equipment Schedules"
+  ]
+}
+</script>
+<style>
+  .marketing-hero {
+    background: radial-gradient(circle at 50% 20%, rgba(88, 166, 255, 0.12) 0%, rgba(13, 17, 23, 0.8) 70%);
+    border: 1px solid rgba(88, 166, 255, 0.2);
+    border-radius: 16px;
+  }
+  .module-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.25s ease;
+    overflow: hidden;
+  }
+  .module-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.5);
+  }
+  .pill-keyword {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: #8b949e;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 9999px;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<main>
+<main class="text-slate-100">
+
+{% if current_user %}
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
+<!-- LOGGED IN VIEW: Operational Engineering Dashboard (Maintained View)        -->
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
 <div class="page-header mb-4">
-  <h1 class="page-title"><i class="bi bi-droplet-fill text-accent mr-2"></i>Pump Master Pro</h1>
-  <p class="page-subtitle">Professional pump selection software — automatic curve fitting, hydraulic performance analysis &amp; pipe network design</p>
+  <div class="flex items-center justify-between flex-wrap gap-2">
+    <div>
+      <h1 class="page-title"><i class="bi bi-droplet-fill text-accent mr-2"></i>Pump Master Pro Dashboard</h1>
+      <p class="page-subtitle">Welcome back, {{ current_user.first_name or current_user.email }}. Active organisation: <strong>{{ current_org.name if current_org else 'Default' }}</strong></p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="{{ url_for('pump_selection') }}" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors flex items-center gap-1.5 shadow">
+        <i class="bi bi-bullseye"></i> Size a Pump
+      </a>
+      <a href="{{ url_for('pipe_network.pipe_network') }}" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-slate-200 border border-[#30363d] transition-colors flex items-center gap-1.5">
+        <i class="bi bi-diagram-3-fill"></i> Pipe Network
+      </a>
+    </div>
+  </div>
 </div>
 
-<!-- Stats row: 4 columns on lg, 2 on sm, 1 on mobile -->
+<!-- Stats row: visible only when logged in -->
 <section aria-label="Platform statistics">
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-  <div>
-    <div class="stat-card">
-      <div class="stat-icon bg-blue"><i class="bi bi-database-fill"></i></div>
-      <div>
-        <div class="stat-value">{{ pump_count }}</div>
-        <div class="stat-label">Pumps in Catalogue</div>
-      </div>
-    </div>
-  </div>
-  <div>
-    <div class="stat-card">
-      <div class="stat-icon bg-green"><i class="bi bi-graph-up"></i></div>
-      <div>
-        <div class="stat-value">4</div>
-        <div class="stat-label">Curve Types</div>
-      </div>
-    </div>
-  </div>
-  <div>
-    <div class="stat-card">
-      <div class="stat-icon bg-orange"><i class="bi bi-layers-fill"></i></div>
-      <div>
-        <div class="stat-value">3</div>
-        <div class="stat-label">Liquid Modes</div>
-      </div>
-    </div>
-  </div>
-  <div>
-    <div class="stat-card">
-      <div class="stat-icon bg-purple"><i class="bi bi-speedometer2"></i></div>
-      <div>
-        <div class="stat-value">BEP</div>
-        <div class="stat-label">Best Efficiency Analysis</div>
-      </div>
-    </div>
-  </div>
-</div>
-</section>
-
-<!-- Feature cards: 4 columns on xl, 2 on md, 1 on mobile -->
-<section aria-label="Core features">
-<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-  <div>
-    <article class="feature-card">
-      <div class="feature-icon"><i class="bi bi-database-add"></i></div>
-      <h2 class="feature-title">Pump Catalogue &amp; Data Entry</h2>
-      <p class="feature-desc">Enter real Q / H / η data points from a datasheet — performance curves are fitted automatically. Mini H-Q sparklines visible on every catalogue card.</p>
-      <a href="{{ url_for('pump_data') }}" class="inline-flex items-center gap-1 mt-auto px-3 py-1.5 rounded border text-sm font-medium transition-colors"
-         style="border-color:rgba(88,166,255,0.45);color:#58a6ff;" onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
-        <i class="bi bi-arrow-right"></i>Open Catalogue
-      </a>
-    </article>
-  </div>
-
-  <div>
-    <article class="feature-card">
-      <div class="feature-icon"><i class="bi bi-activity"></i></div>
-      <h2 class="feature-title">Pump Curve Fitting &amp; Performance Map</h2>
-      <p class="feature-desc">Full impeller-diameter family curves + closed efficiency isolines + RPM speed lines. Toggle Power Lines and System Curve overlay.</p>
-      <a href="{{ url_for('pump_data') }}" class="inline-flex items-center gap-1 mt-auto px-3 py-1.5 rounded border text-sm font-medium transition-colors"
-         style="border-color:rgba(88,166,255,0.45);color:#58a6ff;" onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
-        <i class="bi bi-arrow-right"></i>View Curves
-      </a>
-    </article>
-  </div>
-
-  <div>
-    <article class="feature-card">
-      <div class="feature-icon"><i class="bi bi-bullseye"></i></div>
-      <h2 class="feature-title">Pump Selection &amp; Sizing Tool</h2>
-      <p class="feature-desc">Enter duty point (flow rate, head, NPSHa), choose liquid type — water, slurry or viscous fluid — and get ranked pump recommendations with BEP analysis.</p>
-      <a href="{{ url_for('pump_selection') }}" class="inline-flex items-center gap-1 mt-auto px-3 py-1.5 rounded border text-sm font-medium transition-colors"
-         style="border-color:rgba(88,166,255,0.45);color:#58a6ff;" onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
-        <i class="bi bi-arrow-right"></i>Select a Pump
-      </a>
-    </article>
-  </div>
-
-  <div>
-    <article class="feature-card">
-      <div class="feature-icon"><i class="bi bi-bar-chart-steps"></i></div>
-      <h2 class="feature-title">Multi-Pump Comparison</h2>
-      <p class="feature-desc">Side-by-side curve comparison for up to 4 pumps. Overlay H-Q head, efficiency and power curves on shared axes at your operating point.</p>
-      <a href="{{ url_for('pump_comparison') }}" class="inline-flex items-center gap-1 mt-auto px-3 py-1.5 rounded border text-sm font-medium transition-colors"
-         style="border-color:rgba(88,166,255,0.45);color:#58a6ff;" onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
-        <i class="bi bi-arrow-right"></i>Compare Pumps
-      </a>
-    </article>
-  </div>
-</div>
-</section>
-
-<!-- Liquid modes info -->
-<section aria-label="Supported liquid types">
-<div>
-  <div class="info-panel">
-    <h2 class="info-panel-title"><i class="bi bi-info-circle mr-2"></i>Liquid Derating Methods</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
-      <div class="liquid-card water">
-        <div class="liquid-icon"><i class="bi bi-droplet"></i></div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div>
+      <div class="stat-card">
+        <div class="stat-icon bg-blue"><i class="bi bi-database-fill"></i></div>
         <div>
-          <strong>Clean Water</strong>
-          <p class="mb-0 text-sm text-muted">Standard pump curves, no correction applied. Basis for all derating.</p>
+          <div class="stat-value">{{ pump_count }}</div>
+          <div class="stat-label">Pumps in Catalogue</div>
         </div>
       </div>
-      <div class="liquid-card slurry">
-        <div class="liquid-icon"><i class="bi bi-layers"></i></div>
+    </div>
+    <div>
+      <div class="stat-card">
+        <div class="stat-icon bg-green"><i class="bi bi-graph-up"></i></div>
         <div>
-          <strong>Slurry (ANSI/HI Method)</strong>
-          <p class="mb-0 text-sm text-muted">HR, QR, ER derating factors. Input volumetric concentration C<sub>v</sub> and particle size d<sub>50</sub>.</p>
+          <div class="stat-value">4</div>
+          <div class="stat-label">Curve Types</div>
         </div>
       </div>
-      <div class="liquid-card viscous">
-        <div class="liquid-icon"><i class="bi bi-droplet-half"></i></div>
+    </div>
+    <div>
+      <div class="stat-card">
+        <div class="stat-icon bg-orange"><i class="bi bi-layers-fill"></i></div>
         <div>
-          <strong>Viscous Fluid (HI Method)</strong>
-          <p class="mb-0 text-sm text-muted">Hydraulic Institute correction curves. Input viscosity in cSt. CH, CQ, CE factors applied.</p>
+          <div class="stat-value">3</div>
+          <div class="stat-label">Liquid Modes</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="stat-card">
+        <div class="stat-icon bg-purple"><i class="bi bi-speedometer2"></i></div>
+        <div>
+          <div class="stat-value">BEP</div>
+          <div class="stat-label">Best Efficiency Analysis</div>
         </div>
       </div>
     </div>
   </div>
-</div>
 </section>
 
-<!-- ── SEO: Complete Engineering Capability Matrix (Optimized for Search Indexing) ── -->
-<section aria-label="Pump Master Pro Engineering Capabilities" class="mt-8 mb-4">
-  <div class="info-panel" style="border-color:rgba(88,166,255,0.18);">
+<!-- Operational Quick Action Cards -->
+<section aria-label="Core operational tools">
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+    <div>
+      <article class="feature-card">
+        <div class="feature-icon"><i class="bi bi-database-add"></i></div>
+        <h2 class="feature-title">Pump Catalogue &amp; Data Entry</h2>
+        <p class="feature-desc">Enter real Q / H / η data points from a datasheet — performance curves are fitted automatically. Mini H-Q sparklines visible on every catalogue card.</p>
+        <a href="{{ url_for('pump_data') }}" class="inline-flex items-center gap-1 mt-auto px-3 py-1.5 rounded border text-sm font-medium transition-colors"
+           style="border-color:rgba(88,166,255,0.45);color:#58a6ff;" onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
+          <i class="bi bi-arrow-right"></i>Open Catalogue
+        </a>
+      </article>
+    </div>
+
+    <div>
+      <article class="feature-card">
+        <div class="feature-icon"><i class="bi bi-activity"></i></div>
+        <h2 class="feature-title">Pump Curve Fitting &amp; Performance Map</h2>
+        <p class="feature-desc">Full impeller-diameter family curves + closed efficiency isolines + RPM speed lines. Toggle Power Lines and System Curve overlay.</p>
+        <a href="{{ url_for('pump_data') }}" class="inline-flex items-center gap-1 mt-auto px-3 py-1.5 rounded border text-sm font-medium transition-colors"
+           style="border-color:rgba(88,166,255,0.45);color:#58a6ff;" onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
+          <i class="bi bi-arrow-right"></i>View Curves
+        </a>
+      </article>
+    </div>
+
+    <div>
+      <article class="feature-card">
+        <div class="feature-icon"><i class="bi bi-bullseye"></i></div>
+        <h2 class="feature-title">Pump Selection &amp; Sizing Tool</h2>
+        <p class="feature-desc">Enter duty point (flow rate, head, NPSHa), choose liquid type — water, slurry or viscous fluid — and get ranked pump recommendations with BEP analysis.</p>
+        <a href="{{ url_for('pump_selection') }}" class="inline-flex items-center gap-1 mt-auto px-3 py-1.5 rounded border text-sm font-medium transition-colors"
+           style="border-color:rgba(88,166,255,0.45);color:#58a6ff;" onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
+          <i class="bi bi-arrow-right"></i>Select a Pump
+        </a>
+      </article>
+    </div>
+
+    <div>
+      <article class="feature-card">
+        <div class="feature-icon"><i class="bi bi-bar-chart-steps"></i></div>
+        <h2 class="feature-title">Multi-Pump Comparison</h2>
+        <p class="feature-desc">Side-by-side curve comparison for up to 4 pumps. Overlay H-Q head, efficiency and power curves on shared axes at your operating point.</p>
+        <a href="{{ url_for('pump_comparison') }}" class="inline-flex items-center gap-1 mt-auto px-3 py-1.5 rounded border text-sm font-medium transition-colors"
+           style="border-color:rgba(88,166,255,0.45);color:#58a6ff;" onmouseover="this.style.background='rgba(88,166,255,0.1)'" onmouseout="this.style.background='transparent'">
+          <i class="bi bi-arrow-right"></i>Compare Pumps
+        </a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- Additional Quick Links for Logged-In User -->
+<section aria-label="Specialized modules" class="mb-8">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <a href="{{ url_for('pump_selection') }}?filter_pump_type=fire+pump" class="p-4 rounded-xl bg-[#161b22] border border-[#30363d] hover:border-red-500/50 transition-all flex items-center gap-3 group">
+      <div class="w-10 h-10 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center text-lg">
+        <i class="bi bi-fire"></i>
+      </div>
+      <div>
+        <div class="text-sm font-bold text-white group-hover:text-red-400 transition-colors">Fire Protection Sizing</div>
+        <div class="text-xs text-[#8b949e]">NFPA 20 / 13 compliance</div>
+      </div>
+    </a>
+
+    <a href="{{ url_for('pipe_network.pipe_network') }}" class="p-4 rounded-xl bg-[#161b22] border border-[#30363d] hover:border-emerald-500/50 transition-all flex items-center gap-3 group">
+      <div class="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-lg">
+        <i class="bi bi-diagram-3-fill"></i>
+      </div>
+      <div>
+        <div class="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">Pipe Network Canvas</div>
+        <div class="text-xs text-[#8b949e]">Hydraulic friction losses</div>
+      </div>
+    </a>
+
+    <a href="{{ url_for('projects.index') }}" class="p-4 rounded-xl bg-[#161b22] border border-[#30363d] hover:border-cyan-500/50 transition-all flex items-center gap-3 group">
+      <div class="w-10 h-10 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-lg">
+        <i class="bi bi-folder2-open"></i>
+      </div>
+      <div>
+        <div class="text-sm font-bold text-white group-hover:text-cyan-400 transition-colors">Projects &amp; Selections</div>
+        <div class="text-xs text-[#8b949e]">Multi-scenario portfolios</div>
+      </div>
+    </a>
+
+    <a href="{{ url_for('main.features_overview') }}" class="p-4 rounded-xl bg-[#161b22] border border-[#30363d] hover:border-purple-500/50 transition-all flex items-center gap-3 group">
+      <div class="w-10 h-10 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center text-lg">
+        <i class="bi bi-grid-3x3-gap-fill"></i>
+      </div>
+      <div>
+        <div class="text-sm font-bold text-white group-hover:text-purple-400 transition-colors">All Modules &amp; Docs</div>
+        <div class="text-xs text-[#8b949e]">Explore feature directory</div>
+      </div>
+    </a>
+  </div>
+</section>
+
+{% else %}
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
+<!-- LOGGED OUT VIEW: Marketing & SEO Showcase (No raw database counts)          -->
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
+
+<!-- Hero Marketing Banner -->
+<section class="marketing-hero p-8 sm:p-12 mb-10">
+  <div class="max-w-4xl mx-auto text-center">
+    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/30 mb-5">
+      <i class="bi bi-award-fill"></i> Enterprise Hydraulic Engineering Suite
+    </div>
+    <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
+      The Modern Platform for Industrial Pump Sizing &amp; Hydraulic Design
+    </h1>
+    <p class="text-base sm:text-lg text-[#8b949e] max-w-2xl mx-auto leading-relaxed mb-8">
+      Pump Master Pro automates complex hydraulic equations, certified fire protection codes, slurry derating, and piping friction losses so engineers can specify the right pump in minutes.
+    </p>
+
+    <!-- Call to Actions -->
+    <div class="flex flex-wrap items-center justify-center gap-3.5">
+      <a href="{{ url_for('auth.login') }}" class="px-6 py-3 rounded-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-600/30 transition-all transform hover:-translate-y-0.5 flex items-center gap-2">
+        <i class="bi bi-box-arrow-in-right"></i> Sign In to Software
+      </a>
+      <a href="{{ url_for('auth.register') }}" class="px-6 py-3 rounded-lg text-sm font-bold text-slate-200 bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] transition-all flex items-center gap-2">
+        <i class="bi bi-shield-lock"></i> Request Engineering Access
+      </a>
+      <a href="{{ url_for('main.features_overview') }}" class="px-5 py-3 rounded-lg text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1.5">
+        Explore All Capabilities <i class="bi bi-arrow-right"></i>
+      </a>
+    </div>
+
+    <!-- Trust Badges -->
+    <div class="mt-8 pt-6 border-t border-[#30363d]/60 flex flex-wrap justify-center items-center gap-6 text-xs text-[#8b949e]">
+      <span class="flex items-center gap-1.5"><i class="bi bi-check-circle-fill text-emerald-400"></i> NFPA 20 / 13 / 14 Compliant</span>
+      <span class="flex items-center gap-1.5"><i class="bi bi-check-circle-fill text-emerald-400"></i> PumpMasterPro Slurry Derating</span>
+      <span class="flex items-center gap-1.5"><i class="bi bi-check-circle-fill text-emerald-400"></i> Darcy-Weisbach Hydraulics</span>
+      <span class="flex items-center gap-1.5"><i class="bi bi-check-circle-fill text-emerald-400"></i> Instant PDF Submittal Datasheets</span>
+    </div>
+  </div>
+</section>
+
+<!-- Module Showcase Header -->
+<div class="flex items-center justify-between mb-6 flex-wrap gap-2">
+  <div>
+    <h2 class="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+      <i class="bi bi-grid-fill text-blue-400"></i> Software Engineering Modules
+    </h2>
+    <p class="text-xs sm:text-sm text-[#8b949e]">
+      Click any module to read detailed capabilities, view authentic software screenshots, and understand real-world applications.
+    </p>
+  </div>
+  <a href="{{ url_for('main.features_overview') }}" class="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-medium">
+    View Module Directory <i class="bi bi-chevron-right"></i>
+  </a>
+</div>
+
+<!-- All 8 Comprehensive Module Marketing Cards -->
+<section aria-label="Software Modules Directory" class="mb-12">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+    
+    {% for slug, feat in features_catalog.items() %}
+    <article class="module-card group hover:border-[#58a6ff]/50">
+      
+      <!-- Top Header & Icon -->
+      <div class="p-5 pb-4">
+        <div class="flex items-start justify-between gap-2 mb-3">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0"
+               style="background: {{ feat.accent_bg }}; color: {{ feat.accent_color }}; border: 1px solid {{ feat.accent_color }}30;">
+            <i class="bi {{ feat.icon }}"></i>
+          </div>
+          <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                style="background: {{ feat.accent_bg }}; color: {{ feat.accent_color }}; border: 1px solid {{ feat.accent_color }}40;">
+            {{ feat.badge }}
+          </span>
+        </div>
+
+        <h3 class="text-base font-bold text-white group-hover:text-blue-400 transition-colors mb-2">
+          <a href="{{ url_for('main.feature_detail', slug=feat.slug) }}">
+            {{ feat.short_title }}
+          </a>
+        </h3>
+
+        <p class="text-xs text-[#8b949e] line-clamp-3 leading-relaxed mb-3">
+          {{ feat.tagline }}
+        </p>
+
+        <!-- 2 Key Capabilities / Value Highlights -->
+        <ul class="space-y-1.5 mb-3">
+          {% for point in feat.what_it_does[:2] %}
+          <li class="text-[11px] text-[#c9d1d9] flex items-start gap-1.5">
+            <i class="bi bi-check2 text-emerald-400 mt-0.5 flex-shrink-0"></i>
+            <span class="line-clamp-1">{{ point }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+
+        <!-- SEO Keywords Pills -->
+        <div class="flex flex-wrap gap-1 mb-2">
+          {% for kw in feat.seo_keywords[:2] %}
+          <span class="pill-keyword">#{{ kw }}</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Bottom Card Action Footer with Indexable Deep Links -->
+      <div class="p-4 pt-3 bg-[#0d1117] border-t border-[#30363d] flex items-center justify-between gap-2">
+        <a href="{{ url_for('main.feature_detail', slug=feat.slug) }}" 
+           class="text-xs font-semibold text-blue-400 hover:text-blue-300 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
+           title="Learn more about {{ feat.short_title }} and view screenshots">
+          Learn More &amp; Screenshots <i class="bi bi-arrow-right"></i>
+        </a>
+
+        <a href="{{ url_for('auth.login', next=feat.cta_url) }}" 
+           class="text-[11px] font-medium px-2.5 py-1 rounded bg-[#21262d] hover:bg-blue-600 text-slate-300 hover:text-white transition-colors"
+           title="Sign in to use {{ feat.short_title }}">
+          Try Module
+        </a>
+      </div>
+
+    </article>
+    {% endfor %}
+
+  </div>
+</section>
+
+<!-- Liquid Derating & Correction Highlights (Non-Technical Explanation) -->
+<section aria-label="Liquid Handling Capabilities" class="mb-10">
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6 sm:p-8">
+    <div class="flex items-center justify-between flex-wrap gap-2 mb-6 pb-4 border-b border-[#30363d]">
+      <div>
+        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+          <i class="bi bi-droplet-half text-amber-400"></i> Supported Fluids &amp; Viscosity Derating
+        </h2>
+        <p class="text-xs text-[#8b949e] mt-1 mb-0">
+          Pump performance drastically changes depending on the pumped liquid. Pump Master Pro handles multi-fluid correction automatically.
+        </p>
+      </div>
+      <a href="{{ url_for('main.feature_detail', slug='slurry-derating') }}" class="text-xs text-amber-400 hover:underline flex items-center gap-1">
+        Read Slurry &amp; Viscous Guide &rarr;
+      </a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="p-4 rounded-xl bg-[#0d1117] border border-[#30363d] hover:border-blue-500/40 transition-colors">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
+            <i class="bi bi-droplet"></i>
+          </div>
+          <h3 class="text-sm font-bold text-white">Clean Water &amp; Effluent</h3>
+        </div>
+        <p class="text-xs text-[#8b949e] leading-relaxed mb-0">
+          Standard ISO 9906 and ANSI/HI clean water curves. Zero correction factor needed — serves as the baseline for all hydraulic evaluations.
+        </p>
+      </div>
+
+      <div class="p-4 rounded-xl bg-[#0d1117] border border-[#30363d] hover:border-amber-500/40 transition-colors">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+            <i class="bi bi-layers-fill"></i>
+          </div>
+          <h3 class="text-sm font-bold text-white">Mining &amp; Heavy Slurries</h3>
+        </div>
+        <p class="text-xs text-[#8b949e] leading-relaxed mb-0">
+          PumpMasterPro empirical derating method. Corrects for particle size and concentration so pumps clear required head without motor trip-outs.
+        </p>
+      </div>
+
+      <div class="p-4 rounded-xl bg-[#0d1117] border border-[#30363d] hover:border-purple-500/40 transition-colors">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+            <i class="bi bi-funnel-fill"></i>
+          </div>
+          <h3 class="text-sm font-bold text-white">High Viscosity Liquids</h3>
+        </div>
+        <p class="text-xs text-[#8b949e] leading-relaxed mb-0">
+          Hydraulic Institute (ANSI/HI) viscosity correction for heavy oils, syrups, polymers, and chemical pastes with dynamic power recalculation.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endif %}
+
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
+<!-- SEO: Complete Engineering Capability Matrix (Optimized for Search Indexing) -->
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
+<section aria-label="Pump Master Pro Engineering Capabilities" class="mt-8 mb-6">
+  <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6 sm:p-8">
     <div class="flex items-center justify-between flex-wrap gap-2 mb-4 border-b border-[#30363d] pb-3">
       <div>
-        <h2 class="info-panel-title text-base font-bold text-white mb-0">
-          <i class="bi bi-gear-wide-connected text-[#58a6ff] mr-2"></i>Comprehensive Pump Engineering &amp; Sizing Suite
+        <h2 class="text-base font-bold text-white mb-0 flex items-center gap-2">
+          <i class="bi bi-gear-wide-connected text-[#58a6ff]"></i>
+          Comprehensive Pump Engineering &amp; Sizing Index
         </h2>
         <p class="text-xs text-[#8b949e] mt-1 mb-0">
           Industrial hydraulic calculations, pump curves generation, multi-fluid derating, pipe network analysis, and submittal engineering.
@@ -151,18 +427,19 @@
       <div class="flex flex-wrap gap-1.5">
         <span class="px-2 py-0.5 rounded text-[11px] font-mono bg-[#58a6ff]/10 text-[#58a6ff] border border-[#58a6ff]/30">ISO 9906</span>
         <span class="px-2 py-0.5 rounded text-[11px] font-mono bg-[#3fb950]/10 text-[#3fb950] border border-[#3fb950]/30">ANSI/HI 14.6</span>
+        <span class="px-2 py-0.5 rounded text-[11px] font-mono bg-[#f85149]/10 text-[#f85149] border border-[#f85149]/30">NFPA 20</span>
         <span class="px-2 py-0.5 rounded text-[11px] font-mono bg-[#bc8cff]/10 text-[#bc8cff] border border-[#bc8cff]/30">API 610</span>
       </div>
     </div>
 
-    <!-- 10 Target Engineering Keyword Pillars -->
+    <!-- 10 Target Engineering Keyword Pillars with Direct Links -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs text-[#8b949e]">
       
       <!-- 1. Pump Sizing -->
-      <div class="p-3 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
-        <h3 class="text-xs font-semibold text-white flex items-center gap-1.5 mb-1.5">
-          <i class="bi bi-arrows-angle-expand text-[#58a6ff]"></i>
-          <strong>Pump Sizing</strong>
+      <div class="p-3.5 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
+        <h3 class="text-xs font-semibold text-white flex items-center justify-between mb-1.5">
+          <span class="flex items-center gap-1.5"><i class="bi bi-arrows-angle-expand text-[#58a6ff]"></i> <strong>Pump Sizing</strong></span>
+          <a href="{{ url_for('main.feature_detail', slug='pump-selection') }}" class="text-[10px] text-blue-400 hover:underline">View Module &rarr;</a>
         </h3>
         <p class="mb-0 leading-relaxed">
           Accurate duty point matching calculating total dynamic head (TDH), operating flow rate Q, and NPSH margins across clean water, slurry, and high-viscosity applications.
@@ -170,107 +447,96 @@
       </div>
 
       <!-- 2. Pump Selection -->
-      <div class="p-3 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
-        <h3 class="text-xs font-semibold text-white flex items-center gap-1.5 mb-1.5">
-          <i class="bi bi-bullseye text-[#3fb950]"></i>
-          <strong>Pump Selection</strong>
+      <div class="p-3.5 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
+        <h3 class="text-xs font-semibold text-white flex items-center justify-between mb-1.5">
+          <span class="flex items-center gap-1.5"><i class="bi bi-bullseye text-[#3fb950]"></i> <strong>Pump Selection</strong></span>
+          <a href="{{ url_for('main.feature_detail', slug='pump-selection') }}" class="text-[10px] text-blue-400 hover:underline">View Module &rarr;</a>
         </h3>
         <p class="mb-0 leading-relaxed">
           Multi-parameter search engine ranking pumps by hydraulic efficiency (η), proximity to Best Efficiency Point (BEP), motor power rating, and speed compliance.
         </p>
       </div>
 
-      <!-- 3. Pump Monitoring -->
-      <div class="p-3 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
-        <h3 class="text-xs font-semibold text-white flex items-center gap-1.5 mb-1.5">
-          <i class="bi bi-speedometer text-[#f0883e]"></i>
-          <strong>Pump Monitoring</strong>
+      <!-- 3. Fire Protection Pumps -->
+      <div class="p-3.5 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
+        <h3 class="text-xs font-semibold text-white flex items-center justify-between mb-1.5">
+          <span class="flex items-center gap-1.5"><i class="bi bi-fire text-[#f85149]"></i> <strong>Fire Protection Pumps</strong></span>
+          <a href="{{ url_for('main.feature_detail', slug='fire-protection') }}" class="text-[10px] text-red-400 hover:underline">View Module &rarr;</a>
         </h3>
         <p class="mb-0 leading-relaxed">
-          Real-time telemetry tracking of live operating points against rated performance envelopes, detecting cavitation risk, cavitation erosion, and off-design vibration.
+          NFPA 20, NFPA 13, and EN 12845 life safety compliance. Automated churn pressure limits, 150% flow overload margins, and fire water tank sizing.
         </p>
       </div>
 
-      <!-- 4. Fluid Calculations -->
-      <div class="p-3 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
-        <h3 class="text-xs font-semibold text-white flex items-center gap-1.5 mb-1.5">
-          <i class="bi bi-droplet-half text-[#79c0ff]"></i>
-          <strong>Fluid Calculations</strong>
+      <!-- 4. Slurry & Viscous Derating -->
+      <div class="p-3.5 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
+        <h3 class="text-xs font-semibold text-white flex items-center justify-between mb-1.5">
+          <span class="flex items-center gap-1.5"><i class="bi bi-layers-fill text-[#e3b341]"></i> <strong>Slurry Derating</strong></span>
+          <a href="{{ url_for('main.feature_detail', slug='slurry-derating') }}" class="text-[10px] text-yellow-400 hover:underline">View Module &rarr;</a>
         </h3>
         <p class="mb-0 leading-relaxed">
-          Dynamic fluid corrections including ANSI/HI viscous derating (CH, CQ, CE factors), slurry specific gravity, particle size d<sub>50</sub>, and vapor pressure determination.
+          PumpMasterPro slurry derating calculating HR, QR, ER correction factors based on solids concentration Cv and particle size d50, plus ANSI/HI viscous fluid curves.
         </p>
       </div>
 
-      <!-- 5. Pipe Network -->
-      <div class="p-3 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
-        <h3 class="text-xs font-semibold text-white flex items-center gap-1.5 mb-1.5">
-          <i class="bi bi-diagram-3 text-[#d2a8ff]"></i>
-          <strong>Pipe Network</strong>
+      <!-- 5. Pipe Network Hydraulics -->
+      <div class="p-3.5 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
+        <h3 class="text-xs font-semibold text-white flex items-center justify-between mb-1.5">
+          <span class="flex items-center gap-1.5"><i class="bi bi-diagram-3-fill text-[#22c55e]"></i> <strong>Pipe Network</strong></span>
+          <a href="{{ url_for('main.feature_detail', slug='pipe-network') }}" class="text-[10px] text-emerald-400 hover:underline">View Module &rarr;</a>
         </h3>
         <p class="mb-0 leading-relaxed">
-          Hydraulic modeling for series and parallel pipe networks using Darcy-Weisbach friction loss, Colebrook-White friction factors, elevation changes, and fitting K-values.
+          Hydraulic modeling for series and parallel piping networks using Darcy-Weisbach friction loss, Colebrook-White friction factors, static elevation, and fitting K-values.
         </p>
       </div>
 
-      <!-- 6. Pump Catalogue -->
-      <div class="p-3 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
-        <h3 class="text-xs font-semibold text-white flex items-center gap-1.5 mb-1.5">
-          <i class="bi bi-journal-bookmark-fill text-[#58a6ff]"></i>
-          <strong>Pump Catalogue</strong>
+      <!-- 6. Curve Digitization & Fitting -->
+      <div class="p-3.5 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
+        <h3 class="text-xs font-semibold text-white flex items-center justify-between mb-1.5">
+          <span class="flex items-center gap-1.5"><i class="bi bi-graph-up text-[#3fb950]"></i> <strong>Curve Fitting</strong></span>
+          <a href="{{ url_for('main.feature_detail', slug='curve-management') }}" class="text-[10px] text-green-400 hover:underline">View Module &rarr;</a>
         </h3>
         <p class="mb-0 leading-relaxed">
-          Centralized OEM database with manufacturer specifications, impeller trim diameters, motor speeds (2-pole to 8-pole), flange ratings, and weight data.
+          Polynomial regression curve fitting for H-Q head, Efficiency (η), Power consumption (kW), NPSHr, affinity-law impeller trims, and closed iso-efficiency contours.
         </p>
       </div>
 
-      <!-- 7. Pump Curves Generation -->
-      <div class="p-3 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
-        <h3 class="text-xs font-semibold text-white flex items-center gap-1.5 mb-1.5">
-          <i class="bi bi-graph-up text-[#3fb950]"></i>
-          <strong>Pump Curves Generation</strong>
+      <!-- 7. Multi-Pump Arrays & VSD -->
+      <div class="p-3.5 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
+        <h3 class="text-xs font-semibold text-white flex items-center justify-between mb-1.5">
+          <span class="flex items-center gap-1.5"><i class="bi bi-speedometer2 text-[#a371f7]"></i> <strong>Multi-Pump &amp; VSD</strong></span>
+          <a href="{{ url_for('main.feature_detail', slug='multi-pump-vsd') }}" class="text-[10px] text-purple-400 hover:underline">View Module &rarr;</a>
         </h3>
         <p class="mb-0 leading-relaxed">
-          Automated regression algorithms creating fitted polynomial curves for H-Q head, Efficiency (η), Power consumption (kW), NPSHr, and affinity-law trimmed speeds.
+          Parallel pump flow summation, series pressure boosting, and Variable Frequency Drive (VFD) speed curves for energy optimization and booster stations.
         </p>
       </div>
 
-      <!-- 8. Pump Materials -->
-      <div class="p-3 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
-        <h3 class="text-xs font-semibold text-white flex items-center gap-1.5 mb-1.5">
-          <i class="bi bi-shield-check text-[#f0883e]"></i>
-          <strong>Pump Materials</strong>
+      <!-- 8. Projects & Portfolios -->
+      <div class="p-3.5 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
+        <h3 class="text-xs font-semibold text-white flex items-center justify-between mb-1.5">
+          <span class="flex items-center gap-1.5"><i class="bi bi-folder2-open text-[#38bdf8]"></i> <strong>Projects &amp; Portfolios</strong></span>
+          <a href="{{ url_for('main.feature_detail', slug='projects-management') }}" class="text-[10px] text-cyan-400 hover:underline">View Module &rarr;</a>
         </h3>
         <p class="mb-0 leading-relaxed">
-          Metallurgy and chemical compatibility specs including Cast Iron, Ductile Iron, 316 Stainless Steel, Duplex 2205, Super Duplex 2507, Hastelloy, and CD4MCu.
+          Multi-scenario pump project workspaces. Group selections by client, job site, duty point, and export unified equipment schedules.
         </p>
       </div>
 
-      <!-- 9. Quotations & Submittals -->
-      <div class="p-3 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
-        <h3 class="text-xs font-semibold text-white flex items-center gap-1.5 mb-1.5">
-          <i class="bi bi-receipt text-[#79c0ff]"></i>
-          <strong>Quotations &amp; Submittals</strong>
+      <!-- 9. Technical Reports & Submittals -->
+      <div class="p-3.5 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors">
+        <h3 class="text-xs font-semibold text-white flex items-center justify-between mb-1.5">
+          <span class="flex items-center gap-1.5"><i class="bi bi-file-earmark-pdf-fill text-[#ff7b72]"></i> <strong>Reports &amp; Submittals</strong></span>
+          <a href="{{ url_for('main.feature_detail', slug='technical-reports') }}" class="text-[10px] text-red-400 hover:underline">View Module &rarr;</a>
         </h3>
         <p class="mb-0 leading-relaxed">
-          Instant engineering quotations, client submittal packages, estimated pump and motor pricing, technical datasheets, and printable PDF project reports.
-        </p>
-      </div>
-
-      <!-- 10. Pump Drawings & Schematics -->
-      <div class="p-3 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition-colors md:col-span-2 lg:col-span-3">
-        <h3 class="text-xs font-semibold text-white flex items-center gap-1.5 mb-1.5">
-          <i class="bi bi-pencil-ruler text-[#bc8cff]"></i>
-          <strong>Pump Drawings &amp; Schematics</strong>
-        </h3>
-        <p class="mb-0 leading-relaxed">
-          General arrangement (GA) dimensional drawings, suction and discharge flange configurations, footprint mounting patterns, cross-sectional views, and CAD installation dimensions.
+          Publication-ready PDF engineering datasheets, branded client submittals, electric motor schedules, and compliance certificates for tender submissions.
         </p>
       </div>
 
     </div>
   </div>
 </section>
+
 </main>
 {% endblock %}
-

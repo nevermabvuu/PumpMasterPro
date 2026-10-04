@@ -455,11 +455,11 @@ with app.app_context():
         # Seed default supplier if table is empty
         if Supplier.query.count() == 0:
             def_sup = Supplier(
-                name="Weir Minerals / Warman",
-                contact_email="engineering@weirminerals.com",
-                website="www.global.weir",
+                name="PumpMasterPro Slurry Division",
+                contact_email="engineering@pumpmasterpro.example",
+                website="www.pumpmasterpro.example",
                 phone="+1-800-PUMPS",
-                address="Global Slurry & Heavy Duty Engineering Division"
+                address="Slurry & Heavy Duty Engineering Division"
             )
             db.session.add(def_sup)
             db.session.commit()
@@ -632,11 +632,12 @@ def enforce_login_gatekeeper():
     if request.endpoint == 'static' or request.path.startswith('/static') or request.path == '/favicon.ico':
         return None
 
-    # 2. Allow public authentication endpoints, public catalog APIs, health check, and SEO files
-    public_endpoints = {'auth.login', 'auth.register', 'auth.logout', 'favicon', 'robots_txt', 'sitemap_xml', 'google_verification_file', 'pipe_network.get_standard_pipes', 'main.index', 'healthz'}
-    public_paths = {'/', '/login', '/register', '/request-access', '/logout', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/healthz'}
+    # 2. Allow public authentication endpoints, public catalog APIs, feature marketing pages, health check, and SEO files
+    public_endpoints = {'auth.login', 'auth.register', 'auth.logout', 'favicon', 'robots_txt', 'sitemap_xml', 'google_verification_file', 'pipe_network.get_standard_pipes', 'main.index', 'main.features_overview', 'main.feature_detail', 'healthz'}
+    public_paths = {'/', '/login', '/register', '/request-access', '/logout', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/healthz', '/features'}
     if (request.endpoint in public_endpoints or 
         request.path in public_paths or 
+        request.path.startswith('/features') or
         request.path.startswith('/api/pipe-network/standard-pipes') or 
         request.path.endswith('/manifest.json') or
         (request.path.startswith('/google') and request.path.endswith('.html'))):
@@ -709,6 +710,8 @@ def robots_txt():
     base_url = get_canonical_base_url()
     content = f"""User-agent: *
 Allow: /
+Allow: /features
+Allow: /features/
 Allow: /login
 Allow: /register
 Disallow: /api/
@@ -728,21 +731,31 @@ Sitemap: {base_url}/sitemap.xml
 # ── SEO: Dynamic XML sitemap for search engine indexing ──
 @app.route('/sitemap.xml')
 def sitemap_xml():
-    """Generate a dynamic XML sitemap listing all public, indexable pages."""
+    """Generate a dynamic XML sitemap listing all public, indexable pages and marketing feature pages."""
     from datetime import datetime
+    from features_data import FEATURES_CATALOG
     base_url = get_canonical_base_url()
     today = datetime.utcnow().strftime('%Y-%m-%d')
 
     # Define public pages with their change frequency and priority
     pages = [
         {'loc': '/',                  'changefreq': 'weekly',  'priority': '1.0'},
-        {'loc': '/login',             'changefreq': 'monthly', 'priority': '0.9'},
+        {'loc': '/features',          'changefreq': 'weekly',  'priority': '0.9'},
+        {'loc': '/login',             'changefreq': 'monthly', 'priority': '0.8'},
         {'loc': '/register',          'changefreq': 'monthly', 'priority': '0.7'},
         {'loc': '/pump-data',         'changefreq': 'weekly',  'priority': '0.8'},
         {'loc': '/pump-selection',    'changefreq': 'weekly',  'priority': '0.9'},
         {'loc': '/pump-comparison',   'changefreq': 'weekly',  'priority': '0.7'},
         {'loc': '/pipe-network',      'changefreq': 'weekly',  'priority': '0.8'},
     ]
+
+    # Add each dedicated marketing feature landing page
+    for slug in FEATURES_CATALOG.keys():
+        pages.append({
+            'loc': f'/features/{slug}',
+            'changefreq': 'weekly',
+            'priority': '0.85'
+        })
 
     xml_entries = []
     for page in pages:

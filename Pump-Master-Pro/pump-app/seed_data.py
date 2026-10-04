@@ -382,12 +382,12 @@ def seed_pumps(app):
 
         pumps = []
 
-        # ── Warman 4/3 C-AH ─────────────────────────────────────────────────
+        # ── PumpMasterPro 4/3 C-AH ─────────────────────────────────────────────────
         h = _hq(46.0, 80.0)
         e = _eff(72.0, 44.0, 80.0)
         p = _pow(h, e, 44.0, 80.0)
         pumps.append(Pump(
-            name='Warman 4/3 C-AH', manufacturer='Weir Minerals',
+            name='PumpMasterPro 4/3 C-AH', manufacturer='PumpMasterPro',
             model_number='4/3 C-AH', size='4/3 C-AH',
             speed_rpm=1450, impeller_dia_mm=330,
             impeller_diameters='330;305;280;255;230',
@@ -402,12 +402,12 @@ def seed_pumps(app):
             notes='Standard duty slurry pump. Up to 40% w/w abrasive slurry.',
         ))
 
-        # ── Warman 6/4 D-AH ─────────────────────────────────────────────────
+        # ── PumpMasterPro 6/4 D-AH ─────────────────────────────────────────────────
         h = _hq(58.0, 350.0)
         e = _eff(80.0, 195.0, 350.0)
         p = _pow(h, e, 195.0, 350.0)
         pumps.append(Pump(
-            name='Warman 6/4 D-AH', manufacturer='Weir Minerals',
+            name='PumpMasterPro 6/4 D-AH', manufacturer='PumpMasterPro',
             model_number='6/4 D-AH', size='6/4 D-AH',
             speed_rpm=1000, impeller_dia_mm=480,
             impeller_diameters='480;450;420;390;360',
@@ -422,12 +422,12 @@ def seed_pumps(app):
             notes='Heavy duty slurry pump for coarse and abrasive slurries.',
         ))
 
-        # ── Warman 8/6 E-AH ─────────────────────────────────────────────────
+        # ── PumpMasterPro 8/6 E-AH ─────────────────────────────────────────────────
         h = _hq(72.0, 800.0)
         e = _eff(82.0, 440.0, 800.0)
         p = _pow(h, e, 440.0, 800.0)
         pumps.append(Pump(
-            name='Warman 8/6 E-AH', manufacturer='Weir Minerals',
+            name='PumpMasterPro 8/6 E-AH', manufacturer='PumpMasterPro',
             model_number='8/6 E-AH', size='8/6 E-AH',
             speed_rpm=750, impeller_dia_mm=610,
             impeller_diameters='610;570;530;490;450',
@@ -442,12 +442,12 @@ def seed_pumps(app):
             notes='Large slurry pump for high flow, coarse slurry duties.',
         ))
 
-        # ── Warman 10/8 F-M ─────────────────────────────────────────────────
+        # ── PumpMasterPro 10/8 F-M ─────────────────────────────────────────────────
         h = _hq(82.0, 1600.0)
         e = _eff(80.0, 880.0, 1600.0)
         p = _pow(h, e, 880.0, 1600.0)
         pumps.append(Pump(
-            name='Warman 10/8 F-MTest', manufacturer='Weir Minerals',
+            name='PumpMasterPro 10/8 F-MTest', manufacturer='PumpMasterPro',
             model_number='10/8 F-M', size='10/8 F-M',
             speed_rpm=600, impeller_dia_mm=760,
             impeller_diameters='760;710;660;610;560',

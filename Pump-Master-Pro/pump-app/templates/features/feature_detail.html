@@ -1,0 +1,549 @@
+{% extends "base.html" %}
+
+{% block title %}{{ feature.title }} | Pump Master Pro Engineering Software{% endblock %}
+
+{% block extra_head %}
+<!-- Primary Meta Tags -->
+<meta name="title" content="{{ feature.title }} — Pump Master Pro">
+<meta name="description" content="{{ feature.meta_description }}">
+<meta name="keywords" content="{{ feature.seo_keywords | join(', ') }}">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ request.base_url }}">
+<meta property="og:title" content="{{ feature.title }}">
+<meta property="og:description" content="{{ feature.meta_description }}">
+<meta property="og:image" content="{{ url_for('static', filename=feature.screenshot, _external=True) }}">
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary_large_image">
+<meta property="twitter:url" content="{{ request.base_url }}">
+<meta property="twitter:title" content="{{ feature.title }}">
+<meta property="twitter:description" content="{{ feature.meta_description }}">
+<meta property="twitter:image" content="{{ url_for('static', filename=feature.screenshot, _external=True) }}">
+
+<style>
+  .feature-hero {
+    background: radial-gradient(circle at 50% 0%, {{ feature.accent_bg }} 0%, rgba(13, 17, 23, 0.95) 75%);
+    border-bottom: 1px solid rgba(48, 54, 61, 0.6);
+  }
+  .browser-frame {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 30px {{ feature.accent_bg }};
+    overflow: hidden;
+  }
+  .browser-bar {
+    background: #0d1117;
+    border-bottom: 1px solid #21262d;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .browser-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .browser-url {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 3px 12px;
+    font-size: 11px;
+    color: #8b949e;
+    font-family: monospace;
+    flex: 1;
+    max-width: 480px;
+  }
+  .feature-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    transition: transform 0.3s ease;
+  }
+  .benefit-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 1.25rem;
+    transition: all 0.2s ease;
+  }
+  .benefit-card:hover {
+    border-color: {{ feature.accent_color }};
+    transform: translateY(-2px);
+  }
+  .capability-pill {
+    background: rgba(22, 27, 34, 0.8);
+    border: 1px solid #30363d;
+    border-left: 3px solid {{ feature.accent_color }};
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+  .carousel-tab-btn {
+    border: 1px solid #30363d;
+    cursor: pointer;
+    user-select: none;
+  }
+  .carousel-tab-btn:hover:not(.active-slide-tab) {
+    background: #21262d;
+    color: #f0f6fc;
+    border-color: #484f58;
+  }
+  .carousel-tab-btn.active-slide-tab {
+    background: {{ feature.accent_bg }} !important;
+    color: {{ feature.accent_color }} !important;
+    border-color: {{ feature.accent_color }} !important;
+    box-shadow: 0 0 12px {{ feature.accent_bg }};
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .carousel-slide-item:not(.hidden) {
+    animation: fadeInSlide 0.35s ease-out;
+  }
+  @keyframes fadeInSlide {
+    from { opacity: 0.4; transform: scale(0.998); }
+    to { opacity: 1; transform: scale(1); }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen text-slate-100 pb-16">
+  <!-- Top Breadcrumb & Navigation -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2">
+    <nav class="flex items-center text-xs text-[#8b949e] space-x-2">
+      <a href="{{ url_for('main.index') }}" class="hover:text-blue-400 transition-colors flex items-center gap-1">
+        <i class="bi bi-house-door"></i> Home
+      </a>
+      <span>/</span>
+      <a href="{{ url_for('main.features_overview') }}" class="hover:text-blue-400 transition-colors">
+        Features
+      </a>
+      <span>/</span>
+      <span class="text-white font-medium">{{ feature.short_title }}</span>
+    </nav>
+  </div>
+
+  <!-- Hero Header Section -->
+  <section class="feature-hero py-12 px-4 sm:px-6 lg:px-8 mb-8">
+    <div class="max-w-5xl mx-auto text-center">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4"
+           style="background: {{ feature.accent_bg }}; color: {{ feature.accent_color }}; border: 1px solid {{ feature.accent_color }}40;">
+        <i class="bi {{ feature.icon }}"></i> {{ feature.badge }}
+      </div>
+      <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-4 leading-tight">
+        {{ feature.title }}
+      </h1>
+      <p class="text-lg sm:text-xl text-[#8b949e] max-w-3xl mx-auto leading-relaxed mb-8">
+        {{ feature.tagline }}
+      </p>
+
+      <div class="flex flex-wrap items-center justify-center gap-4">
+        {% if current_user %}
+        <a href="{{ feature.cta_url }}" 
+           class="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold text-white shadow-lg transition-all transform hover:-translate-y-0.5"
+           style="background: linear-gradient(135deg, {{ feature.accent_color }}, #1f6feb);">
+          <i class="bi bi-play-circle-fill"></i> {{ feature.cta_text }}
+        </a>
+        {% else %}
+        <a href="{{ url_for('auth.login', next=feature.cta_url) }}" 
+           class="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold text-white shadow-lg transition-all transform hover:-translate-y-0.5"
+           style="background: linear-gradient(135deg, {{ feature.accent_color }}, #1f6feb);">
+          <i class="bi bi-box-arrow-in-right"></i> Try In Software
+        </a>
+        <a href="{{ url_for('auth.register') }}" 
+           class="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold text-slate-200 bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] transition-all">
+          <i class="bi bi-person-plus"></i> Request Access
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content & Software Screenshot -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+    
+    <!-- Authentic Software Screenshot Display (With Carousel / Slideshow support) -->
+    <div class="browser-frame" id="featureMediaFrame">
+      <div class="browser-bar">
+        <div class="flex gap-1.5">
+          <span class="browser-dot" style="background: #ff5f56;"></span>
+          <span class="browser-dot" style="background: #ffbd2e;"></span>
+          <span class="browser-dot" style="background: #27c93f;"></span>
+        </div>
+        <div class="browser-url">
+          <i class="bi bi-lock-fill text-emerald-400 mr-1"></i> https://pumpmaster.pro{{ feature.cta_url }}
+        </div>
+        <div class="ml-auto text-xs text-[#8b949e] hidden sm:flex items-center gap-2">
+          {% if feature.carousel %}
+          <button type="button" id="btnCarouselPlayPause" onclick="toggleCarouselAutoplay()"
+                  class="px-2 py-0.5 rounded text-[11px] bg-[#161b22] hover:bg-[#21262d] border border-[#30363d] text-slate-300 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Pause / Resume Autoplay">
+            <i class="bi bi-pause-fill text-amber-400" id="carouselPlayPauseIcon"></i>
+            <span id="carouselPlayPauseText">Autoplay</span>
+          </button>
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 
+          Interactive Carousel ({{ feature.carousel|length }} Views)
+          {% else %}
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span> Real Software Interface
+          {% endif %}
+        </div>
+      </div>
+
+      {% if feature.carousel %}
+      <!-- Interactive Slideshow Tabs Header -->
+      <div class="bg-[#111620] border-b border-[#30363d] px-3 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-[#8b949e] px-1.5 shrink-0 flex items-center gap-1">
+          <i class="bi bi-collection-play text-blue-400"></i> Standards &amp; Views:
+        </span>
+        {% for slide in feature.carousel %}
+        <button type="button" 
+                onclick="setCarouselSlide({{ loop.index0 }})"
+                id="carousel-tab-{{ loop.index0 }}"
+                class="carousel-tab-btn px-2.5 py-1 rounded-md text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 {{ 'active-slide-tab' if loop.first else 'text-[#8b949e] bg-[#161b22]' }}">
+          <i class="bi {{ slide.icon or 'bi-layers' }} text-xs"></i>
+          <span>{{ slide.title }}</span>
+        </button>
+        {% endfor %}
+      </div>
+
+      <!-- Slideshow Images Container -->
+      <div class="bg-[#0d1117] p-2 sm:p-4 relative group">
+        {% for slide in feature.carousel %}
+        <div id="carousel-slide-{{ loop.index0 }}" 
+             class="carousel-slide-item {{ '' if loop.first else 'hidden' }}"
+             data-index="{{ loop.index0 }}"
+             data-title="{{ slide.title }}"
+             data-badge="{{ slide.badge }}"
+             data-caption="{{ slide.caption }}">
+          <img src="{{ url_for('static', filename=slide.image) }}" 
+               alt="{{ slide.title }} — {{ feature.title }} actual software screenshot" 
+               class="feature-img rounded-lg shadow-md border border-[#30363d]"
+               loading="eager">
+        </div>
+        {% endfor %}
+
+        <!-- Prev / Next Navigation Arrows -->
+        <button type="button" onclick="prevCarouselSlide()" aria-label="Previous view"
+                class="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-[#161b22]/90 hover:bg-[#21262d] text-white border border-[#30363d] shadow-xl flex items-center justify-center transition-all opacity-70 hover:opacity-100 backdrop-blur-sm z-10 cursor-pointer">
+          <i class="bi bi-chevron-left text-base"></i>
+        </button>
+        <button type="button" onclick="nextCarouselSlide()" aria-label="Next view"
+                class="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-[#161b22]/90 hover:bg-[#21262d] text-white border border-[#30363d] shadow-xl flex items-center justify-center transition-all opacity-70 hover:opacity-100 backdrop-blur-sm z-10 cursor-pointer">
+          <i class="bi bi-chevron-right text-base"></i>
+        </button>
+      </div>
+
+      <!-- Slide Caption & Code Standard Indicator Footer -->
+      <div class="bg-[#111620] border-t border-[#30363d] px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-start sm:items-center gap-3 min-w-0">
+          <span id="carouselSlideBadge" class="px-2 py-0.5 rounded text-[11px] font-mono font-bold shrink-0"
+                style="background: {{ feature.accent_bg }}; color: {{ feature.accent_color }}; border: 1px solid {{ feature.accent_color }}40;">
+            {{ feature.carousel[0].badge }}
+          </span>
+          <div class="min-w-0">
+            <div id="carouselSlideTitle" class="text-xs sm:text-sm font-bold text-white leading-tight">
+              {{ feature.carousel[0].title }}
+            </div>
+            <p id="carouselSlideCaption" class="text-xs text-[#8b949e] mt-0.5 leading-relaxed">
+              {{ feature.carousel[0].caption }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Dot Indicators -->
+        <div class="flex items-center gap-1.5 shrink-0 self-center sm:self-auto">
+          {% for slide in feature.carousel %}
+          <button type="button" onclick="setCarouselSlide({{ loop.index0 }})"
+                  id="carousel-dot-{{ loop.index0 }}"
+                  aria-label="View {{ loop.index }}"
+                  class="carousel-dot-btn w-2.5 h-2.5 rounded-full transition-all cursor-pointer {{ 'scale-125' if loop.first else 'bg-[#30363d] hover:bg-[#8b949e]' }}"
+                  style="{{ 'background-color: ' ~ feature.accent_color ~ ';' if loop.first else '' }}">
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% else %}
+      <!-- Single Software Screenshot Display -->
+      <div class="bg-[#0d1117] p-2 sm:p-4">
+        <img src="{{ url_for('static', filename=feature.screenshot) }}" 
+             alt="{{ feature.title }} — Actual software screenshot" 
+             class="feature-img rounded-lg shadow-md border border-[#30363d]"
+             loading="eager">
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Overview & Value Proposition -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+      <!-- Left 2 Cols: Capabilities & Applications -->
+      <div class="lg:col-span-2 space-y-8">
+        <!-- Overview summary -->
+        <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6 sm:p-8">
+          <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <i class="bi bi-info-circle text-blue-400"></i> Module Overview
+          </h2>
+          <p class="text-[#8b949e] text-base leading-relaxed">
+            {{ feature.summary }}
+          </p>
+        </div>
+
+        <!-- What the software does -->
+        <div class="space-y-4">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <i class="bi bi-check2-circle text-emerald-400"></i> What You Can Do With This Module
+          </h2>
+          <div class="space-y-3">
+            {% for item in feature.what_it_does %}
+            <div class="capability-pill">
+              <div class="flex items-start gap-3">
+                <i class="bi bi-arrow-right-circle-fill text-blue-400 mt-0.5 text-base flex-shrink-0"></i>
+                <span class="text-slate-200 text-sm leading-relaxed">{{ item }}</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Key Applications -->
+        <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6">
+          <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <i class="bi bi-building text-amber-400"></i> Primary Applications & Industries
+          </h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {% for app in feature.applications %}
+            <div class="flex items-center gap-2.5 text-sm text-[#c9d1d9] bg-[#0d1117] px-3.5 py-2.5 rounded-lg border border-[#30363d]/60">
+              <i class="bi bi-check-lg text-emerald-400"></i>
+              <span>{{ app }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right 1 Col: Key Benefits, Keywords & Navigation -->
+      <div class="space-y-6">
+        
+        <!-- Key Benefits Card -->
+        <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-6">
+          <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+            <i class="bi bi-lightning-charge-fill text-yellow-400"></i> Why Engineers Choose It
+          </h3>
+          <ul class="space-y-3">
+            {% for benefit in feature.benefits %}
+            <li class="flex items-start gap-2.5 text-sm text-[#8b949e]">
+              <i class="bi bi-shield-check text-blue-400 mt-0.5 flex-shrink-0"></i>
+              <span class="text-slate-200 leading-snug">{{ benefit }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+
+          <div class="mt-6 pt-5 border-t border-[#30363d]">
+            {% if current_user %}
+            <a href="{{ feature.cta_url }}" 
+               class="w-full inline-flex justify-center items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-colors">
+              {{ feature.cta_text }} <i class="bi bi-arrow-right"></i>
+            </a>
+            {% else %}
+            <a href="{{ url_for('auth.login', next=feature.cta_url) }}" 
+               class="w-full inline-flex justify-center items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-colors">
+              Access This Module <i class="bi bi-arrow-right"></i>
+            </a>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- SEO Keywords & Tags -->
+        <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-5">
+          <h4 class="text-xs font-semibold text-[#8b949e] uppercase tracking-wider mb-3">
+            Industry Topics & Keywords
+          </h4>
+          <div class="flex flex-wrap gap-1.5">
+            {% for kw in feature.seo_keywords %}
+            <span class="text-xs px-2.5 py-1 rounded bg-[#0d1117] text-[#8b949e] border border-[#30363d]">
+              #{{ kw }}
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Explore Other Modules -->
+        <div class="bg-[#161b22] border border-[#30363d] rounded-xl p-5">
+          <h4 class="text-xs font-semibold text-[#8b949e] uppercase tracking-wider mb-3">
+            Other Engineering Modules
+          </h4>
+          <div class="space-y-2">
+            {% for rel in related_features %}
+            <a href="{{ url_for('main.feature_detail', slug=rel.slug) }}" 
+               class="flex items-center justify-between p-2.5 rounded-lg bg-[#0d1117] hover:bg-[#21262d] border border-[#30363d]/60 transition-colors group">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <i class="bi {{ rel.icon }} text-sm" style="color: {{ rel.accent_color }};"></i>
+                <span class="text-xs font-medium text-slate-200 truncate group-hover:text-blue-400">
+                  {{ rel.short_title }}
+                </span>
+              </div>
+              <i class="bi bi-chevron-right text-xs text-[#8b949e] group-hover:translate-x-0.5 transition-transform"></i>
+            </a>
+            {% endfor %}
+          </div>
+          <div class="mt-3 text-center">
+            <a href="{{ url_for('main.features_overview') }}" class="text-xs text-blue-400 hover:underline">
+              View all 8 modules &rarr;
+            </a>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+{% if feature.carousel %}
+<script>
+  let currentCarouselIndex = 0;
+  const totalCarouselSlides = {{ feature.carousel|length }};
+  const accentColor = "{{ feature.accent_color }}";
+  let isAutoplayActive = true;
+  let autoplayIntervalId = null;
+  const AUTOPLAY_DELAY_MS = 4500;
+
+  function setCarouselSlide(index, isAuto = false) {
+    if (totalCarouselSlides === 0) return;
+    if (index < 0) index = totalCarouselSlides - 1;
+    if (index >= totalCarouselSlides) index = 0;
+    currentCarouselIndex = index;
+
+    for (let i = 0; i < totalCarouselSlides; i++) {
+      const slide = document.getElementById('carousel-slide-' + i);
+      const tab = document.getElementById('carousel-tab-' + i);
+      const dot = document.getElementById('carousel-dot-' + i);
+
+      if (slide) {
+        if (i === index) {
+          slide.classList.remove('hidden');
+          const title = slide.getAttribute('data-title');
+          const badge = slide.getAttribute('data-badge');
+          const caption = slide.getAttribute('data-caption');
+          const titleEl = document.getElementById('carouselSlideTitle');
+          const badgeEl = document.getElementById('carouselSlideBadge');
+          const captionEl = document.getElementById('carouselSlideCaption');
+          if (titleEl) titleEl.textContent = title;
+          if (badgeEl) badgeEl.textContent = badge;
+          if (captionEl) captionEl.textContent = caption;
+        } else {
+          slide.classList.add('hidden');
+        }
+      }
+
+      if (tab) {
+        if (i === index) {
+          tab.classList.add('active-slide-tab');
+          tab.classList.remove('text-[#8b949e]', 'bg-[#161b22]');
+        } else {
+          tab.classList.remove('active-slide-tab');
+          tab.classList.add('text-[#8b949e]', 'bg-[#161b22]');
+        }
+      }
+
+      if (dot) {
+        if (i === index) {
+          dot.classList.add('scale-125');
+          dot.classList.remove('bg-[#30363d]');
+          dot.style.backgroundColor = accentColor;
+        } else {
+          dot.classList.remove('scale-125');
+          dot.classList.add('bg-[#30363d]');
+          dot.style.backgroundColor = '';
+        }
+      }
+    }
+
+    // Reset autoplay countdown if user clicked manually
+    if (!isAuto && isAutoplayActive) {
+      restartAutoplay();
+    }
+  }
+
+  function prevCarouselSlide() {
+    setCarouselSlide(currentCarouselIndex - 1);
+  }
+
+  function nextCarouselSlide(isAuto = false) {
+    setCarouselSlide(currentCarouselIndex + 1, isAuto);
+  }
+
+  function startAutoplay() {
+    stopAutoplay();
+    if (isAutoplayActive) {
+      autoplayIntervalId = setInterval(function() {
+        nextCarouselSlide(true);
+      }, AUTOPLAY_DELAY_MS);
+    }
+  }
+
+  function stopAutoplay() {
+    if (autoplayIntervalId) {
+      clearInterval(autoplayIntervalId);
+      autoplayIntervalId = null;
+    }
+  }
+
+  function restartAutoplay() {
+    stopAutoplay();
+    startAutoplay();
+  }
+
+  function toggleCarouselAutoplay() {
+    isAutoplayActive = !isAutoplayActive;
+    const icon = document.getElementById('carouselPlayPauseIcon');
+    const text = document.getElementById('carouselPlayPauseText');
+    if (isAutoplayActive) {
+      if (icon) icon.className = 'bi bi-pause-fill text-amber-400';
+      if (text) text.textContent = 'Autoplay';
+      startAutoplay();
+    } else {
+      if (icon) icon.className = 'bi bi-play-fill text-emerald-400';
+      if (text) text.textContent = 'Paused';
+      stopAutoplay();
+    }
+  }
+
+  // Pause on mouse hover, resume on mouse leave
+  const mediaFrame = document.getElementById('featureMediaFrame');
+  if (mediaFrame) {
+    mediaFrame.addEventListener('mouseenter', function() {
+      if (isAutoplayActive) stopAutoplay();
+    });
+    mediaFrame.addEventListener('mouseleave', function() {
+      if (isAutoplayActive) startAutoplay();
+    });
+  }
+
+  // Keyboard navigation when user is on the page
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowLeft') {
+      prevCarouselSlide();
+    } else if (e.key === 'ArrowRight') {
+      nextCarouselSlide();
+    }
+  });
+
+  // Start autoplay immediately on load
+  startAutoplay();
+</script>
+{% endif %}
+{% endblock %}

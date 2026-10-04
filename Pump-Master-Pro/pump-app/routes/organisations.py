@@ -565,6 +565,13 @@ def save_features(org_id):
             'simple_mode': 'feat_pn_simple' in request.form,
             'simple_series': 'feat_pn_simple_series' in request.form,
             'simple_parallel': 'feat_pn_simple_parallel' in request.form,
+        },
+        'pump_modules': {
+            'all': 'feat_pm_all' in request.form,
+            'centrifugal': 'feat_pm_centrifugal' in request.form,
+            'slurry': 'feat_pm_slurry' in request.form,
+            'fire': 'feat_pm_fire' in request.form,
+            'vertical_shaft': 'feat_pm_vertical_shaft' in request.form,
         }
     }
 

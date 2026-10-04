@@ -484,6 +484,38 @@ def pump_selection():
     if not cur_liquid or cur_liquid not in allowed_liquids:
         form_data['liquid'] = allowed_liquids[0]
 
+    # ── Sanitize selected pump module to permitted options for current user/role ──
+    allow_pm_all = _hf('pump_modules', 'all')
+    allow_pm_centrifugal = _hf('pump_modules', 'centrifugal')
+    allow_pm_slurry = _hf('pump_modules', 'slurry')
+    allow_pm_fire = _hf('pump_modules', 'fire')
+    allow_pm_vertical_shaft = _hf('pump_modules', 'vertical_shaft')
+
+    allowed_pump_modules = {
+        'all': allow_pm_all,
+        'centrifugal': allow_pm_centrifugal,
+        'slurry': allow_pm_slurry,
+        'fire': allow_pm_fire,
+        'vertical_shaft': allow_pm_vertical_shaft
+    }
+
+    cur_pt = (form_data.get('filter_pump_type') or '').strip().lower()
+    if cur_pt in ('fire', 'fire pump', 'fire_pump'):
+        if not allow_pm_fire:
+            form_data['filter_pump_type'] = 'centrifugal' if allow_pm_centrifugal else ('slurry' if allow_pm_slurry else ('vertical_shaft' if allow_pm_vertical_shaft else ''))
+    elif cur_pt == 'slurry':
+        if not allow_pm_slurry:
+            form_data['filter_pump_type'] = 'centrifugal' if allow_pm_centrifugal else ('fire pump' if allow_pm_fire else '')
+    elif cur_pt == 'centrifugal':
+        if not allow_pm_centrifugal:
+            form_data['filter_pump_type'] = 'slurry' if allow_pm_slurry else ('fire pump' if allow_pm_fire else '')
+    elif cur_pt in ('vertical_shaft', 'vertical shaft'):
+        if not allow_pm_vertical_shaft:
+            form_data['filter_pump_type'] = 'centrifugal' if allow_pm_centrifugal else ''
+    elif not cur_pt:
+        if not allow_pm_all:
+            form_data['filter_pump_type'] = 'centrifugal' if allow_pm_centrifugal else ('slurry' if allow_pm_slurry else ('fire pump' if allow_pm_fire else ''))
+
     # ── Available Motors & Filter Options for Selection ─────────────────────
     from motor_models import get_available_motors, get_motor_filter_options
 
@@ -576,6 +608,13 @@ def pump_selection():
         'feat_pipe_visual':        _hf('pipe_network', 'canvas_visual'),
         'feat_pipe_series':        _hf('pipe_network', 'simple_series'),
         'feat_pipe_parallel':      _hf('pipe_network', 'simple_parallel'),
+        # Pump modules accessibility flags
+        'feat_pm_all':             allow_pm_all,
+        'feat_pm_centrifugal':     allow_pm_centrifugal,
+        'feat_pm_slurry':          allow_pm_slurry,
+        'feat_pm_fire':            allow_pm_fire,
+        'feat_pm_vertical_shaft':  allow_pm_vertical_shaft,
+        'allowed_pump_modules':    allowed_pump_modules,
     }
 
     fire_standards_json = json.dumps({

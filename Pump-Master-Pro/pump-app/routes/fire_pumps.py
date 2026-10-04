@@ -92,9 +92,13 @@ fire_pumps_bp = Blueprint('fire_pumps', __name__)
 @fire_pumps_bp.route('/fire-pumps', methods=['GET'])
 def index():
     """
-    Main interactive Fire Protection Pump Sizing & Selection interface.
-    Loads standard sizing presets, current session state, and matching fire pumps.
+    Consolidated Module Access:
+    Fire protection pump sizing & selection is accessed directly via Pump Selection.
+    Redirects canonical requests to /pump-selection with filter_pump_type='fire pump'.
     """
+    if request.args.get('standalone') != '1':
+        return redirect(url_for('pump_selection', filter_pump_type='fire pump'))
+
     current_org = get_current_organisation()
 
     # Load initial or session defaults
@@ -177,8 +181,8 @@ def index():
 
 @fire_pumps_bp.route('/fire-pump-selection', methods=['GET'])
 def fire_pump_selection_redirect():
-    """Canonical alias redirect to /fire-pumps."""
-    return redirect(url_for('fire_pumps.index'))
+    """Canonical alias redirect to pump_selection."""
+    return redirect(url_for('pump_selection', filter_pump_type='fire pump'))
 
 
 @fire_pumps_bp.route('/fire-pumps/api/standards-data', methods=['GET'])

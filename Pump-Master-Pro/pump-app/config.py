@@ -114,7 +114,7 @@ def build_database_uri() -> str:
 
 class Config:
     """Base application configuration loaded by Flask."""
-    VERSION = '5.1.1.5'
+    VERSION = '5.1.1.6'
     SECRET_KEY = os.environ.get('SESSION_SECRET', 'dev-insecure-secret-key-replace-in-production')
     SQLALCHEMY_DATABASE_URI = build_database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False

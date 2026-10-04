@@ -1579,6 +1579,34 @@ function syncDutyInputsLocation(isFire) {
 
 
 
+const PUMP_MODULE_NAMES = {
+  '': 'All Types',
+  'all': 'All Types',
+  'centrifugal': 'Centrifugal',
+  'slurry': 'Slurry',
+  'fire': 'Fire Pump',
+  'fire pump': 'Fire Pump',
+  'fire_pump': 'Fire Pump',
+  'vertical_shaft': 'Vertical Line Shaft',
+  'vertical shaft': 'Vertical Line Shaft'
+};
+
+function getPumpModuleName(val) {
+  const norm = (val || '').trim().toLowerCase();
+  return PUMP_MODULE_NAMES[norm] || (norm ? norm.charAt(0).toUpperCase() + norm.slice(1) : 'All Types');
+}
+
+function isPumpModulePermitted(val) {
+  const allowed = window.ALLOWED_PUMP_MODULES;
+  if (!allowed) return true;
+  const norm = (val || '').trim().toLowerCase();
+  let key = norm;
+  if (norm === 'fire pump' || norm === 'fire_pump') key = 'fire';
+  else if (norm === '') key = 'all';
+  else if (norm === 'vertical shaft') key = 'vertical_shaft';
+  return allowed[key] !== false;
+}
+
 /**
  * setQuickPumpType(typeVal)
  * Handles clicking the quick segmented buttons:
@@ -1589,6 +1617,10 @@ function syncDutyInputsLocation(isFire) {
  */
 function setQuickPumpType(typeVal) {
   const normVal = (typeVal || '').trim().toLowerCase();
+  if (!isPumpModulePermitted(normVal)) {
+    console.warn(`[Access Control] Pump module '${normVal}' is not enabled for your organisation or role.`);
+    return;
+  }
   const filterSelect = document.getElementById('filter_pump_type');
   if (filterSelect) {
     let found = false;
@@ -1626,7 +1658,7 @@ function setQuickPumpType(typeVal) {
     fireNotice.classList.toggle('hidden', !isFire);
   }
   if (ptLabel) {
-    ptLabel.textContent = isFire ? 'Fire Pump' : (normVal === 'slurry' ? 'Slurry' : (normVal === 'centrifugal' ? 'Centrifugal' : 'All Types'));
+    ptLabel.textContent = getPumpModuleName(normVal);
   }
 
   const firePrompt = document.getElementById('fireInitialPrompt');
@@ -1648,17 +1680,15 @@ function setQuickPumpType(typeVal) {
 /**
  * syncFireModeUI(isFire)
  * Synchronizes header banner and liquid selector restrictions for Fire Mode.
- * - In Fire Mode: displays fire header, shows Dedicated View link, disables slurry option and defaults liquid to clean water (NFPA 20).
- * - In Standard Mode: displays standard header, hides Dedicated View link, re-enables slurry option.
+ * - In Fire Mode: displays fire header, disables slurry option and defaults liquid to clean water (NFPA 20).
+ * - In Standard Mode: displays standard header, re-enables slurry option.
  */
 function syncFireModeUI(isFire) {
   // Page Header toggle
   const defaultHdr = document.getElementById('defaultPageHeader');
   const fireHdr = document.getElementById('firePageHeader');
-  const fireDedBtn = document.getElementById('fireDedicatedViewBtn');
   if (defaultHdr) defaultHdr.classList.toggle('hidden', isFire);
   if (fireHdr) fireHdr.classList.toggle('hidden', !isFire);
-  if (fireDedBtn) fireDedBtn.classList.toggle('hidden', !isFire);
 
   // Liquid Selection: In fire mode disable slurry and default to clean water
   const liquidSel = document.getElementById('liquidSel');
@@ -1703,7 +1733,7 @@ function onPumpTypeFilterChange(typeVal) {
     fireNotice.classList.toggle('hidden', !isFire);
   }
   if (ptLabel) {
-    ptLabel.textContent = isFire ? 'Fire Pump' : (normVal === 'slurry' ? 'Slurry' : (normVal === 'centrifugal' ? 'Centrifugal' : 'All Types'));
+    ptLabel.textContent = getPumpModuleName(normVal);
   }
 
   const firePrompt = document.getElementById('fireInitialPrompt');

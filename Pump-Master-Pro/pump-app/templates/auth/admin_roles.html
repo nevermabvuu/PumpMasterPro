@@ -187,6 +187,13 @@
                 {% else %}
                   <span class="px-1.5 py-0.5 rounded bg-[#21262d] text-[#8b949e] border border-[#30363d]">PN Off</span>
                 {% endif %}
+
+                {% if r_feats.pump_modules %}
+                  {% if r_feats.pump_modules.centrifugal %}<span class="px-1.5 py-0.5 rounded bg-[#38bdf8]/10 text-[#38bdf8] border border-[#38bdf8]/30">Centrif</span>{% endif %}
+                  {% if r_feats.pump_modules.slurry %}<span class="px-1.5 py-0.5 rounded bg-[#e3b341]/10 text-[#e3b341] border border-[#e3b341]/30">Slurry</span>{% endif %}
+                  {% if r_feats.pump_modules.fire %}<span class="px-1.5 py-0.5 rounded bg-[#f85149]/10 text-[#ff7b72] border border-[#f85149]/30">Fire</span>{% endif %}
+                  {% if r_feats.pump_modules.vertical_shaft %}<span class="px-1.5 py-0.5 rounded bg-[#a371f7]/10 text-[#d2a8ff] border border-[#a371f7]/30">Vert Shaft</span>{% endif %}
+                {% endif %}
               </div>
             </div>
 
@@ -580,6 +587,44 @@
 
           </div>
         </div>
+
+        <!-- 5. PUMP MODULES ACCESSIBILITY -->
+        {% set o_pm = o_feat.pump_modules if (o_feat and o_feat.pump_modules) else {'all': true, 'centrifugal': true, 'slurry': true, 'fire': true, 'vertical_shaft': true} %}
+        <div class="p-3 rounded-lg border border-[#30363d] bg-[#0d1117] space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+              <i class="bi bi-gear-wide-connected text-[#38bdf8]"></i> Pump Modules Accessibility
+            </span>
+            <span class="text-[10px] font-mono text-[#8b949e]">Modules Permitted</span>
+          </div>
+          <div class="ms-5 grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 border-t border-[#30363d]/60">
+            <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] {{ 'opacity-40 cursor-not-allowed' if not o_pm.all else 'cursor-pointer' }}">
+              <input type="checkbox" name="feat_pm_all" value="1" class="accent-[#38bdf8] rounded"
+                     {{ 'checked' if o_pm.all else 'disabled' }}>
+              <span>All Types</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] {{ 'opacity-40 cursor-not-allowed' if not o_pm.centrifugal else 'cursor-pointer' }}">
+              <input type="checkbox" name="feat_pm_centrifugal" value="1" class="accent-[#38bdf8] rounded"
+                     {{ 'checked' if o_pm.centrifugal else 'disabled' }}>
+              <span>Centrifugal</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] {{ 'opacity-40 cursor-not-allowed' if not o_pm.slurry else 'cursor-pointer' }}">
+              <input type="checkbox" name="feat_pm_slurry" value="1" class="accent-[#38bdf8] rounded"
+                     {{ 'checked' if o_pm.slurry else 'disabled' }}>
+              <span>Slurry</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] {{ 'opacity-40 cursor-not-allowed' if not o_pm.fire else 'cursor-pointer' }}">
+              <input type="checkbox" name="feat_pm_fire" value="1" class="accent-[#38bdf8] rounded"
+                     {{ 'checked' if o_pm.fire else 'disabled' }}>
+              <span>Fire Protection</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] {{ 'opacity-40 cursor-not-allowed' if not o_pm.vertical_shaft else 'cursor-pointer' }}">
+              <input type="checkbox" name="feat_pm_vertical_shaft" value="1" class="accent-[#38bdf8] rounded"
+                     {{ 'checked' if o_pm.vertical_shaft else 'disabled' }}>
+              <span>Vertical Shaft</span>
+            </label>
+          </div>
+        </div>
       </div>
 
       <div class="pt-4 border-t border-[#30363d] flex items-center justify-end gap-2 shrink-0">
@@ -872,6 +917,38 @@
             </div>
           </div>
         </div>
+
+        <!-- 5. PUMP MODULES ACCESSIBILITY -->
+        <div class="p-3 rounded-lg border border-[#30363d] bg-[#0d1117] space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+              <i class="bi bi-gear-wide-connected text-[#38bdf8]"></i> Pump Modules Accessibility
+            </span>
+            <span class="text-[10px] font-mono text-[#8b949e]">Modules Permitted</span>
+          </div>
+          <div class="ms-5 grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 border-t border-[#30363d]/60">
+            <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] cursor-pointer" id="lbl_edit_feat_pm_all">
+              <input type="checkbox" name="feat_pm_all" id="edit_feat_pm_all" value="1" class="accent-[#38bdf8] rounded">
+              <span>All Types</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] cursor-pointer" id="lbl_edit_feat_pm_centrifugal">
+              <input type="checkbox" name="feat_pm_centrifugal" id="edit_feat_pm_centrifugal" value="1" class="accent-[#38bdf8] rounded">
+              <span>Centrifugal</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] cursor-pointer" id="lbl_edit_feat_pm_slurry">
+              <input type="checkbox" name="feat_pm_slurry" id="edit_feat_pm_slurry" value="1" class="accent-[#38bdf8] rounded">
+              <span>Slurry</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] cursor-pointer" id="lbl_edit_feat_pm_fire">
+              <input type="checkbox" name="feat_pm_fire" id="edit_feat_pm_fire" value="1" class="accent-[#38bdf8] rounded">
+              <span>Fire Protection</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-xs text-[#c9d1d9] cursor-pointer" id="lbl_edit_feat_pm_vertical_shaft">
+              <input type="checkbox" name="feat_pm_vertical_shaft" id="edit_feat_pm_vertical_shaft" value="1" class="accent-[#38bdf8] rounded">
+              <span>Vertical Shaft</span>
+            </label>
+          </div>
+        </div>
       </div>
 
       <div class="pt-4 border-t border-[#30363d] flex items-center justify-end gap-2 shrink-0">
@@ -1085,6 +1162,15 @@ function openEditRoleModal(role) {
   applyFeatCheckbox('edit_feat_pn_simple', rf_pn.simple_mode !== false, of_simple_en);
   applyFeatCheckbox('edit_feat_pn_simple_series', rf_pn.simple_series !== false, of_simple_en && of_pn.simple_series !== false);
   applyFeatCheckbox('edit_feat_pn_simple_parallel', rf_pn.simple_parallel !== false, of_simple_en && of_pn.simple_parallel !== false);
+
+  // Pump Modules Accessibility
+  const rf_pm = rf.pump_modules || {};
+  const of_pm = of.pump_modules || {};
+  applyFeatCheckbox('edit_feat_pm_all', rf_pm.all !== false, of_pm.all !== false);
+  applyFeatCheckbox('edit_feat_pm_centrifugal', rf_pm.centrifugal !== false, of_pm.centrifugal !== false);
+  applyFeatCheckbox('edit_feat_pm_slurry', rf_pm.slurry !== false, of_pm.slurry !== false);
+  applyFeatCheckbox('edit_feat_pm_fire', rf_pm.fire !== false, of_pm.fire !== false);
+  applyFeatCheckbox('edit_feat_pm_vertical_shaft', rf_pm.vertical_shaft !== false, of_pm.vertical_shaft !== false);
 
   // Trigger subgroup dimming
   toggleFeatSubGroupRole('edit_feat_op_fixed', 'edit_feat_op_fixed_sub');

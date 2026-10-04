@@ -1158,6 +1158,14 @@ DEFAULT_FEATURE_FLAGS = {
         'simple_mode': True,
         'simple_series': True,
         'simple_parallel': True
+    },
+    # 5. Pump Modules Accessibility (centrifugal, slurry, fire, vertical line shaft, all types)
+    'pump_modules': {
+        'all': True,
+        'centrifugal': True,
+        'slurry': True,
+        'fire': True,
+        'vertical_shaft': True
     }
 }
 
@@ -1268,6 +1276,15 @@ def normalize_feature_flags(flags_dict):
         if not result['pipe_network']['simple_series'] and not result['pipe_network']['simple_parallel']:
             result['pipe_network']['simple_mode'] = False
 
+    # 5. Pump Modules Accessibility
+    pm_in = flags_dict.get('pump_modules')
+    if isinstance(pm_in, dict):
+        result['pump_modules']['all'] = bool(pm_in.get('all', True))
+        result['pump_modules']['centrifugal'] = bool(pm_in.get('centrifugal', True))
+        result['pump_modules']['slurry'] = bool(pm_in.get('slurry', True))
+        result['pump_modules']['fire'] = bool(pm_in.get('fire', True))
+        result['pump_modules']['vertical_shaft'] = bool(pm_in.get('vertical_shaft', True))
+
     return result
 
 
@@ -1306,6 +1323,10 @@ def clamp_feature_flags(child_flags, parent_flags):
     clamped['pipe_network']['simple_mode'] = bool(parent['pipe_network']['simple_mode'] and child['pipe_network']['simple_mode'])
     clamped['pipe_network']['simple_series'] = bool(parent['pipe_network']['simple_series'] and child['pipe_network']['simple_series']) if clamped['pipe_network']['simple_mode'] else False
     clamped['pipe_network']['simple_parallel'] = bool(parent['pipe_network']['simple_parallel'] and child['pipe_network']['simple_parallel']) if clamped['pipe_network']['simple_mode'] else False
+
+    # 5. Pump Modules Accessibility
+    for pm_k in ['all', 'centrifugal', 'slurry', 'fire', 'vertical_shaft']:
+        clamped['pump_modules'][pm_k] = bool(parent['pump_modules'].get(pm_k, True) and child['pump_modules'].get(pm_k, True))
 
     return clamped
 
@@ -2853,6 +2874,21 @@ class User(db.Model):
                 return False
             if option is None:
                 return True
+
+        elif category == 'pump_modules':
+            if option is None:
+                return True
+            norm_pm = str(option).lower().strip()
+            if norm_pm in ('fire', 'fire pump', 'fire_pump'):
+                option = 'fire'
+            elif norm_pm in ('centrifugal', 'centrif'):
+                option = 'centrifugal'
+            elif norm_pm == 'slurry':
+                option = 'slurry'
+            elif norm_pm in ('vertical_shaft', 'vertical shaft', 'vertical lineshaft', 'vertical_line_shaft'):
+                option = 'vertical_shaft'
+            elif norm_pm in ('all', ''):
+                option = 'all'
 
         flags = self.get_effective_feature_flags()
         cat_data = flags.get(category)

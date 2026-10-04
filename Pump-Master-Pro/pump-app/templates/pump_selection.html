@@ -39,14 +39,6 @@
     </div>
   </div>
   <div class="flex items-center gap-2">
-    <!-- Dedicated Full-Page View Button (visible in Fire Mode) -->
-    <a href="{{ url_for('fire_pumps.index') }}" target="_blank" id="fireDedicatedViewBtn"
-       class="{{ '' if is_fire_mode else 'hidden' }} inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#f85149]/15 hover:bg-[#f85149]/25 text-[#ff7b72] hover:text-white border border-[#f85149]/40 transition-colors shadow-sm"
-       title="Open Dedicated Full-Page Fire Pump Sizing View">
-      <i class="bi bi-box-arrow-up-right text-xs"></i>
-      <span>Dedicated View</span>
-    </a>
-
     <a href="{{ url_for('pump_comparison', q_duty=form_data.q_duty, h_duty=form_data.h_duty, liquid=form_data.get('liquid', 'water'), operation_mode=form_data.get('operation_mode', 'fixed')) if form_data.q_duty else url_for('pump_comparison') }}"
        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] hover:text-white border border-[#30363d] transition-colors shadow-sm">
       <i class="bi bi-bar-chart-line"></i>
@@ -194,6 +186,7 @@
 
           <!-- ── Quick Application / Pump Type Switcher ────────────────────────── -->
           {% set cur_pt = form_data.get('filter_pump_type', '')|lower %}
+          {% set pm_allowed = feat_flags.get('allowed_pump_modules', {'all': True, 'centrifugal': True, 'slurry': True, 'fire': True, 'vertical_shaft': True}) if feat_flags else {'all': True, 'centrifugal': True, 'slurry': True, 'fire': True, 'vertical_shaft': True} %}
           <div class="mb-1 space-y-1.5">
             <div class="flex items-center justify-between">
               <label class="form-label text-[11px] font-semibold text-[#c9d1d9] flex items-center gap-1.5 mb-0">
@@ -204,32 +197,51 @@
                 <span id="quickPtFireNotice" class="text-[10px] px-1.5 py-0.2 rounded font-semibold text-[#ff7b72] bg-[#f85149]/15 border border-[#f85149]/30 {{ '' if cur_pt in ['fire', 'fire pump', 'fire_pump'] else 'hidden' }}">
                   <i class="bi bi-fire text-[#f85149]"></i> Fire Sizing
                 </span>
-                <span class="text-[10px] text-[#8b949e]" id="quickPtLabel">
-                  {{ 'Fire Pump' if cur_pt in ['fire', 'fire pump', 'fire_pump'] else ('Slurry' if cur_pt == 'slurry' else ('Centrifugal' if cur_pt == 'centrifugal' else 'All Types')) }}
+                {% set pm_labels = {
+                  '': 'All Types',
+                  'all': 'All Types',
+                  'centrifugal': 'Centrifugal',
+                  'slurry': 'Slurry',
+                  'fire': 'Fire Pump',
+                  'fire pump': 'Fire Pump',
+                  'fire_pump': 'Fire Pump',
+                  'vertical_shaft': 'Vertical Line Shaft',
+                  'vertical shaft': 'Vertical Line Shaft'
+                } %}
+                <span class="text-[10px] text-[#8b949e]" id="quickPtLabel" data-active-pt="{{ cur_pt }}">
+                  {{ pm_labels.get(cur_pt, cur_pt|capitalize if cur_pt else 'All Types') }}
                 </span>
               </div>
             </div>
-            <div class="grid grid-cols-4 gap-1 p-1 bg-[#0d1117] rounded-lg border border-[#30363d]" id="quickPumpTypeSwitcher">
+            <div class="flex items-center [&>*]:flex-1 gap-1 p-1 bg-[#0d1117] rounded-lg border border-[#30363d]" id="quickPumpTypeSwitcher">
+              {% if pm_allowed.all %}
               <button type="button" onclick="setQuickPumpType('')" id="qpt-all"
                       class="px-1.5 py-1 text-[11px] font-medium rounded text-center transition-all {{ 'bg-[#21262d] text-white shadow-sm font-semibold border border-[#30363d]' if (not cur_pt or cur_pt == '') else 'text-[#8b949e] hover:text-white' }}"
                       title="Show all pump types (Clean water centrifugal, slurry, and fire pumps)">
                 All
               </button>
+              {% endif %}
+              {% if pm_allowed.centrifugal %}
               <button type="button" onclick="setQuickPumpType('centrifugal')" id="qpt-centrifugal"
                       class="px-1.5 py-1 text-[11px] font-medium rounded text-center transition-all {{ 'bg-[#21262d] text-[#58a6ff] shadow-sm font-semibold border border-[#30363d]' if cur_pt == 'centrifugal' else 'text-[#8b949e] hover:text-white' }}"
                       title="Clean water centrifugal pumps (Fire-capable centrifugal pumps remain available)">
                 Centrif.
               </button>
+              {% endif %}
+              {% if pm_allowed.slurry %}
               <button type="button" onclick="setQuickPumpType('slurry')" id="qpt-slurry"
                       class="px-1.5 py-1 text-[11px] font-medium rounded text-center transition-all {{ 'bg-[#21262d] text-[#e3b341] shadow-sm font-semibold border border-[#30363d]' if cur_pt == 'slurry' else 'text-[#8b949e] hover:text-white' }}"
                       title="Centrifugal slurry pumps for solids handling">
                 Slurry
               </button>
+              {% endif %}
+              {% if pm_allowed.fire %}
               <button type="button" onclick="setQuickPumpType('fire pump')" id="qpt-fire"
                       class="px-1.5 py-1 text-[11px] font-medium rounded text-center transition-all flex items-center justify-center gap-1 {{ 'bg-[#f85149]/20 text-[#ff7b72] border border-[#f85149]/40 shadow-sm font-bold' if cur_pt in ['fire', 'fire pump', 'fire_pump'] else 'text-[#8b949e] hover:text-[#ff7b72]' }}"
                       title="Fire Protection Pumps (NFPA 20 / 13 / 14 & EN 12845 sizing)">
                 <i class="bi bi-fire text-[11px] text-[#f85149]"></i><span>Fire</span>
               </button>
+              {% endif %}
             </div>
           </div>
 
@@ -1278,14 +1290,24 @@
             <div>
               <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Pump Type</label>
               <select name="filter_pump_type" id="filter_pump_type" class="form-select form-control-dark w-full text-xs" onchange="onPumpTypeFilterChange(this.value)">
+                {% if pm_allowed.all %}
                 <option value="">All Types</option>
+                {% endif %}
+                {% if pm_allowed.centrifugal %}
                 <option value="centrifugal" {{ 'selected' if form_data.get('filter_pump_type') == 'centrifugal' }}>Centrifugal</option>
+                {% endif %}
+                {% if pm_allowed.slurry %}
                 <option value="slurry" {{ 'selected' if form_data.get('filter_pump_type') == 'slurry' }}>Slurry</option>
+                {% endif %}
+                {% if pm_allowed.fire %}
                 <option value="fire pump" {{ 'selected' if form_data.get('filter_pump_type') in ['fire', 'fire pump', 'fire_pump'] }}>Fire Pump</option>
+                {% endif %}
                 {% if filter_options and filter_options.pump_types %}
                   {% for pt in filter_options.pump_types %}
                     {% if pt|lower not in ['centrifugal', 'slurry', 'fire pump', 'fire', 'fire_pump'] %}
-                    <option value="{{ pt }}" {{ 'selected' if form_data.get('filter_pump_type') == pt }}>{{ pt|capitalize }}</option>
+                      {% if pt|lower not in ['vertical_shaft', 'vertical shaft'] or pm_allowed.vertical_shaft %}
+                      <option value="{{ pt }}" {{ 'selected' if form_data.get('filter_pump_type') == pt }}>{{ pt|capitalize }}</option>
+                      {% endif %}
                     {% endif %}
                   {% endfor %}
                 {% endif %}
@@ -4665,6 +4687,7 @@
   window.FEAT_PIPE_SCHEMATIC = {{ 'true' if (feat_pipe_schematic or (current_user and current_user.is_super_admin_user)) else 'false' }};
   window.FEAT_PIPE_SERIES = {{ 'true' if (feat_pipe_series or (current_user and current_user.is_super_admin_user)) else 'false' }};
   window.FEAT_PIPE_PARALLEL = {{ 'true' if (feat_pipe_parallel or (current_user and current_user.is_super_admin_user)) else 'false' }};
+  window.ALLOWED_PUMP_MODULES = {{ (feat_flags.allowed_pump_modules if (feat_flags and feat_flags.allowed_pump_modules) else {'all': true, 'centrifugal': true, 'slurry': true, 'fire': true, 'vertical_shaft': true}) | tojson | safe }};
 </script>
 
 <script src="{{ url_for('static', filename='js/pump_selection.js') }}?v=20260913_1635"></script>

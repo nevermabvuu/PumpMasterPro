@@ -2160,6 +2160,155 @@ def _build_report_curve_context(pump, report, params_override=None):
             show_fav_curve = _param('show_fav_curve', '1') not in ('0', 'false', 'False') and 'fav_curve' not in hidden_set
             show_fire_regions = _param('show_fire_regions', '1') not in ('0', 'false', 'False') and 'fire_regions' not in hidden_set
 
+            # Conversions for Head and Pressure
+            h_conv_factor = CURVE_CONVERSIONS['h'].get(str(rep_unit_h).lower(), 1.0)
+            def _to_bar(h_val):
+                hm = h_val / h_conv_factor if h_conv_factor > 0 else h_val
+                return round(hm * 0.0980665, 2)
+            def _to_psi(h_val):
+                hm = h_val / h_conv_factor if h_conv_factor > 0 else h_val
+                return round(hm * 1.42233433, 1)
+
+            p_churn_bar = _to_bar(h_churn)
+            p_churn_psi = _to_psi(h_churn)
+            p_rated_bar = _to_bar(fh_duty)
+            p_rated_psi = _to_psi(fh_duty)
+            p_fav_bar = _to_bar(h_fav)
+            p_fav_psi = _to_psi(h_fav)
+            p_150_bar = _to_bar(h_150)
+            p_150_psi = _to_psi(h_150)
+
+            # Interpolate Efficiency, Power, and NPSH across curves
+            eta_c = next((c for c in eta_curves_list if c.get('is_rated')), eta_curves_list[0] if eta_curves_list else None)
+            pow_c = next((c for c in pow_curves_list if c.get('is_rated')), pow_curves_list[0] if pow_curves_list else None)
+            npsh_c = next((c for c in npsh_curves_list if c.get('is_rated')), npsh_curves_list[0] if npsh_curves_list else None)
+
+            def _get_eff(qv):
+                if eta_c and 'x' in eta_c and 'y' in eta_c and eta_c['x']:
+                    return round(float(np.interp(qv, eta_c['x'], eta_c['y'])), 1)
+                return None
+
+            def _get_pow(qv, hv, etav):
+                if pow_c and 'x' in pow_c and 'y' in pow_c and pow_c['x']:
+                    return round(float(np.interp(qv, pow_c['x'], pow_c['y'])), 1)
+                if etav and etav > 0:
+                    qm = qv / fQ_curve if fQ_curve > 0 else qv
+                    hm = hv / fH_curve if fH_curve > 0 else hv
+                    kw = (1000.0 * 9.80665 * (qm / 3600.0) * hm) / (1000.0 * (etav / 100.0))
+                    return round(kw * fPow_curve, 1)
+                return None
+
+            def _get_npsh(qv):
+                if npsh_c and 'x' in npsh_c and 'y' in npsh_c and npsh_c['x']:
+                    return round(float(np.interp(qv, npsh_c['x'], npsh_c['y'])), 2)
+                return None
+
+            eff_churn = 0.0
+            pow_churn = _get_pow(0.0, h_churn, 5.0)
+
+            eff_rated = _get_eff(fq_duty)
+            pow_rated = _get_pow(fq_duty, fh_duty, eff_rated)
+            npsh_rated = _get_npsh(fq_duty)
+
+            eff_fav = _get_eff(q_fav)
+            pow_fav = _get_pow(q_fav, h_fav, eff_fav)
+            npsh_fav = _get_npsh(q_fav)
+
+            eff_150 = _get_eff(q_150)
+            pow_150 = _get_pow(q_150, h_150, eff_150)
+            npsh_150 = _get_npsh(q_150)
+
+            pass_churn = h_churn <= (max_churn_limit * 1.005)
+            pass_rated = True
+            pass_150 = h_150 >= (min_overload_limit * 0.995)
+
+            # Driver Sizing Margin (1.15 service factor)
+            all_pows = [p for p in [pow_churn, pow_rated, pow_fav, pow_150] if p is not None]
+            max_pow = max(all_pows) if all_pows else 0.0
+            rec_driver_pow = round(max_pow * 1.15, 1)
+            pow_factor = CURVE_CONVERSIONS['pow'].get(str(rep_unit_pow).lower(), 1.0)
+            rec_driver_kw = round(rec_driver_pow / pow_factor, 1) if pow_factor > 0 else rec_driver_pow
+            rec_driver_hp = round(rec_driver_kw * 1.341022, 1)
+
+            # Jockey pump setpoints
+            jockey_stop_bar = p_churn_bar
+            jockey_stop_psi = p_churn_psi
+            jockey_start_bar = round(max(0.0, p_churn_bar - 0.7), 2)
+            jockey_start_psi = round(max(0.0, p_churn_psi - 10.0), 1)
+            fire_start_bar = round(max(0.0, p_churn_bar - 1.05), 2)
+            fire_start_psi = round(max(0.0, p_churn_psi - 15.0), 1)
+
+            # Flow in m3/h for casing relief valve check
+            q_m3h_duty = fq_duty / fQ_curve if fQ_curve > 0 else fq_duty
+            relief_valve_size = '3/4" NPT (20 mm)' if q_m3h_duty <= 568.0 else '1" NPT (25 mm)'
+
+            schedule = [
+                {
+                    'letter': 'A',
+                    'point': 'Shutoff / Churn',
+                    'flow_pct': 0,
+                    'q': 0.0,
+                    'h': h_churn,
+                    'p_bar': p_churn_bar,
+                    'p_psi': p_churn_psi,
+                    'h_pct': round(h_churn / fh_duty * 100.0, 1) if fh_duty > 0 else 0.0,
+                    'limit_text': f'≤ 140% ({max_churn_limit} {lbl_h})',
+                    'eff': eff_churn,
+                    'power': pow_churn,
+                    'npsh': None,
+                    'status': 'PASS' if pass_churn else 'FAIL',
+                    'pass': pass_churn
+                },
+                {
+                    'letter': 'B',
+                    'point': 'Rated Duty Point',
+                    'flow_pct': 100,
+                    'q': fq_duty,
+                    'h': fh_duty,
+                    'p_bar': p_rated_bar,
+                    'p_psi': p_rated_psi,
+                    'h_pct': 100.0,
+                    'limit_text': f'≥ 100% ({fh_duty} {lbl_h})',
+                    'eff': eff_rated,
+                    'power': pow_rated,
+                    'npsh': npsh_rated,
+                    'status': 'PASS' if pass_rated else 'FAIL',
+                    'pass': pass_rated
+                },
+                {
+                    'letter': 'C',
+                    'point': 'System Operating Point',
+                    'flow_pct': round(q_fav / fq_duty * 100.0, 1) if fq_duty > 0 else 0.0,
+                    'q': q_fav,
+                    'h': h_fav,
+                    'p_bar': p_fav_bar,
+                    'p_psi': p_fav_psi,
+                    'h_pct': round(h_fav / fh_duty * 100.0, 1) if fh_duty > 0 else 0.0,
+                    'limit_text': 'System Demand Match',
+                    'eff': eff_fav,
+                    'power': pow_fav,
+                    'npsh': npsh_fav,
+                    'status': 'NORMAL',
+                    'pass': True
+                },
+                {
+                    'letter': 'D',
+                    'point': '150% Overload Test',
+                    'flow_pct': 150,
+                    'q': q_150,
+                    'h': h_150,
+                    'p_bar': p_150_bar,
+                    'p_psi': p_150_psi,
+                    'h_pct': round(h_150 / fh_duty * 100.0, 1) if fh_duty > 0 else 0.0,
+                    'limit_text': f'≥ 65% ({min_overload_limit} {lbl_h})',
+                    'eff': eff_150,
+                    'power': pow_150,
+                    'npsh': npsh_150,
+                    'status': 'PASS' if pass_150 else 'FAIL',
+                    'pass': pass_150
+                }
+            ]
+
             fire_data = {
                 'is_fire': True,
                 'q_duty': fq_duty,
@@ -2173,6 +2322,34 @@ def _build_report_curve_context(pump, report, params_override=None):
                 'h_fav': h_fav,
                 'churn_pct': round(h_churn / fh_duty * 100.0, 1) if fh_duty > 0 else 0.0,
                 'h_150_pct': round(h_150 / fh_duty * 100.0, 1) if fh_duty > 0 else 0.0,
+                'p_churn_bar': p_churn_bar,
+                'p_churn_psi': p_churn_psi,
+                'p_rated_bar': p_rated_bar,
+                'p_rated_psi': p_rated_psi,
+                'p_fav_bar': p_fav_bar,
+                'p_fav_psi': p_fav_psi,
+                'p_150_bar': p_150_bar,
+                'p_150_psi': p_150_psi,
+                'eff_rated': eff_rated,
+                'eff_150': eff_150,
+                'eff_fav': eff_fav,
+                'pow_rated': pow_rated,
+                'pow_150': pow_150,
+                'pow_fav': pow_fav,
+                'pow_churn': pow_churn,
+                'npsh_rated': npsh_rated,
+                'npsh_150': npsh_150,
+                'rec_driver_pow': rec_driver_pow,
+                'rec_driver_kw': rec_driver_kw,
+                'rec_driver_hp': rec_driver_hp,
+                'jockey_stop_bar': jockey_stop_bar,
+                'jockey_stop_psi': jockey_stop_psi,
+                'jockey_start_bar': jockey_start_bar,
+                'jockey_start_psi': jockey_start_psi,
+                'fire_start_bar': fire_start_bar,
+                'fire_start_psi': fire_start_psi,
+                'relief_valve_size': relief_valve_size,
+                'schedule': schedule,
                 'points': [
                     {'q': 0.0, 'h': h_churn, 'letter': 'A', 'title': 'Shutoff / Churn Point', 'desc': f'0% flow, {round(h_churn,1)} {lbl_h}', 'label': 'A', 'color': '#ef4444', 'symbol': 'circle', 'show': show_fire_churn},
                     {'q': fq_duty, 'h': fh_duty, 'letter': 'B', 'title': 'Rated Duty Point', 'desc': f'100% flow ({round(fq_duty,1)} {lbl_q}) @ 100% head ({round(fh_duty,1)} {lbl_h})', 'label': 'B', 'color': '#ef4444', 'symbol': 'circle', 'show': show_fire_remote},

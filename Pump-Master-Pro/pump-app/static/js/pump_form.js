@@ -982,6 +982,7 @@ function getPumpFormData() {
 }
 
 function convertUnitCurveData(data, qUnit, hUnit, npshUnit, powUnit) {
+  if (!data) return data;
   const converted = JSON.parse(JSON.stringify(data));
   const baseQ = document.getElementById('unit_q_field')?.value || (typeof window.pumpObj !== 'undefined' && window.pumpObj && window.pumpObj.unit_q ? window.pumpObj.unit_q : 'm3h');
   const baseH = document.getElementById('unit_h_field')?.value || (typeof window.pumpObj !== 'undefined' && window.pumpObj && window.pumpObj.unit_h ? window.pumpObj.unit_h : 'm');
@@ -993,27 +994,28 @@ function convertUnitCurveData(data, qUnit, hUnit, npshUnit, powUnit) {
   const npshFactor = CONVERSIONS.npsh[npshUnit] || 1.0;
   const powFactor = CONVERSIONS.pow[powUnit] || 1.0;
 
-  if (converted.q) converted.q = converted.q.map(v => v * qFactor);
-  if (converted.h) converted.h = converted.h.map(v => v * hFactor);
-  if (converted.eta) converted.eta = converted.eta.map(v => v);
-  if (converted.power) converted.power = converted.power.map(v => v * powFactor);
-  if (converted.npsh) converted.npsh = converted.npsh.map(v => v * npshFactor);
+  if (Array.isArray(converted.q)) converted.q = converted.q.map(v => v != null ? v * qFactor : null);
+  if (Array.isArray(converted.h)) converted.h = converted.h.map(v => v != null ? v * hFactor : null);
+  if (Array.isArray(converted.eta)) converted.eta = converted.eta.map(v => v);
+  if (Array.isArray(converted.power)) converted.power = converted.power.map(v => v != null ? v * powFactor : null);
+  if (Array.isArray(converted.npsh)) converted.npsh = converted.npsh.map(v => v != null ? v * npshFactor : null);
 
-  if (converted.h_clean) converted.h_clean = converted.h_clean.map(v => v * hFactor);
-  if (converted.eta_clean) converted.eta_clean = converted.eta_clean.map(v => v);
-  if (converted.power_clean) converted.power_clean = converted.power_clean.map(v => v * powFactor);
+  if (Array.isArray(converted.h_clean)) converted.h_clean = converted.h_clean.map(v => v != null ? v * hFactor : null);
+  if (Array.isArray(converted.eta_clean)) converted.eta_clean = converted.eta_clean.map(v => v);
+  if (Array.isArray(converted.power_clean)) converted.power_clean = converted.power_clean.map(v => v != null ? v * powFactor : null);
 
   if (converted.bep) {
-    converted.bep.q = converted.bep.q * qFactor;
-    converted.bep.h = converted.bep.h * hFactor;
-    converted.bep.power = converted.bep.power * powFactor;
+    if (converted.bep.q != null) converted.bep.q = converted.bep.q * qFactor;
+    if (converted.bep.h != null) converted.bep.h = converted.bep.h * hFactor;
+    if (converted.bep.power != null) converted.bep.power = converted.bep.power * powFactor;
   }
-  if (converted.system_h) converted.system_h = converted.system_h.map(v => v * hFactor);
+  if (Array.isArray(converted.system_h)) converted.system_h = converted.system_h.map(v => v != null ? v * hFactor : null);
 
   return converted;
 }
 
 function convertUnitWarmanData(data, qUnit, hUnit, npshUnit, powUnit) {
+  if (!data) return data;
   const converted = JSON.parse(JSON.stringify(data));
   const baseQ = document.getElementById('unit_q_field')?.value || (typeof window.pumpObj !== 'undefined' && window.pumpObj && window.pumpObj.unit_q ? window.pumpObj.unit_q : 'm3h');
   const baseH = document.getElementById('unit_h_field')?.value || (typeof window.pumpObj !== 'undefined' && window.pumpObj && window.pumpObj.unit_h ? window.pumpObj.unit_h : 'm');
@@ -1025,101 +1027,109 @@ function convertUnitWarmanData(data, qUnit, hUnit, npshUnit, powUnit) {
   const npshFactor = CONVERSIONS.npsh[npshUnit] || 1.0;
   const powFactor = CONVERSIONS.pow[powUnit] || 1.0;
 
-  if (converted.family) {
+  if (Array.isArray(converted.family)) {
     converted.family.forEach(d => {
-      d.q = d.q.map(v => v * qFactor);
-      d.h = d.h.map(v => v * hFactor);
-      d.eta = d.eta.map(v => v);
-      d.power = d.power.map(v => v * powFactor);
-      d.npsh = d.npsh.map(v => v * npshFactor);
+      if (Array.isArray(d.q)) d.q = d.q.map(v => v != null ? v * qFactor : null);
+      if (Array.isArray(d.h)) d.h = d.h.map(v => v != null ? v * hFactor : null);
+      if (Array.isArray(d.eta)) d.eta = d.eta.map(v => v);
+      if (Array.isArray(d.power)) d.power = d.power.map(v => v != null ? v * powFactor : null);
+      if (Array.isArray(d.pow)) d.pow = d.pow.map(v => v != null ? v * powFactor : null);
+      if (Array.isArray(d.npsh)) d.npsh = d.npsh.map(v => v != null ? v * npshFactor : null);
       if (d.bep) {
-        d.bep.q = d.bep.q * qFactor;
-        d.bep.h = d.bep.h * hFactor;
+        if (d.bep.q != null) d.bep.q = d.bep.q * qFactor;
+        if (d.bep.h != null) d.bep.h = d.bep.h * hFactor;
+        if (d.bep.power != null) d.bep.power = d.bep.power * powFactor;
+        if (d.bep.pow != null) d.bep.pow = d.bep.pow * powFactor;
+        if (d.bep.npsh != null) d.bep.npsh = d.bep.npsh * npshFactor;
       }
     });
   }
 
-  if (converted.isolines) {
+  if (Array.isArray(converted.isolines)) {
     converted.isolines.forEach(iso => {
-      iso.q = iso.q.map(v => v * qFactor);
-      iso.h = iso.h.map(v => v * hFactor);
-      iso.label_q = iso.label_q * qFactor;
-      iso.label_h = iso.label_h * hFactor;
+      if (Array.isArray(iso.q)) iso.q = iso.q.map(v => v != null ? v * qFactor : null);
+      if (Array.isArray(iso.h)) iso.h = iso.h.map(v => v != null ? v * hFactor : null);
+      if (iso.label_q != null) iso.label_q = iso.label_q * qFactor;
+      if (iso.label_h != null) iso.label_h = iso.label_h * hFactor;
     });
   }
 
-  if (converted.power_isolines) {
+  if (Array.isArray(converted.power_isolines)) {
     converted.power_isolines.forEach(iso => {
-      iso.q = iso.q.map(v => v * qFactor);
-      iso.h = iso.h.map(v => v * hFactor);
-      iso.label_q = iso.label_q * qFactor;
-      iso.label_h = iso.label_h * hFactor;
+      if (Array.isArray(iso.q)) iso.q = iso.q.map(v => v != null ? v * qFactor : null);
+      if (Array.isArray(iso.h)) iso.h = iso.h.map(v => v != null ? v * hFactor : null);
+      if (iso.label_q != null) iso.label_q = iso.label_q * qFactor;
+      if (iso.label_h != null) iso.label_h = iso.label_h * hFactor;
     });
   }
 
-  if (converted.npsh_isolines) {
+  if (Array.isArray(converted.npsh_isolines)) {
     converted.npsh_isolines.forEach(iso => {
-      iso.q = iso.q.map(v => v * qFactor);
-      iso.h = iso.h.map(v => v * hFactor);
-      iso.label_q = iso.label_q * qFactor;
-      iso.label_h = iso.label_h * hFactor;
+      if (Array.isArray(iso.q)) iso.q = iso.q.map(v => v != null ? v * qFactor : null);
+      if (Array.isArray(iso.h)) iso.h = iso.h.map(v => v != null ? v * hFactor : null);
+      if (iso.label_q != null) iso.label_q = iso.label_q * qFactor;
+      if (iso.label_h != null) iso.label_h = iso.label_h * hFactor;
     });
   }
 
-  if (converted.speed_lines) {
+  if (Array.isArray(converted.speed_lines)) {
     converted.speed_lines.forEach(sl => {
-      sl.q = sl.q.map(v => v * qFactor);
-      sl.h = sl.h.map(v => v * hFactor);
-      if (sl.power) sl.power = sl.power.map(v => v * powFactor);
-      if (sl.npsh) sl.npsh = sl.npsh.map(v => v * npshFactor);
+      if (Array.isArray(sl.q)) sl.q = sl.q.map(v => v != null ? v * qFactor : null);
+      if (Array.isArray(sl.h)) sl.h = sl.h.map(v => v != null ? v * hFactor : null);
+      if (Array.isArray(sl.power)) sl.power = sl.power.map(v => v != null ? v * powFactor : null);
+      if (Array.isArray(sl.pow)) sl.pow = sl.pow.map(v => v != null ? v * powFactor : null);
+      if (Array.isArray(sl.npsh)) sl.npsh = sl.npsh.map(v => v != null ? v * npshFactor : null);
       if (sl.bep) {
-        sl.bep.q = sl.bep.q * qFactor;
-        sl.bep.h = sl.bep.h * hFactor;
-        if (sl.bep.power) sl.bep.power = sl.bep.power * powFactor;
-        if (sl.bep.npsh) sl.bep.npsh = sl.bep.npsh * npshFactor;
+        if (sl.bep.q != null) sl.bep.q = sl.bep.q * qFactor;
+        if (sl.bep.h != null) sl.bep.h = sl.bep.h * hFactor;
+        if (sl.bep.power != null) sl.bep.power = sl.bep.power * powFactor;
+        if (sl.bep.pow != null) sl.bep.pow = sl.bep.pow * powFactor;
+        if (sl.bep.npsh != null) sl.bep.npsh = sl.bep.npsh * npshFactor;
       }
     });
   }
 
-  if (converted.rpm_overlay) {
+  if (Array.isArray(converted.rpm_overlay)) {
     converted.rpm_overlay.forEach(sl => {
-      sl.q = sl.q.map(v => v * qFactor);
-      sl.h = sl.h.map(v => v * hFactor);
-      if (sl.power) sl.power = sl.power.map(v => v * powFactor);
-      if (sl.pow) sl.pow = sl.pow.map(v => v * powFactor);
-      if (sl.npsh) sl.npsh = sl.npsh.map(v => v * npshFactor);
+      if (Array.isArray(sl.q)) sl.q = sl.q.map(v => v != null ? v * qFactor : null);
+      if (Array.isArray(sl.h)) sl.h = sl.h.map(v => v != null ? v * hFactor : null);
+      if (Array.isArray(sl.power)) sl.power = sl.power.map(v => v != null ? v * powFactor : null);
+      if (Array.isArray(sl.pow)) sl.pow = sl.pow.map(v => v != null ? v * powFactor : null);
+      if (Array.isArray(sl.npsh)) sl.npsh = sl.npsh.map(v => v != null ? v * npshFactor : null);
       if (sl.bep) {
-        sl.bep.q = sl.bep.q * qFactor;
-        sl.bep.h = sl.bep.h * hFactor;
-        if (sl.bep.power) sl.bep.power = sl.bep.power * powFactor;
-        if (sl.bep.npsh) sl.bep.npsh = sl.bep.npsh * npshFactor;
+        if (sl.bep.q != null) sl.bep.q = sl.bep.q * qFactor;
+        if (sl.bep.h != null) sl.bep.h = sl.bep.h * hFactor;
+        if (sl.bep.power != null) sl.bep.power = sl.bep.power * powFactor;
+        if (sl.bep.pow != null) sl.bep.pow = sl.bep.pow * powFactor;
+        if (sl.bep.npsh != null) sl.bep.npsh = sl.bep.npsh * npshFactor;
       }
     });
   }
 
-  if (converted.dia_overlay) {
+  if (Array.isArray(converted.dia_overlay)) {
     converted.dia_overlay.forEach(sl => {
-      sl.q = sl.q.map(v => v * qFactor);
-      sl.h = sl.h.map(v => v * hFactor);
-      if (sl.power) sl.power = sl.power.map(v => v * powFactor);
-      if (sl.pow) sl.pow = sl.pow.map(v => v * powFactor);
-      if (sl.npsh) sl.npsh = sl.npsh.map(v => v * npshFactor);
+      if (Array.isArray(sl.q)) sl.q = sl.q.map(v => v != null ? v * qFactor : null);
+      if (Array.isArray(sl.h)) sl.h = sl.h.map(v => v != null ? v * hFactor : null);
+      if (Array.isArray(sl.power)) sl.power = sl.power.map(v => v != null ? v * powFactor : null);
+      if (Array.isArray(sl.pow)) sl.pow = sl.pow.map(v => v != null ? v * powFactor : null);
+      if (Array.isArray(sl.npsh)) sl.npsh = sl.npsh.map(v => v != null ? v * npshFactor : null);
       if (sl.bep) {
-        sl.bep.q = sl.bep.q * qFactor;
-        sl.bep.h = sl.bep.h * hFactor;
-        if (sl.bep.power) sl.bep.power = sl.bep.power * powFactor;
-        if (sl.bep.npsh) sl.bep.npsh = sl.bep.npsh * npshFactor;
+        if (sl.bep.q != null) sl.bep.q = sl.bep.q * qFactor;
+        if (sl.bep.h != null) sl.bep.h = sl.bep.h * hFactor;
+        if (sl.bep.power != null) sl.bep.power = sl.bep.power * powFactor;
+        if (sl.bep.pow != null) sl.bep.pow = sl.bep.pow * powFactor;
+        if (sl.bep.npsh != null) sl.bep.npsh = sl.bep.npsh * npshFactor;
       }
     });
   }
 
   if (converted.bep) {
-    converted.bep.q = converted.bep.q * qFactor;
-    converted.bep.h = converted.bep.h * hFactor;
+    if (converted.bep.q != null) converted.bep.q = converted.bep.q * qFactor;
+    if (converted.bep.h != null) converted.bep.h = converted.bep.h * hFactor;
   }
 
-  if (converted.system_q) converted.system_q = converted.system_q.map(v => v * qFactor);
-  if (converted.system_h) converted.system_h = converted.system_h.map(v => v * hFactor);
+  if (Array.isArray(converted.system_q)) converted.system_q = converted.system_q.map(v => v != null ? v * qFactor : null);
+  if (Array.isArray(converted.system_h)) converted.system_h = converted.system_h.map(v => v != null ? v * hFactor : null);
 
   return converted;
 }

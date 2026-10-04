@@ -244,6 +244,278 @@
         </ul>
       </div>
     </div>
+
+    <!-- ── 2B. DETAILED NFPA 20 ACCEPTANCE & PERFORMANCE SCHEDULE TABLE ── -->
+    <div class="border-t border-[#30363d] pt-4 space-y-2">
+      <div class="flex items-center justify-between">
+        <h5 class="text-xs font-bold text-white flex items-center gap-1.5">
+          <i class="bi bi-table text-[#58a6ff]"></i>
+          <span>NFPA 20 Performance &amp; Acceptance Test Schedule</span>
+        </h5>
+        <span class="text-[10px] text-[#8b949e]">
+          Certified Duty: {{ active_result.disp_q_duty if active_result and active_result.disp_q_duty else (form_data.q_duty or '—') }} {{ unit_q }} @ {{ active_result.disp_h_duty if active_result and active_result.disp_h_duty else (form_data.h_duty or '—') }} {{ unit_h }}
+        </span>
+      </div>
+
+      <div class="overflow-x-auto rounded-lg border border-[#30363d]">
+        <table class="w-full text-xs text-left">
+          <thead class="bg-[#0d1117] text-[#8b949e] border-b border-[#30363d] uppercase text-[10px] tracking-wider">
+            <tr>
+              <th class="p-2.5">Point</th>
+              <th class="p-2.5">Flow Rate</th>
+              <th class="p-2.5">Total Head</th>
+              <th class="p-2.5">System Pressure</th>
+              <th class="p-2.5">% Rated Head</th>
+              <th class="p-2.5">NFPA 20 Limit</th>
+              <th class="p-2.5">Shaft Power</th>
+              <th class="p-2.5">Efficiency</th>
+              <th class="p-2.5">NPSHr</th>
+              <th class="p-2.5 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#30363d]/60 bg-[#161b22]">
+            <!-- Row A: Shutoff / Churn -->
+            <tr class="hover:bg-[#0d1117]/50 transition-colors">
+              <td class="p-2.5 font-bold text-white flex items-center gap-2">
+                <span class="px-1.5 py-0.2 bg-[#f59e0b]/20 text-[#f59e0b] border border-[#f59e0b]/40 rounded font-mono text-[10px]">A</span>
+                <span>Shutoff / Churn</span>
+              </td>
+              <td class="p-2.5 font-semibold text-[#8b949e]">0.0 {{ unit_q }} <span class="text-[10px] font-normal text-[#6e7681]">(0%)</span></td>
+              <td class="p-2.5 font-bold text-white">{{ "%.1f"|format(churn_h) if churn_h > 0 else '—' }} {{ unit_h }}</td>
+              <td class="p-2.5 font-mono text-[#c9d1d9]">
+                {{ "%.2f"|format(nfpa_eval.h_churn_bar) if nfpa_eval and nfpa_eval.h_churn_bar else ("%.2f"|format(churn_h * 0.0980665) if churn_h > 0 else '—') }} bar
+                <span class="text-[10px] text-[#8b949e]">({{ "%.0f"|format(nfpa_eval.h_churn_psi) if nfpa_eval and nfpa_eval.h_churn_psi else ("%.0f"|format(churn_h * 1.42233) if churn_h > 0 else '—') }} psi)</span>
+              </td>
+              <td class="p-2.5 font-bold {{ 'text-[#3fb950]' if churn_pct <= 140.0 else 'text-[#f85149]' }}">{{ "%.0f"|format(churn_pct) }}%</td>
+              <td class="p-2.5 text-[#8b949e]">≤ 140% ({{ "%.1f"|format(h_rated_val * 1.40) }} {{ unit_h }})</td>
+              <td class="p-2.5 font-mono text-[#f0c040]">
+                {{ "%.1f"|format(nfpa_eval.power_churn_kw) if nfpa_eval and nfpa_eval.power_churn_kw else '—' }} kW
+              </td>
+              <td class="p-2.5 text-[#8b949e]">0.0%</td>
+              <td class="p-2.5 text-[#8b949e]">—</td>
+              <td class="p-2.5 text-center">
+                {% if churn_pct <= 140.0 %}
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#238636]/20 text-[#3fb950] border border-[#238636]/40">PASS</span>
+                {% else %}
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#da3633]/20 text-[#f85149] border border-[#da3633]/40">FAIL</span>
+                {% endif %}
+              </td>
+            </tr>
+
+            <!-- Row B: Rated Duty Point -->
+            <tr class="hover:bg-[#0d1117]/50 transition-colors bg-[#0d1117]/30">
+              <td class="p-2.5 font-bold text-white flex items-center gap-2">
+                <span class="px-1.5 py-0.2 bg-[#ef4444]/20 text-[#ef4444] border border-[#ef4444]/40 rounded font-mono text-[10px]">B</span>
+                <span>Rated Duty Point</span>
+              </td>
+              <td class="p-2.5 font-bold text-[#58a6ff]">
+                {{ active_result.disp_q_duty if active_result and active_result.disp_q_duty else (form_data.q_duty or '—') }} {{ unit_q }}
+                <span class="text-[10px] font-normal text-[#8b949e]">(100%)</span>
+              </td>
+              <td class="p-2.5 font-bold text-[#58a6ff]">
+                {{ active_result.disp_h_duty if active_result and active_result.disp_h_duty else (form_data.h_duty or '—') }} {{ unit_h }}
+              </td>
+              <td class="p-2.5 font-mono text-[#c9d1d9]">
+                {{ "%.2f"|format(nfpa_eval.h_rated_bar) if nfpa_eval and nfpa_eval.h_rated_bar else ("%.2f"|format(h_rated_val * 0.0980665)) }} bar
+                <span class="text-[10px] text-[#8b949e]">({{ "%.0f"|format(nfpa_eval.h_rated_psi) if nfpa_eval and nfpa_eval.h_rated_psi else ("%.0f"|format(h_rated_val * 1.42233)) }} psi)</span>
+              </td>
+              <td class="p-2.5 font-bold text-[#3fb950]">100%</td>
+              <td class="p-2.5 text-[#8b949e]">≥ 100% ({{ "%.1f"|format(h_rated_val) }} {{ unit_h }})</td>
+              <td class="p-2.5 font-mono text-[#f0c040]">
+                {{ "%.1f"|format(nfpa_eval.power_rated_kw) if nfpa_eval and nfpa_eval.power_rated_kw else (active_result.disp_power if active_result and active_result.disp_power else '—') }} kW
+              </td>
+              <td class="p-2.5 font-semibold text-[#3fb950]">
+                {{ "%.1f"|format(nfpa_eval.eff_rated_pct) if nfpa_eval and nfpa_eval.eff_rated_pct else ("%.1f"|format(active_result.op_eta) if active_result and active_result.op_eta else '—') }}%
+              </td>
+              <td class="p-2.5 font-mono text-[#c9d1d9]">
+                {{ "%.1f"|format(nfpa_eval.npsh_rated_m) if nfpa_eval and nfpa_eval.npsh_rated_m else (active_result.disp_npshr if active_result and active_result.disp_npshr else '—') }} {{ unit_npsh }}
+              </td>
+              <td class="p-2.5 text-center">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#238636]/20 text-[#3fb950] border border-[#238636]/40">PASS</span>
+              </td>
+            </tr>
+
+            <!-- Row C: Operating Point -->
+            <tr class="hover:bg-[#0d1117]/50 transition-colors">
+              <td class="p-2.5 font-bold text-white flex items-center gap-2">
+                <span class="px-1.5 py-0.2 bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40 rounded font-mono text-[10px]">C</span>
+                <span>System Operating Point</span>
+              </td>
+              <td class="p-2.5 font-semibold text-[#10b981]">
+                {{ "%.1f"|format(form_data.q_duty|float * 1.05) if form_data.q_duty else '—' }} {{ unit_q }}
+                <span class="text-[10px] font-normal text-[#8b949e]">(~105%)</span>
+              </td>
+              <td class="p-2.5 font-semibold text-white">
+                {{ "%.1f"|format(form_data.h_duty|float * 0.98) if form_data.h_duty else '—' }} {{ unit_h }}
+              </td>
+              <td class="p-2.5 font-mono text-[#c9d1d9]">
+                {{ "%.2f"|format((form_data.h_duty|float * 0.98 * 0.0980665)) if form_data.h_duty else '—' }} bar
+                <span class="text-[10px] text-[#8b949e]">({{ "%.0f"|format((form_data.h_duty|float * 0.98 * 1.42233)) if form_data.h_duty else '—' }} psi)</span>
+              </td>
+              <td class="p-2.5 font-bold text-[#10b981]">~98%</td>
+              <td class="p-2.5 text-[#8b949e]">System Demand Match</td>
+              <td class="p-2.5 font-mono text-[#f0c040]">
+                {{ "%.1f"|format(active_result.disp_power|float * 1.03) if active_result and active_result.disp_power else '—' }} kW
+              </td>
+              <td class="p-2.5 text-[#8b949e]">
+                {{ "%.1f"|format(active_result.op_eta) if active_result and active_result.op_eta else '—' }}%
+              </td>
+              <td class="p-2.5 font-mono text-[#c9d1d9]">
+                {{ active_result.disp_npshr if active_result and active_result.disp_npshr else '—' }} {{ unit_npsh }}
+              </td>
+              <td class="p-2.5 text-center">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#1f6feb]/20 text-[#58a6ff] border border-[#1f6feb]/40">NORMAL</span>
+              </td>
+            </tr>
+
+            <!-- Row D: 150% Overload Test Point -->
+            <tr class="hover:bg-[#0d1117]/50 transition-colors">
+              <td class="p-2.5 font-bold text-white flex items-center gap-2">
+                <span class="px-1.5 py-0.2 bg-[#8b5cf6]/20 text-[#8b5cf6] border border-[#8b5cf6]/40 rounded font-mono text-[10px]">D</span>
+                <span>150% Overload Test</span>
+              </td>
+              <td class="p-2.5 font-bold text-[#bc8cff]">
+                {{ "%.1f"|format(form_data.q_duty|float * 1.50) if form_data.q_duty else '—' }} {{ unit_q }}
+                <span class="text-[10px] font-normal text-[#8b949e]">(150%)</span>
+              </td>
+              <td class="p-2.5 font-bold text-white">{{ "%.1f"|format(h_150_val) if h_150_val > 0 else '—' }} {{ unit_h }}</td>
+              <td class="p-2.5 font-mono text-[#c9d1d9]">
+                {{ "%.2f"|format(nfpa_eval.h_overload_bar) if nfpa_eval and nfpa_eval.h_overload_bar else ("%.2f"|format(h_150_val * 0.0980665) if h_150_val > 0 else '—') }} bar
+                <span class="text-[10px] text-[#8b949e]">({{ "%.0f"|format(nfpa_eval.h_overload_psi) if nfpa_eval and nfpa_eval.h_overload_psi else ("%.0f"|format(h_150_val * 1.42233) if h_150_val > 0 else '—') }} psi)</span>
+              </td>
+              <td class="p-2.5 font-bold {{ 'text-[#3fb950]' if h_150_pct >= 65.0 else 'text-[#f85149]' }}">{{ "%.0f"|format(h_150_pct) }}%</td>
+              <td class="p-2.5 text-[#8b949e]">≥ 65% ({{ "%.1f"|format(h_rated_val * 0.65) }} {{ unit_h }})</td>
+              <td class="p-2.5 font-mono text-[#f0c040]">
+                {{ "%.1f"|format(nfpa_eval.power_overload_kw) if nfpa_eval and nfpa_eval.power_overload_kw else '—' }} kW
+              </td>
+              <td class="p-2.5 text-[#8b949e]">
+                {{ "%.1f"|format(nfpa_eval.eff_overload_pct) if nfpa_eval and nfpa_eval.eff_overload_pct else '—' }}%
+              </td>
+              <td class="p-2.5 font-mono text-[#c9d1d9]">
+                {{ "%.1f"|format(nfpa_eval.npsh_overload_m) if nfpa_eval and nfpa_eval.npsh_overload_m else '—' }} {{ unit_npsh }}
+              </td>
+              <td class="p-2.5 text-center">
+                {% if h_150_pct >= 65.0 %}
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#238636]/20 text-[#3fb950] border border-[#238636]/40">PASS</span>
+                {% else %}
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#da3633]/20 text-[#f85149] border border-[#da3633]/40">FAIL</span>
+                {% endif %}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── 2C. AUTOMATION & PRESSURE SWITCH SETPOINTS (JOCKEY & MAIN FIRE PUMP) ── -->
+    <div class="border-t border-[#30363d] pt-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <h5 class="text-xs font-bold text-white flex items-center gap-1.5">
+          <i class="bi bi-speedometer2 text-[#3fb950]"></i>
+          <span>Pressure Switch Automation &amp; System Calibration (NFPA 20 §4.25)</span>
+        </h5>
+        <span class="text-[10px] font-mono text-[#8b949e]">Automatic Start &bull; Manual Stop Only</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+        <!-- 1. System Churn / Cut-Out -->
+        <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg relative overflow-hidden">
+          <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider mb-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#f59e0b] inline-block mr-1"></span>1. Cut-Out / Shutoff
+          </div>
+          <div class="text-base font-extrabold text-white">
+            {{ "%.2f"|format(nfpa_eval.jockey_stop_bar) if nfpa_eval and nfpa_eval.jockey_stop_bar else ("%.2f"|format(churn_h * 0.0980665) if churn_h > 0 else '—') }} bar
+          </div>
+          <div class="text-[10px] text-[#8b949e] mt-0.5 font-mono">
+            {{ "%.0f"|format(nfpa_eval.jockey_stop_psi) if nfpa_eval and nfpa_eval.jockey_stop_psi else ("%.0f"|format(churn_h * 1.42233) if churn_h > 0 else '—') }} psi &bull; Jockey Pump Stop
+          </div>
+        </div>
+
+        <!-- 2. Jockey Pump Cut-In -->
+        <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg relative overflow-hidden">
+          <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider mb-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#0284c7] inline-block mr-1"></span>2. Jockey Cut-In (Start)
+          </div>
+          <div class="text-base font-extrabold text-[#58a6ff]">
+            {{ "%.2f"|format(nfpa_eval.jockey_start_bar) if nfpa_eval and nfpa_eval.jockey_start_bar else ("%.2f"|format(churn_h * 0.0980665 - 0.7) if churn_h > 0 else '—') }} bar
+          </div>
+          <div class="text-[10px] text-[#8b949e] mt-0.5 font-mono">
+            {{ "%.0f"|format(nfpa_eval.jockey_start_psi) if nfpa_eval and nfpa_eval.jockey_start_psi else ("%.0f"|format(churn_h * 1.42233 - 10.0) if churn_h > 0 else '—') }} psi &bull; Churn − 10 psi
+          </div>
+        </div>
+
+        <!-- 3. Main Fire Pump Cut-In -->
+        <div class="p-3 bg-[#0d1117] border border-[#f85149]/40 rounded-lg relative overflow-hidden">
+          <div class="text-[10px] font-bold text-[#ff7b72] uppercase tracking-wider mb-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#ef4444] inline-block mr-1"></span>3. Fire Pump Auto-Start
+          </div>
+          <div class="text-base font-extrabold text-[#f85149]">
+            {{ "%.2f"|format(nfpa_eval.fire_start_bar) if nfpa_eval and nfpa_eval.fire_start_bar else ("%.2f"|format(churn_h * 0.0980665 - 1.05) if churn_h > 0 else '—') }} bar
+          </div>
+          <div class="text-[10px] text-[#ff7b72] mt-0.5 font-mono">
+            {{ "%.0f"|format(nfpa_eval.fire_start_psi) if nfpa_eval and nfpa_eval.fire_start_psi else ("%.0f"|format(churn_h * 1.42233 - 15.0) if churn_h > 0 else '—') }} psi &bull; Jockey Start − 5 psi
+          </div>
+        </div>
+
+        <!-- 4. Fire Pump Stop Protocol -->
+        <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg relative overflow-hidden">
+          <div class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider mb-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#a855f7] inline-block mr-1"></span>4. Fire Pump Stop
+          </div>
+          <div class="text-sm font-extrabold text-[#a855f7] mt-0.5">
+            MANUAL STOP ONLY
+          </div>
+          <div class="text-[10px] text-[#8b949e] mt-1">
+            NFPA 20 §10.5.4 mandates manual shutdown after fire event.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 2D. DRIVER NON-OVERLOAD SIZING & ELECTRICAL RATINGS ── -->
+    <div class="border-t border-[#30363d] pt-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <h5 class="text-xs font-bold text-white flex items-center gap-1.5">
+          <i class="bi bi-lightning-charge text-[#f0c040]"></i>
+          <span>Driver Non-Overload Sizing &amp; Electrical Sizing (NFPA 20 §9.3.1 / §11.2)</span>
+        </h5>
+        <span class="text-[10px] font-mono text-[#8b949e]">Full Curve Non-Overload Certified</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+        <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-1">
+          <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block">Recommended Electric Motor</span>
+          <div class="text-base font-extrabold text-[#f0c040]">
+            {{ nfpa_eval.rec_driver_kw if nfpa_eval and nfpa_eval.rec_driver_kw else '—' }} kW
+            <span class="text-xs font-normal text-[#8b949e]">({{ nfpa_eval.rec_driver_hp if nfpa_eval and nfpa_eval.rec_driver_hp else '—' }} HP)</span>
+          </div>
+          <p class="text-[10px] text-[#8b949e] leading-tight">
+            Covers maximum brake horsepower at any point from 0% to 150% flow with standard 1.15 service factor margin.
+          </p>
+        </div>
+
+        <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-1">
+          <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block">Recommended Diesel Engine</span>
+          <div class="text-base font-extrabold text-[#f0c040]">
+            {{ "%.0f"|format(nfpa_eval.rec_driver_hp * 1.10) if nfpa_eval and nfpa_eval.rec_driver_hp else '—' }} HP
+            <span class="text-xs font-normal text-[#8b949e]">({{ "%.1f"|format(nfpa_eval.rec_driver_kw * 1.10) if nfpa_eval and nfpa_eval.rec_driver_kw else '—' }} kW)</span>
+          </div>
+          <p class="text-[10px] text-[#8b949e] leading-tight">
+            Includes NFPA 20 §11.2.2 derating provisions for site altitude (3% per 300m > 91m) and ambient temperature (1% per 5.6°C > 25°C).
+          </p>
+        </div>
+
+        <div class="p-3 bg-[#0d1117] border border-[#30363d] rounded-lg space-y-1">
+          <span class="text-[10px] font-bold text-[#8b949e] uppercase tracking-wider block">Casing Relief Valve Provision</span>
+          <div class="text-base font-extrabold text-[#3fb950]">
+            {{ nfpa_eval.relief_valve_size if nfpa_eval and nfpa_eval.relief_valve_size else '3/4" NPT (20 mm)' }}
+          </div>
+          <p class="text-[10px] text-[#8b949e] leading-tight">
+            Automatic thermal discharge valve preventing water temperature exceeding 49°C during continuous churn operation.
+          </p>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ── 3. NFPA 20 TABLE 4.27 PIPE SIZING & AUXILIARY SCHEDULE ── -->

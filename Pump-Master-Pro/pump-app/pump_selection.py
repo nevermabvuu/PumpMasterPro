@@ -189,10 +189,16 @@ def _apply_filters(pumps, filters, operation_mode, fixed_speed_mode='auto', manu
         if filters and filters.get('pump_type'):
             pt_raw = filters['pump_type'].strip().lower()
             apps = ((pump.app_modules or '') + ' ' + (pump.application or '') + ' ' + (pump.pump_type or '')).lower()
+            pump_mods = [m.strip().lower() for m in (pump.app_modules or '').split(',') if m.strip()]
             if pt_raw in ('fire', 'fire pump', 'fire_pump', 'fire protection'):
                 # Match dedicated fire pumps OR clean water centrifugal pumps capable of fire service (never slurry)
-                if 'fire' not in apps and not ((pump.pump_type or '').lower() == 'centrifugal' and 'slurry' not in apps):
-                    continue
+                # If modules are checked, 'fire' must be in pump_mods; if no modules checked, available for all (except slurry)
+                if pump_mods:
+                    if 'fire' not in pump_mods:
+                        continue
+                else:
+                    if 'fire' not in apps and not ((pump.pump_type or '').lower() == 'centrifugal' and 'slurry' not in apps):
+                        continue
             else:
                 type_list = [t.strip().lower() for t in filters['pump_type'].split(',') if t.strip()]
                 if type_list:
@@ -224,12 +230,16 @@ def _apply_filters(pumps, filters, operation_mode, fixed_speed_mode='auto', manu
             except (ValueError, TypeError):
                 pass
 
-        # Application module filter (pump must have ALL specified modules)
+        # Application module filter
+        # Beginners Note:
+        # If a pump has specific modules checked in pump-data (pump.app_modules), it can only be selected
+        # for those checked modules. If NO module is checked in pump-data, it is universally available for all modules.
         if filters and filters.get('application'):
             req_apps = [a.strip().lower() for a in filters['application'].split(',') if a.strip()]
             pump_apps = [a.strip().lower() for a in (pump.app_modules or '').split(',') if a.strip()]
-            if req_apps and not all(ra in pump_apps for ra in req_apps):
-                continue
+            if pump_apps and req_apps:
+                if not any(ra in pump_apps for ra in req_apps):
+                    continue
 
         # Size filter (partial match)
         if filters and filters.get('size'):

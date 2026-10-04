@@ -122,13 +122,20 @@ def index():
     target_head = default_calc['head_m']
 
     for p in all_pumps:
+        pump_mods = [m.strip().lower() for m in (p.app_modules or '').split(',') if m.strip()]
         full_meta = ((p.app_modules or '') + ' ' + (p.application or '') + ' ' + (p.pump_type or '') + ' ' + (p.name or '')).lower()
-        is_dedicated = 'fire' in ((p.app_modules or '') + ' ' + (p.application or '') + ' ' + (p.pump_type or '')).lower()
         is_slurry_or_dirty = any(t in full_meta for t in ['slurry', 'sump', 'sewage', 'sludge', 'dredge', 'froth'])
 
-        # Avoid slurry and sump pumps for fire protection unless explicitly designated for fire service
-        if is_slurry_or_dirty and not is_dedicated:
-            continue
+        if pump_mods:
+            # If specific modules are checked in pump-data, it MUST include 'fire'
+            if 'fire' not in pump_mods:
+                continue
+            is_dedicated = True
+        else:
+            # If no module is checked, it is available for ALL modules (unless explicitly slurry/sump)
+            if is_slurry_or_dirty:
+                continue
+            is_dedicated = False
 
         eval_res = evaluate_pump_nfpa20_compliance(p, target_flow, target_head)
         item = {
@@ -250,13 +257,20 @@ def api_calculate():
 
     candidates = []
     for p in all_pumps:
+        pump_mods = [m.strip().lower() for m in (p.app_modules or '').split(',') if m.strip()]
         full_meta = ((p.app_modules or '') + ' ' + (p.application or '') + ' ' + (p.pump_type or '') + ' ' + (p.name or '')).lower()
-        is_dedicated = 'fire' in ((p.app_modules or '') + ' ' + (p.application or '') + ' ' + (p.pump_type or '')).lower()
         is_slurry_or_dirty = any(t in full_meta for t in ['slurry', 'sump', 'sewage', 'sludge', 'dredge', 'froth'])
 
-        # Exclude dirty water/slurry/sump pumps from fire applications unless explicitly certified
-        if is_slurry_or_dirty and not is_dedicated:
-            continue
+        if pump_mods:
+            # If specific modules are checked in pump-data, it MUST include 'fire'
+            if 'fire' not in pump_mods:
+                continue
+            is_dedicated = True
+        else:
+            # If no module is checked, it is available for ALL modules (unless explicitly slurry/sump)
+            if is_slurry_or_dirty:
+                continue
+            is_dedicated = False
 
         # If user selected Dedicated Fire Pumps Only, filter out general water pumps
         if dedicated_only and not is_dedicated:

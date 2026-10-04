@@ -753,6 +753,104 @@
      Placing modals here guarantees they always attach directly to the browser viewport window. -->
 {% block modals %}{% endblock %}
 
+<!-- ── Global Page & Link Navigation Loading Indicator ── -->
+<div id="globalPageLoaderBar" style="position: fixed; top: 0; left: 0; width: 0%; height: 3px; background: linear-gradient(90deg, #1f6feb, #58a6ff, #79c0ff); box-shadow: 0 0 10px rgba(88, 166, 255, 0.8), 0 0 5px #58a6ff; z-index: 999999; transition: width 0.35s ease, opacity 0.3s ease; opacity: 0; pointer-events: none;"></div>
+
+<div id="globalPageLoaderToast" style="position: fixed; bottom: 24px; right: 24px; z-index: 999999; display: flex; align-items: center; gap: 10px; background: rgba(22, 27, 34, 0.95); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(88, 166, 255, 0.4); border-radius: 9999px; padding: 8px 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 12px rgba(88,166,255,0.25); color: #ffffff; font-size: 12px; font-weight: 600; opacity: 0; transform: translateY(12px) scale(0.96); transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); pointer-events: none;">
+  <svg class="animate-spin" style="width: 15px; height: 15px; color: #58a6ff;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+  </svg>
+  <span id="globalPageLoaderText" style="letter-spacing: 0.2px;">Loading...</span>
+</div>
+
+<script>
+(function() {
+  const bar = document.getElementById('globalPageLoaderBar');
+  const toast = document.getElementById('globalPageLoaderToast');
+  const text = document.getElementById('globalPageLoaderText');
+  let progressInterval = null;
+  let safetyTimeout = null;
+
+  function showLoader(customMsg) {
+    if (!bar || !toast) return;
+    if (customMsg && text) text.textContent = customMsg;
+    else if (text) text.textContent = 'Loading...';
+
+    bar.style.opacity = '1';
+    bar.style.width = '25%';
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0) scale(1)';
+
+    clearInterval(progressInterval);
+    let p = 25;
+    progressInterval = setInterval(() => {
+      if (p < 85) {
+        p += Math.random() * 12 + 3;
+        if (p > 88) p = 88;
+        bar.style.width = p + '%';
+      }
+    }, 250);
+
+    clearTimeout(safetyTimeout);
+    safetyTimeout = setTimeout(() => {
+      hideLoader();
+    }, 12000);
+  }
+
+  function hideLoader() {
+    if (!bar || !toast) return;
+    clearInterval(progressInterval);
+    clearTimeout(safetyTimeout);
+    bar.style.width = '100%';
+    setTimeout(() => {
+      bar.style.opacity = '0';
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(12px) scale(0.96)';
+      setTimeout(() => {
+        bar.style.width = '0%';
+      }, 300);
+    }, 200);
+  }
+
+  // Intercept all link clicks
+  document.addEventListener('click', function(e) {
+    const link = e.target.closest('a');
+    if (!link) return;
+
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
+
+    const href = link.getAttribute('href');
+    if (!href) return;
+
+    if (href === '#' || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+    if (link.getAttribute('target') === '_blank' || link.hasAttribute('download') || link.dataset.noLoading === 'true' || link.classList.contains('no-loader')) return;
+
+    const linkText = link.innerText ? link.innerText.trim() : '';
+    const label = linkText && linkText.length <= 25 ? `Loading ${linkText}...` : 'Loading page...';
+    showLoader(label);
+  });
+
+  // Intercept form submissions
+  document.addEventListener('submit', function(e) {
+    const form = e.target;
+    if (form.getAttribute('target') === '_blank' || form.dataset.noLoading === 'true' || form.classList.contains('no-loader')) return;
+    showLoader('Processing request...');
+  });
+
+  window.addEventListener('pageshow', function() {
+    hideLoader();
+  });
+
+  window.addEventListener('beforeunload', function() {
+    showLoader('Loading...');
+  });
+
+  window.showPageLoader = showLoader;
+  window.hidePageLoader = hideLoader;
+})();
+</script>
+
 {% block scripts %}{% endblock %}
 </body>
 </html>

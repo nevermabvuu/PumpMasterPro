@@ -655,6 +655,31 @@ def compute_pump_power(pump: Any, q_m3h: float, h_m: float, eff_pct: float) -> f
     return float((q_m3h * h_m * 9.80665) / (3600.0 * eff))
 
 
+def compute_pump_npsh(pump: Any, q_m3h: float) -> Optional[float]:
+    """
+    Computes pump required NPSH (m) at flow rate q_m3h using polynomial or get_npsh method:
+    NPSHr(Q) = c0 + c1*Q + c2*Q^2 + c3*Q^3 + c4*Q^4 + c5*Q^5
+    """
+    if hasattr(pump, 'get_npsh') and callable(getattr(pump, 'get_npsh')):
+        try:
+            val = pump.get_npsh(q_m3h)
+            if val is not None and float(val) > 0:
+                return round(float(val), 2)
+        except Exception:
+            pass
+    c0 = getattr(pump, 'npsh_c0', None)
+    if c0 is not None:
+        c1 = getattr(pump, 'npsh_c1', 0.0) or 0.0
+        c2 = getattr(pump, 'npsh_c2', 0.0) or 0.0
+        c3 = getattr(pump, 'npsh_c3', 0.0) or 0.0
+        c4 = getattr(pump, 'npsh_c4', 0.0) or 0.0
+        c5 = getattr(pump, 'npsh_c5', 0.0) or 0.0
+        npsh_val = float(c0) + c1 * q_m3h + c2 * (q_m3h ** 2) + c3 * (q_m3h ** 3) + c4 * (q_m3h ** 4) + c5 * (q_m3h ** 5)
+        if npsh_val > 0.05:
+            return round(float(npsh_val), 2)
+    return None
+
+
 def evaluate_pump_nfpa20_compliance(
     pump: Any,
     q_duty_m3h: float,
@@ -667,7 +692,7 @@ def evaluate_pump_nfpa20_compliance(
       3. Overload capacity: H(1.5 * Q_duty) >= 0.65 * H_duty
       4. Driver power requirement across the full operating range (up to 150% flow).
 
-    Returns evaluation metrics, percentages, and pass/fail statuses.
+    Returns evaluation metrics, percentages, pressures, setpoints, and pass/fail statuses.
     """
     # Evaluate Head at 0% flow (Churn / Shutoff)
     h_churn = compute_pump_head(pump, 0.0)
@@ -679,13 +704,18 @@ def evaluate_pump_nfpa20_compliance(
     q_overload = q_duty_m3h * 1.50
     h_overload = compute_pump_head(pump, q_overload)
 
-    # Evaluate Efficiency at rated duty
+    # Evaluate Efficiency at rated duty and overload
     eff_rated = compute_pump_eff(pump, q_duty_m3h)
-
-    # Evaluate Power requirement at rated and 150% overload
-    pow_rated = compute_pump_power(pump, q_duty_m3h, h_rated, eff_rated)
     eff_overload = compute_pump_eff(pump, q_overload)
+
+    # Evaluate Power requirement at shutoff, rated, and 150% overload
+    pow_churn = compute_pump_power(pump, 0.0, h_churn, 5.0)
+    pow_rated = compute_pump_power(pump, q_duty_m3h, h_rated, eff_rated)
     pow_overload = compute_pump_power(pump, q_overload, h_overload, eff_overload)
+
+    # Evaluate NPSHr at rated and 150% flow
+    npsh_rated = compute_pump_npsh(pump, q_duty_m3h)
+    npsh_overload = compute_pump_npsh(pump, q_overload)
 
     # NFPA 20 Ratios:
     # 1. Rated Head Ratio: pump delivered head at duty flow must be >= 100% of required system head
@@ -705,7 +735,6 @@ def evaluate_pump_nfpa20_compliance(
     is_compliant = pass_rated and pass_churn and pass_overload
 
     # Compliance Rating Score (for smart ranking)
-    # Higher score = closer to optimal (rated ratio close to 1.02-1.08, churn ~ 1.15-1.25, overload ~ 0.70-0.80)
     score = 100.0
     if not pass_rated:
         score -= 50.0
@@ -713,14 +742,80 @@ def evaluate_pump_nfpa20_compliance(
         score -= 30.0
     if not pass_overload:
         score -= 30.0
-    # Reward good efficiency
     score += (eff_rated * 0.2)
 
-    # Sizing Recommended Motor (HP and kW)
+    # Sizing Recommended Motor (HP and kW) with NFPA 20 1.15 service factor non-overload margin
     max_power_kw = max(pow_rated, pow_overload)
-    # NFPA 20 Driver Sizing Margin (typically 1.15 service factor)
     rec_driver_kw = round(max_power_kw * 1.15, 1)
     rec_driver_hp = round(rec_driver_kw * KW_TO_HP, 1)
+
+    # Pressure conversions (1 m head = 0.0980665 bar = 1.42233 psi)
+    h_churn_bar = round(h_churn * 0.0980665, 2)
+    h_churn_psi = round(h_churn * M_TO_PSI, 1)
+    h_rated_bar = round(h_rated * 0.0980665, 2)
+    h_rated_psi = round(h_rated * M_TO_PSI, 1)
+    h_overload_bar = round(h_overload * 0.0980665, 2)
+    h_overload_psi = round(h_overload * M_TO_PSI, 1)
+
+    # Jockey pump pressure maintenance switch setpoints (NFPA 20 guidelines)
+    jockey_stop_bar = h_churn_bar
+    jockey_stop_psi = h_churn_psi
+    jockey_start_bar = round(max(0.0, h_churn_bar - 0.7), 2)
+    jockey_start_psi = round(max(0.0, h_churn_psi - 10.0), 1)
+    fire_start_bar = round(max(0.0, h_churn_bar - 1.05), 2)
+    fire_start_psi = round(max(0.0, h_churn_psi - 15.0), 1)
+
+    # Casing relief valve sizing (NFPA 20 §4.18: 3/4" for <= 2500 gpm, 1" for > 2500 gpm)
+    relief_valve_size = '3/4" NPT' if q_duty_m3h <= 568.0 else '1" NPT'
+
+    # Performance Test Schedule
+    schedule = [
+        {
+            'letter': 'A',
+            'name': 'Shutoff / Churn',
+            'flow_pct': 0,
+            'flow_m3h': 0.0,
+            'head_m': round(h_churn, 2),
+            'head_bar': h_churn_bar,
+            'head_psi': h_churn_psi,
+            'head_pct': round(churn_ratio * 100.0, 1),
+            'limit': f'≤ 140% ({round(reference_rated_head * 1.40, 1)} m)',
+            'power_kw': round(pow_churn, 1),
+            'eff_pct': 0.0,
+            'npsh_m': None,
+            'pass': pass_churn
+        },
+        {
+            'letter': 'B',
+            'name': 'Rated Duty Point',
+            'flow_pct': 100,
+            'flow_m3h': round(q_duty_m3h, 1),
+            'head_m': round(h_rated, 2),
+            'head_bar': h_rated_bar,
+            'head_psi': h_rated_psi,
+            'head_pct': round(rated_ratio * 100.0, 1),
+            'limit': f'≥ 100% ({round(h_duty_m, 1)} m)',
+            'power_kw': round(pow_rated, 1),
+            'eff_pct': round(eff_rated, 1),
+            'npsh_m': npsh_rated,
+            'pass': pass_rated
+        },
+        {
+            'letter': 'D',
+            'name': '150% Overload Test',
+            'flow_pct': 150,
+            'flow_m3h': round(q_overload, 1),
+            'head_m': round(h_overload, 2),
+            'head_bar': h_overload_bar,
+            'head_psi': h_overload_psi,
+            'head_pct': round(overload_ratio * 100.0, 1),
+            'limit': f'≥ 65% ({round(reference_rated_head * 0.65, 1)} m)',
+            'power_kw': round(pow_overload, 1),
+            'eff_pct': round(eff_overload, 1),
+            'npsh_m': npsh_overload,
+            'pass': pass_overload
+        }
+    ]
 
     return {
         'pump_id': pump.id,
@@ -730,30 +825,48 @@ def evaluate_pump_nfpa20_compliance(
         'speed_rpm': pump.speed_rpm,
         'impeller_dia_mm': pump.impeller_dia_mm,
 
-        # NFPA 20 Test Points
+        # NFPA 20 Test Points - Head & Pressures
         'h_churn_m': round(h_churn, 2),
-        'h_churn_psi': round(h_churn * M_TO_PSI, 1),
+        'h_churn_bar': h_churn_bar,
+        'h_churn_psi': h_churn_psi,
         'churn_ratio': round(churn_ratio, 4),
         'churn_ratio_pct': round(churn_ratio * 100.0, 1),
         'pass_churn': pass_churn,
 
         'h_rated_m': round(h_rated, 2),
-        'h_rated_psi': round(h_rated * M_TO_PSI, 1),
+        'h_rated_bar': h_rated_bar,
+        'h_rated_psi': h_rated_psi,
         'rated_ratio': round(rated_ratio, 4),
         'rated_ratio_pct': round(rated_ratio * 100.0, 1),
         'pass_rated': pass_rated,
 
         'h_overload_m': round(h_overload, 2),
-        'h_overload_psi': round(h_overload * M_TO_PSI, 1),
+        'h_overload_bar': h_overload_bar,
+        'h_overload_psi': h_overload_psi,
         'overload_ratio': round(overload_ratio, 4),
         'overload_ratio_pct': round(overload_ratio * 100.0, 1),
         'pass_overload': pass_overload,
 
+        # Power & Efficiency
         'eff_rated_pct': round(eff_rated, 1),
+        'eff_overload_pct': round(eff_overload, 1),
+        'power_churn_kw': round(pow_churn, 1),
         'power_rated_kw': round(pow_rated, 1),
         'power_overload_kw': round(pow_overload, 1),
+        'npsh_rated_m': npsh_rated,
+        'npsh_overload_m': npsh_overload,
         'rec_driver_kw': rec_driver_kw,
         'rec_driver_hp': rec_driver_hp,
+
+        # Pressure Maintenance Switch Setpoints
+        'jockey_stop_bar': jockey_stop_bar,
+        'jockey_stop_psi': jockey_stop_psi,
+        'jockey_start_bar': jockey_start_bar,
+        'jockey_start_psi': jockey_start_psi,
+        'fire_start_bar': fire_start_bar,
+        'fire_start_psi': fire_start_psi,
+        'relief_valve_size': relief_valve_size,
+        'schedule': schedule,
 
         'is_compliant': is_compliant,
         'score': round(score, 1),

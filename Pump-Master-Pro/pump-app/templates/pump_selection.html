@@ -1213,6 +1213,7 @@
       {% set active_filters_count = namespace(value=0) %}
       {% if form_data.get('filter_manufacturer') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
       {% if form_data.get('filter_pump_type') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
+      {% if form_data.get('filter_application') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
       {% if form_data.get('filter_size') %}{% set active_filters_count.value = active_filters_count.value + 1 %}{% endif %}
       {% if filter_options and filter_options.custom_attributes %}
         {% for attr in filter_options.custom_attributes %}
@@ -1290,7 +1291,18 @@
                 {% endif %}
               </select>
             </div>
-            <div class="col-span-2">
+            <div>
+              <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Application Module</label>
+              <select name="filter_application" id="filter_application" class="form-select form-control-dark w-full text-xs">
+                <option value="">All Modules</option>
+                {% if filter_options and filter_options.applications %}
+                  {% for app in filter_options.applications %}
+                  <option value="{{ app }}" {{ 'selected' if form_data.get('filter_application') == app }}>{{ app|capitalize }}</option>
+                  {% endfor %}
+                {% endif %}
+              </select>
+            </div>
+            <div>
               <label class="form-label text-[10px] text-[#8b949e] block mb-0.5">Size Match</label>
               <input type="text" name="filter_size" class="form-control form-control-dark w-full text-xs"
                      value="{{ form_data.get('filter_size', '') }}" placeholder="e.g. 6/4 or 100-250">

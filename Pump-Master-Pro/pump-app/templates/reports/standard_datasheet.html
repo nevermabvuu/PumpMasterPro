@@ -404,9 +404,9 @@
             <span>Key NFPA 20 Requirements</span>
           </div>
           <ul style="margin: 0; padding-left: 14px; color: #334155; line-height: 1.35;">
-            <li><strong>[E] Shutoff Head Limit:</strong> Must not exceed 140% of rated head (Limit ≤ {{ "%.1f"|format(curves.fire_data.max_churn_limit) }} {{ curves.rep_unit_h }}; Actual: {{ "%.1f"|format(curves.fire_data.h_churn) }} {{ curves.rep_unit_h }} / {{ "%.0f"|format(curves.fire_data.churn_pct) }}%).</li>
-            <li><strong>[F] Rated Capacity:</strong> At rated capacity, pump must provide at least 100% rated head ({{ "%.1f"|format(curves.fire_data.q_duty) }} {{ curves.rep_unit_q }} @ {{ "%.1f"|format(curves.fire_data.h_duty) }} {{ curves.rep_unit_h }}).</li>
-            <li><strong>[G] 150% Overload Capacity:</strong> At 150% flow, pump must provide at least 65% of rated head (Limit ≥ {{ "%.1f"|format(curves.fire_data.min_overload_limit) }} {{ curves.rep_unit_h }}; Actual: {{ "%.1f"|format(curves.fire_data.h_150) }} {{ curves.rep_unit_h }} / {{ "%.0f"|format(curves.fire_data.h_150_pct) }}%).</li>
+            <li><strong>[E] Shutoff Head Limit:</strong> Must not exceed 140% of rated head (Limit ≤ {{ "%.1f"|format(curves.fire_data.get('max_churn_limit', 0.0)) }} {{ curves.rep_unit_h }}; Actual: {{ "%.1f"|format(curves.fire_data.get('h_churn', 0.0)) }} {{ curves.rep_unit_h }} / {{ "%.0f"|format(curves.fire_data.get('churn_pct', 0.0)) }}%).</li>
+            <li><strong>[F] Rated Capacity:</strong> At rated capacity, pump must provide at least 100% rated head ({{ "%.1f"|format(curves.fire_data.get('q_duty', 0.0)) }} {{ curves.rep_unit_q }} @ {{ "%.1f"|format(curves.fire_data.get('h_duty', 0.0)) }} {{ curves.rep_unit_h }}).</li>
+            <li><strong>[G] 150% Overload Capacity:</strong> At 150% flow, pump must provide at least 65% of rated head (Limit ≥ {{ "%.1f"|format(curves.fire_data.get('min_overload_limit', 0.0)) }} {{ curves.rep_unit_h }}; Actual: {{ "%.1f"|format(curves.fire_data.get('h_150', 0.0)) }} {{ curves.rep_unit_h }} / {{ "%.0f"|format(curves.fire_data.get('h_150_pct', 0.0)) }}%).</li>
           </ul>
         </div>
 
@@ -430,13 +430,99 @@
             <span>Key Operating Points</span>
           </div>
           <ul style="margin: 0; padding-left: 14px; color: #334155; line-height: 1.35;">
-            <li><strong>[A] Shutoff / Churn:</strong> 0% flow @ {{ "%.1f"|format(curves.fire_data.h_churn) }} {{ curves.rep_unit_h }} (~{{ "%.0f"|format(curves.fire_data.churn_pct) }}% of rated head).</li>
-            <li><strong>[B] Rated Duty Point:</strong> 100% flow @ 100% head ({{ "%.1f"|format(curves.fire_data.q_duty) }} {{ curves.rep_unit_q }} @ {{ "%.1f"|format(curves.fire_data.h_duty) }} {{ curves.rep_unit_h }}).</li>
-            <li><strong>[C] Operating Point:</strong> System curve intersection (~{{ "%.1f"|format(curves.fire_data.q_fav) }} {{ curves.rep_unit_q }} @ {{ "%.1f"|format(curves.fire_data.h_fav) }} {{ curves.rep_unit_h }}).</li>
-            <li><strong>[D] 150% Capacity Point:</strong> 150% flow @ {{ "%.1f"|format(curves.fire_data.h_150) }} {{ curves.rep_unit_h }} (~{{ "%.0f"|format(curves.fire_data.h_150_pct) }}% of rated head).</li>
+            <li><strong>[A] Shutoff / Churn:</strong> 0% flow @ {{ "%.1f"|format(curves.fire_data.get('h_churn', 0.0)) }} {{ curves.rep_unit_h }} (~{{ "%.0f"|format(curves.fire_data.get('churn_pct', 0.0)) }}% of rated head).</li>
+            <li><strong>[B] Rated Duty Point:</strong> 100% flow @ 100% head ({{ "%.1f"|format(curves.fire_data.get('q_duty', 0.0)) }} {{ curves.rep_unit_q }} @ {{ "%.1f"|format(curves.fire_data.get('h_duty', 0.0)) }} {{ curves.rep_unit_h }}).</li>
+            <li><strong>[C] Operating Point:</strong> System curve intersection (~{{ "%.1f"|format(curves.fire_data.get('q_fav', 0.0)) }} {{ curves.rep_unit_q }} @ {{ "%.1f"|format(curves.fire_data.get('h_fav', 0.0)) }} {{ curves.rep_unit_h }}).</li>
+            <li><strong>[D] 150% Capacity Point:</strong> 150% flow @ {{ "%.1f"|format(curves.fire_data.get('h_150', 0.0)) }} {{ curves.rep_unit_h }} (~{{ "%.0f"|format(curves.fire_data.get('h_150_pct', 0.0)) }}% of rated head).</li>
           </ul>
         </div>
       </div>
+
+      <!-- Performance Test Schedule Table -->
+      {% if curves.fire_data.get('schedule') %}
+      <div style="margin-top: 6px; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; background: #ffffff;">
+        <div style="background: #f8fafc; border-bottom: 1px solid #cbd5e1; padding: 4px 8px; font-weight: 800; font-size: 7.8pt; color: #1e293b; display: flex; justify-content: space-between; align-items: center;">
+          <span style="display: flex; align-items: center; gap: 5px;">
+            <span style="display: inline-block; width: 6px; height: 6px; background: #e11d48; border-radius: 50%;"></span>
+            <span>NFPA 20 Performance &amp; Acceptance Test Schedule</span>
+          </span>
+          <span style="font-size: 7pt; font-weight: normal; color: #64748b;">Duty Basis: 100% Demand @ {{ "%.1f"|format(curves.fire_data.get('q_duty', 0.0)) }} {{ curves.rep_unit_q }} / {{ "%.1f"|format(curves.fire_data.get('h_duty', 0.0)) }} {{ curves.rep_unit_h }}</span>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 7.2pt; text-align: center;">
+          <thead>
+            <tr style="background: #f1f5f9; color: #475569; border-bottom: 1px solid #cbd5e1; font-weight: 700;">
+              <th style="padding: 3px 4px; text-align: left;">Point</th>
+              <th style="padding: 3px 4px;">Flow</th>
+              <th style="padding: 3px 4px;">Head ({{ curves.rep_unit_h }})</th>
+              <th style="padding: 3px 4px;">Pressure</th>
+              <th style="padding: 3px 4px;">% Head</th>
+              <th style="padding: 3px 4px;">NFPA 20 Criteria</th>
+              <th style="padding: 3px 4px;">Power ({{ curves.rep_unit_pow }})</th>
+              <th style="padding: 3px 4px;">Eff (%)</th>
+              <th style="padding: 3px 4px;">NPSHr ({{ curves.rep_unit_npsh }})</th>
+              <th style="padding: 3px 4px;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in curves.fire_data.get('schedule', []) %}
+            <tr style="border-bottom: 1px solid #f1f5f9; background: {{ '#fff1f2' if not row.pass else ('#f8fafc' if loop.index is odd else '#ffffff') }};">
+              <td style="padding: 3px 4px; text-align: left; font-weight: 700;">
+                <span style="display: inline-block; width: 14px; height: 14px; line-height: 14px; text-align: center; border-radius: 3px; font-size: 6.5pt; font-weight: bold; background: #e2e8f0; color: #1e293b; margin-right: 3px;">{{ row.letter }}</span>
+                {{ row.point }}
+              </td>
+              <td style="padding: 3px 4px; font-weight: 600;">{{ "%.1f"|format(row.q) }} ({{ row.flow_pct }}%)</td>
+              <td style="padding: 3px 4px; font-weight: 700; color: #0f172a;">{{ "%.1f"|format(row.h) }}</td>
+              <td style="padding: 3px 4px; color: #475569;">{{ "%.1f"|format(row.p_bar) }} bar / {{ "%.0f"|format(row.p_psi) }} psi</td>
+              <td style="padding: 3px 4px; font-weight: 600; color: {{ '#16a34a' if row.pass else '#dc2626' }};">{{ "%.0f"|format(row.h_pct) }}%</td>
+              <td style="padding: 3px 4px; color: #475569;">{{ row.limit_text }}</td>
+              <td style="padding: 3px 4px; font-weight: 600; color: #b45309;">{{ "%.1f"|format(row.power) if row.power is not none else '—' }}</td>
+              <td style="padding: 3px 4px;">{{ "%.1f"|format(row.eff) if row.eff is not none else '—' }}%</td>
+              <td style="padding: 3px 4px;">{{ "%.1f"|format(row.npsh) if row.npsh is not none else '—' }}</td>
+              <td style="padding: 3px 4px;">
+                <span style="font-weight: 800; font-size: 6.8pt; padding: 1px 5px; border-radius: 3px; background: {{ '#dcfce7' if row.pass else '#fee2e2' }}; color: {{ '#15803d' if row.pass else '#b91c1c' }};">
+                  {{ row.status }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      <!-- Auxiliary & Installation Engineering Setpoints -->
+      {% if curves.fire_data.get('rec_driver_kw') or curves.fire_data.get('p_churn_bar') %}
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; font-size: 7.2pt; font-family: sans-serif;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 5px 7px;">
+          <div style="font-weight: 700; color: #475569; text-transform: uppercase; font-size: 6.8pt;">Non-Overload Driver Sizing</div>
+          <div style="font-weight: 800; color: #0f172a; font-size: 8.5pt; margin-top: 1px;">
+            {{ "%.1f"|format(curves.fire_data.get('rec_driver_kw', 0.0)) }} kW <span style="font-size: 7pt; font-weight: normal; color: #64748b;">({{ "%.0f"|format(curves.fire_data.get('rec_driver_hp', 0.0)) }} HP)</span>
+          </div>
+          <div style="color: #64748b; font-size: 6.5pt; margin-top: 1px;">NFPA 20 1.15 Service Factor margin</div>
+        </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 5px 7px;">
+          <div style="font-weight: 700; color: #475569; text-transform: uppercase; font-size: 6.8pt;">Casing Relief Valve</div>
+          <div style="font-weight: 800; color: #16a34a; font-size: 8.5pt; margin-top: 1px;">
+            {{ curves.fire_data.get('relief_valve_size', '3/4" NPT (20 mm)') }}
+          </div>
+          <div style="color: #64748b; font-size: 6.5pt; margin-top: 1px;">Set: {{ "%.1f"|format(curves.fire_data.get('p_churn_bar', 0.0)) }} bar / {{ "%.0f"|format(curves.fire_data.get('p_churn_psi', 0.0)) }} psi</div>
+        </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 5px 7px;">
+          <div style="font-weight: 700; color: #475569; text-transform: uppercase; font-size: 6.8pt;">Jockey Pump Setpoints</div>
+          <div style="font-weight: 800; color: #0284c7; font-size: 8.5pt; margin-top: 1px;">
+            {{ "%.1f"|format(curves.fire_data.get('jockey_start_bar', 0.0)) }} / {{ "%.1f"|format(curves.fire_data.get('jockey_stop_bar', 0.0)) }} bar
+          </div>
+          <div style="color: #64748b; font-size: 6.5pt; margin-top: 1px;">Start @ -10 psi / Stop @ Churn</div>
+        </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 5px 7px;">
+          <div style="font-weight: 700; color: #475569; text-transform: uppercase; font-size: 6.8pt;">Fire Pump Auto-Start</div>
+          <div style="font-weight: 800; color: #dc2626; font-size: 8.5pt; margin-top: 1px;">
+            {{ "%.1f"|format(curves.fire_data.get('fire_start_bar', 0.0)) }} bar <span style="font-size: 7pt; font-weight: normal; color: #64748b;">({{ "%.0f"|format(curves.fire_data.get('fire_start_psi', 0.0)) }} psi)</span>
+          </div>
+          <div style="color: #64748b; font-size: 6.5pt; margin-top: 1px;">Stop: Manual Only (NFPA 20 §10.5.4)</div>
+        </div>
+      </div>
+      {% endif %}
       {% endif %}
     </div>
 

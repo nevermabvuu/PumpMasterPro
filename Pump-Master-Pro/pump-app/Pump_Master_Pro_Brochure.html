@@ -104,6 +104,9 @@
           <i class="bi bi-check-circle-fill text-[#3fb950] mr-1"></i> API 610 (11th/12th)
         </span>
         <span class="px-3 py-1 rounded-lg bg-[#161b22] border border-[#30363d] text-[#e6edf3]">
+          <i class="bi bi-check-circle-fill text-[#f85149] mr-1"></i> NFPA 20 / 13 / 14 &amp; EN 12845
+        </span>
+        <span class="px-3 py-1 rounded-lg bg-[#161b22] border border-[#30363d] text-[#e6edf3]">
           <i class="bi bi-check-circle-fill text-[#38bdf8] mr-1"></i> Darcy-Weisbach Solvers
         </span>
       </div>
@@ -164,29 +167,46 @@
         </p>
       </div>
 
-      <!-- Screenshot 2 -->
+      <!-- Screenshot 2: Pipeline Schematic View -->
       <div class="card-glow p-5 rounded-2xl space-y-3">
         <div class="flex items-center justify-between">
           <h3 class="text-sm font-bold text-white flex items-center gap-2">
             <i class="bi bi-bezier2 text-[#818cf8]"></i>
-            Figure 2: Interactive CAD Pipe Network &amp; Friction Loss Designer
+            Figure 2: Interactive CAD Pipe Network Designer — Schematic View &amp; Flow Solver
           </h3>
-          <span class="text-[11px] font-mono text-[#818cf8] bg-[#818cf8]/10 px-2 py-0.5 rounded">CAD Designer</span>
+          <span class="text-[11px] font-mono text-[#818cf8] bg-[#818cf8]/10 px-2 py-0.5 rounded">Schematic Canvas</span>
         </div>
         <div class="screenshot-frame">
-          <img src="../../static/screenshots/screenshot_pipe_network.png" alt="Pipe Network CAD Canvas" class="w-full h-auto block" onerror="this.src='screenshot_pipe_network.png'">
+          <img src="../../static/screenshots/screenshot_pipe_schematic.png" alt="Pipe Network Schematic Canvas" class="w-full h-auto block" onerror="this.src='screenshot_pipe_schematic.png'">
         </div>
         <p class="text-xs text-[#8b949e] leading-relaxed">
-          Full orthogonal pipe routing with integrated elbows, reducers, and inline valves. Computes Darcy-Weisbach head loss using Colebrook-White friction factors and overlays system curves onto pump curves.
+          Interactive schematic canvas perspective displaying hydraulic circuit symbols, node elevations, Darcy-Weisbach / Colebrook-White friction factors, and system curve overlays (Hsys = Hstatic + k·Q²) plotted against pump curves.
         </p>
       </div>
 
-      <!-- Screenshot 3 -->
+      <!-- Screenshot 3: Fire Protection Module -->
+      <div class="card-glow p-5 rounded-2xl space-y-3 border-l-2 border-l-[#f85149]">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i class="bi bi-fire text-[#f85149]"></i>
+            Figure 3: Fire Protection Pump Sizing &amp; NFPA 20 Code Compliance Engine
+          </h3>
+          <span class="text-[11px] font-mono text-[#f85149] bg-[#f85149]/10 px-2 py-0.5 rounded">NFPA 20 / 13 / 14 / EN 12845</span>
+        </div>
+        <div class="screenshot-frame">
+          <img src="../../static/screenshots/screenshot_fire_protection.png" alt="Fire Protection Pump Sizing Interface" class="w-full h-auto block" onerror="this.src='screenshot_fire_protection.png'">
+        </div>
+        <p class="text-xs text-[#8b949e] leading-relaxed">
+          Code-certified fire sizing for sprinklers (NFPA 13, EN 12845) and standpipes (NFPA 14, AS 2941). Enforces mandatory NFPA 20 curve boundaries (100% rated duty, &ge;65% head at 150% overload, &le;140% churn/shutoff head), with automated auxiliary sizing for jockey pumps, duration tank volumes (30–120 min), and pipe schedules.
+        </p>
+      </div>
+
+      <!-- Screenshot 4 -->
       <div class="card-glow p-5 rounded-2xl space-y-3">
         <div class="flex items-center justify-between">
           <h3 class="text-sm font-bold text-white flex items-center gap-2">
             <i class="bi bi-plus-circle text-[#34d399]"></i>
-            Figure 3: Custom Pump Builder — Add Your Own Proprietary Pumps
+            Figure 4: Custom Pump Builder — Add Your Own Proprietary Pumps
           </h3>
           <span class="text-[11px] font-mono text-[#34d399] bg-[#34d399]/10 px-2 py-0.5 rounded">Data Entry</span>
         </div>
@@ -198,12 +218,12 @@
         </p>
       </div>
 
-      <!-- Screenshot 4 -->
+      <!-- Screenshot 5 -->
       <div class="card-glow p-5 rounded-2xl space-y-3">
         <div class="flex items-center justify-between">
           <h3 class="text-sm font-bold text-white flex items-center gap-2">
             <i class="bi bi-journal-bookmark-fill text-[#f59e0b]"></i>
-            Figure 4: Centralized Pump Data Catalogue &amp; Fleet Overview
+            Figure 5: Centralized Pump Data Catalogue &amp; Fleet Overview
           </h3>
           <span class="text-[11px] font-mono text-[#f59e0b] bg-[#f59e0b]/10 px-2 py-0.5 rounded">Catalogue Fleet</span>
         </div>
@@ -211,16 +231,16 @@
           <img src="../../static/screenshots/screenshot_pump_catalogue.png" alt="Pump Data Catalogue" class="w-full h-auto block" onerror="this.src='screenshot_pump_catalogue.png'">
         </div>
         <p class="text-xs text-[#8b949e] leading-relaxed">
-          Searchable inventory of centrifugal and slurry pump models with one-click curve analysis, fleet filtering, multi-pump comparison, and exportable engineering submittals.
+          Searchable inventory of centrifugal, slurry, and fire pump models with one-click curve analysis, fleet filtering, multi-pump comparison, and exportable engineering submittals.
         </p>
       </div>
 
-      <!-- Screenshot 5 -->
+      <!-- Screenshot 6 -->
       <div class="card-glow p-5 rounded-2xl space-y-3">
         <div class="flex items-center justify-between">
           <h3 class="text-sm font-bold text-white flex items-center gap-2">
             <i class="bi bi-folder2-open text-[#ec4899]"></i>
-            Figure 5: Projects Directory &amp; Saved Selections Management
+            Figure 6: Projects Directory &amp; Saved Selections Management
           </h3>
           <span class="text-[11px] font-mono text-[#ec4899] bg-[#ec4899]/10 px-2 py-0.5 rounded">Projects &amp; Revisions</span>
         </div>
@@ -232,12 +252,12 @@
         </p>
       </div>
 
-      <!-- Screenshot 6 -->
+      <!-- Screenshot 7 -->
       <div class="card-glow p-5 rounded-2xl space-y-3">
         <div class="flex items-center justify-between">
           <h3 class="text-sm font-bold text-white flex items-center gap-2">
             <i class="bi bi-file-earmark-pdf-fill text-[#ef4444]"></i>
-            Figure 6: PDF Report Configuration &amp; Graph Layout Settings
+            Figure 7: PDF Report Configuration &amp; Graph Layout Settings
           </h3>
           <span class="text-[11px] font-mono text-[#ef4444] bg-[#ef4444]/10 px-2 py-0.5 rounded">PDF Reports</span>
         </div>
@@ -254,9 +274,9 @@
     <!-- ── CALL TO ACTION FOOTER ── -->
     <footer class="p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-[#1e3a8a]/40 via-[#161b22] to-[#312e81]/40 border border-[#38bdf8]/30 flex flex-col md:flex-row items-center justify-between gap-6">
       <div class="space-y-2 text-center md:text-left">
-        <h3 class="text-xl sm:text-2xl font-bold text-white">Ready to Modernize Your Pump Sizing?</h3>
+        <h3 class="text-xl sm:text-2xl font-bold text-white">Ready to Modernize Your Pump Sizing &amp; Fire Protection Workflow?</h3>
         <p class="text-xs sm:text-sm text-[#8b949e]">
-          Experience automated pump curve fitting, CAD pipe network analysis, and add your own custom pump models today.
+          Experience automated pump curves, schematic CAD pipe network analysis, NFPA 20 code compliance, and instant submittals today.
         </p>
       </div>
 

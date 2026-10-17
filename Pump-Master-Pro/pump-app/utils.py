@@ -111,8 +111,50 @@ def convert_unit(val, from_unit, to_unit, unit_category='flow'):
 
 
 def get_current_organisation():
-    """Return the active organisation (defaults to ID 2: Lytrose Engineering until auth module is added)."""
-    org = Organisation.query.get(CURRENT_ORGANISATION_ID)
+    """
+    Return the active organisation for the current request context.
+
+    Beginners Note:
+    1. First checks if an authenticated user is logged in (via get_current_user) and returns their organisation.
+    2. Then checks if an 'org_id' is stored in the active Flask session.
+    3. Falls back to CURRENT_ORGANISATION_ID (2: Lytrose Engineering) or the first available organisation.
+    This guarantees that when users belonging to non-Lytrose organisations (e.g. Fermento LLC) access the system,
+    their own company is correctly identified as active (preventing Lytrose from being forced/disabled as current).
+    """
+    try:
+        from routes.auth import get_current_user
+        user = get_current_user()
+        if user:
+            # Beginners Note: If user belongs to a company that is not Lytrose, match by company name
+            if getattr(user, 'company', None) and user.company.strip():
+                comp = user.company.strip()
+                if 'lytrose' not in comp.lower():
+                    matched = Organisation.query.filter(Organisation.name.ilike(comp)).first()
+                    if not matched:
+                        matched = Organisation.query.filter(Organisation.name.ilike(f"%{comp}%")).first()
+                    if matched:
+                        return matched
+
+            if getattr(user, 'org_profile', None):
+                return user.org_profile
+            if getattr(user, 'organisation_id', None):
+                org = db.session.get(Organisation, user.organisation_id) if hasattr(db.session, 'get') else Organisation.query.get(user.organisation_id)
+                if org:
+                    return org
+    except Exception:
+        pass
+
+    try:
+        from flask import session
+        if session and session.get('org_id'):
+            s_org_id = int(session.get('org_id'))
+            org = db.session.get(Organisation, s_org_id) if hasattr(db.session, 'get') else Organisation.query.get(s_org_id)
+            if org:
+                return org
+    except Exception:
+        pass
+
+    org = db.session.get(Organisation, CURRENT_ORGANISATION_ID) if hasattr(db.session, 'get') else Organisation.query.get(CURRENT_ORGANISATION_ID)
     if not org:
         org = Organisation.query.first()
     return org

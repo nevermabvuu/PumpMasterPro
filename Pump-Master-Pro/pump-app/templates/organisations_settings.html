@@ -4,8 +4,13 @@
 {% block robots %}noindex, nofollow{% endblock %}
 
 {% block content %}
-{% set org_access_level = current_user.get_access_level('organisation_settings') if current_user else 0 %}
-{% set can_edit_org = (org_access_level >= 2) %}
+{# Beginners Note: Identifies if current organisation or user belongs to Lytrose. Checks company string first so non-Lytrose companies are not misidentified. #}
+{% set is_lytrose = (current_org and 'lytrose' in (current_org.name or '').lower()) or (current_user and current_user.org_profile and 'lytrose' in (current_user.org_profile.name or '').lower()) or (current_user and 'lytrose' in (current_user.company or '').lower()) or (current_user and current_user.organisation_id == 2 and (not current_user.company or 'lytrose' in current_user.company.lower())) %}
+{% set org_ceiling_level = current_org.get_access_level('organisation_settings') if current_org else 2 %}
+{% set user_org_access_level = current_user.get_access_level('organisation_settings') if current_user else 0 %}
+{# Beginners Note: Requirement 1 — When company is Lytrose and organisation access level is 2 (or user has level 2 / superadmin), full add/edit authority is granted #}
+{% set can_add_edit_org = (is_lytrose and org_ceiling_level >= 2) or (user_org_access_level >= 2) or (current_user and current_user.is_super_admin_user) %}
+{% set can_edit_org = can_add_edit_org or (user_org_access_level >= 2) %}
 {% set can_edit_reports = current_user.can_edit('report_settings') if current_user else False %}
 {% set can_edit_cat_reports = can_edit_org and can_edit_reports %}
 
@@ -37,7 +42,7 @@
          class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold text-[#c9d1d9] hover:text-white rounded-lg flex items-center gap-1.5 border border-[#30363d] transition-colors">
         <i class="bi bi-people text-[#58a6ff]"></i> Users
       </a>
-      {% if can_edit_org and current_user and current_user.is_super_admin_user %}
+      {% if can_add_edit_org %}
       <button onclick="openOrgModal()" class="px-3.5 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-semibold text-white rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
         <i class="bi bi-building-add"></i> Add Organisation
       </button>
@@ -1669,11 +1674,13 @@
         </div>
 
         <form action="{{ url_for('organisations.save_visibility') }}" method="POST" class="p-4 space-y-4">
+          <input type="hidden" name="target_org_id" value="{{ current_org.id if current_org else 2 }}">
           <p class="text-xs text-[#8b949e]">
             Configure which organisations' pump records <strong class="text-white">{{ current_org.name if current_org else 'Lytrose Engineering' }}</strong> can view and search across the Catalogue, Selection Engine, and Comparison module.
           </p>
 
-          <fieldset {% if not can_edit_org %}disabled{% endif %} class="contents space-y-4">
+          {# Beginners Note: Requirement — All checkboxes are fully enabled so any user can check or uncheck any company freely #}
+          <fieldset class="contents space-y-4">
           <div class="space-y-3 bg-[#0d1117] p-3.5 border border-[#30363d] rounded-lg">
             <label class="flex items-start gap-2.5 cursor-pointer">
               <input type="radio" name="visibility_mode" value="all" id="mode_all" class="mt-0.5 accent-[#58a6ff]" {% if view_all_mode %}checked{% endif %} onchange="toggleOrgCheckboxes(false)">
@@ -1695,14 +1702,15 @@
           </div>
 
           <!-- CHECKBOX LIST OF ORGANISATIONS -->
-          <div id="org_checkboxes_container" class="space-y-2 pt-1 {% if view_all_mode %}opacity-50 pointer-events-none{% endif %}">
+          <div id="org_checkboxes_container" class="space-y-2 pt-1 transition-opacity duration-200 {% if view_all_mode %}opacity-60{% endif %}">
             <span class="block text-[11px] font-semibold text-[#8b949e] uppercase tracking-wider">Select Permitted Organisations:</span>
             
             <div class="space-y-1.5 max-h-56 overflow-y-auto pe-1">
               {% for org in all_organisations %}
               <label class="flex items-center justify-between p-2 rounded bg-[#0d1117] border border-[#30363d] hover:border-[#58a6ff]/50 transition cursor-pointer text-xs">
                 <div class="flex items-center gap-2">
-                  <input type="checkbox" name="selected_org_ids" value="{{ org.id }}" class="accent-[#58a6ff] rounded" {% if org.id in allowed_id_set %}checked{% endif %} {% if org.id == current_org.id %}checked disabled title="Active company is always included"{% endif %}>
+                  {# Beginners Note: All checkboxes are completely enabled, checkable, and uncheckable #}
+                  <input type="checkbox" name="selected_org_ids" value="{{ org.id }}" class="accent-[#58a6ff] rounded org-visibility-checkbox cursor-pointer" {% if org.id in allowed_id_set %}checked{% endif %}>
                   <span class="font-medium text-[#e6edf3]">{{ org.name }}</span>
                   {% if org.id == current_org.id %}
                   <span class="text-[10px] px-1.5 py-0.2 rounded bg-[#238636]/20 text-[#3fb950] font-mono">Current</span>
@@ -1716,15 +1724,9 @@
           </fieldset>
 
           <div class="pt-2 flex justify-end">
-            {% if can_edit_org %}
             <button type="submit" class="px-4 py-2 bg-[#58a6ff] hover:bg-[#79c0ff] text-xs font-bold text-[#0d1117] rounded-lg flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
               <i class="bi bi-shield-check"></i> Apply Visibility Filter
             </button>
-            {% else %}
-            <button type="button" disabled class="px-4 py-2 bg-[#21262d] text-xs font-semibold text-[#8b949e] rounded-lg border border-[#30363d] cursor-not-allowed flex items-center gap-1.5 opacity-60">
-              <i class="bi bi-lock-fill"></i> Read-Only (Changes Disabled)
-            </button>
-            {% endif %}
           </div>
         </form>
       </div>
@@ -1840,7 +1842,7 @@
       <h2 class="text-sm font-semibold text-[#e6edf3] flex items-center gap-2">
         <i class="bi bi-building text-[#58a6ff]"></i> All Registered Organisations &amp; Manufacturers ({{ all_organisations|length }})
       </h2>
-      {% if can_edit_org and current_user and current_user.is_super_admin_user %}
+      {% if can_add_edit_org %}
       <button onclick="openOrgModal()" class="text-xs text-[#58a6ff] hover:underline flex items-center gap-1">
         <i class="bi bi-plus-lg"></i> Add New Profile
       </button>
@@ -1864,16 +1866,18 @@
                 <i class="bi bi-shield-shaded"></i>
               </button>
               {% endif %}
-              {% if can_edit_org and current_user and (current_user.is_super_admin_user or o.id == current_org.id) %}
-              <button data-org='{{ o.to_dict()|tojson }}' onclick="editOrg(JSON.parse(this.dataset.org))" class="text-xs text-[#8b949e] hover:text-[#58a6ff] p-1" title="Edit Organisation">
+              {# Beginners Note: Requirement 1 — When company is Lytrose and org access level is 2, all organisations are editable #}
+              {% set can_edit_this_org = can_add_edit_org or (can_edit_org and o.id == current_org.id) %}
+              {% if can_edit_this_org %}
+              <button data-org='{{ o.to_dict()|tojson }}' onclick="editOrg(JSON.parse(this.dataset.org), false)" class="text-xs text-[#8b949e] hover:text-[#58a6ff] p-1" title="Edit Organisation">
                 <i class="bi bi-pencil"></i>
               </button>
               {% elif current_user and current_user.can_access('organisation_settings', 1) %}
-              <button data-org='{{ o.to_dict()|tojson }}' onclick="editOrg(JSON.parse(this.dataset.org))" class="text-xs text-[#8b949e] hover:text-[#58a6ff] p-1" title="View Organisation (Read-Only)">
+              <button data-org='{{ o.to_dict()|tojson }}' onclick="editOrg(JSON.parse(this.dataset.org), true)" class="text-xs text-[#8b949e] hover:text-[#58a6ff] p-1" title="View Organisation (Read-Only)">
                 <i class="bi bi-eye"></i>
               </button>
               {% endif %}
-              {% if can_edit_org and current_user and current_user.is_super_admin_user and o.id != current_org.id %}
+              {% if (can_add_edit_org or (current_user and current_user.is_super_admin_user)) and o.id != current_org.id and o.id != 2 %}
               <form action="{{ url_for('organisations.delete_organisation', id=o.id) }}" method="POST" class="inline" onsubmit="return confirm('Delete organisation &quot;{{ o.name }}&quot;?');">
                 <button type="submit" class="text-xs text-[#8b949e] hover:text-[#f85149] p-1" title="Delete Organisation">
                   <i class="bi bi-trash"></i>
@@ -1922,7 +1926,7 @@
     </div>
     
     <form action="{{ url_for('organisations.save_organisation') }}" method="POST" class="p-4 space-y-3">
-      <fieldset {% if not can_edit_org %}disabled class="contents space-y-3"{% endif %}>
+      <fieldset id="modal_org_fieldset" {% if not can_edit_org %}disabled{% endif %} class="contents space-y-3">
       <input type="hidden" name="organisation_id" id="modal_org_id">
       <div>
         <label class="block text-xs font-semibold text-[#c9d1d9] mb-1">Organisation / Manufacturer Name *</label>
@@ -1965,11 +1969,8 @@
 
       <div class="pt-2 flex justify-end gap-2">
         <button type="button" onclick="closeOrgModal()" class="px-3 py-1.5 bg-[#21262d] text-xs text-[#c9d1d9] rounded border border-[#30363d]">Cancel</button>
-        {% if can_edit_org %}
-        <button type="submit" class="px-4 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded">Save Organisation</button>
-        {% else %}
-        <button type="button" disabled class="px-4 py-1.5 bg-[#21262d] text-xs font-semibold text-[#8b949e] rounded border border-[#30363d] cursor-not-allowed opacity-60 flex items-center gap-1.5"><i class="bi bi-lock-fill"></i> Read-Only</button>
-        {% endif %}
+        <button type="submit" id="modal_org_save_btn" class="{% if not can_edit_org %}hidden {% endif %}px-4 py-1.5 bg-[#238636] hover:bg-[#2ea043] text-xs font-bold text-white rounded">Save Organisation</button>
+        <button type="button" id="modal_org_readonly_btn" disabled class="{% if can_edit_org %}hidden {% endif %}px-4 py-1.5 bg-[#21262d] text-xs font-semibold text-[#8b949e] rounded border border-[#30363d] cursor-not-allowed opacity-60 flex items-center gap-1.5"><i class="bi bi-lock-fill"></i> Read-Only</button>
       </div>
     </form>
   </div>
@@ -2197,25 +2198,46 @@
     if (jsonEl) jsonEl.value = JSON.stringify(styles);
   }
 
+  // Beginners Note: Toggles visual state for permitted organisation checkboxes.
+  // Never disables pointer events so checkboxes remain fully interactive and clickable at all times.
   function toggleOrgCheckboxes(enable) {
     const container = document.getElementById('org_checkboxes_container');
-    if (enable) {
-      container.classList.remove('opacity-50', 'pointer-events-none');
-    } else {
-      container.classList.add('opacity-50', 'pointer-events-none');
+    if (container) {
+      if (enable) {
+        container.classList.remove('opacity-60');
+      } else {
+        container.classList.add('opacity-60');
+      }
     }
   }
+
+  // Beginners Note: If user checks or unchecks any organisation checkbox directly,
+  // automatically select 'Filter by Selected Organisations Only' mode and update styles.
+  document.addEventListener('DOMContentLoaded', function() {
+    const orgCheckboxes = document.querySelectorAll('.org-visibility-checkbox');
+    const modeSelected = document.getElementById('mode_selected');
+    orgCheckboxes.forEach(function(cb) {
+      cb.addEventListener('change', function() {
+        if (modeSelected) {
+          modeSelected.checked = true;
+          toggleOrgCheckboxes(true);
+        }
+      });
+    });
+  });
 
   function toggleReportCheckboxes(enable) {
     const container = document.getElementById('report_checkboxes_container');
-    if (enable) {
-      container.classList.remove('opacity-50', 'pointer-events-none');
-    } else {
-      container.classList.add('opacity-50', 'pointer-events-none');
+    if (container) {
+      if (enable) {
+        container.classList.remove('opacity-60');
+      } else {
+        container.classList.add('opacity-60');
+      }
     }
   }
 
-  // Beginners Note: Opens Add Organisation modal and locks page scrolling
+  // Beginners Note: Opens Add Organisation modal and unlocks all input fields
   function openOrgModal() {
     document.getElementById('modal_org_id').value = '';
     document.getElementById('modal_org_name').value = '';
@@ -2225,13 +2247,22 @@
     document.getElementById('modal_org_website').value = '';
     document.getElementById('modal_org_address').value = '';
     document.getElementById('modal_org_color').value = '#1e3a8a';
-    document.getElementById('orgModalTitle').innerHTML = '<i class="bi bi-building text-[#58a6ff]"></i> Add Organisation';
+    document.getElementById('modal_org_template').value = '';
+
+    const fieldset = document.getElementById('modal_org_fieldset');
+    if (fieldset) fieldset.disabled = false;
+    const saveBtn = document.getElementById('modal_org_save_btn');
+    if (saveBtn) saveBtn.classList.remove('hidden');
+    const roBtn = document.getElementById('modal_org_readonly_btn');
+    if (roBtn) roBtn.classList.add('hidden');
+
+    document.getElementById('orgModalTitle').innerHTML = '<i class="bi bi-building-add text-[#58a6ff]"></i> Add Organisation';
     document.getElementById('orgModal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
   }
 
-  // Beginners Note: Opens Edit Organisation modal prefilled with target org and locks scrolling
-  function editOrg(o) {
+  // Beginners Note: Opens Edit Organisation modal prefilled with target org and configures editable/read-only mode
+  function editOrg(o, isReadOnly = false) {
     document.getElementById('modal_org_id').value = o.id;
     document.getElementById('modal_org_name').value = o.name || '';
     document.getElementById('modal_org_email').value = o.contact_email || '';
@@ -2240,10 +2271,24 @@
     document.getElementById('modal_org_website').value = o.website || '';
     document.getElementById('modal_org_address').value = o.address || '';
     document.getElementById('modal_org_color').value = o.primary_color || '#1e3a8a';
-    const canEditOrg = {{ 'true' if can_edit_org else 'false' }};
-    document.getElementById('orgModalTitle').innerHTML = canEditOrg 
-      ? '<i class="bi bi-pencil text-[#58a6ff]"></i> Edit Organisation'
-      : '<i class="bi bi-eye text-[#58a6ff]"></i> View Organisation (Read-Only)';
+    document.getElementById('modal_org_template').value = o.pump_details_template || '';
+
+    const fieldset = document.getElementById('modal_org_fieldset');
+    const saveBtn = document.getElementById('modal_org_save_btn');
+    const roBtn = document.getElementById('modal_org_readonly_btn');
+
+    if (isReadOnly) {
+      if (fieldset) fieldset.disabled = true;
+      if (saveBtn) saveBtn.classList.add('hidden');
+      if (roBtn) roBtn.classList.remove('hidden');
+      document.getElementById('orgModalTitle').innerHTML = '<i class="bi bi-eye text-[#58a6ff]"></i> View Organisation (Read-Only)';
+    } else {
+      if (fieldset) fieldset.disabled = false;
+      if (saveBtn) saveBtn.classList.remove('hidden');
+      if (roBtn) roBtn.classList.add('hidden');
+      document.getElementById('orgModalTitle').innerHTML = '<i class="bi bi-pencil text-[#58a6ff]"></i> Edit Organisation';
+    }
+
     document.getElementById('orgModal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
   }

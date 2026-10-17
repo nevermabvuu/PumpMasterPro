@@ -27,8 +27,26 @@ def settings():
     """
     Beginners Note: Displays the Organisation Settings page with active profile defaults,
     multi-organisation pump visibility permissions, catalogue report configurations, and registered organisation directory.
+    Supports ?org_id=X for authorized Lytrose and SuperAdmin administrators to inspect and manage specific organisations.
     """
-    current_org = get_current_organisation()
+    target_org_id = request.args.get('org_id', type=int)
+    current_u = get_current_user()
+    is_super = current_u.is_super_admin_user if current_u else False
+    user_org = current_u.org_profile if (current_u and current_u.org_profile) else None
+    is_lytrose = bool(
+        is_super or
+        (user_org and 'lytrose' in (user_org.name or '').lower()) or
+        (current_u and 'lytrose' in (current_u.company or '').lower()) or
+        (current_u and current_u.organisation_id == 2 and (not current_u.company or 'lytrose' in current_u.company.lower()))
+    )
+    user_access_lvl = current_u.get_access_level('organisation_settings') if current_u else 0
+
+    if target_org_id and (is_super or is_lytrose or user_access_lvl >= 2 or (current_u and current_u.organisation_id == target_org_id)):
+        current_org = db.session.get(Organisation, target_org_id) if hasattr(db.session, 'get') else Organisation.query.get(target_org_id)
+        if not current_org:
+            current_org = get_current_organisation()
+    else:
+        current_org = get_current_organisation()
     all_organisations = Organisation.query.order_by(Organisation.name.asc()).all()
     all_reports = ReportConfig.query.order_by(ReportConfig.id.asc()).all()
     
@@ -325,13 +343,32 @@ def save_project_attributes():
 
 
 @organisations_bp.route('/visibility/save', methods=['POST'], endpoint='save_visibility')
-@require_access('organisation_settings', min_level=2)
+@require_access('organisation_settings', min_level=1)
 def save_visibility():
     """
     Beginners Note: Saves the SQL pump visibility filter for the active organisation.
     Controls which organisations' pump records appear in the catalogue, selection, and comparison.
+    Supports target_org_id to apply changes to the exact organisation being configured.
     """
-    current_org = get_current_organisation()
+    target_org_id = request.form.get('target_org_id', type=int)
+    current_u = get_current_user()
+    is_super = current_u.is_super_admin_user if current_u else False
+    user_org = current_u.org_profile if (current_u and current_u.org_profile) else None
+    is_lytrose = bool(
+        is_super or
+        (user_org and 'lytrose' in (user_org.name or '').lower()) or
+        (current_u and 'lytrose' in (current_u.company or '').lower()) or
+        (current_u and current_u.organisation_id == 2 and (not current_u.company or 'lytrose' in current_u.company.lower()))
+    )
+    user_access_lvl = current_u.get_access_level('organisation_settings') if current_u else 0
+
+    if target_org_id and (is_super or is_lytrose or user_access_lvl >= 2 or (current_u and current_u.organisation_id == target_org_id)):
+        current_org = db.session.get(Organisation, target_org_id) if hasattr(db.session, 'get') else Organisation.query.get(target_org_id)
+        if not current_org:
+            current_org = get_current_organisation()
+    else:
+        current_org = get_current_organisation()
+
     if not current_org:
         flash('Active organisation not found.', 'error')
         return redirect(url_for('organisations.settings'))
@@ -341,15 +378,14 @@ def save_visibility():
         current_org.allowed_view_org_ids = 'all'
     else:
         selected_ids = request.form.getlist('selected_org_ids')
+        # Beginners Note: Respect exactly the organisations checked or unchecked by the user.
+        # Do not force active organisation or Lytrose back into the list if the user chose to uncheck it.
         clean_ids = [s.strip() for s in selected_ids if s.strip().isdigit()]
-        # Always ensure the active company can view its own pumps
-        if str(current_org.id) not in clean_ids:
-            clean_ids.append(str(current_org.id))
         current_org.allowed_view_org_ids = ','.join(clean_ids)
 
     db.session.commit()
-    flash('Pump visibility permissions updated. Search and catalogue queries are now filtered.', 'success')
-    return redirect(url_for('organisations.settings'))
+    flash(f'Pump visibility permissions for "{current_org.name}" updated successfully.', 'success')
+    return redirect(url_for('organisations.settings', org_id=current_org.id))
 
 
 @organisations_bp.route('/graph-styles/save', methods=['POST'], endpoint='save_graph_styles')
@@ -375,10 +411,23 @@ def save_graph_styles():
 def save_organisation():
     """
     Add a new organisation or update an existing one.
-    Adding a new organisation is strictly restricted to the Lytrose SuperAdmin.
+    Beginners Note: Requirement 1 — When the company is Lytrose and organisation access level is 2
+    (or user has level 2 / superadmin authority), the user is authorized to add and edit organisations.
     """
     current_u = get_current_user()
     is_super = current_u.is_super_admin_user if current_u else False
+    user_org = current_u.org_profile if (current_u and current_u.org_profile) else get_current_organisation()
+
+    # Determine if user belongs to Lytrose
+    is_lytrose = bool(
+        is_super or
+        (user_org and 'lytrose' in (user_org.name or '').lower()) or
+        (current_u and 'lytrose' in (current_u.company or '').lower()) or
+        (current_u and current_u.organisation_id == 2 and (not current_u.company or 'lytrose' in current_u.company.lower()))
+    )
+    org_ceiling = user_org.get_access_level('organisation_settings') if user_org else 2
+    user_level = current_u.get_access_level('organisation_settings') if current_u else 0
+    can_manage_all_orgs = is_super or (is_lytrose and org_ceiling >= 2) or (user_level >= 2)
 
     org_id = request.form.get('organisation_id')
     name = request.form.get('name', '').strip()
@@ -388,9 +437,9 @@ def save_organisation():
         return redirect(url_for('organisations.settings'))
 
     if not org_id:
-        # Creating a NEW organisation requires Lytrose SuperAdmin
-        if not is_super:
-            flash('Only the Lytrose Super Administrator has permission to add new organisations.', 'danger')
+        # Creating a NEW organisation requires Lytrose level 2 access or SuperAdmin
+        if not can_manage_all_orgs:
+            flash('Only Lytrose administrators with full organisation access have permission to add new organisations.', 'danger')
             return redirect(url_for('organisations.settings'))
         org = Organisation(name=name)
         db.session.add(org)
@@ -437,11 +486,12 @@ def save_organisation():
         ]
         db.session.add_all(new_org_roles)
     else:
-        # Editing existing organisation: only SuperAdmin or admin belonging to this organisation
-        if not is_super and int(org_id) != (current_u.organisation_id if current_u else None):
+        # Editing existing organisation: Lytrose level 2 access, SuperAdmin, or admin belonging to this organisation
+        is_own_org = bool(current_u and current_u.organisation_id and int(org_id) == current_u.organisation_id)
+        if not (can_manage_all_orgs or is_own_org):
             flash('You do not have permission to edit other organisations.', 'danger')
             return redirect(url_for('organisations.settings'))
-        org = Organisation.query.get(int(org_id))
+        org = db.session.get(Organisation, int(org_id)) if hasattr(db.session, 'get') else Organisation.query.get(int(org_id))
         if not org:
             flash('Organisation not found.', 'error')
             return redirect(url_for('organisations.settings'))
@@ -464,23 +514,40 @@ def save_organisation():
 
     db.session.commit()
     flash(f'Organisation "{org.name}" saved successfully.', 'success')
-    return redirect(url_for('organisations.settings'))
+    return redirect(url_for('organisations.settings', org_id=org.id))
 
 
 @organisations_bp.route('/delete/<int:id>', methods=['POST'], endpoint='delete_organisation')
 def delete_organisation(id):
-    """Delete an organisation profile (Lytrose SuperAdmin only)."""
+    """Delete an organisation profile (Lytrose Admin / SuperAdmin only)."""
     from routes.auth import get_current_user
     current_u = get_current_user()
-    if not current_u or not current_u.is_super_admin_user:
-        flash('Only the Lytrose Super Administrator has permission to delete organisations.', 'danger')
+    is_super = current_u.is_super_admin_user if current_u else False
+    user_org = current_u.org_profile if (current_u and current_u.org_profile) else get_current_organisation()
+    is_lytrose = bool(
+        is_super or
+        (user_org and 'lytrose' in (user_org.name or '').lower()) or
+        (current_u and 'lytrose' in (current_u.company or '').lower()) or
+        (current_u and current_u.organisation_id == 2 and (not current_u.company or 'lytrose' in current_u.company.lower()))
+    )
+    org_ceiling = user_org.get_access_level('organisation_settings') if user_org else 2
+    user_level = current_u.get_access_level('organisation_settings') if current_u else 0
+    can_manage_all_orgs = is_super or (is_lytrose and org_ceiling >= 2) or (user_level >= 2)
+
+    if not can_manage_all_orgs:
+        flash('Only Lytrose administrators have permission to delete organisations.', 'danger')
         return redirect(url_for('organisations.settings'))
 
-    if id == CURRENT_ORGANISATION_ID:
-        flash('Cannot delete the active working organisation.', 'error')
+    if id == 2:
+        flash('Cannot delete the root Lytrose Engineering organisation.', 'error')
         return redirect(url_for('organisations.settings'))
 
-    org = Organisation.query.get_or_404(id)
+    org = db.session.get(Organisation, id) if hasattr(db.session, 'get') else Organisation.query.get_or_404(id)
+    name = org.name
+    db.session.delete(org)
+    db.session.commit()
+    flash(f'Organisation "{name}" removed successfully.', 'info')
+    return redirect(url_for('organisations.settings'))
     name = org.name
     db.session.delete(org)
     db.session.commit()

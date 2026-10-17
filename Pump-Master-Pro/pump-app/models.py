@@ -2695,6 +2695,16 @@ class User(db.Model):
 
     @property
     def org_profile(self):
+        # Beginners Note: If user has a company specified that is not Lytrose,
+        # resolve to their matching company organisation (even if organisation_id defaulted to 2 or None)
+        if self.company and self.company.strip():
+            comp_clean = self.company.strip()
+            if 'lytrose' not in comp_clean.lower():
+                matched = Organisation.query.filter(Organisation.name.ilike(comp_clean)).first()
+                if not matched:
+                    matched = Organisation.query.filter(Organisation.name.ilike(f"%{comp_clean}%")).first()
+                if matched:
+                    return matched
         return self.organisation_ref or (Organisation.query.get(self.organisation_id) if self.organisation_id else None)
 
     @property
@@ -2765,6 +2775,21 @@ class User(db.Model):
             role_level = self.role_rel.get_access_level(module_key)
         else:
             role_level = 2 if self.role == 'admin' else (1 if self.role == 'viewer' else 2)
+
+        # Beginners Note: Special Rule for Lytrose Organisation Settings
+        # When the user's company is Lytrose and the organisation-level access ceiling is 2,
+        # users with at least base access (level >= 1 or admin role) have full add/edit authority (level 2)
+        # over organisations and organisation settings.
+        is_lytrose_user = bool(
+            org and (
+                'lytrose' in (org.name or '').lower() or
+                org.id == 2 or
+                'lytrose' in (getattr(self, 'company', '') or '').lower()
+            )
+        )
+        if module_key == 'organisation_settings' and is_lytrose_user and org_cap >= 2:
+            if role_level >= 1 or (self.role or '').lower() in ('admin', 'administrator', 'super_admin', 'superadmin'):
+                return 2
 
         return min(org_cap, role_level)
 

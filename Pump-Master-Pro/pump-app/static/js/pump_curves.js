@@ -901,13 +901,14 @@ function buildWarmanChart(data, opts = {}) {
         targetH = d.h[lastIdx];
       }
 
+      // Beginners Note: Curve label outline removed (borderwidth: 0)
       annotations.push({
         x: targetQ, y: targetH,
         text: `<b>${curveKey}</b>`,
         showarrow: false, captureevents: true,
         font: { color: '#ffffff', size: 10, family: 'Arial, sans-serif' },
         bgcolor: 'rgba(22, 27, 34, 0.92)',
-        bordercolor: col, borderwidth: 1.5, borderpad: 4,
+        borderwidth: 0, borderpad: 4,
         xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
         name: curveKey
       });
@@ -958,13 +959,14 @@ function buildWarmanChart(data, opts = {}) {
         const targetQ = pos ? pos.x : ol.q[lastIdx];
         const targetH = pos ? pos.y : ol.h[lastIdx];
 
+        // Beginners Note: Overlay curve label outline removed (borderwidth: 0)
         annotations.push({
           x: targetQ, y: targetH,
           text: `<b>${lineLabel}</b>`,
           showarrow: false, captureevents: true,
           font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
           bgcolor: 'rgba(15, 23, 42, 0.90)',
-          bordercolor: col, borderwidth: 1, borderpad: 2,
+          borderwidth: 0, borderpad: 2,
           xanchor: 'center', yanchor: 'middle',
           name: curveKey
         });
@@ -998,6 +1000,7 @@ function buildWarmanChart(data, opts = {}) {
         const targetQ = pos ? pos.x : iso.label_q;
         const targetH = pos ? pos.y : iso.label_h;
 
+        // Beginners Note: Efficiency isoline label outline removed (borderwidth: 0)
         annotations.push({
           x: targetQ, y: targetH,
           text: `<b>${iso.label_text || `${iso.eta}%`}</b>`,
@@ -1005,8 +1008,7 @@ function buildWarmanChart(data, opts = {}) {
           captureevents: true,
           font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
           bgcolor: 'rgba(15, 23, 42, 0.92)',
-          bordercolor: effColor,
-          borderwidth: 1,
+          borderwidth: 0,
           borderpad: 3,
           xanchor: 'center',
           yanchor: 'middle',
@@ -1038,6 +1040,7 @@ function buildWarmanChart(data, opts = {}) {
         const targetQ = pos ? pos.x : pl.q[mi];
         const targetH = pos ? pos.y : pl.h[mi];
 
+        // Beginners Note: Power isoline label outline removed (borderwidth: 0)
         annotations.push({
           x: targetQ, y: targetH,
           text: `<b>${pl.power}${lblPow}</b>`,
@@ -1045,8 +1048,7 @@ function buildWarmanChart(data, opts = {}) {
           captureevents: true,
           font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
           bgcolor: 'rgba(15, 23, 42, 0.92)',
-          bordercolor: '#f85149',
-          borderwidth: 1,
+          borderwidth: 0,
           borderpad: 3,
           xanchor: 'center',
           yanchor: 'middle',
@@ -1078,6 +1080,7 @@ function buildWarmanChart(data, opts = {}) {
         const targetQ = pos ? pos.x : nl.q[mi];
         const targetH = pos ? pos.y : nl.h[mi];
 
+        // Beginners Note: NPSH isoline label outline removed (borderwidth: 0)
         annotations.push({
           x: targetQ, y: targetH,
           text: `<b>${nl.npsh}${lblNpsh}</b>`,
@@ -1085,8 +1088,7 @@ function buildWarmanChart(data, opts = {}) {
           captureevents: true,
           font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
           bgcolor: 'rgba(15, 23, 42, 0.92)',
-          bordercolor: '#39d3c0',
-          borderwidth: 1,
+          borderwidth: 0,
           borderpad: 3,
           xanchor: 'center',
           yanchor: 'middle',
@@ -1411,13 +1413,14 @@ function buildEffChart(familyData, singleData, showClean, opts = {}) {
       targetEta = fam.eta[lastIdx];
     }
 
+    // Beginners Note: Efficiency curve label outline removed (borderwidth: 0)
     layout.annotations.push({
       x: targetQ, y: targetEta,
       text: `<b>η ${lblText}</b>`,
       showarrow: false, captureevents: true,
       font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
       bgcolor: 'rgba(15, 23, 42, 0.92)',
-      bordercolor: col, borderwidth: 1.5, borderpad: 3,
+      borderwidth: 0, borderpad: 3,
       xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
       name: curveKey
     });
@@ -1439,13 +1442,14 @@ function buildEffChart(familyData, singleData, showClean, opts = {}) {
       const targetQ = pos ? pos.x : sl.q[lastIdx];
       const targetEta = pos ? pos.y : sl.eta[lastIdx];
 
+      // Beginners Note: Efficiency overlay curve label outline removed (borderwidth: 0)
       layout.annotations.push({
         x: targetQ, y: targetEta,
         text: `<b>η ${lineLabel}</b>`,
         showarrow: false, captureevents: true,
         font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
         bgcolor: 'rgba(15, 23, 42, 0.90)',
-        bordercolor: col, borderwidth: 1, borderpad: 2,
+        borderwidth: 0, borderpad: 2,
         xanchor: 'center', yanchor: 'middle',
         name: curveKey
       });
@@ -1645,13 +1649,14 @@ function buildEffPowerChart(familyData, singleData, showClean, opts = {}) {
       targetEta = fam.eta[lastIdx];
     }
 
+    // Beginners Note: Combined chart curve label outline removed (borderwidth: 0)
     layout.annotations.push({
       x: targetQ, y: targetEta,
       text: `<b>η ${lblText}</b>`,
       showarrow: false, captureevents: true,
       font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
       bgcolor: 'rgba(15, 23, 42, 0.92)',
-      bordercolor: col, borderwidth: 1.5, borderpad: 3,
+      borderwidth: 0, borderpad: 3,
       xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
       name: curveKey
     });
@@ -1670,13 +1675,14 @@ function buildEffPowerChart(familyData, singleData, showClean, opts = {}) {
       const targetQ = pos ? pos.x : sl.q[lastIdx];
       const targetEta = pos ? pos.y : sl.eta[lastIdx];
 
+      // Beginners Note: Combined overlay curve label outline removed (borderwidth: 0)
       layout.annotations.push({
         x: targetQ, y: targetEta,
         text: `<b>η ${lineLabel}</b>`,
         showarrow: false, captureevents: true,
         font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
         bgcolor: 'rgba(15, 23, 42, 0.90)',
-        bordercolor: col, borderwidth: 1, borderpad: 2,
+        borderwidth: 0, borderpad: 2,
         xanchor: 'center', yanchor: 'middle',
         name: curveKey
       });
@@ -1818,13 +1824,14 @@ function buildPowerChart(familyData, singleData, showClean, opts = {}) {
       targetPow = pwrArr[lastIdx];
     }
 
+    // Beginners Note: Power chart curve label outline removed (borderwidth: 0)
     layout.annotations.push({
       x: targetQ, y: targetPow,
       text: `<b>P ${lblText}</b>`,
       showarrow: false, captureevents: true,
       font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
       bgcolor: 'rgba(15, 23, 42, 0.92)',
-      bordercolor: col, borderwidth: 1.5, borderpad: 3,
+      borderwidth: 0, borderpad: 3,
       xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
       name: curveKey
     });
@@ -1847,13 +1854,14 @@ function buildPowerChart(familyData, singleData, showClean, opts = {}) {
       const targetQ = pos ? pos.x : sl.q[lastIdx];
       const targetPow = pos ? pos.y : pwrArr[lastIdx];
 
+      // Beginners Note: Power overlay curve label outline removed (borderwidth: 0)
       layout.annotations.push({
         x: targetQ, y: targetPow,
         text: `<b>P ${lineLabel}</b>`,
         showarrow: false, captureevents: true,
         font: { color: '#ffffff', size: 9, family: 'Arial, sans-serif' },
         bgcolor: 'rgba(15, 23, 42, 0.90)',
-        bordercolor: col, borderwidth: 1, borderpad: 2,
+        borderwidth: 0, borderpad: 2,
         xanchor: 'center', yanchor: 'middle',
         name: curveKey
       });
@@ -1984,13 +1992,14 @@ function buildNpshChart(familyData, singleData, opts = {}) {
         targetNpsh = fam.npsh[lastIdx];
       }
 
+      // Beginners Note: NPSH chart curve label outline removed (borderwidth: 0)
       layout.annotations.push({
         x: targetQ, y: targetNpsh,
         text: `<b>${lblText}</b>`,
         showarrow: false, captureevents: true,
         font: { color: '#ffffff', size: 9.5, family: 'Arial, sans-serif' },
         bgcolor: 'rgba(22, 27, 34, 0.92)',
-        bordercolor: col, borderwidth: 1.5, borderpad: 3,
+        borderwidth: 0, borderpad: 3,
         xanchor: xanchor, yanchor: yanchor, xshift: xshift, yshift: yshift,
         name: curveKey
       });

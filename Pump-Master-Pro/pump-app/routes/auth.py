@@ -492,14 +492,18 @@ def admin_request_action(req_id):
         org_title = assigned_org.name if assigned_org else (user.company or reg_req.company or '')
 
         # Dispatch approval notification email to applicant
-        send_registration_decision_notification(
+        email_sent, email_msg = send_registration_decision_notification(
             reg_req,
             approved=True,
             notes=admin_notes,
             role_name=role_title,
             org_name=org_title
         )
-        flash(f"Access approved for {reg_req.full_name} ({reg_req.email}). Welcome email dispatched.", "success")
+        if email_sent:
+            flash(f"Access approved for {reg_req.full_name} ({reg_req.email}). Welcome email dispatched successfully.", "success")
+        else:
+            current_app.logger.warning(f"[APPROVAL EMAIL NOTICE] Approval saved for {reg_req.email}, but email dispatch failed: {email_msg}")
+            flash(f"Access approved for {reg_req.full_name} ({reg_req.email}), but email notification could not be delivered: {email_msg}", "warning")
 
     elif action == 'reject':
         reg_req.status = 'rejected'
@@ -508,13 +512,17 @@ def admin_request_action(req_id):
         db.session.commit()
 
         # Dispatch rejection notification email to applicant
-        send_registration_decision_notification(
+        email_sent, email_msg = send_registration_decision_notification(
             reg_req,
             approved=False,
             notes=admin_notes,
             org_name=reg_req.company
         )
-        flash(f"Access request from {reg_req.full_name} has been rejected. Notification email dispatched.", "info")
+        if email_sent:
+            flash(f"Access request from {reg_req.full_name} has been rejected. Notification email dispatched.", "info")
+        else:
+            current_app.logger.warning(f"[REJECTION EMAIL NOTICE] Rejection saved for {reg_req.email}, but email dispatch failed: {email_msg}")
+            flash(f"Access request from {reg_req.full_name} has been rejected, but notification email could not be delivered: {email_msg}", "warning")
 
     return redirect(url_for('auth.admin_requests'))
 
@@ -1084,7 +1092,7 @@ def admin_user_edit(user_id):
             role_title = role_obj.name if role_obj else (target_user.role or 'engineer').replace('_', ' ').title()
             org_obj = target_user.organisation_ref or (Organisation.query.get(target_user.organisation_id) if target_user.organisation_id else None)
             org_title = org_obj.name if org_obj else target_user.company
-            send_registration_decision_notification(
+            email_sent, email_msg = send_registration_decision_notification(
                 req_proxy,
                 approved=True,
                 notes="Access activated by administrator in Users Console.",
@@ -1095,8 +1103,13 @@ def admin_user_edit(user_id):
                 matched_req.status = 'approved'
                 matched_req.reviewed_at = datetime.now(timezone.utc)
                 db.session.commit()
+            if email_sent:
+                flash(f"User '{target_user.full_name}' activated and welcome email dispatched.", "success")
+            else:
+                flash(f"User '{target_user.full_name}' activated, but email notification could not be delivered: {email_msg}", "warning")
+            return redirect(url_for('auth.admin_users'))
         elif target_user.status == 'disabled':
-            send_registration_decision_notification(
+            email_sent, email_msg = send_registration_decision_notification(
                 req_proxy,
                 approved=False,
                 notes="Registration declined by administrator.",
@@ -1106,6 +1119,12 @@ def admin_user_edit(user_id):
                 matched_req.status = 'rejected'
                 matched_req.reviewed_at = datetime.now(timezone.utc)
                 db.session.commit()
+            if email_sent:
+                flash(f"User '{target_user.full_name}' registration declined and notification email dispatched.", "info")
+            else:
+                flash(f"User '{target_user.full_name}' declined, but notification email could not be delivered: {email_msg}", "warning")
+            return redirect(url_for('auth.admin_users'))
+
     flash(f"User '{target_user.full_name}' updated successfully.", "success")
     return redirect(url_for('auth.admin_users'))
 
@@ -1114,7 +1133,7 @@ def admin_user_edit(user_id):
 @login_required
 @require_access('users_settings', min_level=2)
 def admin_user_toggle_status(user_id):
-    """Toggle a user's active/disabled status with self-protection."""
+    """Toggle a user's active/disabled status with self-protection and applicant notification on activation."""
     current_u = get_current_user()
     is_super = current_u.is_super_admin_user if current_u else False
 
@@ -1128,8 +1147,52 @@ def admin_user_toggle_status(user_id):
         flash("You cannot modify accounts from another organisation.", "danger")
         return redirect(url_for('auth.admin_users'))
 
+    prev_status = target_user.status
     target_user.status = 'disabled' if target_user.status == 'active' else 'active'
     db.session.commit()
+
+    # If user was in pending_approval state, dispatch activation / rejection notification
+    if prev_status == 'pending_approval':
+        matched_req = RegistrationRequest.query.filter_by(email=target_user.email, status='pending').order_by(RegistrationRequest.created_at.desc()).first()
+        req_proxy = matched_req or target_user
+        if target_user.status == 'active':
+            role_obj = Role.query.get(target_user.role_id) if target_user.role_id else None
+            role_title = role_obj.name if role_obj else (target_user.role or 'engineer').replace('_', ' ').title()
+            org_obj = target_user.organisation_ref or (Organisation.query.get(target_user.organisation_id) if target_user.organisation_id else None)
+            org_title = org_obj.name if org_obj else target_user.company
+            email_sent, email_msg = send_registration_decision_notification(
+                req_proxy,
+                approved=True,
+                notes="Access activated by administrator in Users Console.",
+                role_name=role_title,
+                org_name=org_title
+            )
+            if matched_req:
+                matched_req.status = 'approved'
+                matched_req.reviewed_at = datetime.now(timezone.utc)
+                db.session.commit()
+            if email_sent:
+                flash(f"Account for {target_user.full_name} is now active. Welcome email dispatched.", "success")
+            else:
+                flash(f"Account for {target_user.full_name} is now active, but notification email could not be delivered: {email_msg}", "warning")
+            return redirect(url_for('auth.admin_users'))
+        elif target_user.status == 'disabled':
+            email_sent, email_msg = send_registration_decision_notification(
+                req_proxy,
+                approved=False,
+                notes="Registration declined by administrator.",
+                org_name=target_user.company
+            )
+            if matched_req:
+                matched_req.status = 'rejected'
+                matched_req.reviewed_at = datetime.now(timezone.utc)
+                db.session.commit()
+            if email_sent:
+                flash(f"Account for {target_user.full_name} has been rejected. Notification email dispatched.", "info")
+            else:
+                flash(f"Account for {target_user.full_name} has been rejected, but notification email could not be delivered: {email_msg}", "warning")
+            return redirect(url_for('auth.admin_users'))
+
     flash(f"Account for {target_user.full_name} is now {target_user.status}.", "info")
     return redirect(url_for('auth.admin_users'))
 

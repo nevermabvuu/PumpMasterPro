@@ -881,19 +881,22 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
             ly = min(max(float(padding_top + 12), float(ly)), float(VIEW_H - padding_bottom - 6))
 
             tw = len(display_text) * 5.8 + 10
+            # Remove outlines (stroke) from curve labels on report templates for a clean modern aesthetic
             if is_rated:
-                # Highlighted Amber badge for rated curve
-                labels.append(f'<rect x="{lx - tw/2:.1f}" y="{ly - 11:.1f}" width="{tw:.1f}" height="14" fill="#fffbeb" fill-opacity="0.95" stroke="#d97706" stroke-width="1.2" rx="3.5" />')
+                # Highlighted Amber badge for rated curve without border outline
+                labels.append(f'<rect x="{lx - tw/2:.1f}" y="{ly - 11:.1f}" width="{tw:.1f}" height="14" fill="#fffbeb" fill-opacity="0.95" stroke="none" rx="3.5" />')
                 labels.append(f'<text x="{lx:.1f}" y="{ly - 1.5:.1f}" font-size="{9 * f_scale:.1f}" font-weight="700" font-family="{font_family}" fill="#b45309" text-anchor="middle">{display_text}</text>')
             elif badge_style == 'pill_tinted':
-                labels.append(f'<rect x="{lx - tw/2:.1f}" y="{ly - 11:.1f}" width="{tw:.1f}" height="14" fill="{color}" fill-opacity="0.12" stroke="{color}" stroke-width="1.0" rx="3.5" />')
+                # Tinted pill without border outline
+                labels.append(f'<rect x="{lx - tw/2:.1f}" y="{ly - 11:.1f}" width="{tw:.1f}" height="14" fill="{color}" fill-opacity="0.15" stroke="none" rx="3.5" />')
                 labels.append(f'<text x="{lx:.1f}" y="{ly - 1.5:.1f}" font-size="{9 * f_scale:.1f}" font-weight="700" font-family="{font_family}" fill="{color}" text-anchor="middle">{display_text}</text>')
             elif badge_style == 'subtle_glow':
                 labels.append(f'<text x="{lx:.1f}" y="{ly - 1.5:.1f}" font-size="{9 * f_scale:.1f}" font-weight="700" font-family="{font_family}" fill="{color}" text-anchor="middle" paint-order="stroke" stroke="{chart_bg}" stroke-width="4px" stroke-linejoin="round">{display_text}</text>')
             elif badge_style == 'plain':
                 labels.append(f'<text x="{lx:.1f}" y="{ly - 1.5:.1f}" font-size="{9 * f_scale:.1f}" font-weight="700" font-family="{font_family}" fill="{color}" text-anchor="middle">{display_text}</text>')
             else:  # pill_white default
-                labels.append(f'<rect x="{lx - tw/2:.1f}" y="{ly - 11:.1f}" width="{tw:.1f}" height="14" fill="{chart_bg}" fill-opacity="0.95" stroke="{color}" stroke-width="1.0" rx="3.5" />')
+                # Solid white pill without border outline
+                labels.append(f'<rect x="{lx - tw/2:.1f}" y="{ly - 11:.1f}" width="{tw:.1f}" height="14" fill="{chart_bg}" fill-opacity="0.95" stroke="none" rx="3.5" />')
                 labels.append(f'<text x="{lx:.1f}" y="{ly - 1.5:.1f}" font-size="{9 * f_scale:.1f}" font-weight="700" font-family="{font_family}" fill="{color}" text-anchor="middle">{display_text}</text>')
 
     # ── Fire Protection Curves (NFPA 20 Limits & System Curve with Reference Letters E, F, G) ──
@@ -1046,8 +1049,9 @@ def generate_chart_svg(curves_list, x_label="Flow (m³/h)", y_label="Head (m)", 
                     if badge_y > padding_top + plot_h - 4:
                         badge_y = padding_top + plot_h - 16
 
+                    # 3. High-contrast coordinate badge (borderless pill for clean look)
                     duty_parts.append(
-                        f'<rect x="{badge_x - tw_d/2:.1f}" y="{badge_y - 10:.1f}" width="{tw_d:.1f}" height="13" fill="#ffffff" fill-opacity="0.95" stroke="{pt_col}" stroke-width="1.0" rx="3" />'
+                        f'<rect x="{badge_x - tw_d/2:.1f}" y="{badge_y - 10:.1f}" width="{tw_d:.1f}" height="13" fill="#ffffff" fill-opacity="0.95" stroke="none" rx="3" />'
                         f'<text x="{badge_x:.1f}" y="{badge_y - 1.0:.1f}" font-size="8.5" font-weight="700" font-family="{font_family}" fill="{pt_col}" text-anchor="middle">{d_lbl}</text>'
                     )
             except Exception as e:

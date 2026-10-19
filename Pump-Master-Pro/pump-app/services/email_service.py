@@ -228,6 +228,8 @@ def send_email(to_email, subject, html_content, text_content="", from_email=None
                 msg['From'] = formataddr(('Pump Master Pro', sender_email))
                 msg['Reply-To'] = reply_to_header
                 msg['To'] = recipient
+                msg['Auto-Submitted'] = 'auto-generated'
+                msg['X-Mailer'] = 'Pump Master Pro Notification Engine'
 
                 msg.attach(MIMEText(text_content, 'plain', 'utf-8'))
                 msg.attach(MIMEText(html_content, 'html', 'utf-8'))
@@ -494,7 +496,7 @@ def send_registration_decision_notification(reg_request, approved=True, notes=""
     email = getattr(reg_request, 'email', '')
 
     if approved:
-        subject = "Pump Master Pro: Welcome! Your Access Has Been Approved"
+        subject = "Pump Master Pro: Access Request Approved"
         text_content = f"""
 Hello {first_name},
 
@@ -521,64 +523,58 @@ Pump Master Pro Engineering Suite
 https://www.pumpmasterpro.com
 Support & Inquiries: {lytrose_reg_email}
 """
-        html_content = f"""
-<!DOCTYPE html>
+        html_content = f"""<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <style>
-    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0d1117; color: #c9d1d9; margin: 0; padding: 20px; }}
-    .card {{ background-color: #161b22; border: 1px solid #30363d; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }}
-    .header {{ background: linear-gradient(135deg, #162a1d 0%, #161b22 100%); padding: 28px 20px; border-bottom: 1px solid #30363d; text-align: center; }}
-    .badge {{ display: inline-block; padding: 4px 12px; font-size: 11px; font-weight: 700; color: #3fb950; background: rgba(63,185,80,0.15); border: 1px solid rgba(63,185,80,0.3); border-radius: 20px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }}
-    .header h2 {{ color: #ffffff; margin: 0 0 6px 0; font-size: 22px; font-weight: 700; }}
-    .header p {{ color: #8b949e; margin: 0; font-size: 13px; }}
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; color: #1e293b; margin: 0; padding: 24px; }}
+    .card {{ background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; }}
+    .header {{ background-color: #0f172a; padding: 22px 24px; text-align: left; }}
+    .header h2 {{ color: #ffffff; margin: 0 0 4px 0; font-size: 18px; font-weight: 700; }}
+    .header p {{ color: #94a3b8; margin: 0; font-size: 12px; }}
     .content {{ padding: 24px; }}
-    .account-box {{ background: #0d1117; border: 1px solid #21262d; border-radius: 8px; padding: 16px; margin: 18px 0; }}
-    .btn {{ display: inline-block; background-color: #3fb950; color: #0d1117 !important; text-decoration: none; font-weight: 700; font-size: 14px; padding: 13px 28px; border-radius: 8px; text-align: center; margin: 18px 0; box-shadow: 0 4px 14px rgba(63,185,80,0.3); }}
-    .feature-list {{ margin: 16px 0; padding-left: 20px; font-size: 13px; color: #c9d1d9; line-height: 1.8; }}
-    .admin-note {{ background: rgba(210,153,34,0.1); border-left: 3px solid #d29922; padding: 10px 14px; margin: 16px 0; font-size: 12px; color: #e6edf3; border-radius: 0 6px 6px 0; }}
-    .footer {{ background-color: #0d1117; padding: 16px; text-align: center; font-size: 11px; color: #6e7681; border-top: 1px solid #30363d; }}
+    .table {{ width: 100%; border-collapse: collapse; margin: 18px 0; }}
+    .table td {{ padding: 10px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }}
+    .table tr:last-child td {{ border-bottom: none; }}
+    .table td.label {{ color: #475569; width: 140px; font-weight: 600; }}
+    .table td.value {{ color: #0f172a; font-weight: 500; }}
+    .success-box {{ background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; margin: 18px 0; border-radius: 4px; }}
+    .success-box h4 {{ margin: 0 0 4px 0; color: #15803d; font-size: 13px; font-weight: 700; }}
+    .success-box p {{ margin: 0; color: #166534; font-size: 12px; line-height: 1.5; }}
+    .notes-box {{ background-color: #eff6ff; border-left: 4px solid #2563eb; padding: 12px 16px; margin: 16px 0; border-radius: 4px; font-size: 13px; color: #1e3a8a; }}
+    .btn {{ display: inline-block; background-color: #16a34a; color: #ffffff !important; text-decoration: none; font-weight: 600; font-size: 13px; padding: 11px 22px; border-radius: 6px; margin: 16px 0; }}
+    .feature-list {{ margin: 12px 0 0 0; padding-left: 18px; font-size: 12px; color: #475569; line-height: 1.8; }}
+    .footer {{ background-color: #f8fafc; padding: 14px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; text-align: center; }}
   </style>
 </head>
 <body>
   <div class="card">
     <div class="header">
-      <span class="badge">&bull; Access Granted &bull;</span>
-      <h2>Welcome to Pump Master Pro</h2>
+      <h2>Pump Master Pro &bull; Access Granted</h2>
       <p>Your engineering account has been reviewed and authorized</p>
     </div>
     <div class="content">
-      <p style="margin-top: 0; font-size: 14px; color: #e6edf3;">Hello <strong>{first_name}</strong>,</p>
-      <p style="font-size: 13px; color: #8b949e; line-height: 1.5;">
-        Great news! Your access request for <strong>Pump Master Pro</strong> has been reviewed and approved by the administration. You now have full access to pump selection, curve analysis, and technical report generation.
+      <p style="margin-top: 0; font-size: 14px; color: #0f172a;">Hello <strong>{first_name}</strong>,</p>
+      <p style="font-size: 13px; color: #334155; line-height: 1.5;">
+        Great news! Your online access request for <strong>Pump Master Pro</strong> has been reviewed and approved by the administration. You now have full access to pump selection, curve analysis, and technical report generation.
       </p>
 
-      <div class="account-box">
-        <table style="width:100%; border-collapse:collapse; font-size:13px;">
-          <tr>
-            <td style="color:#8b949e; padding:6px 0; font-weight:600; width:130px;">Login Email:</td>
-            <td style="color:#58a6ff; padding:6px 0; font-family:monospace; font-weight:600;">{email}</td>
-          </tr>
-          <tr>
-            <td style="color:#8b949e; padding:6px 0; font-weight:600;">Organisation:</td>
-            <td style="color:#ffffff; padding:6px 0; font-weight:500;">{display_org}</td>
-          </tr>
-          <tr>
-            <td style="color:#8b949e; padding:6px 0; font-weight:600;">Assigned Role:</td>
-            <td style="color:#ffffff; padding:6px 0; font-weight:500;">{display_role}</td>
-          </tr>
-        </table>
-      </div>
+      <table class="table">
+        <tr><td class="label">Login Email</td><td class="value"><strong style="color: #2563eb;">{email}</strong></td></tr>
+        <tr><td class="label">Organisation</td><td class="value">{display_org}</td></tr>
+        <tr><td class="label">Assigned Role</td><td class="value">{display_role}</td></tr>
+        <tr><td class="label">Status</td><td class="value" style="color: #16a34a; font-weight: 700;">Active / Authorized</td></tr>
+      </table>
 
-      {f'<div class="admin-note"><strong>Administrator Note:</strong> {notes}</div>' if notes else ''}
+      {f'<div class="notes-box"><strong>Administrator Note:</strong> {notes}</div>' if notes else ''}
 
-      <div style="text-align: center; margin: 24px 0 16px 0;">
+      <div style="text-align: center; margin: 20px 0;">
         <a href="{login_url}" class="btn">Sign In to Pump Master Pro &rarr;</a>
       </div>
 
-      <div style="border-top: 1px solid #21262d; padding-top: 16px; margin-top: 20px;">
-        <div style="font-size: 11px; font-weight: 700; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px;">Included Capabilities:</div>
+      <div class="success-box">
+        <h4>Included Capabilities</h4>
         <ul class="feature-list">
           <li>Centrifugal &amp; Slurry Pump Selection &amp; Duty Point Evaluation</li>
           <li>Pipe Network Resistance &amp; Friction Head Analysis</li>
@@ -588,14 +584,13 @@ Support & Inquiries: {lytrose_reg_email}
       </div>
     </div>
     <div class="footer">
-      Pump Master Pro Curve Engine &bull; Support: <a href="mailto:{lytrose_reg_email}" style="color:#8b949e;">{lytrose_reg_email}</a>
+      Pump Master Pro Curve Engine &bull; Support: <a href="mailto:{lytrose_reg_email}" style="color: #2563eb;">{lytrose_reg_email}</a>
     </div>
   </div>
 </body>
-</html>
-"""
+</html>"""
     else:
-        subject = "Pump Master Pro: Access Request Status Update"
+        subject = "Pump Master Pro: Access Request Update"
         text_content = f"""
 Hello {first_name},
 
@@ -610,48 +605,44 @@ If you believe this is in error or require assistance, please contact our engine
 Pump Master Pro Engineering Suite
 https://www.pumpmasterpro.com
 """
-        html_content = f"""
-<!DOCTYPE html>
+        html_content = f"""<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <style>
-    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0d1117; color: #c9d1d9; margin: 0; padding: 20px; }}
-    .card {{ background-color: #161b22; border: 1px solid #30363d; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }}
-    .header {{ background: linear-gradient(135deg, #2a1818 0%, #161b22 100%); padding: 28px 20px; border-bottom: 1px solid #30363d; text-align: center; }}
-    .badge {{ display: inline-block; padding: 4px 12px; font-size: 11px; font-weight: 700; color: #f85149; background: rgba(248,81,73,0.15); border: 1px solid rgba(248,81,73,0.3); border-radius: 20px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }}
-    .header h2 {{ color: #ffffff; margin: 0 0 6px 0; font-size: 20px; font-weight: 700; }}
-    .header p {{ color: #8b949e; margin: 0; font-size: 13px; }}
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; color: #1e293b; margin: 0; padding: 24px; }}
+    .card {{ background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; }}
+    .header {{ background-color: #0f172a; padding: 22px 24px; text-align: left; }}
+    .header h2 {{ color: #ffffff; margin: 0 0 4px 0; font-size: 18px; font-weight: 700; }}
+    .header p {{ color: #94a3b8; margin: 0; font-size: 12px; }}
     .content {{ padding: 24px; }}
-    .notes-box {{ background: #0d1117; border-left: 3px solid #f85149; border-radius: 0 8px 8px 0; padding: 14px; margin: 18px 0; font-size: 13px; color: #e6edf3; }}
-    .footer {{ background-color: #0d1117; padding: 16px; text-align: center; font-size: 11px; color: #6e7681; border-top: 1px solid #30363d; }}
+    .reject-box {{ background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 12px 16px; margin: 18px 0; border-radius: 4px; font-size: 13px; color: #991b1b; }}
+    .footer {{ background-color: #f8fafc; padding: 14px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #e2e8f0; text-align: center; }}
   </style>
 </head>
 <body>
   <div class="card">
     <div class="header">
-      <span class="badge">&bull; Status Update &bull;</span>
-      <h2>Pump Master Pro &mdash; Access Request Update</h2>
+      <h2>Pump Master Pro &bull; Access Request Update</h2>
       <p>An update regarding your registration application</p>
     </div>
     <div class="content">
-      <p style="margin-top: 0; font-size: 14px; color: #e6edf3;">Hello <strong>{first_name}</strong>,</p>
-      <p style="font-size: 13px; color: #8b949e; line-height: 1.5;">
+      <p style="margin-top: 0; font-size: 14px; color: #0f172a;">Hello <strong>{first_name}</strong>,</p>
+      <p style="font-size: 13px; color: #334155; line-height: 1.5;">
         Thank you for your interest in <strong>Pump Master Pro</strong>. After careful review, your online registration request for <strong>{display_org}</strong> could not be approved at this time.
       </p>
 
-      {f'<div class="notes-box"><strong style="color:#f85149; display:block; margin-bottom:4px; font-size:12px; text-transform:uppercase;">Reason / Note from Reviewer:</strong> {notes}</div>' if notes else ''}
+      {f'<div class="reject-box"><strong>Reason / Note from Reviewer:</strong> {notes}</div>' if notes else ''}
 
-      <p style="font-size: 12px; color: #8b949e; line-height: 1.5; margin-top: 20px;">
-        If you believe this decision is in error or require enterprise licensing assistance, please contact our engineering administration desk at <a href="mailto:{lytrose_reg_email}" style="color:#58a6ff; text-decoration:none;">{lytrose_reg_email}</a>.
+      <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin-top: 20px;">
+        If you believe this decision is in error or require enterprise licensing assistance, please contact our engineering administration desk at <a href="mailto:{lytrose_reg_email}" style="color: #2563eb; text-decoration:none;">{lytrose_reg_email}</a>.
       </p>
     </div>
     <div class="footer">
-      Pump Master Pro Engineering Suite &bull; Support: <a href="mailto:{lytrose_reg_email}" style="color:#8b949e;">{lytrose_reg_email}</a>
+      Pump Master Pro Engineering Suite &bull; Support: <a href="mailto:{lytrose_reg_email}" style="color: #64748b;">{lytrose_reg_email}</a>
     </div>
   </div>
 </body>
-</html>
-"""
+</html>"""
 
     return send_email(email, subject, html_content, text_content, from_email=lytrose_reg_email, reply_to=lytrose_reg_email)
